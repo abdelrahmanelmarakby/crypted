@@ -44,7 +44,7 @@ class CustomReactiveSwitchItem extends StatelessWidget {
                     value: switchValue.value,
                     onChanged: onChanged,
                     activeTrackColor: ColorsManager.primary,
-                    activeThumbColor: ColorsManager.white,
+                    activeColor: ColorsManager.white,
                     inactiveThumbColor: ColorsManager.white,
                     inactiveTrackColor: ColorsManager.veryLightGrey,
                     trackOutlineColor: const WidgetStatePropertyAll(

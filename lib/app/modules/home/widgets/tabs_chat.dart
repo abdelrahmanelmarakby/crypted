@@ -141,17 +141,22 @@ class TabsChat extends StatelessWidget {
                       isScrollable: false,
                       indicatorSize: TabBarIndicatorSize.label,
                       indicator: UnderlineTabIndicator(
+                        
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: ColorsManager.primary,
-                          width: 2,
+                          width: 1,
+                          
                         ),
                         insets: EdgeInsets.symmetric(horizontal: 1),
                       ),
                       labelPadding: EdgeInsets.zero,
                       labelColor: ColorsManager.primary,
-                      labelStyle: TextStyle(fontSize: FontSize.large),
-                      unselectedLabelColor: Colors.black,
-                      unselectedLabelStyle: TextStyle(fontSize: FontSize.large),
+                      labelStyle: TextStyle(fontSize: FontSize.medium, fontWeight: FontWeight.w500,
+                      color: ColorsManager.primary),
+                      unselectedLabelColor: ColorsManager.grey,
+                      unselectedLabelStyle: TextStyle(fontSize: FontSize.medium, fontWeight: FontWeight.w400,
+                      color: ColorsManager.grey),
                       dividerColor: Colors.transparent,
                       tabs: [
                         buildTab(Constants.kAll.tr, true),
@@ -166,7 +171,7 @@ class TabsChat extends StatelessWidget {
             ];
           },
           body: TabBarView(
-            children: [TabBarBody(), TabBarBody(), TabBarBody(), TabBarBody()],
+            children: [TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false), TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false), TabBarBody(getGroupChatOnly: true, getPrivateChatOnly: false), TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: true)],
           ),
         ),
       ),

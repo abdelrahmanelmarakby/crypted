@@ -24,10 +24,6 @@ class ChatRow extends StatelessWidget {
 
   Future<void> _deleteChat() async {
     try {
-      print("🔍 Chat Room Debug:");
-      print("   ID: ${chatRoom?.id}");
-      print("   Sender: ${chatRoom?.sender?.fullName}");
-      print("   Receiver: ${chatRoom?.receiver?.fullName}");
 
       // عرض dialog للتأكيد
       final result = await Get.dialog<bool>(
@@ -76,9 +72,8 @@ class ChatRow extends StatelessWidget {
         print("🔄 Attempting to delete chat room: ${chatRoom?.id}");
 
         final chatDataSources = ChatDataSources(
-          chatServicesParameters: ChatServicesParameters(
-            myId: int.tryParse(UserService.currentUser.value?.uid ?? '0') ?? 0,
-            myUser: UserService.currentUser.value,
+          chatConfiguration: ChatConfiguration(
+            members: [ UserService.currentUser.value!,  ],
           ),
         );
 
@@ -121,15 +116,13 @@ class ChatRow extends StatelessWidget {
       onTap: () {
         final myId = UserService.currentUser.value?.uid ??
             FirebaseAuth.instance.currentUser?.uid;
-        final other = chatRoom?.sender?.uid == myId
-            ? chatRoom?.receiver
-            : chatRoom?.sender;
+     
         Map<String, dynamic> arg = {
-          "sender": UserService.currentUser.value,
-          "receiver": other,
+          'members': chatRoom?.members,
           "blockingUserId": chatRoom?.blockingUserId,
+          "roomId": chatRoom?.id,
+          "isGroupChat": chatRoom?.isGroupChat,
         };
-        log("Chat Args $arg");
         Get.toNamed(Routes.CHAT, arguments: arg);
       },
       onLongPress: () {
@@ -158,19 +151,16 @@ class ChatRow extends StatelessWidget {
                       Get.toNamed(
                         Routes.CHAT,
                         arguments: {
-                          "user": UserService.currentUser.value?.uid ==
-                                  chatRoom?.receiver?.uid
-                              ? chatRoom?.sender
-                              : chatRoom?.receiver,
+                          "user":   chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid),
+                          "roomId": chatRoom?.id,
+                          "members": chatRoom?.members,
+                          "isGroupChat": chatRoom?.isGroupChat,
                         },
                       );
                     },
                     child: ClipOval(
                       child: AppCachedNetworkImage(
-                        imageUrl: chatRoom?.sender?.uid !=
-                                UserService.currentUser.value?.uid
-                            ? chatRoom?.sender?.imageUrl ?? ""
-                            : chatRoom?.receiver?.imageUrl ?? "",
+                        imageUrl:(chatRoom?.members?.length ?? 0)<=2?chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.imageUrl ?? "":chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.imageUrl ?? "",
                         fit: BoxFit.cover,
                         height: Sizes.size48,
                         width: Sizes.size48,
@@ -185,10 +175,7 @@ class ChatRow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          chatRoom?.sender?.uid !=
-                                  UserService.currentUser.value?.uid
-                              ? chatRoom?.sender?.fullName ?? ""
-                              : chatRoom?.receiver?.fullName ?? "",
+                          (chatRoom?.members?.length ?? 0)<=2?chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.fullName ?? "":chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.fullName ?? "",
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: FontSize.small,
@@ -198,7 +185,7 @@ class ChatRow extends StatelessWidget {
                         ),
                         // SizedBox(height: 8),
                         Text(
-                          chatRoom?.lastMsg ?? "",
+                          (chatRoom?.members?.length ?? 0)<=2?chatRoom?.lastMsg ?? "":chatRoom?.lastMsg ?? "",
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

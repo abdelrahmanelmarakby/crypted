@@ -1,3 +1,4 @@
+import 'package:crypted_app/app/data/models/item_out_side_chat_model.dart';
 import 'package:crypted_app/app/modules/inviteFriend/widgets/item_invite.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:flutter/material.dart';

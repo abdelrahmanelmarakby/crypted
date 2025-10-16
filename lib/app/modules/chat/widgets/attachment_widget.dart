@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, must_be_immutable, use_build_context_synchronously, library_private_types_in_public_api, deprecated_member_use
 
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
@@ -69,7 +70,8 @@ class AttachmentWidget extends GetView<ChatController> {
                       onSubmit: (value) {
                         if (controller.messageController.text.isNotEmpty) {
                           controller.sendQuickTextMessage(
-                              controller.messageController.text);
+                              controller.messageController.text,
+                              controller.roomId);
                         }
                       },
                       hint: Constants.kSendamessage.tr,
@@ -127,8 +129,7 @@ class AttachmentWidget extends GetView<ChatController> {
                               final audioMessage =
                                   await FirebaseUtils.uploadAudio(
                                       soundFile.path,
-                                      controller.sender,
-                                      controller.receiver,
+                                      controller.roomId,
                                       time);
                               if (audioMessage != null) {
                                 await controller.sendMessage(audioMessage);
@@ -155,7 +156,8 @@ class AttachmentWidget extends GetView<ChatController> {
                     onTap: () {
                       if (controller.messageController.text.isNotEmpty) {
                         controller.sendQuickTextMessage(
-                            controller.messageController.text);
+                            controller.messageController.text,
+                            controller.roomId);
                       }
                     },
                     child: Container(
@@ -234,8 +236,7 @@ class AttachmentWidget extends GetView<ChatController> {
                           // استخدم uploadImage بدلاً من uploadFile
                           final photoMessage = await FirebaseUtils.uploadImage(
                             path,
-                            controller.sender,
-                            controller.receiver,
+                            controller.roomId,
                           );
                           if (photoMessage != null) {
                             await controller.sendMessage(photoMessage);
@@ -256,8 +257,7 @@ class AttachmentWidget extends GetView<ChatController> {
                             final photoMessage =
                                 await FirebaseUtils.uploadImage(
                               photo.path,
-                              controller.sender,
-                              controller.receiver,
+                              controller.roomId,
                             );
                             if (photoMessage != null) {
                               await controller.sendMessage(photoMessage);
@@ -294,11 +294,8 @@ class AttachmentWidget extends GetView<ChatController> {
                               id: DateTime.now()
                                   .millisecondsSinceEpoch
                                   .toString(),
-                              roomId: ChatDataSources.getRoomId(
-                                controller.sender?.uid ?? "",
-                                controller.receiver?.uid ?? "",
-                              ),
-                              senderId: controller.sender?.uid ?? "",
+                              roomId: controller.roomId,
+                              senderId: UserService.currentUser.value?.uid ?? "",
                               timestamp: DateTime.now(),
                               latitude: position.latitude,
                               longitude: position.longitude,
@@ -359,11 +356,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                 id: DateTime.now()
                                     .millisecondsSinceEpoch
                                     .toString(),
-                                roomId: ChatDataSources.getRoomId(
-                                  controller.sender?.uid ?? "",
-                                  controller.receiver?.uid ?? "",
-                                ),
-                                senderId: controller.sender?.uid ?? "",
+                                roomId: controller.roomId,
+                                senderId: UserService.currentUser?.value?.uid??"",
                                 timestamp: DateTime.now(),
                                 name: contact.fullName ?? 'Unknown Contact',
                                 phoneNumber: contact.phoneNumbers!.first,
@@ -394,8 +388,7 @@ class AttachmentWidget extends GetView<ChatController> {
                           // استخدم uploadFile وأرسل الرسالة الناتجة
                           final fileMessage = await FirebaseUtils.uploadFile(
                             path,
-                            controller.sender,
-                            controller.receiver,
+                            controller.roomId,
                           );
                           if (fileMessage != null) {
                             await controller.sendMessage(fileMessage);

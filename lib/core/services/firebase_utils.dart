@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/image_message_model.dart';
@@ -11,21 +12,20 @@ class FirebaseUtils {
   // ⏺️ رفع صوت + يرجّع AudioMessage
   static Future<AudioMessage?> uploadAudio(
     String path,
-    SocialMediaUser? sender,
-    SocialMediaUser? receiver,
+    String roomId,
     String duration,
   ) async {
     try {
       final now = DateTime.now();
-      final id = generateUniqueId("audio", sender?.uid);
+      final id = generateUniqueId("audio", roomId);
       final url = await _uploadFile(File(path), "audios", id);
 
       return url == null
           ? null
           : AudioMessage(
               id: id,
-              roomId: receiver?.uid ?? '',
-              senderId: sender?.uid ?? '',
+              roomId: roomId,
+              senderId: UserService.currentUser.value?.uid ?? '',
               timestamp: now,
               audioUrl: url,
               duration: duration,
@@ -39,20 +39,19 @@ class FirebaseUtils {
   // 🖼️ رفع صورة + يرجّع PhotoMessage
   static Future<PhotoMessage?> uploadImage(
     String path,
-    SocialMediaUser? sender,
-    SocialMediaUser? receiver,
+    String roomId,
   ) async {
     try {
       final now = DateTime.now();
-      final id = generateUniqueId("image", sender?.uid);
+      final id = generateUniqueId("image", roomId);
       final url = await _uploadFile(File(path), "images", id);
 
       return url == null
           ? null
           : PhotoMessage(
               id: id,
-              roomId: receiver?.uid ?? '',
-              senderId: sender?.uid ?? '',
+              roomId: roomId,
+              senderId: UserService.currentUser.value?.uid ?? '',
               timestamp: now,
               imageUrl: url,
             );
@@ -65,20 +64,19 @@ class FirebaseUtils {
   // 🎥 رفع فيديو + يرجّع VideoMessage
   static Future<VideoMessage?> uploadVideo(
     String path,
-    SocialMediaUser? sender,
-    SocialMediaUser? receiver,
+    String roomId,
   ) async {
     try {
       final now = DateTime.now();
-      final id = generateUniqueId("video", sender?.uid);
+      final id = generateUniqueId("video", roomId);
       final url = await _uploadFile(File(path), "videos", id);
 
       return url == null
           ? null
           : VideoMessage(
               id: id,
-              roomId: receiver?.uid ?? '',
-              senderId: sender?.uid ?? '',
+              roomId: roomId,
+              senderId: UserService.currentUser.value?.uid ?? '',
               timestamp: now,
               video: url,
             );
@@ -91,12 +89,11 @@ class FirebaseUtils {
   // 📄 رفع ملف عام + يرجّع FileMessage
   static Future<FileMessage?> uploadFile(
     String path,
-    SocialMediaUser? sender,
-    SocialMediaUser? receiver,
+    String roomId,
   ) async {
     try {
       final now = DateTime.now();
-      final id = generateUniqueId("file", sender?.uid);
+      final id = generateUniqueId("file", roomId);
       final url = await _uploadFile(File(path), "files", id);
       final fileName = path.split(Platform.pathSeparator).last;
 
@@ -104,8 +101,8 @@ class FirebaseUtils {
           ? null
           : FileMessage(
               id: id,
-              roomId: receiver?.uid ?? '',
-              senderId: sender?.uid ?? '',
+              roomId: roomId,
+              senderId: UserService.currentUser.value?.uid ?? '',
               timestamp: now,
               file: url,
               fileName: fileName,
@@ -139,8 +136,8 @@ class FirebaseUtils {
   }
 
   // 🆔 توليد ID فريد
-  static String generateUniqueId(String type, String? userId) {
-    return '${type}_${DateTime.now().millisecondsSinceEpoch}_${userId ?? 'unknown'}';
+  static String generateUniqueId(String type, String? roomId) {
+    return '${type}_${DateTime.now().millisecondsSinceEpoch}_${roomId ?? 'unknown'}';
   }
 
   // 🔍 هل الملف موجود؟

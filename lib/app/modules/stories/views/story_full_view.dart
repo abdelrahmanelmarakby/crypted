@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/modules/stories/controllers/stories_controller.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

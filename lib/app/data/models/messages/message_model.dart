@@ -104,10 +104,9 @@ abstract class Message {
         replyTo.hashCode;
   }
 
-  copyWith({required String id, required String roomId}) {
+  copyWith({required String id, }) {
     return copyWith(
       id: id,
-      roomId: roomId,
     );
   }
 }

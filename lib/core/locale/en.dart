@@ -83,7 +83,7 @@ Map<String, String> en = {
   Constants.kCancel: 'Cancel',
   Constants.kNoChatsyet: 'No chats yet',
   Constants.kNewChat: 'New Chat',
-  Constants.kSelectUser: 'Select User',
+  Constants.kSelectUser: 'Select a friend',
   Constants.kNousersfound: 'No users found',
   Constants.kAll: 'All',
   Constants.kUnread: 'Unread',

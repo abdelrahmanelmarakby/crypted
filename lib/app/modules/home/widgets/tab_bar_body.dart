@@ -1,10 +1,12 @@
 import 'dart:developer';
 
+import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/widgets/custom_loading.dart';
 import 'package:crypted_app/core/extensions/string.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,24 +17,29 @@ import '../../../data/models/chat/chat_room_model.dart';
 import 'chat_row.dart';
 
 class TabBarBody extends StatelessWidget {
-  const TabBarBody({super.key});
+  const TabBarBody({super.key,  this.getGroupChatOnly, required this.getPrivateChatOnly});
+  final bool? getGroupChatOnly;
+  final bool? getPrivateChatOnly;
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ChatRoom>>(
       stream: ChatDataSources(
-        chatServicesParameters: ChatServicesParameters(
-          myId: UserService.currentUser.value?.uid?.encryptTextToNumbers(),
-          myUser: UserService.currentUser.value,
+        chatConfiguration: ChatConfiguration(
+          members: [ UserService.currentUser.value??SocialMediaUser(
+            uid: FirebaseAuth.instance.currentUser?.uid,
+            fullName: FirebaseAuth.instance.currentUser?.displayName,
+            imageUrl  : FirebaseAuth.instance.currentUser?.photoURL,
+          ), ],
         ),
-      ).getLastChatUser,
+      ).getChats(getGroupChatOnly: getGroupChatOnly??false, getPrivateChatOnly: getPrivateChatOnly??false),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           List<ChatRoom>? getRecentChat = snapshot.data;
+          
           final myId = UserService.currentUser.value?.uid;
           final myChats = getRecentChat
               ?.where((chatRoom) =>
-                  chatRoom.sender?.uid == myId ||
-                  chatRoom.receiver?.uid == myId)
+                  chatRoom.membersIds?.contains(myId) ?? false)
               .toList();
 
           if (myChats?.isNotEmpty ?? false) {
@@ -59,7 +66,7 @@ class TabBarBody extends StatelessWidget {
           }
         } else if (snapshot.hasError) {
           log("Error fetching chats: ${snapshot.error}");
-          return const CustomLoading();
+          return const Center(child: Text("‼️ Ooooh no! Could not fetch chats ‼️", style: TextStyle(color: ColorsManager.error),));
         } else {
           return const CustomLoading();
         }

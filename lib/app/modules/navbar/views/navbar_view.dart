@@ -10,6 +10,7 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../controllers/navbar_controller.dart';
@@ -39,6 +40,7 @@ class NavbarView extends GetView<NavbarController> {
             index: controller.selectedIndex.value,
           ),
           color: ColorsManager.navbarColor,
+          
           showLabel: true,
           textOverflow: TextOverflow.visible,
           maxLine: 1,
@@ -128,7 +130,7 @@ class NavbarView extends GetView<NavbarController> {
             ),
           ],
           onTap: (index) {
-            // log('Selected index: $index');
+            HapticFeedback.lightImpact();
             controller.changePage(index);
           },
         ),

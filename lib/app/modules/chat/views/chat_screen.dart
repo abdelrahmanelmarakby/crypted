@@ -19,313 +19,146 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 import 'package:crypted_app/app/modules/calls/controllers/calls_controller.dart';
 
-class ChatScreen extends GetView<ChatController> {
-  const ChatScreen({super.key});
+class PrivateChatScreen extends GetView<ChatController> {
+  const PrivateChatScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ChatController>(
       builder: (controller) {
-        if (controller.sender == null || controller.receiver == null) {
+        if (controller.members.isEmpty || controller.roomId.isEmpty) {
           return Scaffold(
-            body: Center(child: Text(Constants.kInvalidchatparameters.tr)),
+            backgroundColor: ColorsManager.navbarColor,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.error_outline,
+                      color: ColorsManager.grey,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    Constants.kInvalidchatparameters.tr,
+                    style: StylesManager.medium(
+                      fontSize: FontSize.medium,
+                      color: ColorsManager.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         }
+
+
         return StreamProvider<List<Message>>.value(
           value: ChatDataSources(
-            chatServicesParameters: ChatServicesParameters(
-              myId: controller.sender?.uid?.encryptTextToNumbers(),
-              hisId: controller.receiver?.uid?.encryptTextToNumbers(),
-              myUser: controller.sender,
-              hisUser: controller.receiver,
+            chatConfiguration: ChatConfiguration(
+              members: controller.members,
             ),
-          ).getLivePrivateMessage,
+          ).getLivePrivateMessage(controller.roomId),
           initialData: const [],
           catchError: (error, stackTrace) {
             print(error);
             print(stackTrace);
-            throw Exception(error.toString() + stackTrace.toString());
             return [];
           },
           builder: (context, child) {
-            final getFluffs = Provider.of<List<Message>>(context);
+            final messages = Provider.of<List<Message>>(context);
             return Scaffold(
-              appBar: AppBar(
-                backgroundColor: ColorsManager.navbarColor,
-                centerTitle: false,
-                leading: IconButton(
-                  onPressed: () {
-                    Get.back();
-                  },
-                  icon: const Icon(
-                    Icons.arrow_back_ios,
-                    color: Colors.black,
-                    size: Sizes.size20,
-                  ),
-                ),
-                title: GestureDetector(
-                  onTap: () {
-                    ///Check if i am the sender and the reciver and then go to other user profile
-                    Get.toNamed(
-                      Routes.CONTACT_INFO,
-                      arguments: {
-                        "user": UserService.currentUser.value?.uid ==
-                                controller.receiver?.uid
-                            ? controller.sender
-                            : controller.receiver,
-                      },
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      ClipOval(
-                        child: AppCachedNetworkImage(
-                          imageUrl: (UserService.currentUser.value?.uid ==
-                                      controller.receiver?.uid
-                                  ? controller.sender?.imageUrl
-                                  : controller.receiver?.imageUrl) ??
-                              '',
-                          height: Sizes.size38,
-                          width: Sizes.size38,
-                        ),
-                      ),
-                      SizedBox(width: Sizes.size10),
-                      Text(
-                        UserService.currentUser.value?.uid ==
-                                controller.receiver?.uid
-                            ? UserService.currentUser.value?.fullName ?? ""
-                            : controller.receiver?.fullName ?? "",
-                        overflow: TextOverflow.fade,
-                        style: StylesManager.semiBold(
-                          color: ColorsManager.black,
-                          fontSize: FontSize.large,
-                        ),
-                      ),
-                      Expanded(child: SizedBox()),
-                      // Always show call buttons, even if chatting with self
-                      ZegoSendCallInvitationButton(
-                        buttonSize: Size(Sizes.size38, Sizes.size38),
-                        padding: EdgeInsets.all(0),
-                        iconSize: Size.fromHeight(Sizes.size20),
-                        icon: ButtonIcon(
-                          icon: SvgPicture.asset(
-                            'assets/icons/call-calling.svg',
-                            color: ColorsManager.black,
-                            height: Sizes.size20,
-                            width: Sizes.size20,
-                          ),
-                        ),
-                        onPressed: (code, message, p2) async {
-                          // إنشاء CallModel للمكالمة
-                          CallModel callModel = CallModel(
-                            callType: CallType.audio,
-                            callStatus: CallStatus.outgoing,
-                            calleeId: controller.receiver?.uid ?? "",
-                            calleeImage: controller.receiver?.imageUrl ?? "",
-                            calleeUserName: controller.receiver?.fullName ?? "",
-                            callerId: controller.sender?.uid ?? "",
-                            callerImage: controller.sender?.imageUrl ?? "",
-                            callerUserName: controller.sender?.fullName ?? "",
-                            time: DateTime.now(),
-                          );
-
-                          // حفظ المكالمة في Firestore
-                          CallDataSources callDataSource = CallDataSources();
-                          print(
-                              '📞 ChatScreen: Storing audio call to Firestore');
-                          print('📞 Call details: ${callModel.toMap()}');
-                          final success =
-                              await callDataSource.storeCall(callModel);
-                          if (success) {
-                            print(
-                                '📞 ChatScreen: Audio call stored successfully');
-                            // تحديث صفحة المكالمات
-                            Get.find<CallsController>().refreshCalls();
-                          } else {
-                            print('❌ ChatScreen: Failed to store audio call');
-                          }
-
-                          // إرسال رسالة المكالمة في الشات
-                          await controller.sendMessage(CallMessage(
-                            id: "${Timestamp.now().toDate()}",
-                            roomId: ChatDataSources.getRoomId(
-                              controller.sender?.uid ?? "",
-                              controller.receiver?.uid ?? "",
-                            ),
-                            senderId: controller.sender?.uid ?? "",
-                            timestamp: Timestamp.now().toDate(),
-                            callModel: callModel,
-                          ));
-                        },
-                        isVideoCall: false,
-                        resourceID: "crypted",
-                        invitees: [
-                          ZegoUIKitUser(
-                            id: controller.receiver?.uid ?? "",
-                            name: controller.receiver?.fullName ?? "",
-                          ),
-                        ],
-                      ),
-                      ZegoSendCallInvitationButton(
-                        buttonSize: Size(Sizes.size38, Sizes.size38),
-                        icon: ButtonIcon(icon: Icon(Icons.videocam_outlined)),
-                        padding: EdgeInsets.all(0),
-                        iconSize: Size.fromHeight(Sizes.size30),
-                        isVideoCall: true,
-                        resourceID: "crypted",
-                        onPressed: (code, message, p2) async {
-                          // إنشاء CallModel للمكالمة
-                          CallModel callModel = CallModel(
-                            callType: CallType.video,
-                            callStatus: CallStatus.outgoing,
-                            calleeId: controller.receiver?.uid ?? "",
-                            calleeImage: controller.receiver?.imageUrl ?? "",
-                            calleeUserName: controller.receiver?.fullName ?? "",
-                            callerId: controller.sender?.uid ?? "",
-                            callerImage: controller.sender?.imageUrl ?? "",
-                            callerUserName: controller.sender?.fullName ?? "",
-                            time: DateTime.now(),
-                          );
-
-                          // حفظ المكالمة في Firestore
-                          CallDataSources callDataSource = CallDataSources();
-                          print(
-                              '📞 ChatScreen: Storing video call to Firestore');
-                          print('📞 Call details: ${callModel.toMap()}');
-                          final success =
-                              await callDataSource.storeCall(callModel);
-                          if (success) {
-                            print(
-                                '📞 ChatScreen: Video call stored successfully');
-                            // تحديث صفحة المكالمات
-                            Get.find<CallsController>().refreshCalls();
-                          } else {
-                            print('❌ ChatScreen: Failed to store video call');
-                          }
-
-                          // إرسال رسالة المكالمة في الشات
-                          await controller.sendMessage(CallMessage(
-                            id: "${Timestamp.now().toDate()}",
-                            roomId: ChatDataSources.getRoomId(
-                              controller.sender?.uid ?? "",
-                              controller.receiver?.uid ?? "",
-                            ),
-                            senderId: controller.sender?.uid ?? "",
-                            timestamp: Timestamp.now().toDate(),
-                            callModel: callModel,
-                          ));
-                        },
-                        invitees: [
-                          ZegoUIKitUser(
-                            id: controller.receiver?.uid ?? "",
-                            name: controller.receiver?.fullName ?? "",
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              backgroundColor: ColorsManager.navbarColor,
+              extendBodyBehindAppBar: false,
+              // appBar: _buildAppBar(context, otherUser),
               body: SafeArea(
-                child: GestureDetector(
-                  onTap: () {
-                    // إخفاء لوحة المفاتيح عند الضغط على مكان فارغ
-                    FocusScope.of(context).unfocus();
-                  },
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: ListView.builder(
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          reverse: true,
-                          itemCount: getFluffs.length,
-                          itemBuilder: (context, index) {
-                            final Message? old = index != getFluffs.length - 1
-                                ? getFluffs[index + 1]
-                                : null;
-                            DateTime oldTime;
-                            if (old?.timestamp != null) {
-                              oldTime = old!.timestamp;
-                            } else {
-                              oldTime = DateTime.now();
-                            }
-                            final Message msg = getFluffs[index];
-
-                            // تحديد ما إذا كانت الرسالة من المستخدم الحالي أم لا
-                            bool isMe = msg.senderId ==
-                                UserService.currentUser.value?.uid;
-                            print("📱 Building message widget:");
-                            print("   Message senderId: ${msg.senderId}");
-                            print(
-                                "   Current user UID: ${UserService.currentUser.value?.uid}");
-                            print("   Is me: $isMe");
-                            print(
-                                "   SenderType (for MessageBuilder): ${!isMe}");
-                            print(
-                                "   Message will appear on: ${isMe ? 'RIGHT (as sender)' : 'LEFT (as receiver)'}");
-                            DateTime newTime;
-                            newTime = msg.timestamp;
-
-                            return Column(
-                              children: [
-                                if (index == getFluffs.length - 1 ||
-                                    !_isSameDay(oldTime, newTime))
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: Paddings.small,
-                                    ),
-                                    child: Center(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: Paddings.small,
-                                          vertical: Paddings.xSmall,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: ColorsManager.navbarColor,
-                                          borderRadius: BorderRadius.circular(
-                                              Sizes.size16),
-                                        ),
-                                        child: Text(
-                                          _formatDate(newTime),
-                                          style: const TextStyle(
-                                            color: ColorsManager.black,
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: Sizes.size12,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                MessageBuilder(
-                                  !isMe, // عكس القيمة لأن senderType = true يعني الرسالة من شخص آخر
-                                  messageModel: msg,
-                                  timestamp: msg.timestamp.toIso8601String(),
-                                  senderName: isMe
-                                      ? UserService.currentUser.value?.fullName
-                                      : controller.receiver?.fullName,
-                                  senderImage: isMe
-                                      ? UserService.currentUser.value?.imageUrl
-                                      : controller.receiver?.imageUrl,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        ColorsManager.navbarColor,
+                        Colors.white.withOpacity(0.95),
+                      ],
+                      stops: const [0.0, 0.3],
+                    ),
+                  ),
+                  child: GestureDetector(
+                    onTap: () => FocusScope.of(context).unfocus(),
+                    child: Column(
+                      children: [
+                        // Messages area
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(24),
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(24),
+                              ),
+                              child: ListView.builder(
+                                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                reverse: true,
+                                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                                itemCount: messages.length,
+                                itemBuilder: (context, index) => _buildMessageItem(
+                                  messages,
+                                  index,
+                                  UserService.currentUser.value,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // Input area
+                        if (controller.blockingUserId == null)
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, -2),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                      ),
-                      if (controller.blockingUserId == null)
-                        const AttachmentWidget()
-                      else
-                        const SizedBox(height: Sizes.size20),
-                    ],
+                            ),
+                            child: const SafeArea(
+                              child: AttachmentWidget(),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -334,6 +167,305 @@ class ChatScreen extends GetView<ChatController> {
         );
       },
     );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context, dynamic otherUser) {
+    return AppBar(
+      backgroundColor: ColorsManager.navbarColor,
+      elevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      leading: Container(
+        margin: const EdgeInsets.only(left: 8),
+        child: IconButton(
+          onPressed: () => Get.back(),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.black,
+              size: 18,
+            ),
+          ),
+        ),
+      ),
+      title: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Get.toNamed(
+            Routes.CONTACT_INFO,
+            arguments: {"user": otherUser},
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // User avatar with online status
+              Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: AppCachedNetworkImage(
+                        imageUrl: otherUser.imageUrl ?? '',
+                        height: 44,
+                        width: 44,
+                      ),
+                    ),
+                  ),
+                  // Online status indicator
+                  Positioned(
+                    right: 2,
+                    bottom: 2,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ColorsManager.navbarColor,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // User info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      otherUser.fullName ?? "Unknown User",
+                      style: StylesManager.bold(
+                        color: Colors.black,
+                        fontSize: 18,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Online", // You can make this dynamic
+                      style: StylesManager.regular(
+                        color: Colors.green,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        // Call buttons with modern design
+        _buildCallButton(
+          icon: SvgPicture.asset(
+            'assets/icons/call-calling.svg',
+            color: Colors.black,
+            height: 20,
+            width: 20,
+          ),
+          onPressed: () => _handleAudioCall(otherUser),
+          isVideoCall: false,
+          otherUser: otherUser,
+        ),
+        
+        const SizedBox(width: 8),
+        
+        _buildCallButton(
+          icon: const Icon(
+            Iconsax.video_copy,
+            color: Colors.black,
+            size: 22,
+          ),
+          onPressed: () => _handleVideoCall(otherUser),
+          isVideoCall: true,
+          otherUser: otherUser,
+        ),
+        
+        const SizedBox(width: 16),
+      ],
+    );
+  }
+
+  Widget _buildCallButton({
+    required Widget icon,
+    required VoidCallback onPressed,
+    required bool isVideoCall,
+    required dynamic otherUser,
+  }) {
+    return ZegoSendCallInvitationButton(
+      buttonSize: const Size(44, 44),
+      padding: EdgeInsets.zero,
+      iconSize: const Size.fromHeight(24),
+      icon: ButtonIcon(
+        icon: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: icon,
+        ),
+      ),
+      onPressed: (code, message, p2) => onPressed(),
+      isVideoCall: isVideoCall,
+      resourceID: "crypted",
+      invitees: [
+        ZegoUIKitUser(
+          id: otherUser.uid ?? "",
+          name: otherUser.fullName ?? "",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessageItem(List<Message> messages, int index, dynamic otherUser) {
+    final Message? previousMsg = index != messages.length - 1 ? messages[index + 1] : null;
+    final Message currentMsg = messages[index];
+    
+    final bool isMe = currentMsg.senderId == UserService.currentUser.value?.uid;
+    final DateTime currentTime = currentMsg.timestamp!;
+    final DateTime? previousTime = previousMsg?.timestamp;
+
+    return Column(
+      children: [
+        // Date separator
+        if (index == messages.length - 1 || 
+            (previousTime != null && !_isSameDay(previousTime, currentTime)))
+          _buildDateSeparator(currentTime),
+        
+        // Message
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          child: MessageBuilder(
+            !isMe,
+            messageModel: currentMsg,
+            timestamp: currentMsg.timestamp.toIso8601String(),
+            senderName: isMe 
+                ? UserService.currentUser.value?.fullName
+                : otherUser.fullName,
+            senderImage: isMe 
+                ? UserService.currentUser.value?.imageUrl
+                : otherUser.imageUrl,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateSeparator(DateTime date) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: ColorsManager.offWhite,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            _formatDate(date),
+            style: StylesManager.medium(
+              color: ColorsManager.grey,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAudioCall(dynamic otherUser) async {
+    HapticFeedback.lightImpact();
+    
+    final callModel = CallModel(
+      callType: CallType.audio,
+      callStatus: CallStatus.outgoing,
+      calleeId: otherUser.uid ?? "",
+      calleeImage: otherUser.imageUrl ?? "",
+      calleeUserName: otherUser.fullName ?? "",
+      callerId: UserService.currentUser.value?.uid ?? "",
+      callerImage: UserService.currentUser.value?.imageUrl ?? "",
+      callerUserName: UserService.currentUser.value?.fullName ?? "",
+      time: DateTime.now(),
+    );
+
+    await _storeCallAndSendMessage(callModel);
+  }
+
+  Future<void> _handleVideoCall(dynamic otherUser) async {
+    HapticFeedback.lightImpact();
+    
+    final callModel = CallModel(
+      callType: CallType.video,
+      callStatus: CallStatus.outgoing,
+      calleeId: otherUser.uid ?? "",
+      calleeImage: otherUser.imageUrl ?? "",
+      calleeUserName: otherUser.fullName ?? "",
+      callerId: UserService.currentUser.value?.uid ?? "",
+      callerImage: UserService.currentUser.value?.imageUrl ?? "",
+      callerUserName: UserService.currentUser.value?.fullName ?? "",
+      time: DateTime.now(),
+    );
+
+    await _storeCallAndSendMessage(callModel);
+  }
+
+  Future<void> _storeCallAndSendMessage(CallModel callModel) async {
+    try {
+      final callDataSource = CallDataSources();
+      final success = await callDataSource.storeCall(callModel);
+      
+      if (success) {
+        Get.find<CallsController>().refreshCalls();
+        
+        await controller.sendMessage(CallMessage(
+          id: "${Timestamp.now().toDate()}",
+          roomId: controller.roomId,
+          senderId: UserService.currentUser.value?.uid ?? "",
+          timestamp: Timestamp.now().toDate(),
+          callModel: callModel,
+        ));
+      }
+    } catch (e) {
+      print('❌ Error handling call: $e');
+    }
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
@@ -369,12 +501,5 @@ class ChatScreen extends GetView<ChatController> {
       ];
       return '${date.day} ${monthNames[date.month - 1]} ${date.year}';
     }
-  }
-
-  String _getValidImageUrl(String? url) {
-    if (url != null && url.isNotEmpty) {
-      return url;
-    }
-    return 'https://i2.wp.com/ui-avatars.com/api/%D8%B3%D9%85%D9%8A%D8%B1%20%D8%A7%D8%AD%D9%85%D8%B1/128?ssl=1';
   }
 }

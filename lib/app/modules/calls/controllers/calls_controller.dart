@@ -4,16 +4,21 @@ import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
+import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CallsController extends GetxController {
   CallDataSources callDataSource = CallDataSources();
   ChatDataSources chatDataSource = ChatDataSources(
-    chatServicesParameters: ChatServicesParameters(
-      myId: int.tryParse(UserService.currentUser.value?.uid ?? '0') ?? 0,
-      myUser: UserService.currentUser.value,
+    chatConfiguration: ChatConfiguration(
+      members: [ UserService.currentUser.value??SocialMediaUser(
+        uid: FirebaseAuth.instance.currentUser?.uid,
+        fullName: FirebaseAuth.instance.currentUser?.displayName,
+        imageUrl  : FirebaseAuth.instance.currentUser?.photoURL,
+      ), ],
     ),
   );
 
@@ -49,11 +54,11 @@ class CallsController extends GetxController {
   }
 
   Stream<List<CallModel>> _getCallsFromChat(String userId) {
-    return chatDataSource.getLastChatUser.map((chatRooms) {
+    return chatDataSource.getChats(getGroupChatOnly: false, getPrivateChatOnly: false).map((chatRooms) {
       List<CallModel> callModels = [];
       for (var chatRoom in chatRooms) {
         // هذا الجزء يحتاج إلى إعادة تقييم لأن getLivePrivateMessage مصمم لغرفة شات محددة
-        chatDataSource.getLivePrivateMessage.listen((messages) {
+        chatDataSource.getLivePrivateMessage(chatRoom.id??"").listen((messages) {
           for (var message in messages) {
             if (message is CallMessage) {
               CallModel callModel = CallModel(

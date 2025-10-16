@@ -17,6 +17,7 @@ import 'package:crypted_app/app/data/data_source/auth_data_sources.dart';
 class HomeController extends GetxController {
   final RxList<SocialMediaUser> users = <SocialMediaUser>[].obs;
   late Future<List<SocialMediaUser>> futureUsers;
+  late RxList<SocialMediaUser> selectedUsers = <SocialMediaUser>[].obs;
   CallDataSources callDataSources = CallDataSources();
 
   // إضافة متغير المستخدم التفاعلي
@@ -81,15 +82,14 @@ class HomeController extends GetxController {
       );
 
       final ChatDataSources chatDataSources = ChatDataSources(
-        chatServicesParameters: ChatServicesParameters(
-          myId: currentUser.uid?.encryptTextToNumbers(),
-          hisId: otherUser.uid?.encryptTextToNumbers(),
-          myUser: currentUser,
-          hisUser: otherUser,
+        chatConfiguration: ChatConfiguration(
+          members: [ currentUser, otherUser ],
         ),
       );
 
-      final chatRoom = await chatDataSources.createNewChatRoom();
+      final chatRoom = await chatDataSources.createNewChatRoom(
+        members: [ currentUser, otherUser ],
+        isGroupChat: false);
       print("✅ Chat room created: ${chatRoom.toMap()}");
 
       Get.back();
@@ -97,9 +97,9 @@ class HomeController extends GetxController {
       Get.toNamed(
         Routes.CHAT,
         arguments: {
-          "sender": currentUser,
-          "receiver": otherUser,
           "useSessionManager": true,
+          "roomId": chatRoom.id,
+          "members": [ currentUser, otherUser ],
         },
       );
     } catch (e) {
@@ -117,4 +117,14 @@ class HomeController extends GetxController {
       print('Error fetching users: $e');
     }
   }
+
+  
+// Add these methods
+void toggleUserSelection(SocialMediaUser user) {
+  if (selectedUsers.contains(user)) {
+    selectedUsers.remove(user);
+  } else {
+    selectedUsers.add(user);
+  }
+}
 }

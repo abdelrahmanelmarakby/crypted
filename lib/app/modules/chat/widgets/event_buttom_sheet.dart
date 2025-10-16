@@ -1,3 +1,4 @@
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -459,11 +460,8 @@ class _EventBottomSheetState extends State<EventBottomSheet>
 
       final eventMessage = EventMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        roomId: ChatDataSources.getRoomId(
-          widget.controller.sender?.uid ?? "",
-          widget.controller.receiver?.uid ?? "",
-        ),
-        senderId: widget.controller.sender?.uid ?? "",
+        roomId: widget.controller.roomId,
+        senderId: UserService.currentUser.value?.uid ?? "",
         timestamp: DateTime.now(),
         title: titleController.text.trim(),
         description: descriptionController.text.trim(),

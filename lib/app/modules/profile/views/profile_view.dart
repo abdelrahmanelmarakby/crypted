@@ -237,29 +237,53 @@ class ProfileView extends GetView<ProfileController> {
                         Obx(() {
                           // Show selected image if available
                           if (controller.selectedImage.value != null) {
-                            return CircleAvatar(
-                              backgroundImage:
-                                  FileImage(controller.selectedImage.value!),
-                              radius: Radiuss.xXLarge50,
+                            return Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                image: DecorationImage(
+                                  image: FileImage(controller.selectedImage.value!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              height: Radiuss.xXLarge50 * 2,
+                              width: Radiuss.xXLarge50 * 2,
                             );
                           }
 
                           // Show user's profile image or default
                           if (user.imageUrl != null &&
                               user.imageUrl!.isNotEmpty) {
-                            return AppCachedNetworkImage(
-                              imageUrl: user.imageUrl!,
-                              height: Radiuss.xXLarge50 * 2,
-                              width: Radiuss.xXLarge50 * 2,
-                              isCircular: true,
-                              fit: BoxFit.cover,
+                            return ClipRRect( 
+                              borderRadius: BorderRadius.circular(Radiuss.xXLarge50),
+                              child: AppCachedNetworkImage(
+                                imageUrl: user.imageUrl!,
+                                height: Radiuss.xXLarge50 * 2,
+                                width: Radiuss.xXLarge50 * 2,
+                                isCircular: true,
+                                fit: BoxFit.cover,
+                              ),
                             );
                           }
 
-                          return CircleAvatar(
-                            backgroundImage: const AssetImage(
-                                'assets/images/Profile Image111.png'),
-                            radius: Radiuss.xXLarge50,
+                          return Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              image: DecorationImage(
+                                image: const AssetImage(
+                                    'assets/images/Profile Image111.png'),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            height: Radiuss.xXLarge50 * 2,
+                            width: Radiuss.xXLarge50 * 2,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(Radiuss.xXLarge50),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
                           );
                         }),
                         // Loading indicator overlay

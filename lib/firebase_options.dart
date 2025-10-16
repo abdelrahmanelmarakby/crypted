@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '129583430741',
     projectId: 'crypted-8468f',
     storageBucket: 'crypted-8468f.firebasestorage.app',
-    iosBundleId: 'com.crypted.app',
+    iosBundleId: 'com.example.cryptedApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '129583430741',
     projectId: 'crypted-8468f',
     storageBucket: 'crypted-8468f.firebasestorage.app',
-    iosBundleId: 'com.crypted.app',
+    iosBundleId: 'com.example.cryptedApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'crypted-8468f.firebasestorage.app',
     measurementId: 'G-LC1257PL0D',
   );
+
 }

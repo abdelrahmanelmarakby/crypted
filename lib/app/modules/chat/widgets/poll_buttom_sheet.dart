@@ -1,4 +1,5 @@
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
@@ -111,11 +112,8 @@ class _PollBottomSheetState extends State<PollBottomSheet>
     try {
       final pollMessage = PollMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        roomId: ChatDataSources.getRoomId(
-          widget.controller.sender?.uid ?? "",
-          widget.controller.receiver?.uid ?? "",
-        ),
-        senderId: widget.controller.sender?.uid ?? "",
+        roomId: widget.controller.roomId,
+        senderId: UserService.currentUser.value?.uid ?? "",
         timestamp: DateTime.now(),
         question: questionController.text.trim(),
         options: options,

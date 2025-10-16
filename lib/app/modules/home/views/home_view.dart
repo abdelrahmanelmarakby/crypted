@@ -59,14 +59,14 @@ class HomeView extends GetView<HomeController> {
                     children: [
                       Text(
                         Constants.kHello.tr,
-                        style: StylesManager.medium(fontSize: FontSize.small),
+                        style: StylesManager.regular(fontSize: FontSize.small, color: ColorsManager.grey),
                       ),
-                      Obx(() => Text(
+                      Obx(() => Text(   
                             controller.myUser.value?.fullName ??
                                 UserService.currentUser.value?.fullName ??
                                 Constants.kUser.tr,
                             style: StylesManager.regular(
-                                fontSize: FontSize.medium),
+                                fontSize: FontSize.medium, color: ColorsManager.black),
                           )),
                     ],
                   ),

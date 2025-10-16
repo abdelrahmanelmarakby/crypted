@@ -1,18 +1,17 @@
-import 'package:crypted_app/app/modules/chat/bindings/chat_binding.dart';
-import 'package:crypted_app/app/modules/chat/views/chat_screen.dart';
-
-//import 'package:crypted_app/app/modules/templates/stories2/bindings/stories2_binding.dart';
-
 import 'package:get/get_navigation/src/routes/get_route.dart';
 
 import '../modules/callfriend/bindings/callfriend_binding.dart';
 import '../modules/callfriend/views/callfriend_view.dart';
 import '../modules/calls/bindings/calls_binding.dart';
 import '../modules/calls/views/calls_view.dart';
+import '../modules/chat/bindings/chat_binding.dart';
+import '../modules/chat/views/chat_screen.dart';
 import '../modules/contactInfo/bindings/contact_info_binding.dart';
 import '../modules/contactInfo/views/contact_info_view.dart';
 import '../modules/forgetPassword/bindings/forget_password_binding.dart';
 import '../modules/forgetPassword/views/forget_password_view.dart';
+import '../modules/groupChat/bindings/group_chat_binding.dart';
+import '../modules/groupChat/views/group_chat_view.dart';
 import '../modules/group_info/bindings/group_info_binding.dart';
 import '../modules/group_info/views/group_info_view.dart';
 import '../modules/help/bindings/help_binding.dart';
@@ -43,6 +42,8 @@ import '../modules/splash/bindings/splash_binding.dart';
 import '../modules/splash/views/splash_view.dart';
 import '../modules/stories/bindings/stories_binding.dart';
 import '../modules/stories/views/stories_view.dart';
+
+//import 'package:crypted_app/app/modules/templates/stories2/bindings/stories2_binding.dart';
 
 part 'app_routes.dart';
 
@@ -104,7 +105,7 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.NAVBAR,
-      page: () => const NavbarView(),
+      page: () =>  NavbarView(),
       binding: NavbarBinding(),
     ),
     GetPage(
@@ -154,8 +155,20 @@ class AppPages {
     // ),
     GetPage(
       name: _Paths.CHAT,
-      page: () => const ChatScreen(),
+      page: () => const PrivateChatScreen(),
       binding: ChatBinding(),
+    ),
+    GetPage(
+      name: _Paths.GROUP_CHAT,
+      page: () => const GroupChatView(),
+      binding: GroupChatBinding(),
+      children: [
+        GetPage(
+          name: _Paths.GROUP_CHAT,
+          page: () => const GroupChatView(),
+          binding: GroupChatBinding(),
+        ),
+      ],
     ),
   ];
 }
