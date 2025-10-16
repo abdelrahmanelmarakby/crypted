@@ -1,0 +1,20 @@
+name: photo_gallery
+
+description: A Flutter plugin for accessing photos and videos from the device's gallery.
+version: 2.2.1
+
+environment:
+  sdk: ">=2.12.0 <4.0.0"
+  flutter: ">=1.20.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  permission_handler: ^11.4.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.morbit.photogallery
+        pluginClass: PhotoGalleryPlugin 

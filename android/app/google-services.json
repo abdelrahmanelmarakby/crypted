@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "129583430741",
+    "project_id": "crypted-8468f",
+    "storage_bucket": "crypted-8468f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:129583430741:android:c85f747891671468f328dc",
+        "android_client_info": {
+          "package_name": "com.example.crypted_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDulqa7QJUuFaXAfcd0xM0uDusC6lvqyc4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

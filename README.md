@@ -1,4 +1,4 @@
-# crypted
+# crypted_app
 
 A new Flutter project.
 

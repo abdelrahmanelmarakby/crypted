@@ -1,118 +1,113 @@
+import 'dart:async';
+import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../core/extensions/int.dart';
-import '../../core/extensions/string.dart';
-import '../../core/constants/theme/colors_manager.dart';
-import '../../core/constants/theme/sizes_manager.dart';
-import '../../core/constants/theme/styles_manager.dart';
-import 'required_text_widget.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class CustomTextField extends StatefulWidget {
+  // Appearance Properties
   final Color? iconColor;
   final Color? labelColor;
   final Color? hintColor;
+  final Color? fillColor;
+  final Color? textColor;
+  final Color? borderColor;
+  final Color? focusedBorderColor;
+  final double borderRadius;
+  final double height;
+  final double? textSize;
+  final bool isBold;
+
+  // Input Properties
   final TextInputType? type;
   final String? hint;
-  final Iterable<String>? autoFillHints;
   final String? anotherHint;
+  final String? initialValue;
+  final int? maxLines;
+  final int? maxLength;
+  final TextInputAction inputAction;
+  final TextAlign? textAlign;
+  final TextDirection? textDirection;
+  final List<TextInputFormatter>? formattedType;
+
+  // Behavior Properties
+  final bool isPassword;
+  final bool isRequired;
+  final bool isEnabled;
+  final bool readOnly;
+  final bool? autoFocus;
+  final bool keyboardPadding;
+  final bool contentPadding;
+  final bool needMargin;
+  final bool needToSuffixConstraints;
+  final bool isResendSuffixIcon;
+  final bool isNeedToElevation;
+
+  // Controllers and Callbacks
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String>? onChange;
   final ValueChanged<String>? onSubmit;
   final String? Function(String?)? validate;
-  final int? maxLines;
-  final TextEditingController? controller;
   final void Function()? onTap;
-  final bool keyboardPadding;
-  final bool contentPadding;
-  final int? maxLength;
-  final bool? autoFocus;
-  final String? errorText;
-  final Color? fillColor;
-  final Color? textColor;
-  final Widget? suffixIcon;
-
-  final String? initialValue;
-  final Widget? prefixIcon;
-
-  final bool isEnabled;
-  final bool needMargin;
-
-  final bool readOnly;
-  final double? textSize;
-
-  final TextDirection? textDirection;
-
-  final List<TextInputFormatter>? formattedType;
-  final double height;
-  final double borderRadius;
-  final Color? borderColor;
-  final Color? focusedBorderColor;
-
-  final bool isNeedToElevation;
-  final TextAlign? textAlign;
-  final bool needToSuffixConstraints;
-  final bool isResendSuffixIcon;
-  final bool isBold;
-  final TextInputAction inputAction;
-  final FocusNode? focusNode;
-  final String? name;
-  final bool isPassword;
-  final bool isRequired;
-  final bool isSunTitleRequired;
-
-  final String? sunTitle;
   final void Function(bool)? onFocusChange;
   final void Function()? onEditingComplete;
+
+  // Additional UI Elements
+  final String? name;
+  final String? errorText;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
+  final Iterable<String>? autoFillHints;
+
   const CustomTextField({
     super.key,
-    this.focusNode,
-    this.sunTitle,
-    this.type,
-    this.isSunTitleRequired = false,
-    this.hint,
-    this.isRequired = false,
-    this.autoFillHints,
-    this.isPassword = false,
-    this.onChange,
-    this.validate,
-    this.onFocusChange,
-    this.focusedBorderColor = ColorsManager.primary1000,
-    this.inputAction = TextInputAction.next,
-    this.onTap,
-    this.maxLines,
-    this.isEnabled = true,
-    this.onEditingComplete,
-    this.controller,
-    this.errorText,
-    this.fillColor,
-    this.textColor,
-    this.maxLength,
-    this.formattedType,
     this.iconColor,
     this.labelColor,
+    this.hintColor = Colors.grey,
+    this.fillColor = Colors.white,
+    this.textColor,
+    this.borderColor = ColorsManager.borderColor,
+    this.focusedBorderColor = ColorsManager.primary,
+    this.borderRadius = 8,
+    this.height = 50,
+    this.textSize,
+    this.isBold = true,
+    this.type,
+    this.hint,
+    this.anotherHint,
+    this.initialValue,
+    this.maxLines,
+    this.maxLength,
+    this.inputAction = TextInputAction.next,
+    this.textAlign,
+    this.textDirection,
+    this.formattedType,
+    this.isPassword = false,
+    this.isRequired = false,
+    this.isEnabled = true,
+    this.readOnly = false,
+    this.autoFocus,
     this.keyboardPadding = true,
     this.contentPadding = false,
-    this.autoFocus,
-    this.initialValue,
-    this.onSubmit,
-    this.prefixIcon,
-    this.readOnly = false,
     this.needMargin = true,
-    this.textDirection,
-    this.anotherHint,
-    this.suffixIcon,
-    this.textSize,
-    this.height = 50,
-    this.borderRadius = 10,
-    this.isNeedToElevation = false,
-    this.hintColor,
-    this.textAlign,
-    this.borderColor = Colors.grey,
     this.needToSuffixConstraints = false,
     this.isResendSuffixIcon = false,
-    this.isBold = true,
+    this.isNeedToElevation = false,
+    this.controller,
+    this.focusNode,
+    this.onChange,
+    this.onSubmit,
+    this.validate,
+    this.onTap,
+    this.onFocusChange,
+    this.onEditingComplete,
     this.name,
+    this.errorText,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.autoFillHints,
   });
 
   @override
@@ -120,23 +115,51 @@ class CustomTextField extends StatefulWidget {
 }
 
 class _CustomTextFieldState extends State<CustomTextField> {
-  bool showPassword = false;
-  int passwordStrength = 0;
-  Color strengthColor = Colors.grey;
+  late bool _showPassword;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _showPassword = false;
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _handleTextChange(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), () {
+      widget.onChange?.call(value);
+    });
+  }
+
+  InputBorder _buildBorder({Color? color}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(widget.borderRadius),
+      borderSide: BorderSide(color: color ?? widget.borderColor!),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.name != null)
-          RequiredTextWidget(
-            text: widget.name ?? "",
-            isRequired: widget.isRequired,
-            anotherHint: widget.sunTitle,
-            isAnotherHintRequired: widget.isSunTitleRequired,
+        if (widget.name != null) ...[
+          Text(
+            widget.name!,
+            style: StylesManager.regular(
+              fontSize: 14,
+              color: widget.labelColor,
+            ),
           ),
-        if (widget.name != null) SizedBox(height: 8.h),
+          //   AppSpacer(heightRatio: .6),
+        ],
+        SizedBox(height: 10),
         TextFormField(
           enableSuggestions: true,
           focusNode: widget.focusNode,
@@ -152,109 +175,37 @@ class _CustomTextFieldState extends State<CustomTextField> {
           textAlign: widget.textAlign ?? TextAlign.start,
           controller: widget.controller,
           maxLines: widget.isPassword ? 1 : widget.maxLines ?? 1,
-          obscureText: widget.isPassword && !showPassword,
+          obscureText: widget.isPassword && !_showPassword,
           validator: widget.validate,
           keyboardType: widget.type,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          onChanged: widget.isPassword
-              ? (password) {
-                  if (widget.onChange != null) widget.onChange!(password);
-                  setState(() {
-                    passwordStrength = password.measurePasswordStrength();
-                    strengthColor =
-                        passwordStrength.getColorForPasswordStrength();
-                  });
-                }
-              : (txt) {
-                  if (widget.onChange != null) widget.onChange!(txt);
-                },
+          onChanged: _handleTextChange,
           inputFormatters: widget.formattedType ?? [],
-          style: StylesManager.medium(
-            fontSize: widget.textSize ?? 14,
+          style: StylesManager.regular(
+            fontSize: 14,
             color: widget.textColor ?? const Color(0xFF39434F),
           ),
           scrollPadding: EdgeInsets.only(
             bottom: widget.keyboardPadding
-                ? MediaQuery.of(context).size.height * .2
-                : 0.0,
+                ? MediaQuery.of(context).size.height * 0.2
+                : 0,
           ),
           cursorColor: Colors.grey,
           decoration: InputDecoration(
+            hintText: widget.anotherHint ?? widget.hint ?? "",
             hintStyle: StylesManager.medium(
-              fontSize: 14,
-              color: widget.hintColor ?? Colors.grey[600],
+              fontSize: 12,
+              color: widget.hintColor,
             ),
             isDense: true,
             enabled: widget.isEnabled,
-            hintText: widget.anotherHint ?? widget.hint ?? "",
-            labelStyle: TextStyle(
-              fontSize: 16,
-              color: widget.labelColor ?? ColorsManager.white,
-            ),
-            floatingLabelBehavior: FloatingLabelBehavior.always,
-            alignLabelWithHint: true,
-            errorStyle: const TextStyle(color: Colors.red),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(widget.borderRadius),
-              ),
-              borderSide: BorderSide(color: widget.borderColor!, width: 0.5),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(widget.borderRadius),
-              ),
-              borderSide: BorderSide(color: widget.borderColor!, width: 0.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(widget.borderRadius),
-              ),
-              borderSide:
-                  const BorderSide(color: ColorsManager.red, width: 0.5),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(widget.borderRadius),
-              ),
-              borderSide: const BorderSide(
-                  color: ColorsManager.primary1000, width: 0.5),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(widget.borderRadius),
-              ),
-              borderSide: BorderSide(color: widget.borderColor!, width: 0.5),
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(widget.borderRadius),
-              ),
-              borderSide: BorderSide(color: widget.borderColor!, width: 0.5),
-            ),
-
-            //  alignLabelWithHint: true,
-            fillColor: widget.fillColor ?? Colors.transparent,
             filled: true,
+            fillColor: widget.fillColor,
             errorText: widget.errorText,
             errorMaxLines: 1,
             prefixIcon: widget.prefixIcon,
-            suffixIcon: widget.isPassword
-                ? SizedBox(
-                    width: Sizes.size38.h,
-                    child: GestureDetector(
-                      onTap: () {
-                        showPassword = !showPassword;
-                        setState(() {});
-                      },
-                      child: Icon(
-                        showPassword ? Iconsax.eye : Iconsax.eye_slash,
-                        size: 16.h,
-                        color: const Color(0xFF82878F),
-                      ),
-                    ),
-                  )
-                : widget.suffixIcon,
+            suffixIcon:
+                widget.isPassword ? _buildPasswordToggle() : widget.suffixIcon,
             suffixIconConstraints: widget.needToSuffixConstraints
                 ? BoxConstraints(
                     minHeight: 47,
@@ -263,11 +214,37 @@ class _CustomTextFieldState extends State<CustomTextField> {
                     maxWidth: widget.isResendSuffixIcon ? 30 : 1,
                   )
                 : null,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: widget.height < 49
+                  ? (widget.suffixIcon != null || widget.prefixIcon != null
+                      ? 0
+                      : (widget.height - 30))
+                  : (widget.height / 2 - 10),
+            ),
+            border: _buildBorder(),
+            enabledBorder: _buildBorder(),
+            focusedBorder: _buildBorder(color: widget.focusedBorderColor),
+            disabledBorder: _buildBorder(),
+            errorBorder: _buildBorder(color: ColorsManager.error),
+            focusedErrorBorder: _buildBorder(),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPasswordToggle() {
+    return SizedBox(
+      width: 38,
+      child: GestureDetector(
+        onTap: () => setState(() => _showPassword = !_showPassword),
+        child: Icon(
+          _showPassword ? Iconsax.eye : Iconsax.eye_slash,
+          size: 20,
+          color: widget.iconColor ?? const Color(0xFF82878F),
+        ),
+      ),
     );
   }
 }

@@ -1,107 +1,120 @@
-
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:crypted_app/app/widgets/shimmer.dart';
 import 'package:flutter/material.dart';
-import 'package:crypted/gen/assets.gen.dart';
+import 'package:iconsax/iconsax.dart';
 
-import '../../core/constants/theme/colors_manager.dart';
-import 'custom_shimmer.dart';
+import 'loader.dart';
 
-class AppCashedImage extends StatelessWidget {
-  final String imageUrl;
-  final double? radius, width, height;
-  final BoxFit? fit;
-  final Color? borderColor;
-  final double? borderWidth;
-  final bool isCircular;
-  final Color? color;
-  const AppCashedImage({
-    required this.imageUrl,
-    this.width = 150,
-    this.height = 150,
-    this.radius,
-    this.fit,
-    this.borderColor,
-    this.borderWidth,
-    this.isCircular = false,
-    this.color,
+/// Wrapper widget around a [CachedNetworkImage]
+///
+/// See: https://pub.dev/packages/cached_network_image
+class AppCachedNetworkImage extends StatelessWidget {
+  /// Creates a new instance of [AppCachedNetworkImage]
+  const AppCachedNetworkImage({
     super.key,
+    required this.imageUrl,
+    this.customErrorWidgetBuilder,
+    this.customErrorWidget,
+    this.loaderWidget,
+    this.noLoader = false,
+    this.height,
+    this.width,
+    this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
+    this.color,
+    this.colorBlendMode,
+    this.isLoaderShimmer = true,
+    this.isCircular = false,
+    this.radius = 8,
   });
 
+  /// The image url
+  final String imageUrl;
+
+  /// An optional custom error widget builder
+  final LoadingErrorWidgetBuilder? customErrorWidgetBuilder;
+
+  /// An optional custom error widget
+  ///
+  /// Default to an [ErrorView] widget
+  final Widget? customErrorWidget;
+
+  /// An optional custom loader widget
+  ///
+  /// Defaults to a [Shimmer] widget if [isLoaderShimmer] is true
+  /// Defaults to a [AppLoader] widget if [isLoaderShimmer] is false
+  final Widget? loaderWidget;
+
+  /// Forces a null placeholder
+  final bool noLoader;
+
+  /// Image height
+  final double? height;
+
+  /// Image width
+  final double? width;
+
+  /// Image fit
+  final BoxFit fit;
+
+  /// Image alignment
+  final Alignment alignment;
+
+  /// Image overlay color
+  final Color? color;
+
+  /// Image overlay color blend mode
+  final BlendMode? colorBlendMode;
+
+  /// Indicates what loading widget to render
+  ///
+  /// [AppLoader] or [Shimmer]
+  /// Defaults to true
+  final bool isLoaderShimmer;
+  final bool isCircular;
+  final double? radius;
   @override
   Widget build(BuildContext context) {
+    final memCacheHeight = height != null ? (height! * 2).ceil() : null;
+    final memCacheWidth = width != null ? (width! * 2).ceil() : null;
     return Container(
       decoration: BoxDecoration(
-        border: borderColor == null
-            ? null
-            : Border.all(
-                color: borderColor ?? Theme.of(context).primaryColor,
-                width: borderWidth ?? 0,
-              ),
         shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: isCircular ? null : BorderRadius.circular(radius ?? 12),
       ),
-      child: CachedNetworkImage(
-        imageBuilder: (context, imageProvider) => Container(
-          decoration: BoxDecoration(
-            color: color ?? ColorsManager.primary1000.withOpacity(.2),
-            shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
-            borderRadius: isCircular
-                ? null
-                : BorderRadius.only(
-                    topLeft: Radius.circular(radius ?? 12),
-                    topRight: Radius.circular(radius ?? 12),
-                    bottomLeft: Radius.circular(radius ?? 12),
-                    bottomRight: Radius.circular(radius ?? 12),
-                  ),
-            image: DecorationImage(
-              image: imageProvider,
-              fit: fit ?? BoxFit.cover,
-            ),
-          ),
-        ),
-        imageUrl: imageUrl,
-        width: width,
-        height: height,
-        progressIndicatorBuilder: (context, url, downloadProgress) {
-          return MainShimmerWidget(
-            child: Container(
-              height: height,
-              width: width,
-              decoration: BoxDecoration(
-                shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
-                borderRadius: isCircular
-                    ? null
-                    : BorderRadius.only(
-                        topLeft: Radius.circular(radius ?? 12),
-                        topRight: Radius.circular(radius ?? 12),
-                        bottomLeft: Radius.circular(radius ?? 12),
-                        bottomRight: Radius.circular(radius ?? 12),
-                      ),
-              ),
-            ),
-          );
-        },
-        errorWidget: (context, url, error) {
-          return Container(
-            height: height,
-            width: width,
-            decoration: BoxDecoration(
-              shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
-              borderRadius: isCircular
+      child: RepaintBoundary(
+        child: CachedNetworkImage(
+          placeholder:
+              noLoader
                   ? null
-                  : BorderRadius.only(
-                      topLeft: Radius.circular(radius ?? 12),
-                      topRight: Radius.circular(radius ?? 12),
-                      bottomLeft: Radius.circular(radius ?? 12),
-                      bottomRight: Radius.circular(radius ?? 12),
-                    ),
-            ),
-            child: Assets.images.logo.image()/* const Icon(
-              Icons.error,
-              color: ColorsManager.primary1000,
-            ), */
-          );
-        },
+                  : (_, __) => Center(
+                    child:
+                        loaderWidget ??
+                        (isLoaderShimmer
+                            ? Shimmer(height: height, width: width)
+                            : const AppLoader()),
+                  ),
+          memCacheHeight: memCacheHeight,
+          memCacheWidth: memCacheWidth,
+          imageUrl: imageUrl,
+          width: width,
+          height: height,
+          fit: fit,
+          color: color,
+          colorBlendMode: colorBlendMode,
+          alignment: alignment,
+          errorWidget:
+              customErrorWidgetBuilder ??
+              (BuildContext context, String url, dynamic error) {
+                return Container(
+                  decoration: BoxDecoration(color: Colors.grey[300]),
+                  child:
+                      customErrorWidget ??
+                      const Icon(Iconsax.user, color: Colors.black),
+                );
+              }, // coverage:ignore-end
+        ),
       ),
     );
   }
