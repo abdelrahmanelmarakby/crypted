@@ -363,8 +363,8 @@ class ChatDataSources {
         'lastChat': DateTime.now().toIso8601String(),
       };
       
-      if (groupName != null) updateData['groupName'] = groupName;
-      if (groupDescription != null) updateData['groupDescription'] = groupDescription;
+      if (groupName != null) updateData['name'] = groupName;
+      if (groupDescription != null) updateData['description'] = groupDescription;
       if (groupImageUrl != null) updateData['groupImageUrl'] = groupImageUrl;
       
       await chatCollection.doc(roomId).update(updateData);

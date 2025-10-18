@@ -15,6 +15,7 @@ class ChatRoom {
   bool? read;
   bool? isGroupChat;
   String? description;
+  String? groupImageUrl;
   bool? isMuted;
   bool? isPinned;
   bool? isArchived;
@@ -34,6 +35,7 @@ class ChatRoom {
     this.blockingUserId,
     this.isGroupChat,
     this.description,
+    this.groupImageUrl,
     this.isMuted = false,
     this.isPinned = false,
     this.isArchived = false,
@@ -53,6 +55,7 @@ class ChatRoom {
     bool? read,
     bool? isGroupChat,
     String? description,
+    String? groupImageUrl,
     bool? isMuted,
     bool? isPinned,
     bool? isArchived,
@@ -71,6 +74,7 @@ class ChatRoom {
       read: read ?? this.read,
       isGroupChat: isGroupChat ?? this.isGroupChat,
       description: description ?? this.description,
+      groupImageUrl: groupImageUrl ?? this.groupImageUrl,
       isMuted: isMuted ?? this.isMuted,
       isPinned: isPinned ?? this.isPinned,
       isArchived: isArchived ?? this.isArchived,
@@ -92,6 +96,7 @@ class ChatRoom {
       'read': read,
       'isGroupChat': isGroupChat,
       'description': description,
+      'groupImageUrl': groupImageUrl,
       'isMuted': isMuted,
       'isPinned': isPinned,
       'isArchived': isArchived,
@@ -121,6 +126,7 @@ class ChatRoom {
         read: data['read'] as bool?,
         isGroupChat: data['isGroupChat'] as bool?,
         description: _safeGet(data, 'description'),
+        groupImageUrl: _safeGet(data, 'groupImageUrl'),
         isMuted: data['isMuted'] as bool?,
         isPinned: data['isPinned'] as bool?,
         isArchived: data['isArchived'] as bool?,
@@ -169,6 +175,8 @@ class ChatRoom {
       isMuted: map['isMuted'] as bool?,
       isPinned: map['isPinned'] as bool?,
       isArchived: map['isArchived'] as bool?,
+      description: map['description'] as String?,
+      groupImageUrl: map['groupImageUrl'] as String?,
       blockedUsers: map['blockedUsers'] != null
           ? (map['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
           : null,

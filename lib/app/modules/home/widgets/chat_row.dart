@@ -422,10 +422,8 @@ class ChatRow extends StatelessWidget {
   /// Get the appropriate display image for the chat
   String _getChatDisplayImage() {
     if (chatRoom?.isGroupChat == true) {
-      // For group chats, you could show a group icon or the first member's image
-      // For now, we'll use the first member's image as fallback
-      final displayUser = _getChatDisplayUser();
-      return displayUser?.imageUrl ?? "";
+      // For group chats, use group image URL if available, otherwise fallback to first member's image
+      return chatRoom?.groupImageUrl ?? _getChatDisplayUser()?.imageUrl ?? "";
     } else {
       // For private chats, show the other user's image
       final displayUser = _getChatDisplayUser();

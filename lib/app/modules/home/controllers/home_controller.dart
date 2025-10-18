@@ -266,7 +266,7 @@ class HomeController extends GetxController {
       final chatRoom = await ChatService.instance.createChatRoom(
         members: allMembers,
         isGroupChat: true,
-        groupName: ChatSessionManager.instance.chatName,
+        groupName: groupName.value.isNotEmpty ? groupName.value : _generateGroupName(selectedUsersList),
         groupDescription: ChatSessionManager.instance.chatDescription,
         customRoomId: ChatSessionManager.instance.roomId,
       );

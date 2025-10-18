@@ -1,16 +1,19 @@
+import 'package:crypted_app/app/modules/group_info/controllers/group_info_controller.dart';
+import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends GetView<GroupInfoController> {
   const ProfileHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Obx(() => Column(
       children: [
         Container(
           width: Sizes.size104,
@@ -20,20 +23,35 @@ class ProfileHeader extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(Paddings.xXSmall),
-            child: Image.asset(
-              'assets/images/Profile Image111.png',
-              fit: BoxFit.cover,
-            ),
+            child: controller.displayImage != null && controller.displayImage!.isNotEmpty
+                ? ClipOval(
+                    child: AppCachedNetworkImage(
+                      imageUrl: controller.displayImage!,
+                      fit: BoxFit.cover,
+                      height: Sizes.size104,
+                      width: Sizes.size104,
+                    ),
+                  )
+                : CircleAvatar(
+                    backgroundColor: ColorsManager.primary.withOpacity(0.1),
+                    child: Text(
+                      controller.displayName.isNotEmpty ? controller.displayName.substring(0, 1).toUpperCase() : '?',
+                      style: StylesManager.bold(
+                        fontSize: FontSize.xXlarge,
+                        color: ColorsManager.primary,
+                      ),
+                    ),
+                  ),
           ),
         ),
         SizedBox(height: Sizes.size8),
         Text(
-          'elgam3a',
+          controller.displayName,
           style: StylesManager.regular(fontSize: FontSize.xLarge),
         ),
         SizedBox(height: Sizes.size4),
         Text(
-          '3 Members',
+          controller.displayMemberCount,
           style: StylesManager.medium(fontSize: FontSize.medium),
         ),
         SizedBox(height: Sizes.size10),
@@ -67,6 +85,6 @@ class ProfileHeader extends StatelessWidget {
           ],
         ),
       ],
-    );
+    ));
   }
 }

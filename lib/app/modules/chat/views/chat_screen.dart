@@ -218,17 +218,32 @@ class PrivateChatScreen extends GetView<ChatController> {
       title: GestureDetector(
         onTap: () {
           HapticFeedback.lightImpact();
-          Get.toNamed(
-            Routes.CONTACT_INFO,
-            arguments: {"user": otherUser},
-          );
+          if (controller.isGroupChat.value) {
+            // Navigate to group info for group chats
+            Get.toNamed(
+              Routes.GROUP_INFO,
+              arguments: {
+                "chatName": controller.chatName.value,
+                "chatDescription": controller.chatDescription.value,
+                "memberCount": controller.memberCount.value,
+                "members": controller.members,
+                "groupImageUrl": "", // TODO: Get from chat room data
+              },
+            );
+          } else {
+            // Navigate to contact info for individual chats
+            Get.toNamed(
+              Routes.CONTACT_INFO,
+              arguments: {"user": otherUser},
+            );
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // User avatar with online status
+              // Avatar with online status
               Stack(
                 children: [
                   Container(
@@ -244,44 +259,43 @@ class PrivateChatScreen extends GetView<ChatController> {
                         ),
                       ],
                     ),
-                    child: ClipOval(
-                      child: AppCachedNetworkImage(
-                        imageUrl: otherUser.imageUrl ?? '',
-                        height: 44,
-                        width: 44,
-                      ),
-                    ),
+                    child: controller.isGroupChat.value
+                        ? _buildGroupAvatar()
+                        : _buildPrivateAvatar(otherUser),
                   ),
-                  // Online status indicator
-                  Positioned(
-                    right: 2,
-                    bottom: 2,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: ColorsManager.darkGrey,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: ColorsManager.navbarColor,
-                          width: 2,
+                  // Online status indicator - only for private chats
+                  if (!controller.isGroupChat.value)
+                    Positioned(
+                      right: 2,
+                      bottom: 2,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.darkGrey,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: ColorsManager.navbarColor,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
-              
+
               const SizedBox(width: 12),
-              
-              // User info
+
+              // User/Group info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      otherUser.fullName ?? "Unknown User",
+                      controller.isGroupChat.value
+                          ? controller.chatName.value
+                          : otherUser.fullName ?? "Unknown User",
                       style: StylesManager.bold(
                         color: Colors.black,
                         fontSize: 18,
@@ -291,7 +305,9 @@ class PrivateChatScreen extends GetView<ChatController> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Offline", // You can make this dynamic
+                      controller.isGroupChat.value
+                          ? "${controller.memberCount.value} members"
+                          : "Offline", // You can make this dynamic
                       style: StylesManager.regular(
                         color: ColorsManager.darkGrey,
                         fontSize: 13,
@@ -305,32 +321,52 @@ class PrivateChatScreen extends GetView<ChatController> {
         ),
       ),
       actions: [
-        // Call buttons with modern design
-        _buildCallButton(
-          icon: SvgPicture.asset(
-            'assets/icons/call-calling.svg',
-            color: Colors.black,
-            height: 20,
-            width: 20,
+        // Show different actions based on chat type
+        if (controller.isGroupChat.value) ...[
+          // Group management button
+          IconButton(
+            onPressed: () => _showGroupManagementMenu(context),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.more_vert,
+                color: Colors.black,
+                size: 20,
+              ),
+            ),
           ),
-          onPressed: () => _handleAudioCall(otherUser),
-          isVideoCall: false,
-          otherUser: otherUser,
-        ),
-        
-        const SizedBox(width: 8),
-        
-        _buildCallButton(
-          icon: const Icon(
-            Iconsax.video_copy,
-            color: Colors.black,
-            size: 22,
+        ] else ...[
+          // Call buttons for private chats
+          _buildCallButton(
+            icon: SvgPicture.asset(
+              'assets/icons/call-calling.svg',
+              color: Colors.black,
+              height: 20,
+              width: 20,
+            ),
+            onPressed: () => _handleAudioCall(otherUser),
+            isVideoCall: false,
+            otherUser: otherUser,
           ),
-          onPressed: () => _handleVideoCall(otherUser),
-          isVideoCall: true,
-          otherUser: otherUser,
-        ),
-        
+
+          const SizedBox(width: 8),
+
+          _buildCallButton(
+            icon: const Icon(
+              Iconsax.video_copy,
+              color: Colors.black,
+              size: 22,
+            ),
+            onPressed: () => _handleVideoCall(otherUser),
+            isVideoCall: true,
+            otherUser: otherUser,
+          ),
+        ],
+
         const SizedBox(width: 16),
       ],
     );
@@ -495,6 +531,311 @@ class PrivateChatScreen extends GetView<ChatController> {
     return date1.year == date2.year &&
         date1.month == date2.month &&
         date1.day == date2.day;
+  }
+
+  /// Build avatar for group chats
+  Widget _buildGroupAvatar() {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: ColorsManager.primary.withOpacity(0.1),
+      ),
+      child: CircleAvatar(
+        backgroundColor: ColorsManager.primary.withOpacity(0.2),
+        child: Icon(
+          Icons.group,
+          color: ColorsManager.primary,
+          size: 24,
+        ),
+      ),
+    );
+  }
+
+  /// Build avatar for private chats
+  Widget _buildPrivateAvatar(dynamic otherUser) {
+    return ClipOval(
+      child: AppCachedNetworkImage(
+        imageUrl: otherUser.imageUrl ?? '',
+        height: 44,
+        width: 44,
+      ),
+    );
+  }
+
+  /// Show group management menu for group chats
+  void _showGroupManagementMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ColorsManager.lightGrey,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Group info
+              Text(
+                controller.chatName.value,
+                style: StylesManager.bold(fontSize: FontSize.large),
+              ),
+              Text(
+                "${controller.memberCount.value} members",
+                style: StylesManager.regular(fontSize: FontSize.small, color: ColorsManager.grey),
+              ),
+              const SizedBox(height: 20),
+
+              // Menu options
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.group_add, color: ColorsManager.primary),
+                ),
+                title: Text("Add Members", style: StylesManager.medium(fontSize: FontSize.medium)),
+                onTap: () {
+                  Get.back();
+                  _showAddMembersDialog();
+                },
+              ),
+
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.people, color: ColorsManager.primary),
+                ),
+                title: Text("View Members", style: StylesManager.medium(fontSize: FontSize.medium)),
+                onTap: () {
+                  Get.back();
+                  _showMembersList();
+                },
+              ),
+
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.settings, color: ColorsManager.primary),
+                ),
+                title: Text("Group Settings", style: StylesManager.medium(fontSize: FontSize.medium)),
+                onTap: () {
+                  Get.back();
+                  _showGroupSettings();
+                },
+              ),
+
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show dialog to add new members to group
+  void _showAddMembersDialog() {
+    Get.toNamed(Routes.HOME, arguments: {'showUserSelection': true});
+  }
+
+  /// Show list of current group members
+  void _showMembersList() {
+    // Navigate to a members list view or show in a dialog
+    Get.dialog(
+      Dialog(
+        child: Container(
+          width: double.maxFinite,
+          height: 400,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(
+                "Group Members",
+                style: StylesManager.bold(fontSize: FontSize.large),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: controller.members.length,
+                  itemBuilder: (context, index) {
+                    final member = controller.members[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: member.imageUrl != null && member.imageUrl!.isNotEmpty
+                            ? NetworkImage(member.imageUrl!)
+                            : null,
+                        child: member.imageUrl == null || member.imageUrl!.isEmpty
+                            ? Text(member.fullName?.substring(0, 1).toUpperCase() ?? '?')
+                            : null,
+                      ),
+                      title: Text(member.fullName ?? 'Unknown'),
+                      subtitle: Text(member.uid == UserService.currentUser.value?.uid ? 'You' : 'Member'),
+                      trailing: member.uid != UserService.currentUser.value?.uid
+                          ? IconButton(
+                              icon: const Icon(Icons.remove_circle, color: ColorsManager.error),
+                              onPressed: () {
+                                _removeMember(member.uid!);
+                                Get.back();
+                              },
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show group settings dialog
+  void _showGroupSettings() {
+    Get.dialog(
+      Dialog(
+        child: Container(
+          width: double.maxFinite,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Group Settings",
+                style: StylesManager.bold(fontSize: FontSize.large),
+              ),
+              const SizedBox(height: 20),
+
+              // Group name setting
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text("Edit Group Name"),
+                subtitle: Text(controller.chatName.value),
+                onTap: () {
+                  Get.back();
+                  _showEditGroupNameDialog();
+                },
+              ),
+
+              // Group description setting
+              ListTile(
+                leading: const Icon(Icons.description),
+                title: Text("Edit Description"),
+                subtitle: Text(controller.chatDescription.value.isEmpty ? "No description" : controller.chatDescription.value),
+                onTap: () {
+                  Get.back();
+                  _showEditGroupDescriptionDialog();
+                },
+              ),
+
+              // Change group photo
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: Text("Change Group Photo"),
+                onTap: () {
+                  Get.back();
+                  // TODO: Implement group photo change
+                  Get.snackbar("Coming Soon", "Group photo change will be available soon");
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show dialog to edit group name
+  void _showEditGroupNameDialog() {
+    final TextEditingController nameController = TextEditingController(text: controller.chatName.value);
+
+    Get.dialog(
+      AlertDialog(
+        title: Text("Edit Group Name"),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            hintText: "Enter group name",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              if (nameController.text.trim().isNotEmpty) {
+                controller.updateGroupInfo(name: nameController.text.trim());
+                Get.back();
+              }
+            },
+            child: Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog to edit group description
+  void _showEditGroupDescriptionDialog() {
+    final TextEditingController descController = TextEditingController(text: controller.chatDescription.value);
+
+    Get.dialog(
+      AlertDialog(
+        title: Text("Edit Group Description"),
+        content: TextField(
+          controller: descController,
+          decoration: InputDecoration(
+            hintText: "Enter group description",
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              controller.updateGroupInfo(description: descController.text.trim());
+              Get.back();
+            },
+            child: Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Remove a member from the group
+  void _removeMember(String userId) {
+    controller.removeMemberFromGroup(userId);
   }
 
   String _formatDate(DateTime date) {

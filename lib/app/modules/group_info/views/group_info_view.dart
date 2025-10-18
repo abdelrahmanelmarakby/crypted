@@ -66,7 +66,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '3 Members',
+                controller.displayMemberCount,
                 style: StylesManager.regular(fontSize: FontSize.small),
               ),
             ),
