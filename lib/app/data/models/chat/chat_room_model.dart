@@ -15,6 +15,10 @@ class ChatRoom {
   bool? read;
   bool? isGroupChat;
   String? description;
+  bool? isMuted;
+  bool? isPinned;
+  bool? isArchived;
+  List<String>? blockedUsers;
   
 
   ChatRoom({
@@ -30,6 +34,10 @@ class ChatRoom {
     this.blockingUserId,
     this.isGroupChat,
     this.description,
+    this.isMuted = false,
+    this.isPinned = false,
+    this.isArchived = false,
+    this.blockedUsers,
   });
 
   ChatRoom copyWith({
@@ -45,6 +53,10 @@ class ChatRoom {
     bool? read,
     bool? isGroupChat,
     String? description,
+    bool? isMuted,
+    bool? isPinned,
+    bool? isArchived,
+    List<String>? blockedUsers,
   }) {
     return ChatRoom(
       blockingUserId: blockingUserId ?? this.blockingUserId,
@@ -59,6 +71,10 @@ class ChatRoom {
       read: read ?? this.read,
       isGroupChat: isGroupChat ?? this.isGroupChat,
       description: description ?? this.description,
+      isMuted: isMuted ?? this.isMuted,
+      isPinned: isPinned ?? this.isPinned,
+      isArchived: isArchived ?? this.isArchived,
+      blockedUsers: blockedUsers ?? this.blockedUsers,
     );
   }
 
@@ -67,14 +83,19 @@ class ChatRoom {
       'id': id,
       'name': name,
       'blockingUserId': blockingUserId,
-      'membersIds': membersIds, // Use membersIds instead of members
+      'membersIds': membersIds,
+      'members': members?.map((member) => member.toMap()).toList(), // Include members in saved data
       'lastMsg': lastMsg,
-      'lastSender': lastSender, // Remove unnecessary enum conversion
+      'lastSender': lastSender,
       'lastChat': lastChat,
       'keywords': keywords,
       'read': read,
       'isGroupChat': isGroupChat,
       'description': description,
+      'isMuted': isMuted,
+      'isPinned': isPinned,
+      'isArchived': isArchived,
+      'blockedUsers': blockedUsers,
     };
   }
 
@@ -100,6 +121,12 @@ class ChatRoom {
         read: data['read'] as bool?,
         isGroupChat: data['isGroupChat'] as bool?,
         description: _safeGet(data, 'description'),
+        isMuted: data['isMuted'] as bool?,
+        isPinned: data['isPinned'] as bool?,
+        isArchived: data['isArchived'] as bool?,
+        blockedUsers: data['blockedUsers'] != null
+            ? (data['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
+            : null,
       );
     })
         .where((chatRoom) => chatRoom != null)
@@ -139,12 +166,18 @@ class ChatRoom {
           : null,
       read: map['read'] as bool?,
       isGroupChat: map['isGroupChat'] as bool?,
+      isMuted: map['isMuted'] as bool?,
+      isPinned: map['isPinned'] as bool?,
+      isArchived: map['isArchived'] as bool?,
+      blockedUsers: map['blockedUsers'] != null
+          ? (map['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
+          : null,
     );
   }
 
   @override
   String toString() {
-    return 'ChatRoom(blockingUserId: $blockingUserId, id: $id, membersIds: $membersIds, lastMsg: $lastMsg, lastSender: $lastSender, lastChat: $lastChat, keywords: $keywords, read: $read)';
+    return 'ChatRoom(blockingUserId: $blockingUserId, id: $id, membersIds: $membersIds, lastMsg: $lastMsg, lastSender: $lastSender, lastChat: $lastChat, keywords: $keywords, read: $read, isMuted: $isMuted, isPinned: $isPinned, isArchived: $isArchived)';
   }
 
   @override
@@ -159,7 +192,11 @@ class ChatRoom {
         other.lastChat == lastChat &&
         listEquals(other.keywords, keywords) &&
         other.read == read &&
-        other.isGroupChat == isGroupChat;
+        other.isGroupChat == isGroupChat &&
+        other.isMuted == isMuted &&
+        other.isPinned == isPinned &&
+        other.isArchived == isArchived &&
+        listEquals(other.blockedUsers, blockedUsers);
   }
 
   @override
@@ -173,6 +210,10 @@ class ChatRoom {
         lastChat.hashCode ^
         keywords.hashCode ^
         read.hashCode ^
-        isGroupChat.hashCode;
+        isGroupChat.hashCode ^
+        isMuted.hashCode ^
+        isPinned.hashCode ^
+        isArchived.hashCode ^
+        blockedUsers.hashCode;
   }
 }

@@ -17,6 +17,11 @@ class EventMessage extends Message {
     this.eventDate,
     super.reactions,
     super.replyTo,
+    super.isPinned,
+    super.isFavorite,
+    super.isDeleted,
+    super.isForwarded,
+    super.forwardedFrom,
   });
 
   @override
@@ -35,9 +40,14 @@ class EventMessage extends Message {
         timestamp: DateTime.parse(map['timestamp']),
         title: map['title'],
         description: map['description'],
-        eventDate: DateTime.parse(map['eventDate']),
+        eventDate: map['eventDate'] != null ? DateTime.parse(map['eventDate']) : null,
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
+        isPinned: map['isPinned'] ?? false,
+        isFavorite: map['isFavorite'] ?? false,
+        isDeleted: map['isDeleted'] ?? false,
+        isForwarded: map['isForwarded'] ?? false,
+        forwardedFrom: map['forwardedFrom'],
       );
 
   @override
@@ -51,6 +61,11 @@ class EventMessage extends Message {
     DateTime? timestamp,
     List<Reaction>? reactions,
     ReplyToMessage? replyTo,
+    bool? isPinned,
+    bool? isFavorite,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFrom,
   }) {
     return EventMessage(
       title: title ?? this.title,
@@ -62,6 +77,11 @@ class EventMessage extends Message {
       timestamp: timestamp ?? this.timestamp,
       reactions: reactions ?? this.reactions,
       replyTo: replyTo ?? this.replyTo,
+      isPinned: isPinned ?? this.isPinned,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFrom: forwardedFrom ?? this.forwardedFrom,
     );
   }
 }

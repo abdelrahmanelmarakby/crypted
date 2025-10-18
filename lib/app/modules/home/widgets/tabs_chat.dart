@@ -171,7 +171,12 @@ class TabsChat extends StatelessWidget {
             ];
           },
           body: TabBarView(
-            children: [TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false), TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false), TabBarBody(getGroupChatOnly: true, getPrivateChatOnly: false), TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: true)],
+            children: [
+              TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false), // All
+              TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false, getUnreadOnly: true), // Unread
+              TabBarBody(getGroupChatOnly: true, getPrivateChatOnly: false), // Groups
+              TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false, getFavoriteOnly: true), // Favourite
+            ],
           ),
         ),
       ),

@@ -34,12 +34,12 @@ enum MessageType {
 
 class ChatDataSources {
   // =================== PROPERTIES ===================
-  final ChatConfiguration chatConfiguration;
+  final ChatConfiguration? chatConfiguration;
   final CollectionReference chatCollection = FirebaseFirestore.instance.collection('chats');
   final String userId = UserService.currentUser.value?.uid.toString() ?? 
                        FirebaseAuth.instance.currentUser?.uid.toString() ?? '';
   
-  ChatDataSources({required this.chatConfiguration});
+  ChatDataSources({this.chatConfiguration});
 
   // =================== CHAT ROOM QUERIES ===================
   
@@ -93,8 +93,10 @@ class ChatDataSources {
 
   /// Check if a chat room exists between specific members
   Future<bool> chatRoomExists() async {
+    if (chatConfiguration == null || chatConfiguration!.members.isEmpty) return false;
+
     final querySnapshot = await chatCollection
-        .where('membersIds', isEqualTo: chatConfiguration.members.map((e) => e.uid).toList())
+        .where('membersIds', isEqualTo: chatConfiguration!.members.map((e) => e.uid).toList())
         .get();
     
     if (kDebugMode) {
@@ -155,8 +157,8 @@ class ChatDataSources {
         Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
         blockedList = userData["blockedUser"] ?? [];
         
-        final memberUids = chatConfiguration.members.map((e) => e.uid).toList();
-        if (blockedList.any((blocked) => memberUids.contains(blocked))) {
+        final memberUids = members?.map((e) => e.uid).toList() ?? [];
+        if (memberUids.isNotEmpty && blockedList.any((blocked) => memberUids.contains(blocked))) {
           throw Exception('Cannot create chat room with blocked users');
         }
       }
@@ -164,15 +166,15 @@ class ChatDataSources {
       final chatRoom = ChatRoom(
         id: roomId,
         keywords: List.generate(
-          chatConfiguration.members.length, 
-          (index) => 'id+${chatConfiguration.members[index].uid}+'
+          members?.length ?? 0,
+          (index) => 'id+${members![index].uid}+'
         ),
         read: false,
         membersIds: List.generate(
-          chatConfiguration.members.length, 
-          (index) => chatConfiguration.members[index].uid ?? ""
+          members?.length ?? 0,
+          (index) => members![index].uid ?? ""
         ),
-        members: chatConfiguration.members,
+        members: members,
         lastMsg: setLastMessage(privateMessage),
         lastSender: userId,
         lastChat: DateTime.now().toIso8601String(),
@@ -382,6 +384,30 @@ class ChatDataSources {
 
   // =================== MESSAGE OPERATIONS ===================
   
+  /// Update a specific message
+  Future<void> updateMessage({
+    required String roomId,
+    required String messageId,
+    required Map<String, dynamic> updates,
+  }) async {
+    try {
+      await chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .doc(messageId)
+          .update(updates);
+
+      if (kDebugMode) {
+        print('✅ Message updated: $messageId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error updating message: $error');
+      }
+      rethrow;
+    }
+  }
+
   /// Get live messages for a chat room
   Stream<List<Message>> getLivePrivateMessage(String roomId) {
     return chatCollection
@@ -441,23 +467,28 @@ class ChatDataSources {
           .toMap(),
     );
     
-    await updateChatRoom(privateMessage, roomId);
+    await updateChatRoomWithMessage(privateMessage, roomId);
   }
 
   /// Update chat room with latest message info
-  Future<void> updateChatRoom(Message? privateMessage, String roomId) async {
+  Future<void> updateChatRoomWithMessage(Message? privateMessage, String roomId) async {
+    if (chatConfiguration == null || chatConfiguration!.members.isEmpty) {
+      print("❌ Cannot update chat room: chatConfiguration is null or empty");
+      return;
+    }
+
     final room = ChatRoom(
       id: roomId,
       read: false,
       keywords: List<String>.generate(
-        chatConfiguration.members.length,
-        (index) => 'id+${chatConfiguration.members[index].uid}+'
+        chatConfiguration!.members.length,
+        (index) => 'id+${chatConfiguration!.members[index].uid}+'
       ),
       membersIds: List<String>.generate(
-        chatConfiguration.members.length,
-        (index) => chatConfiguration.members[index].uid ?? ""
+        chatConfiguration!.members.length,
+        (index) => chatConfiguration!.members[index].uid ?? ""
       ),
-      members: chatConfiguration.members,
+      members: chatConfiguration!.members, // Keep existing members for updates
       lastMsg: setLastMessage(privateMessage),
       lastSender: userId,
       lastChat: DateTime.now().toIso8601String(),
@@ -557,23 +588,143 @@ class ChatDataSources {
 
   // =================== DELETE OPERATIONS ===================
   
-  /// Delete a specific message
-  Future<void> deletePrivateMessage(String msgId, String roomId) async {
+  /// Update chat room properties (mute, pin, archive, block)
+  Future<void> updateChatRoomProperties({
+    required String roomId,
+    Map<String, dynamic>? updates,
+  }) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('Chats')
+      await chatCollection.doc(roomId).update(updates ?? {});
+
+      if (kDebugMode) {
+        print('✅ Chat room updated: $roomId with ${updates?.keys.join(", ")}');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error updating chat room: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Toggle mute status for a chat room
+  Future<void> toggleMuteChat(String roomId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      final currentMuted = chatRoom.isMuted ?? false;
+      await updateChatRoomProperties(roomId: roomId, updates: {'isMuted': !currentMuted});
+
+      if (kDebugMode) {
+        print('✅ Chat ${!currentMuted ? 'muted' : 'unmuted'}: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error toggling mute: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Toggle pin status for a chat room
+  Future<void> togglePinChat(String roomId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      final currentPinned = chatRoom.isPinned ?? false;
+      await updateChatRoomProperties(roomId: roomId, updates: {'isPinned': !currentPinned});
+
+      if (kDebugMode) {
+        print('✅ Chat ${!currentPinned ? 'pinned' : 'unpinned'}: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error toggling pin: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Block a user in a private chat
+  Future<void> blockUser(String roomId, String userId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      if (chatRoom.isGroupChat == true) {
+        throw Exception('Cannot block users in group chats');
+      }
+
+      final currentBlockedUsers = chatRoom.blockedUsers ?? [];
+      if (currentBlockedUsers.contains(userId)) {
+        throw Exception('User is already blocked');
+      }
+
+      currentBlockedUsers.add(userId);
+      await updateChatRoomProperties(roomId: roomId, updates: {'blockedUsers': currentBlockedUsers});
+
+      if (kDebugMode) {
+        print('✅ User blocked: $userId in room: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error blocking user: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Archive a chat room
+  Future<void> archiveChat(String roomId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      final currentArchived = chatRoom.isArchived ?? false;
+      if (currentArchived) {
+        throw Exception('Chat is already archived');
+      }
+
+      await updateChatRoomProperties(roomId: roomId, updates: {'isArchived': true});
+
+      if (kDebugMode) {
+        print('✅ Chat archived: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error archiving chat: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Delete a specific message
+  Future<void> deletePrivateMessage(String messageId, String roomId) async {
+    try {
+      await chatCollection
           .doc(roomId)
           .collection('chat')
-          .doc(msgId)
+          .doc(messageId)
           .delete();
-      
+
       if (kDebugMode) {
-        print('✅ Message deleted: $msgId');
+        print('✅ Message deleted: $messageId');
       }
     } catch (error) {
       if (kDebugMode) {
         print('Error deleting message: $error');
       }
+      rethrow;
     }
   }
 

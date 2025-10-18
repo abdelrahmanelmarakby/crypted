@@ -12,6 +12,11 @@ class TextMessage extends Message {
     required this.text,
     super.reactions,
     super.replyTo,
+    super.isPinned,
+    super.isFavorite,
+    super.isDeleted,
+    super.isForwarded,
+    super.forwardedFrom,
   });
 
   @override
@@ -29,6 +34,11 @@ class TextMessage extends Message {
         text: map['text'],
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
+        isPinned: map['isPinned'] ?? false,
+        isFavorite: map['isFavorite'] ?? false,
+        isDeleted: map['isDeleted'] ?? false,
+        isForwarded: map['isForwarded'] ?? false,
+        forwardedFrom: map['forwardedFrom'],
       );
 
   @override
@@ -40,6 +50,11 @@ class TextMessage extends Message {
     String? text,
     List<Reaction>? reactions,
     ReplyToMessage? replyTo,
+    bool? isPinned,
+    bool? isFavorite,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFrom,
   }) {
     return TextMessage(
       id: id ?? this.id,
@@ -49,6 +64,11 @@ class TextMessage extends Message {
       text: text ?? this.text,
       reactions: reactions ?? this.reactions,
       replyTo: replyTo ?? this.replyTo,
+      isPinned: isPinned ?? this.isPinned,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFrom: forwardedFrom ?? this.forwardedFrom,
     );
   }
 }

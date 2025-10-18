@@ -13,6 +13,11 @@ class CallMessage extends Message {
     required this.callModel,
     super.reactions,
     super.replyTo,
+    super.isPinned,
+    super.isFavorite,
+    super.isDeleted,
+    super.isForwarded,
+    super.forwardedFrom,
   });
 
   @override
@@ -30,6 +35,11 @@ class CallMessage extends Message {
         callModel: CallModel.fromMap(map['callModel']),
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
+        isPinned: map['isPinned'] ?? false,
+        isFavorite: map['isFavorite'] ?? false,
+        isDeleted: map['isDeleted'] ?? false,
+        isForwarded: map['isForwarded'] ?? false,
+        forwardedFrom: map['forwardedFrom'],
       );
 
   @override
@@ -41,6 +51,11 @@ class CallMessage extends Message {
     CallModel? callModel,
     List<Reaction>? reactions,
     ReplyToMessage? replyTo,
+    bool? isPinned,
+    bool? isFavorite,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFrom,
   }) {
     return CallMessage(
       id: id ?? this.id,
@@ -50,6 +65,11 @@ class CallMessage extends Message {
       callModel: callModel ?? this.callModel,
       reactions: reactions ?? this.reactions,
       replyTo: replyTo ?? this.replyTo,
+      isPinned: isPinned ?? this.isPinned,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFrom: forwardedFrom ?? this.forwardedFrom,
     );
   }
 }

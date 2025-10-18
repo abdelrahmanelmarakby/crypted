@@ -7,6 +7,7 @@ import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
+import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
@@ -84,16 +85,19 @@ class PrivateChatScreen extends GetView<ChatController> {
           ).getLivePrivateMessage(controller.roomId),
           initialData: const [],
           catchError: (error, stackTrace) {
+            print("Error in Members: ${controller.members}");
             print(error);
             print(stackTrace);
             return [];
           },
           builder: (context, child) {
+            print("members ${controller.members}");
+            print("Is group chat ? ${controller.isGroupChat.value} ${controller.isGroup}");
             final messages = Provider.of<List<Message>>(context);
             return Scaffold(
               backgroundColor: ColorsManager.navbarColor,
               extendBodyBehindAppBar: false,
-              // appBar: _buildAppBar(context, otherUser),
+              appBar: _buildAppBar(context, _getOtherUserForAppBar()),
               body: SafeArea(
                 child: Container(
                   decoration: BoxDecoration(
@@ -169,6 +173,25 @@ class PrivateChatScreen extends GetView<ChatController> {
     );
   }
 
+  /// Safely get the other user for app bar display
+  dynamic _getOtherUserForAppBar() {
+    try {
+      // Try to find other user from controller members
+      if (controller.members.isNotEmpty) {
+        final otherUsers = controller.members.where((user) => user.uid != UserService.currentUser.value?.uid);
+        if (otherUsers.isNotEmpty) {
+          return otherUsers.first;
+        }
+      }
+
+      // Fallback to current user if no other user found
+      return UserService.currentUser.value ?? SocialMediaUser(fullName: "Unknown User");
+    } catch (e) {
+      print("❌ Error getting other user for app bar: $e");
+      return SocialMediaUser(fullName: "Unknown User");
+    }
+  }
+
   PreferredSizeWidget _buildAppBar(BuildContext context, dynamic otherUser) {
     return AppBar(
       backgroundColor: ColorsManager.navbarColor,
@@ -237,7 +260,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: ColorsManager.darkGrey,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: ColorsManager.navbarColor,
@@ -268,9 +291,9 @@ class PrivateChatScreen extends GetView<ChatController> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Online", // You can make this dynamic
+                      "Offline", // You can make this dynamic
                       style: StylesManager.regular(
-                        color: Colors.green,
+                        color: ColorsManager.darkGrey,
                         fontSize: 13,
                       ),
                     ),

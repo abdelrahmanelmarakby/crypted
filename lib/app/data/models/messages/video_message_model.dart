@@ -13,12 +13,17 @@ class VideoMessage extends Message {
     required this.video,
     super.reactions,
     super.replyTo,
+    super.isPinned,
+    super.isFavorite,
+    super.isDeleted,
+    super.isForwarded,
+    super.forwardedFrom,
   });
 
   @override
   Map<String, dynamic> toMap() => {
         ...baseMap(),
-        'type': 'photo',
+        'type': 'video',
         'video': video,
       };
 
@@ -30,6 +35,11 @@ class VideoMessage extends Message {
         video: map['video'],
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
+        isPinned: map['isPinned'] ?? false,
+        isFavorite: map['isFavorite'] ?? false,
+        isDeleted: map['isDeleted'] ?? false,
+        isForwarded: map['isForwarded'] ?? false,
+        forwardedFrom: map['forwardedFrom'],
       );
 
   @override
@@ -41,6 +51,11 @@ class VideoMessage extends Message {
     DateTime? timestamp,
     List<Reaction>? reactions,
     ReplyToMessage? replyTo,
+    bool? isPinned,
+    bool? isFavorite,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFrom,
   }) {
     return VideoMessage(
       video: video ?? this.video,
@@ -50,6 +65,11 @@ class VideoMessage extends Message {
       timestamp: timestamp ?? this.timestamp,
       reactions: reactions ?? this.reactions,
       replyTo: replyTo ?? this.replyTo,
+      isPinned: isPinned ?? this.isPinned,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFrom: forwardedFrom ?? this.forwardedFrom,
     );
   }
 }

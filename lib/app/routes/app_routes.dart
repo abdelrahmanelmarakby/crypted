@@ -25,7 +25,6 @@ abstract class Routes {
   static const GROUP_INFO = _Paths.GROUP_INFO;
   static const STORIES2 = _Paths.STORIES2;
 //  static const PRIVET_CHAT = _Paths.PRIVET_CHAT;
-  static const GROUP_CHAT = _Paths.GROUP_CHAT;
 }
 
 abstract class _Paths {
@@ -52,5 +51,4 @@ abstract class _Paths {
   static const GROUP_INFO = '/group-info';
   static const STORIES2 = '/stories2';
 //  static const PRIVET_CHAT = '/privet-chat';
-  static const GROUP_CHAT = '/group-chat';
 }

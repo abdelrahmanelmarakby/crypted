@@ -14,6 +14,11 @@ class ContactMessage extends Message {
     required this.phoneNumber,
     super.reactions,
     super.replyTo,
+    super.isPinned,
+    super.isFavorite,
+    super.isDeleted,
+    super.isForwarded,
+    super.forwardedFrom,
   });
 
   @override
@@ -33,6 +38,11 @@ class ContactMessage extends Message {
         phoneNumber: map['phoneNumber'],
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
+        isPinned: map['isPinned'] ?? false,
+        isFavorite: map['isFavorite'] ?? false,
+        isDeleted: map['isDeleted'] ?? false,
+        isForwarded: map['isForwarded'] ?? false,
+        forwardedFrom: map['forwardedFrom'],
       );
 
   @override
@@ -45,6 +55,11 @@ class ContactMessage extends Message {
     DateTime? timestamp,
     List<Reaction>? reactions,
     ReplyToMessage? replyTo,
+    bool? isPinned,
+    bool? isFavorite,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFrom,
   }) {
     return ContactMessage(
       name: name ?? this.name,
@@ -55,6 +70,11 @@ class ContactMessage extends Message {
       timestamp: timestamp ?? this.timestamp,
       reactions: reactions ?? this.reactions,
       replyTo: replyTo ?? this.replyTo,
+      isPinned: isPinned ?? this.isPinned,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFrom: forwardedFrom ?? this.forwardedFrom,
     );
   }
 }

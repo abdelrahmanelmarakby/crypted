@@ -19,6 +19,11 @@ abstract class Message {
   final DateTime timestamp;
   final List<Reaction> reactions;
   final ReplyToMessage? replyTo;
+  final bool isPinned;
+  final bool isFavorite;
+  final bool isDeleted;
+  final bool isForwarded;
+  final String? forwardedFrom;
 
   Message({
     required this.id,
@@ -27,6 +32,11 @@ abstract class Message {
     required this.timestamp,
     this.reactions = const [],
     this.replyTo,
+    this.isPinned = false,
+    this.isFavorite = false,
+    this.isDeleted = false,
+    this.isForwarded = false,
+    this.forwardedFrom,
   });
 
   Map<String, dynamic> toMap();
@@ -75,11 +85,16 @@ abstract class Message {
         'timestamp': timestamp.toIso8601String(),
         'reactions': reactions.map((r) => r.toMap()).toList(),
         'replyTo': replyTo?.toMap(),
+        'isPinned': isPinned,
+        'isFavorite': isFavorite,
+        'isDeleted': isDeleted,
+        'isForwarded': isForwarded,
+        'forwardedFrom': forwardedFrom,
       };
 
   @override
   String toString() {
-    return 'Message(id: $id, roomId: $roomId, senderId: $senderId, timestamp: $timestamp, reactions: $reactions, replyTo: $replyTo)';
+    return 'Message(id: $id, roomId: $roomId, senderId: $senderId, timestamp: $timestamp, reactions: $reactions, replyTo: $replyTo, isPinned: $isPinned, isFavorite: $isFavorite, isDeleted: $isDeleted)';
   }
 
   @override
@@ -91,7 +106,10 @@ abstract class Message {
         other.senderId == senderId &&
         other.timestamp == timestamp &&
         listEquals(other.reactions, reactions) &&
-        other.replyTo == replyTo;
+        other.replyTo == replyTo &&
+        other.isPinned == isPinned &&
+        other.isFavorite == isFavorite &&
+        other.isDeleted == isDeleted;
   }
 
   @override
@@ -101,13 +119,27 @@ abstract class Message {
         senderId.hashCode ^
         timestamp.hashCode ^
         reactions.hashCode ^
-        replyTo.hashCode;
+        replyTo.hashCode ^
+        isPinned.hashCode ^
+        isFavorite.hashCode ^
+        isDeleted.hashCode;
   }
 
-  copyWith({required String id, }) {
-    return copyWith(
-      id: id,
-    );
+  copyWith({
+    String? id,
+    String? roomId,
+    String? senderId,
+    DateTime? timestamp,
+    List<Reaction>? reactions,
+    ReplyToMessage? replyTo,
+    bool? isPinned,
+    bool? isFavorite,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFrom,
+  }) {
+    // This is an abstract method, implementation in subclasses
+    throw UnimplementedError('copyWith must be implemented by subclasses');
   }
 }
 

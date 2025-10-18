@@ -103,6 +103,7 @@ dependencies:
   share_plus: ^7.2.2
   vector_graphics: ^1.1.18
   record: ^5.0.4
+  avatar_stack: ^3.0.0
   
   
 dev_dependencies:

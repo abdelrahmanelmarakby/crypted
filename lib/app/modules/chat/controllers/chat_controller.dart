@@ -8,15 +8,26 @@ import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/message_actions_bottom_sheet.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/image_message_model.dart' as image;
+import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/file_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/core/extensions/string.dart';
+import 'package:crypted_app/app/routes/app_pages.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -27,9 +38,7 @@ class ChatController extends GetxController {
   late final String roomId;
   final RxBool isLoading = true.obs;
   final RxBool isRecording = false.obs;
-  
-  // Enhanced member management
-  List<SocialMediaUser> members = ChatSessionManager.instance.members;
+  List<SocialMediaUser> members = [];
   
   // Group chat specific properties
   final RxBool isGroupChat = false.obs;
@@ -123,8 +132,7 @@ class ChatController extends GetxController {
 
   /// Initialize from Chat Session Manager
   void _initializeFromSessionManager() {
-    final sessionManager = ChatSessionManager.instance;
-    
+    final ChatSessionManager sessionManager = ChatSessionManager.instance;
     members = sessionManager.members;
     isGroupChat.value = sessionManager.isGroupChat;
     chatName.value = sessionManager.chatName;
@@ -568,13 +576,6 @@ class ChatController extends GetxController {
     }
   }
 
-  void clearMessages() => messages.clear();
-
-  void _clearMessageInput() {
-    messageController.clear();
-    update();
-  }
-
   void _showToast(String message) => BotToast.showText(text: message);
 
   void _showErrorToast(String message) {
@@ -589,6 +590,249 @@ class ChatController extends GetxController {
 
   void _showLoading() => BotToast.showLoading();
   void _hideLoading() => BotToast.closeAllLoading();
+
+  /// Delete a message
+  Future<void> deleteMessage(Message message) async {
+    try {
+      _showLoading();
+
+      // Update message to mark as deleted
+      final updatedMessage = message.copyWith(id: message.id, isDeleted: true) as Message;
+
+      // Update in Firestore
+      await chatDataSource.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {'isDeleted': true},
+      );
+
+      // Update local messages list
+      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+      if (messageIndex != -1) {
+        messages[messageIndex] = updatedMessage;
+        update();
+      }
+
+      _showToast('Message deleted');
+    } catch (e) {
+      _showErrorToast('Failed to delete message: ${e.toString()}');
+    } finally {
+      _hideLoading();
+    }
+  }
+
+  /// Pin/Unpin a message
+  Future<void> togglePinMessage(Message message) async {
+    try {
+      _showLoading();
+
+      final isCurrentlyPinned = message.isPinned;
+      final updatedMessage = message.copyWith(
+        id: message.id,
+        isPinned: !isCurrentlyPinned,
+      ) as Message;
+
+      // Update in Firestore
+      await chatDataSource.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {'isPinned': !isCurrentlyPinned},
+      );
+
+      // Update local messages list
+      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+      if (messageIndex != -1) {
+        messages[messageIndex] = updatedMessage;
+        update();
+      }
+
+      _showToast(isCurrentlyPinned ? 'Message unpinned' : 'Message pinned');
+    } catch (e) {
+      _showErrorToast('Failed to ${message.isPinned ? 'unpin' : 'pin'} message: ${e.toString()}');
+    } finally {
+      _hideLoading();
+    }
+  }
+
+  /// Favorite/Unfavorite a message
+  Future<void> toggleFavoriteMessage(Message message) async {
+    try {
+      _showLoading();
+
+      final isCurrentlyFavorite = message.isFavorite;
+      final updatedMessage = message.copyWith(
+        id: message.id,
+        isFavorite: !isCurrentlyFavorite,
+      ) as Message;
+
+      // Update in Firestore
+      await chatDataSource.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {'isFavorite': !isCurrentlyFavorite},
+      );
+
+      // Update local messages list
+      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+      if (messageIndex != -1) {
+        messages[messageIndex] = updatedMessage;
+        update();
+      }
+
+      _showToast(isCurrentlyFavorite ? 'Removed from favorites' : 'Added to favorites');
+    } catch (e) {
+      _showErrorToast('Failed to ${message.isFavorite ? 'remove from' : 'add to'} favorites: ${e.toString()}');
+    } finally {
+      _hideLoading();
+    }
+  }
+
+  /// Reply to a message
+  Future<void> replyToMessage(Message message) async {
+    try {
+      // Navigate to reply view or show reply input
+      Get.toNamed(
+        Routes.CHAT,
+        arguments: {
+          'roomId': roomId,
+          'replyTo': message,
+          'replyToText': _getMessagePreview(message),
+        },
+      );
+    } catch (e) {
+      _showErrorToast('Failed to reply to message: ${e.toString()}');
+    }
+  }
+
+  /// Forward a message
+  Future<void> forwardMessage(Message message) async {
+    try {
+      // Show contact selection or forward dialog
+      Get.toNamed(
+        Routes.CHAT,
+        arguments: {
+          'message': message,
+          'roomId': roomId,
+        },
+      );
+    } catch (e) {
+      _showErrorToast('Failed to forward message: ${e.toString()}');
+    }
+  }
+
+  /// Copy message content
+  void clearMessages() => messages.clear();
+
+  void _clearMessageInput() {
+    messageController.clear();
+    update();
+  }
+
+  void copyMessage(Message message) {
+    try {
+      String textToCopy = '';
+
+      if (message is TextMessage) {
+        textToCopy = message.text;
+      } else {
+        textToCopy = _getMessagePreview(message);
+      }
+
+      Clipboard.setData(ClipboardData(text: textToCopy));
+
+      _showToast('Message copied to clipboard');
+    } catch (e) {
+      _showErrorToast('Failed to copy message: ${e.toString()}');
+    }
+  }
+
+  /// Report a message
+  Future<void> reportMessage(Message message) async {
+    try {
+      // Show report dialog or navigate to report screen
+      Get.toNamed(
+        Routes.HELP,
+        arguments: {
+          'message': message,
+          'roomId': roomId,
+        },
+      );
+    } catch (e) {
+      _showErrorToast('Failed to report message: ${e.toString()}');
+    }
+  }
+
+  /// Get message preview for copying/forwarding
+  String _getMessagePreview(Message message) {
+    switch (message) {
+      case TextMessage():
+        return message.text;
+      case image.PhotoMessage():
+        return '[Photo]';
+      case VideoMessage():
+        return '[Video]';
+      case AudioMessage():
+        return '[Audio]';
+      case FileMessage():
+        return '[File: ${message.fileName}]';
+      case LocationMessage():
+        return '[Location]';
+      case ContactMessage():
+        return '[Contact]';
+      case PollMessage():
+        return '[Poll]';
+      case EventMessage():
+        return '[Event]';
+      case CallMessage():
+        return '[${message.callModel.callType == CallType.audio ? 'Audio' : 'Video'} Call]';
+      default:
+        return '[Message]';
+    }
+  }
+
+  /// Get pinned messages
+  List<Message> getPinnedMessages() {
+    return messages.where((message) => message.isPinned).toList();
+  }
+
+  /// Get favorite messages
+  List<Message> getFavoriteMessages() {
+    return messages.where((message) => message.isFavorite).toList();
+  }
+
+  /// Check if message can be acted upon (not deleted, etc.)
+  bool canInteractWithMessage(Message message) {
+    return !message.isDeleted && message.senderId != currentUser?.uid;
+  }
+
+  /// Handle message long press - show bottom sheet
+  void handleMessageLongPress(Message message) {
+    if (!canInteractWithMessage(message)) {
+      _showToast('Cannot perform actions on this message');
+      return;
+    }
+
+    MessageActionsBottomSheet.show(
+      Get.context!,
+      message: message,
+      onReply: () => replyToMessage(message),
+      onCopy: () => copyMessage(message),
+      onForward: () => forwardMessage(message),
+      onPin: () => togglePinMessage(message),
+      onFavorite: () => toggleFavoriteMessage(message),
+      onReport: () => reportMessage(message),
+      onDelete: () => deleteMessage(message),
+      isPinned: message.isPinned,
+      isFavorite: message.isFavorite,
+      canPin: true,
+      canFavorite: true,
+      canDelete: message.senderId == currentUser?.uid, // Only allow delete for own messages
+      canReply: true,
+      canForward: true,
+      canCopy: true,
+      canReport: true,
+    );
+  }
 
   /// Test method for sending a test message
   Future<void> sendTestMessage() async {

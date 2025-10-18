@@ -100,7 +100,7 @@ class CryptedApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Get.put(MyLocaleController());
-    Get.put(ChatSessionManager()); // إضافة مدير جلسة الشات
+    Get.put(ChatSessionManager());
     final botToastBuilder = BotToastInit();
 
     return GetMaterialApp(

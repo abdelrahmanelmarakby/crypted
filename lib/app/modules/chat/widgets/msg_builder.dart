@@ -1,3 +1,4 @@
+import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
@@ -5,11 +6,8 @@ import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/file_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/image_message_model.dart'
     as image;
-
 import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
-import 'package:crypted_app/app/data/models/messages/message_model.dart'
-    as chat;
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
@@ -24,14 +22,12 @@ import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/poll_me
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/text_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/video_message.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
-import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
@@ -44,7 +40,7 @@ class MessageBuilder extends GetView<ChatController> {
     this.timestamp,
     this.senderImage,
   });
-  final chat.Message messageModel;
+  final Message messageModel;
   final bool senderType;
   final String? timestamp;
   final String? senderName;
@@ -109,57 +105,11 @@ class MessageBuilder extends GetView<ChatController> {
                     style: StylesManager.regular(fontSize: FontSize.xSmall),
                   ),
                 const SizedBox(height: Sizes.size4),
-                CupertinoContextMenu(
-                  actions: [
-                    if (messageModel is TextMessage)
-                      CupertinoContextMenuAction(
-                        onPressed: () => Navigator.pop(context),
-                        child: _buildMenuItem(
-                          Constants.kreplay.tr,
-                          'assets/icons/fi_9630774.svg',
-                        ),
-                      ),
-                    CupertinoContextMenuAction(
-                      onPressed: () => Navigator.pop(context),
-                      child: _buildMenuItem(
-                        Constants.kforward.tr,
-                        'assets/icons/fi_9630774.svg',
-                      ),
-                    ),
-                    CupertinoContextMenuAction(
-                      onPressed: () => Navigator.pop(context),
-                      child: _buildMenuItem(
-                          Constants.kcopy.tr, 'assets/icons/copy.svg'),
-                    ),
-                    CupertinoContextMenuAction(
-                      onPressed: () => Navigator.pop(context),
-                      child: _buildMenuItem(
-                          Constants.kstar.tr, 'assets/icons/star.svg'),
-                    ),
-                    CupertinoContextMenuAction(
-                      onPressed: () => Navigator.pop(context),
-                      child: _buildMenuItem(
-                        Constants.kpin.tr,
-                        'assets/icons/fi_3648797.svg',
-                      ),
-                    ),
-                    CupertinoContextMenuAction(
-                      onPressed: () => Navigator.pop(context),
-                      child: _buildMenuItem(
-                        Constants.kreport.tr,
-                        'assets/icons/fi_7689567.svg',
-                      ),
-                    ),
-                    CupertinoContextMenuAction(
-                      onPressed: () => Navigator.pop(context),
-                      isDestructiveAction: true,
-                      child: _buildMenuItem(
-                        Constants.kdelete.tr,
-                        'assets/icons/trash.svg',
-                        isDelete: true,
-                      ),
-                    ),
-                  ],
+                GestureDetector(
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    controller.handleMessageLongPress(messageModel);
+                  },
                   child: Container(
                     decoration: BoxDecoration(
                       color: senderType == true
@@ -214,7 +164,7 @@ class MessageBuilder extends GetView<ChatController> {
     );
   }
 
-  Widget buildMessageContent(BuildContext context, chat.Message msg) {
+  Widget buildMessageContent(BuildContext context, Message msg) {
     switch (msg) {
       case AudioMessage():
         return AudioMessageWidget(
@@ -236,11 +186,6 @@ class MessageBuilder extends GetView<ChatController> {
           message: msg,
         );
 
-      case VideoMessage():
-        return VideoMessageWidget(
-          message: msg,
-        );
-
       case TextMessage():
         return TextMessageWidget(
           message: msg,
@@ -251,36 +196,10 @@ class MessageBuilder extends GetView<ChatController> {
           message: msg,
         );
 
-      //   return GestureDetector(
-      //     onTap: () {
-      //       Get.to(() => PhotoGalleryView(
-      //             photo: File(msg.message?.value ?? ""),
-      //           ));
-      //     },
-      //     child: AppCachedNetworkImage(
-      //       imageUrl: msg.message?.value ?? '',
-      //       fit: BoxFit.cover,
-      //       borderRadius: BorderRadius.circular(8),
-      //     ),
-      //   );
-      // case MessageType.video:
-      //   return Stack(
-      //     alignment: Alignment.center,
-      //     children: [
-      //       // AppCachedNetworkImage(
-      //       //   imageUrl: msg.message?.subVal ?? '',
-      //       //   borderRadius: BorderRadius.circular(8),
-      //       // ),
-      //       // IconButton(
-      //       //   onPressed: () {
-      //       //     Get.to(() => VideoPlayerWidget(
-      //       //           videoUrl: msg.message?.value ?? '',
-      //       //         ));
-      //       //   },
-      //       //   icon: const Icon(Icons.play_circle_fill, size: 40),
-      //       // )
-      //     ],
-      //   );
+      case VideoMessage():
+        return VideoMessageWidget(
+          message: msg,
+        );
 
       case ContactMessage():
         return ContactMessageWidget(
@@ -300,34 +219,5 @@ class MessageBuilder extends GetView<ChatController> {
       default:
         return const SizedBox();
     }
-  }
-
-  Widget _buildMenuItem(
-    String title,
-    String iconPath, {
-    bool isDelete = false,
-  }) {
-    return Row(
-      children: [
-        const SizedBox(width: Sizes.size12),
-        SvgPicture.asset(
-          iconPath,
-          width: Sizes.size16,
-          height: Sizes.size16,
-          colorFilter: ColorFilter.mode(
-            isDelete ? ColorsManager.error2 : ColorsManager.black,
-            BlendMode.srcIn,
-          ),
-        ),
-        const SizedBox(width: Sizes.size8),
-        Text(
-          title,
-          style: StylesManager.medium(
-            fontSize: FontSize.small,
-            color: isDelete ? ColorsManager.error2 : ColorsManager.black,
-          ),
-        ),
-      ],
-    );
   }
 }

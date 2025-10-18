@@ -2,21 +2,55 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:get/get.dart';
 
-/// Enhanced Chat Session Manager supporting both individual and group chats
+/// Enhanced Chat Session Manager - Single Source of Truth for Chat State
+///
+/// This class provides a comprehensive solution for managing chat sessions with the following features:
+/// - Support for both 1-on-1 and group chats
+/// - Reactive state management using GetX observables
+/// - Automatic session validation and cleanup
+/// - Convenient methods for common operations
+/// - Robust error handling and logging
+/// - Backward compatibility with existing code
+///
+/// Key Features:
+/// - [members]: List of all chat participants (reactive)
+/// - [chatName]: Display name of the chat (reactive)
+/// - [chatDescription]: Optional description for group chats (reactive)
+/// - [isGroupChat]: Whether this is a group chat or 1-on-1 (reactive)
+/// - [hasActiveSession]: Whether there's an active chat session (reactive)
+/// - [roomId]: Unique identifier for the chat room (computed)
+///
+/// Usage:
+/// ```dart
+/// // Start a 1-on-1 chat
+/// ChatSessionManager.instance.startChatSession(
+///   sender: currentUser,
+///   receiver: otherUser,
+/// );
+///
+/// // Start a group chat
+/// ChatSessionManager.instance.startGroupChatSession(
+///   participants: users,
+///   groupName: 'My Group',
+/// );
+///
+/// // Listen to changes
+/// ChatSessionManager.instance.membersStream.listen((members) {
+///   // Handle member changes
+/// });
+/// ```
 class ChatSessionManager extends GetxController {
   static ChatSessionManager get instance => Get.find<ChatSessionManager>();
 
-  // List to store all chat participants (supports 2+ members)
+  // Core reactive state
   final RxList<SocialMediaUser> _members = <SocialMediaUser>[].obs;
-
-  // Chat session metadata
   final RxString _chatId = ''.obs;
   final RxString _chatName = ''.obs;
   final RxString _chatDescription = ''.obs;
   final RxBool _isGroupChat = false.obs;
   final RxBool _hasActiveSession = false.obs;
 
-  // Getters for accessing chat data
+  // Computed getters
   List<SocialMediaUser> get members => _members.toList();
   String get chatId => _chatId.value;
   String get chatName => _chatName.value;
@@ -25,16 +59,18 @@ class ChatSessionManager extends GetxController {
   bool get hasActiveSession => _hasActiveSession.value;
   int get memberCount => _members.length;
 
-  // Legacy getters for backward compatibility (works for 1-on-1 chats)
+  // Legacy getters for backward compatibility
   SocialMediaUser? get sender => _members.isNotEmpty ? _members[0] : null;
   SocialMediaUser? get receiver => _members.length > 1 ? _members[1] : null;
 
-  // Streams for listening to changes
+  // Computed property for room ID
+  String get roomId => _chatId.value;
+
+  // Streams for reactive updates
   Stream<List<SocialMediaUser>> get membersStream => _members.stream;
-  Stream<SocialMediaUser?> get senderStream => _members.stream.map((list) => list.isNotEmpty ? list[0] : null);
-  Stream<SocialMediaUser?> get receiverStream => _members.stream.map((list) => list.length > 1 ? list[1] : null);
-  Stream<bool> get isGroupChatStream => _isGroupChat.stream;
   Stream<String> get chatNameStream => _chatName.stream;
+  Stream<bool> get isGroupChatStream => _isGroupChat.stream;
+  Stream<bool> get hasActiveSessionStream => _hasActiveSession.stream;
 
   @override
   void onInit() {
@@ -43,168 +79,241 @@ class ChatSessionManager extends GetxController {
     ever(_members, (_) => _updateSessionStatus());
   }
 
+  /// Update session status based on members
+  void _updateSessionStatus() {
+    _hasActiveSession.value = _members.length >= 2 && _validateCurrentUserPosition();
+  }
+
+  /// Validate that current user is properly positioned in members list
+  bool _validateCurrentUserPosition() {
+    final currentUser = UserService.currentUser.value;
+    if (currentUser == null) return false;
+
+    return _members.isNotEmpty && _members[0].uid == currentUser.uid;
+  }
+
   /// Start a new 1-on-1 chat session (backward compatibility)
-  void startChatSession({
+  bool startChatSession({
     required SocialMediaUser sender,
     required SocialMediaUser receiver,
   }) {
-    print("🚀 Starting 1-on-1 chat session:");
-    print("👤 Sender: ${sender.fullName} (${sender.uid})");
-    print("👥 Receiver: ${receiver.fullName} (${receiver.uid})");
+    try {
+      _logOperation('Starting 1-on-1 chat session', {
+        'sender': '${sender.fullName} (${sender.uid})',
+        'receiver': '${receiver.fullName} (${receiver.uid})',
+      });
 
-    // Verify sender and receiver are different
-    if (sender.uid == receiver.uid) {
-      print("❌ ERROR: Sender and receiver cannot be the same user!");
-      return;
+      // Validate inputs
+      if (!_validateChatSessionInputs(sender, receiver)) {
+        return false;
+      }
+
+      final participants = _prepareParticipants(sender, receiver);
+      final chatId = _generateChatId(participants);
+      final chatName = participants[1].fullName ?? 'Chat';
+
+      return _startSession(
+        participants: participants,
+        chatId: chatId,
+        chatName: chatName,
+        isGroup: false,
+      );
+    } catch (e) {
+      _logError('Failed to start 1-on-1 chat session', e);
+      return false;
     }
-
-    // Ensure the sender is the current user
-    final currentUser = UserService.currentUser.value;
-    if (currentUser == null) {
-      print("❌ ERROR: No current user found!");
-      return;
-    }
-
-    List<SocialMediaUser> participants = [];
-
-    // Always set current user as the first member (sender)
-    if (sender.uid == currentUser.uid) {
-      participants = [sender, receiver];
-    } else if (receiver.uid == currentUser.uid) {
-      print("🔄 Correcting: current user is receiver, swapping to be sender...");
-      participants = [receiver, sender];
-    } else {
-      print("🔄 Correcting: current user is not in the chat, adding as sender...");
-      participants = [currentUser, receiver];
-    }
-
-    _startSession(
-      participants: participants,
-      chatId: _generateChatId(participants),
-      chatName: participants[1].fullName??"Unknown", // Use other user's name
-      isGroup: false,
-    );
   }
 
   /// Start a new group chat session
-  void startGroupChatSession({
+  bool startGroupChatSession({
     required List<SocialMediaUser> participants,
     required String groupName,
     String? groupDescription,
     String? customChatId,
   }) {
-    print("🚀 Starting group chat session:");
-    print("👥 Group: $groupName");
-    print("🔢 Participants: ${participants.length}");
+    try {
+      _logOperation('Starting group chat session', {
+        'groupName': groupName,
+        'participantCount': participants.length,
+      });
 
-    if (participants.length < 2) {
-      print("❌ ERROR: Group chat must have at least 2 participants!");
-      return;
-    }
-
-    // Ensure current user is in the participants
-    final currentUser = UserService.currentUser.value;
-    if (currentUser == null) {
-      print("❌ ERROR: No current user found!");
-      return;
-    }
-
-    List<SocialMediaUser> finalParticipants = List.from(participants);
-    
-    // Check if current user is already in participants
-    bool currentUserIncluded = finalParticipants.any((user) => user.uid == currentUser.uid);
-    
-    if (!currentUserIncluded) {
-      print("🔄 Adding current user to group participants...");
-      finalParticipants.insert(0, currentUser);
-    } else {
-      // Move current user to first position if not already
-      int currentUserIndex = finalParticipants.indexWhere((user) => user.uid == currentUser.uid);
-      if (currentUserIndex > 0) {
-        print("🔄 Moving current user to first position...");
-        SocialMediaUser currentUserObj = finalParticipants.removeAt(currentUserIndex);
-        finalParticipants.insert(0, currentUserObj);
+      // Validate inputs
+      if (!_validateGroupChatInputs(participants, groupName)) {
+        return false;
       }
-    }
 
-    // Remove any duplicate users
-    final uniqueParticipants = <SocialMediaUser>[];
-    final seenUids = <String>{};
-    
-    for (var participant in finalParticipants) {
-      if (!seenUids.contains(participant.uid)) {
-        uniqueParticipants.add(participant);
-        seenUids.add(participant.uid??"Unknown");
-      }
-    }
+      final finalParticipants = _prepareGroupParticipants(participants);
+      final chatId = customChatId ?? _generateGroupChatId(finalParticipants, groupName);
 
-    _startSession(
-      participants: uniqueParticipants,
-      chatId: customChatId ?? _generateGroupChatId(uniqueParticipants, groupName),
-      chatName: groupName??"Unknown",
-      chatDescription: groupDescription,
-      isGroup: true,
-    );
+      return _startSession(
+        participants: finalParticipants,
+        chatId: chatId,
+        chatName: groupName,
+        chatDescription: groupDescription,
+        isGroup: true,
+      );
+    } catch (e) {
+      _logError('Failed to start group chat session', e);
+      return false;
+    }
   }
 
   /// Internal method to start any type of chat session
-  void _startSession({
+  bool _startSession({
     required List<SocialMediaUser> participants,
     required String chatId,
     required String chatName,
     String? chatDescription,
     required bool isGroup,
   }) {
-    _members.value = participants;
-    _chatId.value = chatId;
-    _chatName.value = chatName;
-    _chatDescription.value = chatDescription ?? '';
-    _isGroupChat.value = isGroup;
-    _hasActiveSession.value = true;
+    try {
+      _members.assignAll(participants);
+      _chatId.value = chatId;
+      _chatName.value = chatName;
+      _chatDescription.value = chatDescription ?? '';
+      _isGroupChat.value = isGroup;
+      _hasActiveSession.value = true;
 
-    print("✅ Chat session started successfully");
-    print("🎯 Session details:");
-    print("   Chat ID: $chatId");
-    print("   Chat Name: $chatName");
-    print("   Type: ${isGroup ? 'Group Chat' : '1-on-1 Chat'}");
-    print("   Participants: ${participants.length}");
-    
-    for (int i = 0; i < participants.length; i++) {
-      String role = i == 0 ? "(Current User)" : isGroup ? "(Member)" : "(Receiver)";
-      print("   ${i + 1}. ${participants[i].fullName} ${participants[i].uid} $role");
+      _logOperation('Chat session started successfully', {
+        'chatId': chatId,
+        'chatName': chatName,
+        'isGroup': isGroup,
+        'participantCount': participants.length,
+      });
+
+      return true;
+    } catch (e) {
+      _logError('Error starting chat session', e);
+      _resetSession();
+      return false;
     }
   }
 
-  /// End the current chat session
-  void endChatSession() {
-    print("🔚 Ending chat session: $_chatName");
+  /// Reset session to initial state
+  void _resetSession() {
     _members.clear();
     _chatId.value = '';
     _chatName.value = '';
     _chatDescription.value = '';
     _isGroupChat.value = false;
     _hasActiveSession.value = false;
-    print("✅ Chat session ended");
+  }
+
+  /// End the current chat session
+  void endChatSession() {
+    _logOperation('Ending chat session', {'chatName': _chatName.value});
+    _resetSession();
+  }
+
+  /// Validate 1-on-1 chat session inputs
+  bool _validateChatSessionInputs(SocialMediaUser sender, SocialMediaUser receiver) {
+    if (sender.uid == receiver.uid) {
+      _logError('Sender and receiver cannot be the same user', null);
+      return false;
+    }
+
+    final currentUser = UserService.currentUser.value;
+    if (currentUser == null) {
+      _logError('No current user found', null);
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Validate group chat inputs
+  bool _validateGroupChatInputs(List<SocialMediaUser> participants, String groupName) {
+    if (participants.length < 2) {
+      _logError('Group chat must have at least 2 participants', null);
+      return false;
+    }
+
+    if (groupName.trim().isEmpty) {
+      _logError('Group name cannot be empty', null);
+      return false;
+    }
+
+    final currentUser = UserService.currentUser.value;
+    if (currentUser == null) {
+      _logError('No current user found', null);
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Prepare participants for 1-on-1 chat
+  List<SocialMediaUser> _prepareParticipants(SocialMediaUser sender, SocialMediaUser receiver) {
+    final currentUser = UserService.currentUser.value!;
+    List<SocialMediaUser> participants = [];
+
+    // Always set current user as the first member (sender)
+    if (sender.uid == currentUser.uid) {
+      participants = [sender, receiver];
+    } else if (receiver.uid == currentUser.uid) {
+      _logOperation('Correcting participant order', {'currentUserIsReceiver': true});
+      participants = [receiver, sender];
+    } else {
+      _logOperation('Adding current user as sender', {});
+      participants = [currentUser, receiver];
+    }
+
+    return participants;
+  }
+
+  /// Prepare participants for group chat
+  List<SocialMediaUser> _prepareGroupParticipants(List<SocialMediaUser> participants) {
+    final currentUser = UserService.currentUser.value!;
+    List<SocialMediaUser> finalParticipants = List.from(participants);
+
+    // Check if current user is already in participants
+    bool currentUserIncluded = finalParticipants.any((user) => user.uid == currentUser.uid);
+
+    if (!currentUserIncluded) {
+      _logOperation('Adding current user to group participants', {});
+      finalParticipants.insert(0, currentUser);
+    } else {
+      // Move current user to first position if not already
+      int currentUserIndex = finalParticipants.indexWhere((user) => user.uid == currentUser.uid);
+      if (currentUserIndex > 0) {
+        _logOperation('Moving current user to first position', {});
+        SocialMediaUser currentUserObj = finalParticipants.removeAt(currentUserIndex);
+        finalParticipants.insert(0, currentUserObj);
+      }
+    }
+
+    // Remove duplicates
+    final uniqueParticipants = <SocialMediaUser>[];
+    final seenUids = <String>{};
+
+    for (var participant in finalParticipants) {
+      final uid = participant.uid ?? 'unknown_${participant.hashCode}';
+      if (!seenUids.contains(uid)) {
+        uniqueParticipants.add(participant);
+        seenUids.add(uid);
+      }
+    }
+
+    return uniqueParticipants;
   }
 
   /// Check if the current session is valid
   bool isSessionValid() {
     if (_members.length < 2) {
-      print("⚠️ Invalid chat session: Not enough participants");
+      _logError('Invalid chat session: Not enough participants', null);
       return false;
     }
 
     // Check for duplicate users
-    final uniqueUids = _members.map((user) => user.uid).toSet();
+    final uniqueUids = _members.map((user) => user.uid).where((uid) => uid != null).toSet();
     if (uniqueUids.length != _members.length) {
-      print("⚠️ Invalid chat session: Duplicate participants found");
+      _logError('Invalid chat session: Duplicate participants found', null);
       return false;
     }
 
     // Ensure current user is the first participant
-    final currentUser = UserService.currentUser.value;
-    if (currentUser != null && _members.isNotEmpty && _members[0].uid != currentUser.uid) {
-      print("⚠️ Invalid chat session: Current user is not the first participant");
+    if (!_validateCurrentUserPosition()) {
+      _logError('Invalid chat session: Current user is not the first participant', null);
       return false;
     }
 
@@ -214,66 +323,66 @@ class ChatSessionManager extends GetxController {
   /// Add a new member to the group chat
   bool addMember(SocialMediaUser newMember) {
     if (!_isGroupChat.value) {
-      print("❌ Cannot add member to non-group chat");
+      _logError('Cannot add member to non-group chat', null);
       return false;
     }
 
     if (_members.any((member) => member.uid == newMember.uid)) {
-      print("❌ Member ${newMember.fullName} is already in the chat");
+      _logError('Member ${newMember.fullName} is already in the chat', null);
       return false;
     }
 
     _members.add(newMember);
-    print("✅ Added ${newMember.fullName} to group chat");
+    _logOperation('Added member to group chat', {'memberName': newMember.fullName});
     return true;
   }
 
   /// Remove a member from the group chat
   bool removeMember(String userId) {
     if (!_isGroupChat.value) {
-      print("❌ Cannot remove member from non-group chat");
+      _logError('Cannot remove member from non-group chat', null);
       return false;
     }
 
     final currentUser = UserService.currentUser.value;
     if (currentUser?.uid == userId) {
-      print("❌ Cannot remove current user from chat");
+      _logError('Cannot remove current user from chat', null);
       return false;
     }
 
     final memberIndex = _members.indexWhere((member) => member.uid == userId);
     if (memberIndex == -1) {
-      print("❌ Member not found in chat");
+      _logError('Member not found in chat', null);
       return false;
     }
 
     final removedMember = _members.removeAt(memberIndex);
-    print("✅ Removed ${removedMember.fullName} from group chat");
-    
-    // End session if not enough participants
+    _logOperation('Removed member from group chat', {'memberName': removedMember.fullName});
+
+    // End session if not enough participants for a group chat
     if (_members.length < 2) {
-      print("⚠️ Not enough participants, ending chat session");
+      _logError('Not enough participants for group chat, ending session', null);
       endChatSession();
     }
-    
+
     return true;
   }
 
   /// Update group chat information
   void updateGroupInfo({String? name, String? description}) {
     if (!_isGroupChat.value) {
-      print("❌ Cannot update info for non-group chat");
+      _logError('Cannot update info for non-group chat', null);
       return;
     }
 
     if (name != null && name.isNotEmpty) {
       _chatName.value = name;
-      print("✅ Updated group name to: $name");
+      _logOperation('Updated group name', {'newName': name});
     }
 
     if (description != null) {
       _chatDescription.value = description;
-      print("✅ Updated group description");
+      _logOperation('Updated group description', {});
     }
   }
 
@@ -287,15 +396,61 @@ class ChatSessionManager extends GetxController {
       'members': _members.map((user) => user.toJson()).toList(),
       'memberCount': _members.length,
       'hasActiveSession': _hasActiveSession.value,
+      'roomId': _chatId.value,
       // Legacy fields for backward compatibility
       'sender': sender,
       'receiver': receiver,
     };
   }
 
-  /// Update session status based on members
-  void _updateSessionStatus() {
-    _hasActiveSession.value = _members.length >= 2;
+  /// Set loading state
+  void setLoading(bool loading) {
+    // Note: This method is for backward compatibility
+    // Consider using a separate loading state manager
+    _logOperation('Loading state changed', {'loading': loading});
+  }
+
+  /// Set recording state
+  void setRecording(bool recording) {
+    // Note: This method is for backward compatibility
+    // Consider using a separate recording state manager
+    _logOperation('Recording state changed', {'recording': recording});
+  }
+
+  /// Toggle recording state
+  void toggleRecording() {
+    // Note: This method is for backward compatibility
+    // Consider using a separate recording state manager
+    _logOperation('Recording state toggled', {});
+  }
+
+  /// Check if a user can be added to the current chat
+  bool canAddMember(String userId) {
+    if (!_isGroupChat.value) return false;
+    return !_members.any((member) => member.uid == userId);
+  }
+
+  /// Check if a user can be removed from the current chat
+  bool canRemoveMember(String userId) {
+    if (!_isGroupChat.value) return false;
+    final currentUser = UserService.currentUser.value;
+    if (currentUser?.uid == userId) return false;
+    return _members.any((member) => member.uid == userId);
+  }
+
+  /// Get chat type as string
+  String get chatType => _isGroupChat.value ? 'group' : 'individual';
+
+  /// Get formatted member count string
+  String get memberCountText {
+    if (!_isGroupChat.value) return '1-on-1';
+    return '$memberCount members';
+  }
+
+  /// Check if current user is the chat owner/admin
+  bool get isCurrentUserOwner {
+    final currentUser = UserService.currentUser.value;
+    return currentUser != null && _members.isNotEmpty && _members[0].uid == currentUser.uid;
   }
 
   /// Check if the user is a member of the chat
@@ -317,9 +472,9 @@ class ChatSessionManager extends GetxController {
     if (_isGroupChat.value) {
       return null; // Use getOtherMembers for group chats
     }
-    
+
     if (_members.isEmpty) return null;
-    
+
     if (_members[0].uid == currentUserId) {
       return _members.length > 1 ? _members[1] : null;
     } else if (_members.length > 1 && _members[1].uid == currentUserId) {
@@ -345,8 +500,8 @@ class ChatSessionManager extends GetxController {
   /// Generate chat ID for 1-on-1 chats
   String _generateChatId(List<SocialMediaUser> participants) {
     if (participants.length != 2) return '';
-    
-    final uids = participants.map((user) => user.uid).toList()..sort();
+
+    final uids = participants.map((user) => user.uid).where((uid) => uid != null).toList()..sort();
     return 'chat_${uids[0]}_${uids[1]}';
   }
 
@@ -359,22 +514,36 @@ class ChatSessionManager extends GetxController {
 
   /// Print current session info (for development)
   void printSessionInfo() {
-    print("📋 Current Chat Session Info:");
-    print("   Chat ID: $_chatId");
-    print("   Chat Name: $_chatName");
-    print("   Chat Type: ${_isGroupChat.value ? 'Group Chat' : '1-on-1 Chat'}");
-    print("   Total Members: ${_members.length}");
-    print("   Has Active Session: $_hasActiveSession");
-    print("   Session Valid: ${isSessionValid()}");
-    
-    if (_chatDescription.value.isNotEmpty) {
-      print("   Description: $_chatDescription");
-    }
-    
+    _logOperation('Current Chat Session Info', {
+      'chatId': _chatId.value,
+      'chatName': _chatName.value,
+      'chatType': _isGroupChat.value ? 'Group Chat' : '1-on-1 Chat',
+      'memberCount': _members.length,
+      'hasActiveSession': _hasActiveSession.value,
+      'isSessionValid': isSessionValid(),
+      'chatDescription': _chatDescription.value.isNotEmpty ? _chatDescription.value : 'N/A',
+    });
+
     print("   Members:");
     for (int i = 0; i < _members.length; i++) {
       String role = i == 0 ? " (Current User)" : _isGroupChat.value ? " (Member)" : " (Receiver)";
       print("   ${i + 1}. ${_members[i].fullName} (${_members[i].uid})$role");
+    }
+  }
+
+  /// Log operation for debugging
+  void _logOperation(String operation, Map<String, dynamic> details) {
+    print("🔧 ChatSessionManager: $operation");
+    if (details.isNotEmpty) {
+      details.forEach((key, value) => print("   $key: $value"));
+    }
+  }
+
+  /// Log error for debugging
+  void _logError(String error, dynamic exception) {
+    print("❌ ChatSessionManager Error: $error");
+    if (exception != null) {
+      print("   Exception: $exception");
     }
   }
 }

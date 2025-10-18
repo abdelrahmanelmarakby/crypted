@@ -10,8 +10,6 @@ import '../modules/contactInfo/bindings/contact_info_binding.dart';
 import '../modules/contactInfo/views/contact_info_view.dart';
 import '../modules/forgetPassword/bindings/forget_password_binding.dart';
 import '../modules/forgetPassword/views/forget_password_view.dart';
-import '../modules/groupChat/bindings/group_chat_binding.dart';
-import '../modules/groupChat/views/group_chat_view.dart';
 import '../modules/group_info/bindings/group_info_binding.dart';
 import '../modules/group_info/views/group_info_view.dart';
 import '../modules/help/bindings/help_binding.dart';
@@ -157,18 +155,6 @@ class AppPages {
       name: _Paths.CHAT,
       page: () => const PrivateChatScreen(),
       binding: ChatBinding(),
-    ),
-    GetPage(
-      name: _Paths.GROUP_CHAT,
-      page: () => const GroupChatView(),
-      binding: GroupChatBinding(),
-      children: [
-        GetPage(
-          name: _Paths.GROUP_CHAT,
-          page: () => const GroupChatView(),
-          binding: GroupChatBinding(),
-        ),
-      ],
     ),
   ];
 }

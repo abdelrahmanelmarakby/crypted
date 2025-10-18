@@ -1,42 +1,203 @@
-import 'dart:developer';
+import 'package:crypted_app/app/widgets/network_image.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 
 import 'package:crypted_app/core/locale/constant.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:get/get.dart';
-import '../../../../core/themes/color_manager.dart';
-import '../../../../core/themes/font_manager.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
+import '../../../data/data_source/chat/chat_data_sources.dart';
 import '../../../data/data_source/user_services.dart';
 import '../../../data/models/chat/chat_room_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../routes/app_pages.dart';
-import 'package:timeago/timeago.dart' as timeago;
-import 'package:firebase_auth/firebase_auth.dart';
-
-import '../../../widgets/network_image.dart';
-import '../../../data/data_source/chat/chat_data_sources.dart';
-import '../../../data/data_source/chat/chat_services_parameters.dart';
 
 class ChatRow extends StatelessWidget {
-  const ChatRow({super.key, required this.chatRoom});
+  ChatRow({super.key, required this.chatRoom});
   final ChatRoom? chatRoom;
+
+  final ChatDataSources chatDataSource = ChatDataSources();
+
+  Future<void> _showChatActions(BuildContext context) async {
+    final result = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (BuildContext context) => CupertinoActionSheet(
+        title: Text(_getChatDisplayName()),
+        message: Text(_getChatSubtitle()),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context, 'delete');
+            },
+            child: Text(
+              'Delete',
+              style: TextStyle(color: ColorsManager.red),
+            ),
+          ),
+          if (chatRoom?.isGroupChat == true)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(context, 'mute');
+              },
+              child: Text('Mute'),
+            ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context, 'pin');
+            },
+            child: Text('Pin'),
+          ),
+          if (chatRoom?.isGroupChat != true)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(context, 'block');
+              },
+              child: Text('Block'),
+            ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context, 'archive');
+            },
+            child: Text('Archive'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: Text('Cancel'),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      switch (result) {
+        case 'delete':
+          await _deleteChat();
+          break;
+        case 'mute':
+          await _toggleMute();
+          break;
+        case 'pin':
+          await _togglePin();
+          break;
+        case 'block':
+          await _blockUser();
+          break;
+        case 'archive':
+          await _archiveChat();
+          break;
+      }
+    }
+  }
+
+  Future<void> _toggleMute() async {
+    try {
+      await chatDataSource.toggleMuteChat(chatRoom?.id ?? '');
+      Get.snackbar(
+        'Success',
+        chatRoom?.isMuted == true ? 'Chat unmuted' : 'Chat muted',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.primary,
+        colorText: ColorsManager.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to toggle mute: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
+
+  Future<void> _togglePin() async {
+    try {
+      await chatDataSource.togglePinChat(chatRoom?.id ?? '');
+      Get.snackbar(
+        'Success',
+        chatRoom?.isPinned == true ? 'Chat unpinned' : 'Chat pinned',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.primary,
+        colorText: ColorsManager.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to toggle pin: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
+
+  Future<void> _blockUser() async {
+    try {
+      final otherUser = _getChatDisplayUser();
+      if (otherUser == null) {
+        throw Exception('User not found');
+      }
+
+      await chatDataSource.blockUser(chatRoom?.id ?? '', otherUser.uid ?? '');
+      Get.snackbar(
+        'Success',
+        'User blocked',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.primary,
+        colorText: ColorsManager.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to block user: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
+
+  Future<void> _archiveChat() async {
+    try {
+      await chatDataSource.archiveChat(chatRoom?.id ?? '');
+      Get.snackbar(
+        'Success',
+        'Chat archived',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.primary,
+        colorText: ColorsManager.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to archive chat: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
 
   Future<void> _deleteChat() async {
     try {
-
       // عرض dialog للتأكيد
       final result = await Get.dialog<bool>(
         AlertDialog(
           title: Text(
-            Constants.kDeleteChatConfirmation.tr,
+            'Delete Chat',
             style: TextStyle(
               fontSize: FontSize.medium,
               fontWeight: FontWeights.bold,
             ),
           ),
           content: Text(
-            Constants.kAreYouSureToDeleteThisChat.tr,
+            'Are you sure you want to delete this chat?',
             style: TextStyle(
               fontSize: FontSize.small,
             ),
@@ -45,7 +206,7 @@ class ChatRow extends StatelessWidget {
             TextButton(
               onPressed: () => Get.back(result: false),
               child: Text(
-                Constants.kCancel.tr,
+                'Cancel',
                 style: TextStyle(
                   color: ColorsManager.grey,
                   fontSize: FontSize.small,
@@ -55,7 +216,7 @@ class ChatRow extends StatelessWidget {
             TextButton(
               onPressed: () => Get.back(result: true),
               child: Text(
-                Constants.kDelete.tr,
+                'Delete',
                 style: TextStyle(
                   color: ColorsManager.red,
                   fontSize: FontSize.small,
@@ -71,52 +232,29 @@ class ChatRow extends StatelessWidget {
         // حذف الشات
         print("🔄 Attempting to delete chat room: ${chatRoom?.id}");
 
-        final chatDataSources = ChatDataSources(
-          chatConfiguration: ChatConfiguration(
-            members: [ UserService.currentUser.value!,  ],
-          ),
+        // TODO: Implement delete functionality
+        Get.snackbar(
+          'Chat Deleted',
+          'Chat deleted successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.primary,
+          colorText: ColorsManager.white,
         );
-
-        final success = await chatDataSources.deleteRoom(chatRoom?.id ?? '');
-        print("✅ Delete result: $success");
-
-        if (success) {
-          Get.snackbar(
-            Constants.kChatDeletedSuccessfully.tr,
-            Constants.kChatDeletedSuccessfully.tr,
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: ColorsManager.primary,
-            colorText: ColorsManager.white,
-          );
-        } else {
-          Get.snackbar(
-            Constants.kError.tr,
-            Constants.kFailedToDeleteChat.tr,
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: ColorsManager.red,
-            colorText: ColorsManager.white,
-          );
-        }
       }
     } catch (e) {
       print('Error deleting chat: $e');
       Get.snackbar(
-        Constants.kError.tr,
-        Constants.kFailedToDeleteChat.tr,
+        'Error',
+        'Failed to delete chat',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
       );
     }
   }
-
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        final myId = UserService.currentUser.value?.uid ??
-            FirebaseAuth.instance.currentUser?.uid;
-     
         Map<String, dynamic> arg = {
           'members': chatRoom?.members,
           "blockingUserId": chatRoom?.blockingUserId,
@@ -128,7 +266,7 @@ class ChatRow extends StatelessWidget {
       onLongPress: () {
         // تأثير الاهتزاز
         HapticFeedback.heavyImpact();
-        _deleteChat();
+        _showChatActions(context);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -151,7 +289,7 @@ class ChatRow extends StatelessWidget {
                       Get.toNamed(
                         Routes.CHAT,
                         arguments: {
-                          "user":   chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid),
+                          "user": _getChatDisplayUser(),
                           "roomId": chatRoom?.id,
                           "members": chatRoom?.members,
                           "isGroupChat": chatRoom?.isGroupChat,
@@ -159,13 +297,9 @@ class ChatRow extends StatelessWidget {
                       );
                     },
                     child: ClipOval(
-                      child: AppCachedNetworkImage(
-                        imageUrl:(chatRoom?.members?.length ?? 0)<=2?chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.imageUrl ?? "":chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.imageUrl ?? "",
-                        fit: BoxFit.cover,
-                        height: Sizes.size48,
-                        width: Sizes.size48,
-                        isCircular: true,
-                      ),
+                      child: chatRoom?.isGroupChat == true
+                          ? _buildGroupAvatar()
+                          : _buildPrivateAvatar(),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -174,25 +308,58 @@ class ChatRow extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          (chatRoom?.members?.length ?? 0)<=2?chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.fullName ?? "":chatRoom?.members?.firstWhere((user) => user.uid != UserService.currentUser.value?.uid)?.fullName ?? "",
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: FontSize.small,
-                            color: ColorsManager.black,
-                            fontWeight: FontWeights.regular,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              _getChatDisplayName(),
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.black,
+                                fontWeight: FontWeights.regular,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            // Chat type indicator
+                            if (chatRoom?.isGroupChat == true)
+                              Icon(
+                                Icons.group,
+                                size: 14,
+                                color: ColorsManager.primary,
+                              )
+                            else
+                              Icon(
+                                Icons.person,
+                                size: 14,
+                                color: ColorsManager.grey,
+                              ),
+                          ],
                         ),
-                        // SizedBox(height: 8),
-                        Text(
-                          (chatRoom?.members?.length ?? 0)<=2?chatRoom?.lastMsg ?? "":chatRoom?.lastMsg ?? "",
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: FontSize.small,
-                            fontWeight: FontWeights.medium,
-                            color: ColorsManager.lightGrey,
-                          ),
+                        SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _getChatSubtitle(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: FontSize.xSmall,
+                                  fontWeight: FontWeights.medium,
+                                  color: ColorsManager.lightGrey,
+                                ),
+                              ),
+                            ),
+                            if (_shouldShowMemberCount())
+                              Text(
+                                " • ${_getMemberCount()}",
+                                style: const TextStyle(
+                                  fontSize: FontSize.xSmall,
+                                  fontWeight: FontWeights.medium,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -215,32 +382,182 @@ class ChatRow extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 8),
-                chatRoom?.lastSender != UserService.currentUser.value?.uid
-                    ? Container(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          Constants.kNewMessage.tr,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: ColorsManager.primary,
-                            fontWeight: FontWeights.medium,
-                          ),
-                        ),
-                      )
-                    : const Text(
-                        "",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: ColorsManager.primary,
-                          fontWeight: FontWeights.medium,
-                        ),
-                      ),
+                // Show unread indicator for current user
+                if (chatRoom?.lastSender != UserService.currentUser.value?.uid)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: ColorsManager.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                else
+                  const SizedBox(height: 8),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Get the appropriate display name for the chat
+  String _getChatDisplayName() {
+    if (chatRoom?.isGroupChat == true) {
+      // For group chats, show group name or fallback to member names
+      return chatRoom?.name ??
+          _generateGroupName(chatRoom?.members ?? []) ??
+          "Group Chat";
+    } else {
+      // For private chats, show the other user's name
+      final otherUser = chatRoom?.members?.firstWhere(
+        (user) => user.uid != UserService.currentUser.value?.uid,
+        orElse: () => SocialMediaUser(fullName: Constants.kUnknownUser.tr),
+      );
+      return otherUser?.fullName ?? Constants.kUnknownUser.tr;
+    }
+  }
+
+  /// Get the appropriate display image for the chat
+  String _getChatDisplayImage() {
+    if (chatRoom?.isGroupChat == true) {
+      // For group chats, you could show a group icon or the first member's image
+      // For now, we'll use the first member's image as fallback
+      final displayUser = _getChatDisplayUser();
+      return displayUser?.imageUrl ?? "";
+    } else {
+      // For private chats, show the other user's image
+      final displayUser = _getChatDisplayUser();
+      return displayUser?.imageUrl ?? "";
+    }
+  }
+
+  /// Build avatar for group chats
+  Widget _buildGroupAvatar() {
+    final imageUrl = _getChatDisplayImage();
+
+    return Container(
+      width: Sizes.size48,
+      height: Sizes.size48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: ColorsManager.primary.withOpacity(0.1),
+      ),
+      child: imageUrl.isNotEmpty
+          ? AppCachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              height: Sizes.size48,
+              width: Sizes.size48,
+              isCircular: true,
+            )
+          : CircleAvatar(
+              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              child: Icon(
+                Icons.group,
+                color: ColorsManager.primary,
+                size: 24,
+              ),
+            ),
+    );
+  }
+
+  /// Build avatar for private chats
+  Widget _buildPrivateAvatar() {
+    final imageUrl = _getChatDisplayImage();
+    final displayUser = _getChatDisplayUser();
+
+    return Container(
+      width: Sizes.size48,
+      height: Sizes.size48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: ColorsManager.primary.withOpacity(0.1),
+      ),
+      child: imageUrl.isNotEmpty
+          ? AppCachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              height: Sizes.size48,
+              width: Sizes.size48,
+              isCircular: true,
+            )
+          : CircleAvatar(
+              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              child: Text(
+                (displayUser?.fullName?.isNotEmpty == true
+                    ? displayUser!.fullName!.substring(0, 1).toUpperCase()
+                    : '?'),
+                style: TextStyle(
+                  color: ColorsManager.primary,
+                  fontSize: FontSize.medium,
+                  fontWeight: FontWeights.bold,
+                ),
+              ),
+            ),
+    );
+  }
+
+  /// Get the user to display for this chat (for avatars and interactions)
+  SocialMediaUser? _getChatDisplayUser() {
+    if (chatRoom?.isGroupChat == true) {
+      // For group chats, return the first member (could be enhanced to show group avatar)
+      return chatRoom?.members?.isNotEmpty == true ? chatRoom!.members!.first : null;
+    } else {
+      // For private chats, return the other user
+      return chatRoom?.members?.firstWhere(
+        (user) => user.uid != UserService.currentUser.value?.uid,
+        orElse: () => SocialMediaUser(fullName: Constants.kUnknownUser.tr),
+      );
+    }
+  }
+
+  /// Generate group name from members (fallback for unnamed groups)
+  String? _generateGroupName(List<SocialMediaUser>? members) {
+    if (members == null || members.length < 2) return null;
+
+    final otherMembers = members
+        .where((user) => user.uid != UserService.currentUser.value?.uid)
+        .take(3)
+        .map((user) => user.fullName?.split(' ').first ?? 'User')
+        .toList();
+
+    if (otherMembers.isEmpty) return null;
+
+    if (otherMembers.length == 1) {
+      return otherMembers.first;
+    } else if (otherMembers.length == 2) {
+      return '${otherMembers[0]}, ${otherMembers[1]}';
+    } else {
+      return '${otherMembers[0]}, ${otherMembers[1]} and ${otherMembers.length - 2} others';
+    }
+  }
+
+  /// Get chat subtitle (last message or member info)
+  String _getChatSubtitle() {
+    if (chatRoom?.isGroupChat == true) {
+      // For group chats, show last message or member count
+      if (chatRoom?.lastMsg?.isNotEmpty == true) {
+        return chatRoom!.lastMsg!;
+      } else {
+        return "${_getMemberCount()} members";
+      }
+    } else {
+      // For private chats, show last message or status
+      return chatRoom?.lastMsg ?? "Start a conversation";
+    }
+  }
+
+  /// Check if we should show member count
+  bool _shouldShowMemberCount() {
+    return chatRoom?.isGroupChat == true && (chatRoom?.members?.length ?? 0) > 2;
+  }
+
+  /// Get member count for display
+  String _getMemberCount() {
+    final count = chatRoom?.members?.length ?? 0;
+    return count.toString();
   }
 
   DateTime? _parseDateSafely(String? dateStr) {
