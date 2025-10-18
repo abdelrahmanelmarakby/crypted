@@ -1,3 +1,4 @@
+import 'package:crypted_app/app/modules/group_info/controllers/group_info_controller.dart';
 import 'package:crypted_app/app/widgets/custom_container.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
 import 'package:crypted_app/core/locale/constant.dart';
@@ -22,6 +23,9 @@ class StatusSection extends StatelessWidget {
             name: Constants.kStatus.tr,
             hint: Constants.kJustenjoyingthelittlethingsinlife.tr,
             borderColor: ColorsManager.borderColor,
+            onSubmit: (value) {
+              Get.find<GroupInfoController>().updateStatus(value);
+            },
             suffixIcon: Padding(
               padding: const EdgeInsets.symmetric(horizontal: Paddings.xLarge),
               child: SvgPicture.asset(
