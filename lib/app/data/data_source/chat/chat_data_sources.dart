@@ -703,8 +703,30 @@ class ChatDataSources {
     }
   }
 
-  /// Archive a chat room
-  Future<void> archiveChat(String roomId) async {
+  /// Toggle favorite status for a chat room
+  Future<void> toggleFavoriteChat(String roomId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      final currentFavorite = chatRoom.isFavorite ?? false;
+      await updateChatRoomProperties(roomId: roomId, updates: {'isFavorite': !currentFavorite});
+
+      if (kDebugMode) {
+        print('✅ Chat ${!currentFavorite ? 'favorited' : 'unfavorited'}: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error toggling favorite: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Toggle archive status for a chat room
+  Future<void> toggleArchiveChat(String roomId) async {
     try {
       final chatRoom = await getChatRoomById(roomId);
       if (chatRoom == null) {
@@ -712,18 +734,14 @@ class ChatDataSources {
       }
 
       final currentArchived = chatRoom.isArchived ?? false;
-      if (currentArchived) {
-        throw Exception('Chat is already archived');
-      }
-
-      await updateChatRoomProperties(roomId: roomId, updates: {'isArchived': true});
+      await updateChatRoomProperties(roomId: roomId, updates: {'isArchived': !currentArchived});
 
       if (kDebugMode) {
-        print('✅ Chat archived: $roomId');
+        print('✅ Chat ${!currentArchived ? 'archived' : 'unarchived'}: $roomId');
       }
     } catch (error) {
       if (kDebugMode) {
-        print('Error archiving chat: $error');
+        print('Error toggling archive: $error');
       }
       rethrow;
     }

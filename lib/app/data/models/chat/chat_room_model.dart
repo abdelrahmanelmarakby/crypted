@@ -19,6 +19,7 @@ class ChatRoom {
   bool? isMuted;
   bool? isPinned;
   bool? isArchived;
+  bool? isFavorite;
   List<String>? blockedUsers;
   
 
@@ -39,6 +40,7 @@ class ChatRoom {
     this.isMuted = false,
     this.isPinned = false,
     this.isArchived = false,
+    this.isFavorite = false,
     this.blockedUsers,
   });
 
@@ -59,6 +61,7 @@ class ChatRoom {
     bool? isMuted,
     bool? isPinned,
     bool? isArchived,
+    bool? isFavorite,
     List<String>? blockedUsers,
   }) {
     return ChatRoom(
@@ -78,6 +81,7 @@ class ChatRoom {
       isMuted: isMuted ?? this.isMuted,
       isPinned: isPinned ?? this.isPinned,
       isArchived: isArchived ?? this.isArchived,
+      isFavorite: isFavorite ?? this.isFavorite,
       blockedUsers: blockedUsers ?? this.blockedUsers,
     );
   }
@@ -100,6 +104,7 @@ class ChatRoom {
       'isMuted': isMuted,
       'isPinned': isPinned,
       'isArchived': isArchived,
+      'isFavorite': isFavorite,
       'blockedUsers': blockedUsers,
     };
   }
@@ -130,6 +135,7 @@ class ChatRoom {
         isMuted: data['isMuted'] as bool?,
         isPinned: data['isPinned'] as bool?,
         isArchived: data['isArchived'] as bool?,
+        isFavorite: data['isFavorite'] as bool?,
         blockedUsers: data['blockedUsers'] != null
             ? (data['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
             : null,
@@ -175,6 +181,7 @@ class ChatRoom {
       isMuted: map['isMuted'] as bool?,
       isPinned: map['isPinned'] as bool?,
       isArchived: map['isArchived'] as bool?,
+      isFavorite: map['isFavorite'] as bool?,
       description: map['description'] as String?,
       groupImageUrl: map['groupImageUrl'] as String?,
       blockedUsers: map['blockedUsers'] != null
@@ -185,7 +192,7 @@ class ChatRoom {
 
   @override
   String toString() {
-    return 'ChatRoom(blockingUserId: $blockingUserId, id: $id, membersIds: $membersIds, lastMsg: $lastMsg, lastSender: $lastSender, lastChat: $lastChat, keywords: $keywords, read: $read, isMuted: $isMuted, isPinned: $isPinned, isArchived: $isArchived)';
+    return 'ChatRoom(blockingUserId: $blockingUserId, id: $id, membersIds: $membersIds, lastMsg: $lastMsg, lastSender: $lastSender, lastChat: $lastChat, keywords: $keywords, read: $read, isMuted: $isMuted, isPinned: $isPinned, isArchived: $isArchived, isFavorite: $isFavorite)';
   }
 
   @override
@@ -204,6 +211,7 @@ class ChatRoom {
         other.isMuted == isMuted &&
         other.isPinned == isPinned &&
         other.isArchived == isArchived &&
+        other.isFavorite == isFavorite &&
         listEquals(other.blockedUsers, blockedUsers);
   }
 
@@ -222,6 +230,7 @@ class ChatRoom {
         isMuted.hashCode ^
         isPinned.hashCode ^
         isArchived.hashCode ^
+        isFavorite.hashCode ^
         blockedUsers.hashCode;
   }
 }

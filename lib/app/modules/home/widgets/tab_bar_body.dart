@@ -55,10 +55,17 @@ class TabBarBody extends StatelessWidget {
                   chatRoom.membersIds?.contains(myId) ?? false)
               .toList();
 
-          // Sort chats: pinned chats first, then by last message time
+          // Sort chats: pinned chats first, then regular chats, then archived chats at bottom
           if (myChats != null && myChats.isNotEmpty) {
             myChats.sort((a, b) {
-              // First, sort by pinned status (pinned chats first)
+              // First, sort by archived status (archived chats at bottom)
+              if ((a.isArchived ?? false) && !(b.isArchived ?? false)) {
+                return 1; // a (archived) goes after b (not archived)
+              } else if (!(a.isArchived ?? false) && (b.isArchived ?? false)) {
+                return -1; // a (not archived) goes before b (archived)
+              }
+
+              // If both have same archived status, sort by pinned status (pinned chats first)
               if ((a.isPinned ?? false) && !(b.isPinned ?? false)) {
                 return -1;
               } else if (!(a.isPinned ?? false) && (b.isPinned ?? false)) {
@@ -157,11 +164,8 @@ class TabBarBody extends StatelessWidget {
 
     // Filter by favorite status if required
     if (getFavoriteOnly) {
-      // For now, we'll assume favorite chats are group chats or chats with specific criteria
-      // This could be enhanced by adding a 'isFavorite' field to ChatRoom model
       filteredChats = filteredChats.where((chat) {
-        // Example: Consider group chats as favorites, or implement proper favorite logic
-        return chat.isGroupChat == true;
+        return chat.isFavorite == true;
       }).toList();
     }
 

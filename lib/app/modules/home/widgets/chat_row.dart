@@ -87,12 +87,12 @@ class ChatRow extends StatelessWidget {
     }
   }
 
-  Future<void> _archiveChat() async {
+  Future<void> _toggleFavorite() async {
     try {
-      await chatDataSource.archiveChat(chatRoom?.id ?? '');
+      await chatDataSource.toggleFavoriteChat(chatRoom?.id ?? '');
       Get.snackbar(
         'Success',
-        'Chat archived',
+        chatRoom?.isFavorite == true ? 'Chat removed from favorites' : 'Chat added to favorites',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.primary,
         colorText: ColorsManager.white,
@@ -100,7 +100,28 @@ class ChatRow extends StatelessWidget {
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to archive chat: ${e.toString()}',
+        'Failed to toggle favorite: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
+
+  Future<void> _toggleArchive() async {
+    try {
+      await chatDataSource.toggleArchiveChat(chatRoom?.id ?? '');
+      Get.snackbar(
+        'Success',
+        chatRoom?.isArchived == true ? 'Chat unarchived' : 'Chat archived',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.primary,
+        colorText: ColorsManager.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to toggle archive: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
@@ -216,7 +237,14 @@ class ChatRow extends StatelessWidget {
           CupertinoContextMenuAction(
             onPressed: () {
               Navigator.pop(context);
-              _archiveChat();
+              _toggleFavorite();
+            },
+            child: Text('Favorite'),
+          ),
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _toggleArchive();
             },
             child: Text('Archive'),
           ),
@@ -315,6 +343,24 @@ class ChatRow extends StatelessWidget {
                                   Icons.push_pin,
                                   size: 12,
                                   color: ColorsManager.primary,
+                                ),
+                              ),
+                            if (chatRoom?.isArchived == true)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.archive,
+                                  size: 12,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                            if (chatRoom?.isFavorite == true)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.favorite,
+                                  size: 12,
+                                  color: ColorsManager.red,
                                 ),
                               ),
                           ],
