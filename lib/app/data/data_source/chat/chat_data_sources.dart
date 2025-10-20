@@ -163,6 +163,27 @@ class ChatDataSources {
         }
       }
 
+      // Generate a proper group name if none provided
+      String finalGroupName = groupName ?? '';
+      if (isGroupChat && (finalGroupName.isEmpty)) {
+        // Generate group name from members if not provided
+        final otherMembers = members!
+            .where((user) => user.uid != UserService.currentUser.value?.uid)
+            .take(3)
+            .map((user) => user.fullName?.split(' ').first ?? 'User')
+            .toList();
+
+        if (otherMembers.isNotEmpty) {
+          if (otherMembers.length == 1) {
+            finalGroupName = otherMembers.first;
+          } else if (otherMembers.length == 2) {
+            finalGroupName = '${otherMembers[0]}, ${otherMembers[1]}';
+          } else {
+            finalGroupName = '${otherMembers[0]}, ${otherMembers[1]} and ${otherMembers.length - 2} others';
+          }
+        }
+      }
+
       final chatRoom = ChatRoom(
         id: roomId,
         keywords: List.generate(
@@ -179,14 +200,14 @@ class ChatDataSources {
         lastSender: userId,
         lastChat: DateTime.now().toIso8601String(),
         isGroupChat: isGroupChat,
-        name: groupName,
+        name: finalGroupName.isNotEmpty ? finalGroupName : null, // Store null if no name
         description: groupDescription,
       );
       
       await newChatRoom.set(chatRoom.toMap());
       
       if (kDebugMode) {
-        print('✅ Created new chat room: $roomId');
+        print('✅ Created new chat room: $roomId with name: "$finalGroupName"');
       }
       
       return chatRoom;

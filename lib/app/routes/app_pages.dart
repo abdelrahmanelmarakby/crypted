@@ -4,6 +4,7 @@ import '../modules/callfriend/bindings/callfriend_binding.dart';
 import '../modules/callfriend/views/callfriend_view.dart';
 import '../modules/calls/bindings/calls_binding.dart';
 import '../modules/calls/views/calls_view.dart';
+import '../modules/calls/views/call_screen.dart';
 import '../modules/chat/bindings/chat_binding.dart';
 import '../modules/chat/views/chat_screen.dart';
 import '../modules/contactInfo/bindings/contact_info_binding.dart';
@@ -155,6 +156,11 @@ class AppPages {
       name: _Paths.CHAT,
       page: () => const PrivateChatScreen(),
       binding: ChatBinding(),
+    ),
+    GetPage(
+      name: _Paths.CALL,
+      page: () => const CallScreen(),
+      binding: CallsBinding(),
     ),
   ];
 }

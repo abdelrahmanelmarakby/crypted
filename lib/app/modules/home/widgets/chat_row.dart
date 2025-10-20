@@ -406,9 +406,24 @@ class ChatRow extends StatelessWidget {
   String _getChatDisplayName() {
     if (chatRoom?.isGroupChat == true) {
       // For group chats, show group name or fallback to member names
-      return chatRoom?.name ??
-          _generateGroupName(chatRoom?.members ?? []) ??
-          "Group Chat";
+      final groupName = chatRoom?.name;
+      if (groupName != null && groupName.trim().isNotEmpty) {
+        return groupName;
+      }
+
+      // Try to generate group name from members
+      final generatedName = _generateGroupName(chatRoom?.members ?? []);
+      if (generatedName != null && generatedName.trim().isNotEmpty) {
+        return generatedName;
+      }
+
+      // Final fallback: show member count or generic group name
+      final memberCount = chatRoom?.members?.length ?? 0;
+      if (memberCount >= 2) {
+        return "Group Chat ($memberCount members)";
+      } else {
+        return "Group Chat";
+      }
     } else {
       // For private chats, show the other user's name
       final otherUser = chatRoom?.members?.firstWhere(
@@ -513,15 +528,39 @@ class ChatRow extends StatelessWidget {
 
   /// Generate group name from members (fallback for unnamed groups)
   String? _generateGroupName(List<SocialMediaUser>? members) {
-    if (members == null || members.length < 2) return null;
+    if (members == null || members.isEmpty) return null;
 
+    // Get current user ID
+    final currentUserId = UserService.currentUser.value?.uid;
+
+    // Filter out current user and get other members
     final otherMembers = members
-        .where((user) => user.uid != UserService.currentUser.value?.uid)
+        .where((user) => user.uid != currentUserId)
+        .where((user) => user.fullName != null && user.fullName!.trim().isNotEmpty)
         .take(3)
-        .map((user) => user.fullName?.split(' ').first ?? 'User')
+        .map((user) => user.fullName!.trim().split(' ').first)
+        .where((name) => name.isNotEmpty)
         .toList();
 
-    if (otherMembers.isEmpty) return null;
+    if (otherMembers.isEmpty) {
+      // If no other members found, use all members (including current user)
+      final allMembers = members
+          .where((user) => user.fullName != null && user.fullName!.trim().isNotEmpty)
+          .take(3)
+          .map((user) => user.fullName!.trim().split(' ').first)
+          .where((name) => name.isNotEmpty)
+          .toList();
+
+      if (allMembers.isEmpty) return null;
+
+      if (allMembers.length == 1) {
+        return allMembers.first;
+      } else if (allMembers.length == 2) {
+        return '${allMembers[0]}, ${allMembers[1]}';
+      } else {
+        return '${allMembers[0]}, ${allMembers[1]} and ${allMembers.length - 2} others';
+      }
+    }
 
     if (otherMembers.length == 1) {
       return otherMembers.first;

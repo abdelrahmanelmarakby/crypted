@@ -308,6 +308,23 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                    // Selected users avatars
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: isGroupChat ? 30 : 20,
+                    child: AnimatedAvatarStack(
+                      height: isGroupChat ? 30 : 20,
+                      avatars: [
+                        for (var user in controller.selectedUsers)
+                          if (user.imageUrl?.isNotEmpty == true)
+                            CachedNetworkImageProvider(user.imageUrl!)
+                          else
+                            // Fallback for users without images
+                            const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                      ]
+                    ),
+                  ),
+                  
                   // Header text
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
@@ -335,14 +352,9 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                           duration: const Duration(milliseconds: 400),
                           curve: Curves.easeInOut,
                           decoration: BoxDecoration(
-                            color: ColorsManager.lightGrey.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: controller.groupName.value.isNotEmpty
-                                  ? ColorsManager.primary.withOpacity(0.3)
-                                  : ColorsManager.primary.withOpacity(0.2),
-                              width: 1,
-                            ),
+                            color: ColorsManager.offWhite,
+                            borderRadius: BorderRadius.circular(12),
+                          
                           ),
                           child: TextField(
                             onChanged: (value) {
@@ -372,6 +384,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                   ),
                                 ),
                               ),
+                              fillColor: ColorsManager.offWhite,
                               suffixIcon: Obx(() {
                                 return controller.groupName.value.isNotEmpty
                                     ? Padding(
@@ -383,21 +396,19 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                           icon: AnimatedContainer(
                                             duration: const Duration(milliseconds: 200),
                                             padding: const EdgeInsets.all(4),
+
                                             decoration: BoxDecoration(
+                                              
                                               color: ColorsManager.primary.withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
-                                            child: Icon(
-                                              Icons.close,
-                                              color: ColorsManager.primary,
-                                              size: 14,
-                                            ),
+                                            
                                           ),
                                         ),
                                       )
                                     : const SizedBox.shrink();
                               }),
-                              border: InputBorder.none,
+                             
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 16,
@@ -518,24 +529,13 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                                                 },
                                                               ),
                                                       )
-                                                    : Column(
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [
-                                                          Icon(
-                                                            Icons.add_photo_alternate,
-                                                            color: ColorsManager.primary.withOpacity(0.7),
-                                                            size: 24,
-                                                          ),
-                                                          const SizedBox(height: 2),
-                                                          Text(
-                                                            'Photo',
-                                                            style: StylesManager.regular(
-                                                              fontSize: 10,
+                                                    : Center(
+                                                      child: Icon(
+                                                              Iconsax.image_copy,
                                                               color: ColorsManager.primary.withOpacity(0.7),
+                                                              size: 24,
                                                             ),
-                                                          ),
-                                                        ],
-                                                      ),
+                                                    ),
 
                                                 // Remove button overlay (only when photo is selected)
                                                 if (photoUrl.isNotEmpty)
@@ -625,36 +625,10 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
-                  ],
-                  
-                  // Selected users avatars
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    height: isGroupChat ? 70 : 60,
-                    child: AnimatedAvatarStack(
-                      height: isGroupChat ? 70 : 60,
-                      avatars: [
-                        for (var user in controller.selectedUsers)
-                          if (user.imageUrl?.isNotEmpty == true)
-                            CachedNetworkImageProvider(user.imageUrl!)
-                          else
-                            // Fallback for users without images
-                            const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                      ]
-                    ),
-                  ),
-                  
-                  if (isGroupChat) ...[
                     const SizedBox(height: 8),
-                    Text(
-                      '${controller.selectedUsers.length} members selected',
-                      style: StylesManager.regular(
-                        fontSize: FontSize.small,
-                        color: ColorsManager.grey.withOpacity(0.8),
-                      ),
-                    ),
                   ],
+                  
+                
                 ],
               ),
             );
@@ -773,7 +747,9 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                 );
               }
 
-              return ListView.builder(
+              return 
+              
+              ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 itemCount: filteredUsers.length,
                 itemBuilder: (context, index) {
@@ -961,6 +937,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                             ),
                           ),
                           const SizedBox(width: 8),
+                          
                           Text(
                             isGroupChat
                                 ? (hasValidGroupName

@@ -24,6 +24,7 @@ abstract class Routes {
   static const CALLFRIEND = _Paths.CALLFRIEND;
   static const GROUP_INFO = _Paths.GROUP_INFO;
   static const STORIES2 = _Paths.STORIES2;
+  static const CALL = _Paths.CALL;
 //  static const PRIVET_CHAT = _Paths.PRIVET_CHAT;
 }
 
@@ -50,5 +51,6 @@ abstract class _Paths {
   static const CALLFRIEND = '/callfriend';
   static const GROUP_INFO = '/group-info';
   static const STORIES2 = '/stories2';
+  static const CALL='/call';
 //  static const PRIVET_CHAT = '/privet-chat';
 }

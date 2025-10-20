@@ -356,17 +356,17 @@ class PrivateChatScreen extends GetView<ChatController> {
           const SizedBox(width: 8),
 
           _buildCallButton(
-            icon: const Icon(
+            icon: const Icon( 
               Iconsax.video_copy,
               color: Colors.black,
-              size: 22,
+              size: 20,
             ),
             onPressed: () => _handleVideoCall(otherUser),
             isVideoCall: true,
             otherUser: otherUser,
           ),
         ],
-
+  
         const SizedBox(width: 16),
       ],
     );
@@ -379,18 +379,24 @@ class PrivateChatScreen extends GetView<ChatController> {
     required dynamic otherUser,
   }) {
     return ZegoSendCallInvitationButton(
-      buttonSize: const Size(44, 44),
+      buttonSize: const Size(70, 30),
       padding: EdgeInsets.zero,
-      iconSize: const Size.fromHeight(24),
+      iconSize: const Size.fromHeight(20),
       icon: ButtonIcon(
         icon: Container(
-          padding: const EdgeInsets.all(10),
+          
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
           ),
           child: icon,
         ),
+      ),
+      networkLoadingConfig: ZegoNetworkLoadingConfig(
+        progressColor: ColorsManager.primary,
+        icon: CircularProgressIndicator.adaptive(
+          backgroundColor: ColorsManager.offWhite,
+        )
       ),
       onPressed: (code, message, p2) => onPressed(),
       isVideoCall: isVideoCall,
@@ -472,7 +478,7 @@ class PrivateChatScreen extends GetView<ChatController> {
 
   Future<void> _handleAudioCall(dynamic otherUser) async {
     HapticFeedback.lightImpact();
-    
+
     final callModel = CallModel(
       callType: CallType.audio,
       callStatus: CallStatus.outgoing,
@@ -485,12 +491,16 @@ class PrivateChatScreen extends GetView<ChatController> {
       time: DateTime.now(),
     );
 
+    // Store call data first
     await _storeCallAndSendMessage(callModel);
+
+    // Navigate to call screen
+    Get.toNamed('/call', arguments: callModel);
   }
 
   Future<void> _handleVideoCall(dynamic otherUser) async {
     HapticFeedback.lightImpact();
-    
+
     final callModel = CallModel(
       callType: CallType.video,
       callStatus: CallStatus.outgoing,
@@ -503,7 +513,11 @@ class PrivateChatScreen extends GetView<ChatController> {
       time: DateTime.now(),
     );
 
+    // Store call data first
     await _storeCallAndSendMessage(callModel);
+
+    // Navigate to call screen
+    Get.toNamed('/call', arguments: callModel);
   }
 
   Future<void> _storeCallAndSendMessage(CallModel callModel) async {
