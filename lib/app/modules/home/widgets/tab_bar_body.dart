@@ -55,6 +55,32 @@ class TabBarBody extends StatelessWidget {
                   chatRoom.membersIds?.contains(myId) ?? false)
               .toList();
 
+          // Sort chats: pinned chats first, then by last message time
+          if (myChats != null && myChats.isNotEmpty) {
+            myChats.sort((a, b) {
+              // First, sort by pinned status (pinned chats first)
+              if ((a.isPinned ?? false) && !(b.isPinned ?? false)) {
+                return -1;
+              } else if (!(a.isPinned ?? false) && (b.isPinned ?? false)) {
+                return 1;
+              }
+
+              // If both have same pinned status, sort by last message time (newest first)
+              final aTime = _parseTimestamp(a.lastChat);
+              final bTime = _parseTimestamp(b.lastChat);
+
+              if (aTime != null && bTime != null) {
+                return bTime.compareTo(aTime); // Newest first
+              } else if (aTime != null) {
+                return -1;
+              } else if (bTime != null) {
+                return 1;
+              }
+
+              return 0;
+            });
+          }
+
           print("DEBUG: Total chats: ${allChats?.length ?? 0}, Filtered chats: ${filteredChats?.length ?? 0}, My chats: ${myChats?.length ?? 0}");
 
           if (myChats?.isNotEmpty ?? false) {
@@ -169,6 +195,19 @@ class TabBarBody extends StatelessWidget {
       return "Start private conversations to see them here";
     } else {
       return "Start a conversation to see your chats here";
+    }
+  }
+
+  /// Parse timestamp string to DateTime for sorting
+  DateTime? _parseTimestamp(String? timestampStr) {
+    if (timestampStr == null || timestampStr.isEmpty) return null;
+
+    try {
+      // Try to parse as ISO string first
+      return DateTime.tryParse(timestampStr);
+    } catch (e) {
+      print("Failed to parse timestamp: $timestampStr");
+      return null;
     }
   }
 }

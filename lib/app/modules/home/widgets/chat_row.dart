@@ -1,99 +1,23 @@
+import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
+import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
-import '../../../data/data_source/chat/chat_data_sources.dart';
-import '../../../data/data_source/user_services.dart';
-import '../../../data/models/chat/chat_room_model.dart';
-import '../../../data/models/user_model.dart';
-import '../../../routes/app_pages.dart';
 
 class ChatRow extends StatelessWidget {
   ChatRow({super.key, required this.chatRoom});
   final ChatRoom? chatRoom;
 
   final ChatDataSources chatDataSource = ChatDataSources();
-
-  Future<void> _showChatActions(BuildContext context) async {
-    final result = await showCupertinoModalPopup<String>(
-      context: context,
-      builder: (BuildContext context) => CupertinoActionSheet(
-        title: Text(_getChatDisplayName()),
-        message: Text(_getChatSubtitle()),
-        actions: <CupertinoActionSheetAction>[
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context, 'delete');
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: ColorsManager.red),
-            ),
-          ),
-          if (chatRoom?.isGroupChat == true)
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context, 'mute');
-              },
-              child: Text('Mute'),
-            ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context, 'pin');
-            },
-            child: Text('Pin'),
-          ),
-          if (chatRoom?.isGroupChat != true)
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context, 'block');
-              },
-              child: Text('Block'),
-            ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context, 'archive');
-            },
-            child: Text('Archive'),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: Text('Cancel'),
-        ),
-      ),
-    );
-
-    if (result != null) {
-      switch (result) {
-        case 'delete':
-          await _deleteChat();
-          break;
-        case 'mute':
-          await _toggleMute();
-          break;
-        case 'pin':
-          await _togglePin();
-          break;
-        case 'block':
-          await _blockUser();
-          break;
-        case 'archive':
-          await _archiveChat();
-          break;
-      }
-    }
-  }
 
   Future<void> _toggleMute() async {
     try {
@@ -253,150 +177,200 @@ class ChatRow extends StatelessWidget {
     }
   }
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Map<String, dynamic> arg = {
-          'members': chatRoom?.members,
-          "blockingUserId": chatRoom?.blockingUserId,
-          "roomId": chatRoom?.id,
-          "isGroupChat": chatRoom?.isGroupChat,
-        };
-        Get.toNamed(Routes.CHAT, arguments: arg);
-      },
-      onLongPress: () {
-        // تأثير الاهتزاز
-        HapticFeedback.heavyImpact();
-        _showChatActions(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Paddings.xSmall, vertical: Paddings.normal),
-        decoration: BoxDecoration(
-          color: ColorsManager.white,
-          border: Border(
-            top: BorderSide(color: Colors.grey[400]!, width: .2),
-            bottom: BorderSide(color: Colors.grey[400]!, width: .2),
+    return Material(
+      child: CupertinoContextMenu(
+        actions: <Widget>[
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteChat();
+            },
+            child: Text(
+              'Delete',
+              style: TextStyle(color: ColorsManager.red),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
+          if (chatRoom?.isGroupChat == true)
+            CupertinoContextMenuAction(
+              onPressed: () {
+                Navigator.pop(context);
+                _toggleMute();
+              },
+              child: Text('Mute'),
+            ),
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _togglePin();
+            },
+            child: Text('Pin'),
+          ),
+          if (chatRoom?.isGroupChat != true)
+            CupertinoContextMenuAction(
+              onPressed: () {
+                Navigator.pop(context);
+                _blockUser();
+              },
+              child: Text('Block'),
+            ),
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _archiveChat();
+            },
+            child: Text('Archive'),
+          ),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: Paddings.xSmall, vertical: Paddings.normal),
+          decoration: BoxDecoration(
+            color: ColorsManager.white,
+            border: Border(
+              top: BorderSide(color: Colors.grey[400]!, width: .2),
+              bottom: BorderSide(color: Colors.grey[400]!, width: .2),
+            ),
+          ),
+          child: Material(
+            child: GestureDetector(
+              onTap: () {
+                Map<String, dynamic> arg = {
+                  'members': chatRoom?.members,
+                  "blockingUserId": chatRoom?.blockingUserId,
+                  "roomId": chatRoom?.id,
+                  "isGroupChat": chatRoom?.isGroupChat,
+                };
+                Get.toNamed(Routes.CHAT, arguments: arg);
+              },
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      Get.toNamed(
-                        Routes.CHAT,
-                        arguments: {
-                          "user": _getChatDisplayUser(),
-                          "roomId": chatRoom?.id,
-                          "members": chatRoom?.members,
-                          "isGroupChat": chatRoom?.isGroupChat,
-                        },
-                      );
-                    },
-                    child: ClipOval(
-                      child: chatRoom?.isGroupChat == true
-                          ? _buildGroupAvatar()
-                          : _buildPrivateAvatar(),
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: GestureDetector(
+                      onTap: () {
+                        Get.toNamed(
+                          Routes.CHAT,
+                          arguments: {
+                            "user": _getChatDisplayUser(),
+                            "roomId": chatRoom?.id,
+                            "members": chatRoom?.members,
+                            "isGroupChat": chatRoom?.isGroupChat,
+                          },
+                        );
+                      },
+                      child: ClipOval(
+                        child: chatRoom?.isGroupChat == true
+                            ? _buildGroupAvatar()
+                            : _buildPrivateAvatar(),
+                      ),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
+                  SizedBox(width: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: 100,
+                      maxWidth: 200,
+                    ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              _getChatDisplayName(),
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: FontSize.small,
-                                color: ColorsManager.black,
-                                fontWeight: FontWeights.regular,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            // Chat type indicator
-                            if (chatRoom?.isGroupChat == true)
-                              Icon(
-                                Icons.group,
-                                size: 14,
-                                color: ColorsManager.primary,
-                              )
-                            else
-                              Icon(
-                                Icons.person,
-                                size: 14,
-                                color: ColorsManager.grey,
-                              ),
-                          ],
-                        ),
-                        SizedBox(height: 2),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                _getChatSubtitle(),
-                                maxLines: 1,
+                                _getChatDisplayName(),
                                 overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                                 style: const TextStyle(
-                                  fontSize: FontSize.xSmall,
-                                  fontWeight: FontWeights.medium,
-                                  color: ColorsManager.lightGrey,
+                                  fontSize: FontSize.small,
+                                  color: ColorsManager.black,
+                                  fontWeight: FontWeights.regular,
                                 ),
                               ),
                             ),
-                            if (_shouldShowMemberCount())
-                              Text(
-                                " • ${_getMemberCount()}",
-                                style: const TextStyle(
-                                  fontSize: FontSize.xSmall,
-                                  fontWeight: FontWeights.medium,
+                            if (chatRoom?.isGroupChat == true)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.group,
+                                  size: 14,
+                                  color: ColorsManager.primary,
+                                ),
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 14,
                                   color: ColorsManager.grey,
+                                ),
+                              ),
+                            if (chatRoom?.isPinned == true)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.push_pin,
+                                  size: 12,
+                                  color: ColorsManager.primary,
                                 ),
                               ),
                           ],
                         ),
+                        SizedBox(height: 2),
+                        Text(
+                          _getChatSubtitle(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: FontSize.xSmall,
+                            fontWeight: FontWeights.medium,
+                            color: ColorsManager.lightGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  SizedBox(
+                    width: 80,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          timeago.format(
+                              _parseDateSafely(chatRoom?.lastChat) ?? DateTime.now()),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: FontSize.xXSmall,
+                            color: ColorsManager.lightGrey,
+                            fontWeight: FontWeights.medium,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        // Show unread indicator for current user
+                        if (chatRoom?.lastSender != UserService.currentUser.value?.uid)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: ColorsManager.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 8),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  timeago.format(
-                      _parseDateSafely(chatRoom?.lastChat) ?? DateTime.now()),
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: FontSize.xXSmall,
-                    color: ColorsManager.lightGrey,
-                    fontWeight: FontWeights.medium,
-                  ),
-                ),
-                SizedBox(height: 8),
-                // Show unread indicator for current user
-                if (chatRoom?.lastSender != UserService.currentUser.value?.uid)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: ColorsManager.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  )
-                else
-                  const SizedBox(height: 8),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
