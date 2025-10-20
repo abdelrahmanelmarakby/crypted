@@ -5,25 +5,49 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-    android:maxSdkVersion="28"/>
+        android:maxSdkVersion="28"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.BLUETOOTH" />
 
+    <!-- Audio and Camera permissions for calling -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Bluetooth for audio routing during calls -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Foreground service for background calling -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Wake lock for keeping screen on during calls -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE"/>
 
+    <!-- Notification permissions for call notifications -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!--for bring app to foreground from background in Android 10 -->
+
+    <!-- System alert window for bringing app to foreground -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- Location permissions for geolocator and map features -->
+
+    <!-- Location permissions for location sharing -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- Hardware feature requirements -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="false" />
 
    
     <application

@@ -1,4 +1,3 @@
-// ignore_for_file: must_be_immutable, deprecated_member_use
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
@@ -25,8 +24,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:zego_uikit/zego_uikit.dart';
-import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 import 'package:crypted_app/app/modules/calls/controllers/calls_controller.dart';
 
 class PrivateChatScreen extends GetView<ChatController> {
@@ -157,9 +154,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                                 ),
                               ],
                             ),
-                            child: const SafeArea(
-                              child: AttachmentWidget(),
-                            ),
+                            child: AttachmentWidget(),
                           ),
                       ],
                     ),
@@ -340,73 +335,102 @@ class PrivateChatScreen extends GetView<ChatController> {
             ),
           ),
         ] else ...[
-          // Call buttons for private chats
-          _buildCallButton(
-            icon: SvgPicture.asset(
-              'assets/icons/call-calling.svg',
-              color: Colors.black,
-              height: 20,
-              width: 20,
-            ),
-            onPressed: () => _handleAudioCall(otherUser),
-            isVideoCall: false,
-            otherUser: otherUser,
-          ),
+          // Enhanced call buttons for private chats with improved layout
+          // Features:
+          // - Better visual hierarchy with proper spacing
+          // - Container wrapper for consistent margins
+          // - Color-coded icons (green for audio, blue for video)
+          // - Smooth animations and micro-interactions
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Audio call button with green accent
+                _buildCallButton(
+                  icon: SvgPicture.asset(
+                    'assets/icons/call-calling.svg',
+                    color: ColorsManager.success,
+                    height: 20,
+                    width: 20,
+                  ),
+                  onPressed: () => _handleAudioCall(otherUser),
+                  isVideoCall: false,
+                  otherUser: otherUser,
+                ),
 
-          const SizedBox(width: 8),
+                const SizedBox(width: 8),
 
-          _buildCallButton(
-            icon: const Icon( 
-              Iconsax.video_copy,
-              color: Colors.black,
-              size: 20,
+                // Video call button with blue accent
+                _buildCallButton(
+                  icon: const Icon(
+                    Iconsax.video_copy,
+                    color: ColorsManager.primary,
+                    size: 20,
+                  ),
+                  onPressed: () => _handleVideoCall(otherUser),
+                  isVideoCall: true,
+                  otherUser: otherUser,
+                ),
+              ],
             ),
-            onPressed: () => _handleVideoCall(otherUser),
-            isVideoCall: true,
-            otherUser: otherUser,
           ),
         ],
-  
-        const SizedBox(width: 16),
+
+        const SizedBox(width: 8),
       ],
     );
   }
 
+  /// Enhanced call button widget with Apple-style design
+  /// Features:
+  /// - Clean, minimal design without gradients or shadows
+  /// - Distinct colors for audio (green) and video (blue) calls
+  /// - Smooth animations and micro-interactions
+  /// - Proper spacing and visual hierarchy
   Widget _buildCallButton({
     required Widget icon,
     required VoidCallback onPressed,
     required bool isVideoCall,
     required dynamic otherUser,
   }) {
-    return ZegoSendCallInvitationButton(
-      buttonSize: const Size(70, 30),
-      padding: EdgeInsets.zero,
-      iconSize: const Size.fromHeight(20),
-      icon: ButtonIcon(
-        icon: Container(
-          
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isVideoCall
+                ? ColorsManager.primary.withOpacity(0.1)
+                : ColorsManager.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isVideoCall
+                  ? ColorsManager.primary.withOpacity(0.3)
+                  : ColorsManager.success.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isVideoCall
+                  ? ColorsManager.primary.withOpacity(0.15)
+                  : ColorsManager.success.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.all(10),
+              child: icon,
+            ),
           ),
-          child: icon,
         ),
       ),
-      networkLoadingConfig: ZegoNetworkLoadingConfig(
-        progressColor: ColorsManager.primary,
-        icon: CircularProgressIndicator.adaptive(
-          backgroundColor: ColorsManager.offWhite,
-        )
-      ),
-      onPressed: (code, message, p2) => onPressed(),
-      isVideoCall: isVideoCall,
-      resourceID: "crypted",
-      invitees: [
-        ZegoUIKitUser(
-          id: otherUser.uid ?? "",
-          name: otherUser.fullName ?? "",
-        ),
-      ],
     );
   }
 
@@ -479,55 +503,116 @@ class PrivateChatScreen extends GetView<ChatController> {
   Future<void> _handleAudioCall(dynamic otherUser) async {
     HapticFeedback.lightImpact();
 
-    final callModel = CallModel(
-      callType: CallType.audio,
-      callStatus: CallStatus.outgoing,
-      calleeId: otherUser.uid ?? "",
-      calleeImage: otherUser.imageUrl ?? "",
-      calleeUserName: otherUser.fullName ?? "",
-      callerId: UserService.currentUser.value?.uid ?? "",
-      callerImage: UserService.currentUser.value?.imageUrl ?? "",
-      callerUserName: UserService.currentUser.value?.fullName ?? "",
-      time: DateTime.now(),
-    );
+    try {
+      // Send call invitation
+      final callDataSource = CallDataSources();
+      final invitationSuccess = await callDataSource.sendCallInvitation(
+        callerId: UserService.currentUser.value?.uid ?? "",
+        callerName: UserService.currentUser.value?.fullName ?? "",
+        calleeId: otherUser.uid ?? "",
+        calleeName: otherUser.fullName ?? "",
+        isVideoCall: false,
+        customData: "audio_call_${DateTime.now().millisecondsSinceEpoch}",
+      );
 
-    // Store call data first
-    await _storeCallAndSendMessage(callModel);
+      if (!invitationSuccess) {
+        Get.snackbar(
+          'Call Error',
+          'Failed to send call invitation',
+          backgroundColor: ColorsManager.error,
+          colorText: ColorsManager.white,
+        );
+        return;
+      }
 
-    // Navigate to call screen
-    Get.toNamed('/call', arguments: callModel);
+      final callModel = CallModel(
+        callType: CallType.audio,
+        callStatus: CallStatus.outgoing,
+        calleeId: otherUser.uid ?? "",
+        calleeImage: otherUser.imageUrl ?? "",
+        calleeUserName: otherUser.fullName ?? "",
+        callerId: UserService.currentUser.value?.uid ?? "",
+        callerImage: UserService.currentUser.value?.imageUrl ?? "",
+        callerUserName: UserService.currentUser.value?.fullName ?? "",
+        time: DateTime.now(),
+      );
+
+      // Store call data first
+      await _storeCallAndSendMessage(callModel);
+
+      // Navigate to call screen
+      Get.toNamed('/call', arguments: callModel);
+
+    } catch (e) {
+      Get.snackbar(
+        'Call Error',
+        'Failed to start audio call: ${e.toString()}',
+        backgroundColor: ColorsManager.error,
+        colorText: ColorsManager.white,
+      );
+    }
   }
 
   Future<void> _handleVideoCall(dynamic otherUser) async {
     HapticFeedback.lightImpact();
 
-    final callModel = CallModel(
-      callType: CallType.video,
-      callStatus: CallStatus.outgoing,
-      calleeId: otherUser.uid ?? "",
-      calleeImage: otherUser.imageUrl ?? "",
-      calleeUserName: otherUser.fullName ?? "",
-      callerId: UserService.currentUser.value?.uid ?? "",
-      callerImage: UserService.currentUser.value?.imageUrl ?? "",
-      callerUserName: UserService.currentUser.value?.fullName ?? "",
-      time: DateTime.now(),
-    );
+    try {
+      // Send call invitation
+      final callDataSource = CallDataSources();
+      final invitationSuccess = await callDataSource.sendCallInvitation(
+        callerId: UserService.currentUser.value?.uid ?? "",
+        callerName: UserService.currentUser.value?.fullName ?? "",
+        calleeId: otherUser.uid ?? "",
+        calleeName: otherUser.fullName ?? "",
+        isVideoCall: true,
+        customData: "video_call_${DateTime.now().millisecondsSinceEpoch}",
+      );
 
-    // Store call data first
-    await _storeCallAndSendMessage(callModel);
+      if (!invitationSuccess) {
+        Get.snackbar(
+          'Call Error',
+          'Failed to send call invitation',
+          backgroundColor: ColorsManager.error,
+          colorText: ColorsManager.white,
+        );
+        return;
+      }
 
-    // Navigate to call screen
-    Get.toNamed('/call', arguments: callModel);
+      final callModel = CallModel(
+        callType: CallType.video,
+        callStatus: CallStatus.outgoing,
+        calleeId: otherUser.uid ?? "",
+        calleeImage: otherUser.imageUrl ?? "",
+        calleeUserName: otherUser.fullName ?? "",
+        callerId: UserService.currentUser.value?.uid ?? "",
+        callerImage: UserService.currentUser.value?.imageUrl ?? "",
+        callerUserName: UserService.currentUser.value?.fullName ?? "",
+        time: DateTime.now(),
+      );
+
+      // Store call data first
+      await _storeCallAndSendMessage(callModel);
+
+      // Navigate to call screen
+      Get.toNamed('/call', arguments: callModel);
+
+    } catch (e) {
+      Get.snackbar(
+        'Call Error',
+        'Failed to start video call: ${e.toString()}',
+        backgroundColor: ColorsManager.error,
+        colorText: ColorsManager.white,
+      );
+    }
   }
 
   Future<void> _storeCallAndSendMessage(CallModel callModel) async {
     try {
       final callDataSource = CallDataSources();
       final success = await callDataSource.storeCall(callModel);
-      
+
       if (success) {
-        Get.find<CallsController>().refreshCalls();
-        
+        // Send call message to chat
         await controller.sendMessage(CallMessage(
           id: "${Timestamp.now().toDate()}",
           roomId: controller.roomId,
@@ -535,9 +620,12 @@ class PrivateChatScreen extends GetView<ChatController> {
           timestamp: Timestamp.now().toDate(),
           callModel: callModel,
         ));
+
+        Get.find<CallsController>().refreshCalls();
       }
     } catch (e) {
       print('❌ Error handling call: $e');
+      throw e;
     }
   }
 

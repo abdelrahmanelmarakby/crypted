@@ -1,5 +1,5 @@
 class AppConstants {
-  static const int appID = 2119119917;
+  static const int appID = 2017175443;
   static const String appSign =
-      '2ed2143c92c78a30ae5935a94af0e8c54ec60274e87f9746a9d008f43f187dae';
+      '01ff243379ee3ebcadbfe64481325462b38f017e592aae6245bdbad2a6868515';
 }

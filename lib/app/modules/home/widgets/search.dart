@@ -503,6 +503,6 @@ class Search extends StatelessWidget {
     // 2. Get the chat name from the chat room
     // 3. Handle both group chats and private chats
 
-    return 'Chat ${message.roomId.substring(0, 8)}...'; // Placeholder implementation
+    return message.roomId.isNotEmpty ? 'Chat ${message.roomId.substring(0, 8)}...' : 'Unknown Chat';
   }
 }

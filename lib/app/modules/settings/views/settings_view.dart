@@ -178,7 +178,7 @@ class SettingsView extends GetView<SettingsController> {
                               onTap: () {
                                 CallDataSources callDataSources =
                                     CallDataSources();
-                                callDataSources.onUserLogout();
+                                // callDataSources.onUserLogout();
 
                                 CacheHelper.logout();
                                 Get.offAllNamed(Routes.LOGIN);

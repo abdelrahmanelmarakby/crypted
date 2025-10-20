@@ -45,6 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>voip</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>نحتاج إذن الميكروفون لإجراء المكالمات الصوتية والفيديو</string>
+	<key>NSCameraUsageDescription</key>
+	<string>نحتاج إذن الكاميرا لإجراء مكالمات الفيديو</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة</string>
 	<key>NSLocationAlwaysUsageDescription</key>

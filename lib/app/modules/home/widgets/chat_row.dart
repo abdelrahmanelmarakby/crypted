@@ -606,11 +606,6 @@ class ChatRow extends StatelessWidget {
     }
   }
 
-  /// Check if we should show member count
-  bool _shouldShowMemberCount() {
-    return chatRoom?.isGroupChat == true && (chatRoom?.members?.length ?? 0) > 2;
-  }
-
   /// Get member count for display
   String _getMemberCount() {
     final count = chatRoom?.members?.length ?? 0;

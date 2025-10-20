@@ -30,7 +30,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class ChatController extends GetxController {
   final TextEditingController messageController = TextEditingController();
@@ -250,19 +249,8 @@ class ChatController extends GetxController {
   }
 
   Future<void> _checkPermissions() async {
-    final micStatus = await Permission.microphone.status;
-    if (micStatus.isDenied) {
-      await Permission.microphone.request();
-    } else if (micStatus.isPermanentlyDenied) {
-      _showToast('Microphone permission required for voice messages');
-    }
-
-    final camStatus = await Permission.camera.status;
-    if (camStatus.isDenied) {
-      await Permission.camera.request();
-    } else if (camStatus.isPermanentlyDenied) {
-      _showToast('Camera permission required for video calls');
-    }
+    // Skip automatic permission requests to avoid unwanted dialogs
+    // Permissions will be requested by Zego UIKit when actually needed for calls
 
     // Initialize Zego if not already initialized
     if (currentUser?.uid != null && currentUser?.fullName != null) {
