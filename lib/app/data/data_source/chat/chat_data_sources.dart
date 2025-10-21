@@ -35,26 +35,28 @@ enum MessageType {
 class ChatDataSources {
   // =================== PROPERTIES ===================
   final ChatConfiguration? chatConfiguration;
-  final CollectionReference chatCollection = FirebaseFirestore.instance.collection('chats');
-  final String userId = UserService.currentUser.value?.uid.toString() ?? 
-                       FirebaseAuth.instance.currentUser?.uid.toString() ?? '';
-  
+  final CollectionReference chatCollection =
+      FirebaseFirestore.instance.collection('chats');
+  final String userId = UserService.currentUser.value?.uid.toString() ??
+      FirebaseAuth.instance.currentUser?.uid.toString() ??
+      '';
+
   ChatDataSources({this.chatConfiguration});
 
   // =================== CHAT ROOM QUERIES ===================
-  
+
   /// Get all chats for the current user with optional filters
   Stream<List<ChatRoom>> getChats({
-    bool getGroupChatOnly = false, 
+    bool getGroupChatOnly = false,
     bool getPrivateChatOnly = false,
   }) {
     if (userId.isEmpty) return Stream.value([]);
-    
+
     Query query = chatCollection
         .where('membersIds', arrayContains: userId)
         .orderBy('lastChat', descending: true)
         .orderBy('__name__', descending: true);
-    
+
     if (getGroupChatOnly) {
       query = query.where('isGroupChat', isEqualTo: true);
     }
@@ -71,16 +73,18 @@ class ChatDataSources {
         }
       });
     }
-    
+
     return querySnapshotStream;
   }
 
   /// Get a specific chat room by ID
   Future<ChatRoom?> getChatRoomById(String roomId) async {
     try {
-      DocumentSnapshot chatRoomSnapshot = await chatCollection.doc(roomId).get();
+      DocumentSnapshot chatRoomSnapshot =
+          await chatCollection.doc(roomId).get();
       if (chatRoomSnapshot.exists) {
-        return ChatRoom.fromMap(chatRoomSnapshot.data() as Map<String, dynamic>);
+        return ChatRoom.fromMap(
+            chatRoomSnapshot.data() as Map<String, dynamic>);
       }
       return null;
     } catch (e) {
@@ -93,12 +97,14 @@ class ChatDataSources {
 
   /// Check if a chat room exists between specific members
   Future<bool> chatRoomExists() async {
-    if (chatConfiguration == null || chatConfiguration!.members.isEmpty) return false;
+    if (chatConfiguration == null || chatConfiguration!.members.isEmpty)
+      return false;
 
     final querySnapshot = await chatCollection
-        .where('membersIds', isEqualTo: chatConfiguration!.members.map((e) => e.uid).toList())
+        .where('membersIds',
+            isEqualTo: chatConfiguration!.members.map((e) => e.uid).toList())
         .get();
-    
+
     if (kDebugMode) {
       print("✅ Chat room exists: ${querySnapshot.docs.isNotEmpty}");
     }
@@ -112,12 +118,12 @@ class ChatDataSources {
       final querySnapshot = await chatCollection
           .where('membersIds', arrayContainsAny: memberIds)
           .get();
-      
+
       for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final roomMemberIds = List<String>.from(data['membersIds'] ?? []);
         roomMemberIds.sort();
-        
+
         if (_listsEqual(roomMemberIds, memberIds)) {
           return ChatRoom.fromMap(data);
         }
@@ -132,7 +138,7 @@ class ChatDataSources {
   }
 
   // =================== CHAT ROOM MANAGEMENT ===================
-  
+
   /// Create a new chat room
   Future<ChatRoom> createNewChatRoom({
     Message? privateMessage,
@@ -145,7 +151,7 @@ class ChatDataSources {
     try {
       roomId = roomId ?? chatCollection.doc().id;
       final newChatRoom = chatCollection.doc(roomId);
-      
+
       // Check blocked users
       final currentUserDoc = FirebaseFirestore.instance
           .collection('users')
@@ -154,11 +160,13 @@ class ChatDataSources {
       List blockedList = [];
 
       if (userSnapshot.exists && userSnapshot.data() != null) {
-        Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
+        Map<String, dynamic> userData =
+            userSnapshot.data() as Map<String, dynamic>;
         blockedList = userData["blockedUser"] ?? [];
-        
+
         final memberUids = members?.map((e) => e.uid).toList() ?? [];
-        if (memberUids.isNotEmpty && blockedList.any((blocked) => memberUids.contains(blocked))) {
+        if (memberUids.isNotEmpty &&
+            blockedList.any((blocked) => memberUids.contains(blocked))) {
           throw Exception('Cannot create chat room with blocked users');
         }
       }
@@ -187,14 +195,10 @@ class ChatDataSources {
       final chatRoom = ChatRoom(
         id: roomId,
         keywords: List.generate(
-          members?.length ?? 0,
-          (index) => 'id+${members![index].uid}+'
-        ),
+            members?.length ?? 0, (index) => 'id+${members![index].uid}+'),
         read: false,
         membersIds: List.generate(
-          members?.length ?? 0,
-          (index) => members![index].uid ?? ""
-        ),
+            members?.length ?? 0, (index) => members![index].uid ?? ""),
         members: members,
         lastMsg: setLastMessage(privateMessage),
         lastSender: userId,
@@ -203,13 +207,13 @@ class ChatDataSources {
         name: finalGroupName.isNotEmpty ? finalGroupName : null, // Store null if no name
         description: groupDescription,
       );
-      
+
       await newChatRoom.set(chatRoom.toMap());
-      
+
       if (kDebugMode) {
         print('✅ Created new chat room: $roomId with name: "$finalGroupName"');
       }
-      
+
       return chatRoom;
     } catch (e) {
       log("Error creating new chat room: ${e.toString()}");
@@ -225,17 +229,18 @@ class ChatDataSources {
     try {
       final chatRoomRef = chatCollection.doc(roomId);
       final chatRoomSnapshot = await chatRoomRef.get();
-      
+
       if (!chatRoomSnapshot.exists) {
         throw Exception('Chat room not found');
       }
-      
+
       final chatRoomData = chatRoomSnapshot.data() as Map<String, dynamic>;
       final currentMembers = List<SocialMediaUser>.from(
-        (chatRoomData['members'] ?? []).map((member) => SocialMediaUser.fromMap(member))
-      );
-      final currentMemberIds = List<String>.from(chatRoomData['membersIds'] ?? []);
-      
+          (chatRoomData['members'] ?? [])
+              .map((member) => SocialMediaUser.fromMap(member)));
+      final currentMemberIds =
+          List<String>.from(chatRoomData['membersIds'] ?? []);
+
       // Check if member already exists
       if (currentMemberIds.contains(newMember.uid)) {
         if (kDebugMode) {
@@ -243,23 +248,21 @@ class ChatDataSources {
         }
         return false;
       }
-      
+
       // Check if it's a group chat (can't add members to private chats)
       final isGroupChat = chatRoomData['isGroupChat'] ?? false;
       if (!isGroupChat) {
         throw Exception('Cannot add members to private chat');
       }
-      
+
       // Add new member
       currentMembers.add(newMember);
       currentMemberIds.add(newMember.uid ?? "");
-      
+
       // Update keywords
       final newKeywords = List.generate(
-        currentMembers.length, 
-        (index) => 'id+${currentMembers[index].uid}+'
-      );
-      
+          currentMembers.length, (index) => 'id+${currentMembers[index].uid}+');
+
       // Update chat room
       await chatRoomRef.update({
         'members': currentMembers.map((member) => member.toMap()).toList(),
@@ -269,18 +272,18 @@ class ChatDataSources {
         'lastMsg': '${newMember.fullName} joined the group',
         'lastSender': userId,
       });
-      
+
       // Add system message about member joining
       await _addSystemMessage(
         roomId: roomId,
         message: '${newMember.fullName} joined the group',
         messageType: 'member_added',
       );
-      
+
       if (kDebugMode) {
         print('✅ Member added to chat room: ${newMember.fullName}');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -298,17 +301,18 @@ class ChatDataSources {
     try {
       final chatRoomRef = chatCollection.doc(roomId);
       final chatRoomSnapshot = await chatRoomRef.get();
-      
+
       if (!chatRoomSnapshot.exists) {
         throw Exception('Chat room not found');
       }
-      
+
       final chatRoomData = chatRoomSnapshot.data() as Map<String, dynamic>;
       final currentMembers = List<SocialMediaUser>.from(
-        (chatRoomData['members'] ?? []).map((member) => SocialMediaUser.fromMap(member))
-      );
-      final currentMemberIds = List<String>.from(chatRoomData['membersIds'] ?? []);
-      
+          (chatRoomData['members'] ?? [])
+              .map((member) => SocialMediaUser.fromMap(member)));
+      final currentMemberIds =
+          List<String>.from(chatRoomData['membersIds'] ?? []);
+
       // Check if member exists
       if (!currentMemberIds.contains(memberIdToRemove)) {
         if (kDebugMode) {
@@ -316,32 +320,30 @@ class ChatDataSources {
         }
         return false;
       }
-      
+
       // Check if it's a group chat
       final isGroupChat = chatRoomData['isGroupChat'] ?? false;
       if (!isGroupChat) {
         throw Exception('Cannot remove members from private chat');
       }
-      
+
       // Don't allow removing the last member
       if (currentMemberIds.length <= 1) {
         throw Exception('Cannot remove the last member from group chat');
       }
-      
+
       // Find and remove member
       final memberToRemove = currentMembers.firstWhere(
         (member) => member.uid == memberIdToRemove,
       );
-      
+
       currentMembers.removeWhere((member) => member.uid == memberIdToRemove);
       currentMemberIds.remove(memberIdToRemove);
-      
+
       // Update keywords
       final newKeywords = List.generate(
-        currentMembers.length, 
-        (index) => 'id+${currentMembers[index].uid}+'
-      );
-      
+          currentMembers.length, (index) => 'id+${currentMembers[index].uid}+');
+
       // Update chat room
       await chatRoomRef.update({
         'members': currentMembers.map((member) => member.toMap()).toList(),
@@ -351,18 +353,18 @@ class ChatDataSources {
         'lastMsg': '${memberToRemove.fullName} left the group',
         'lastSender': userId,
       });
-      
+
       // Add system message about member leaving
       await _addSystemMessage(
         roomId: roomId,
         message: '${memberToRemove.fullName} left the group',
         messageType: 'member_removed',
       );
-      
+
       if (kDebugMode) {
         print('✅ Member removed from chat room: ${memberToRemove?.fullName}');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -383,17 +385,18 @@ class ChatDataSources {
       final updateData = <String, dynamic>{
         'lastChat': DateTime.now().toIso8601String(),
       };
-      
+
       if (groupName != null) updateData['name'] = groupName;
-      if (groupDescription != null) updateData['description'] = groupDescription;
+      if (groupDescription != null)
+        updateData['description'] = groupDescription;
       if (groupImageUrl != null) updateData['groupImageUrl'] = groupImageUrl;
-      
+
       await chatCollection.doc(roomId).update(updateData);
-      
+
       if (kDebugMode) {
         print('✅ Chat room info updated: $roomId');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -404,7 +407,7 @@ class ChatDataSources {
   }
 
   // =================== MESSAGE OPERATIONS ===================
-  
+
   /// Update a specific message
   Future<void> updateMessage({
     required String roomId,
@@ -461,7 +464,7 @@ class ChatDataSources {
   }) async {
     try {
       bool exists = await chatRoomExists();
-      
+
       if (!exists) {
         if (kDebugMode) {
           print("✅ Chat room does not exist, creating new chat room");
@@ -472,11 +475,11 @@ class ChatDataSources {
           members: members,
         );
       }
-      
+
       if (kDebugMode) {
         print("✅ Chat room exists, posting message");
       }
-      
+
       await postMessageToChat(privateMessage, roomId);
     } catch (error) {
       if (kDebugMode) {
@@ -490,22 +493,19 @@ class ChatDataSources {
 
   /// Post message to chat collection
   Future<void> postMessageToChat(Message? privateMessage, String roomId) async {
-    final newPrivateMessage = chatCollection
-        .doc(roomId)
-        .collection('chat')
-        .doc();
-    
+    final newPrivateMessage =
+        ChatDataSources().chatCollection.doc(roomId).collection('chat').doc();
+
     await newPrivateMessage.set(
-      privateMessage!
-          .copyWith(id: newPrivateMessage.id)
-          .toMap(),
+      privateMessage!.copyWith(id: newPrivateMessage.id).toMap(),
     );
-    
+
     await updateChatRoomWithMessage(privateMessage, roomId);
   }
 
   /// Update chat room with latest message info
-  Future<void> updateChatRoomWithMessage(Message? privateMessage, String roomId) async {
+  Future<void> updateChatRoomWithMessage(
+      Message? privateMessage, String roomId) async {
     if (chatConfiguration == null || chatConfiguration!.members.isEmpty) {
       print("❌ Cannot update chat room: chatConfiguration is null or empty");
       return;
@@ -514,24 +514,20 @@ class ChatDataSources {
     final room = ChatRoom(
       id: roomId,
       read: false,
-      keywords: List<String>.generate(
-        chatConfiguration!.members.length,
-        (index) => 'id+${chatConfiguration!.members[index].uid}+'
-      ),
-      membersIds: List<String>.generate(
-        chatConfiguration!.members.length,
-        (index) => chatConfiguration!.members[index].uid ?? ""
-      ),
+      keywords: List<String>.generate(chatConfiguration!.members.length,
+          (index) => 'id+${chatConfiguration!.members[index].uid}+'),
+      membersIds: List<String>.generate(chatConfiguration!.members.length,
+          (index) => chatConfiguration!.members[index].uid ?? ""),
       members: chatConfiguration!.members, // Keep existing members for updates
       lastMsg: setLastMessage(privateMessage),
       lastSender: userId,
       lastChat: DateTime.now().toIso8601String(),
     );
-    
+
     if (kDebugMode) {
       print("✅ Chat room updated: ${room.id}");
     }
-    
+
     await chatCollection.doc(roomId).update(room.toMap());
   }
 
@@ -549,7 +545,7 @@ class ChatDataSources {
         timestamp: DateTime.now(),
         text: message,
       );
-      
+
       await postMessageToChat(systemMessage, roomId);
     } catch (e) {
       if (kDebugMode) {
@@ -559,11 +555,11 @@ class ChatDataSources {
   }
 
   // =================== MESSAGE UTILITIES ===================
-  
+
   /// Generate preview text for last message
   String setLastMessage(Message? message) {
     if (message == null) return '';
-    
+
     switch (message) {
       case TextMessage():
         return message.text.length > 50
@@ -621,7 +617,7 @@ class ChatDataSources {
   }
 
   // =================== DELETE OPERATIONS ===================
-  
+
   /// Update chat room properties (mute, pin, archive, block)
   Future<void> updateChatRoomProperties({
     required String roomId,
@@ -650,7 +646,8 @@ class ChatDataSources {
       }
 
       final currentMuted = chatRoom.isMuted ?? false;
-      await updateChatRoomProperties(roomId: roomId, updates: {'isMuted': !currentMuted});
+      await updateChatRoomProperties(
+          roomId: roomId, updates: {'isMuted': !currentMuted});
 
       if (kDebugMode) {
         print('✅ Chat ${!currentMuted ? 'muted' : 'unmuted'}: $roomId');
@@ -672,7 +669,8 @@ class ChatDataSources {
       }
 
       final currentPinned = chatRoom.isPinned ?? false;
-      await updateChatRoomProperties(roomId: roomId, updates: {'isPinned': !currentPinned});
+      await updateChatRoomProperties(
+          roomId: roomId, updates: {'isPinned': !currentPinned});
 
       if (kDebugMode) {
         print('✅ Chat ${!currentPinned ? 'pinned' : 'unpinned'}: $roomId');
@@ -703,7 +701,8 @@ class ChatDataSources {
       }
 
       currentBlockedUsers.add(userId);
-      await updateChatRoomProperties(roomId: roomId, updates: {'blockedUsers': currentBlockedUsers});
+      await updateChatRoomProperties(
+          roomId: roomId, updates: {'blockedUsers': currentBlockedUsers});
 
       if (kDebugMode) {
         print('✅ User blocked: $userId in room: $roomId');
@@ -785,9 +784,10 @@ class ChatDataSources {
     try {
       // Delete messages from 'chats' collection
       try {
-        final messagesQuery = await chatCollection.doc(roomId).collection('chat').get();
+        final messagesQuery =
+            await chatCollection.doc(roomId).collection('chat').get();
         await _deleteMessageFiles(messagesQuery.docs);
-        
+
         for (var doc in messagesQuery.docs) {
           await doc.reference.delete();
         }
@@ -804,9 +804,9 @@ class ChatDataSources {
             .doc(roomId)
             .collection('chat')
             .get();
-        
+
         await _deleteMessageFiles(messagesQuery2.docs);
-        
+
         for (var doc in messagesQuery2.docs) {
           await doc.reference.delete();
         }
@@ -817,7 +817,7 @@ class ChatDataSources {
       }
 
       // Delete chat room document
-      await chatCollection.doc(roomId).delete();
+      await ChatDataSources().chatCollection.doc(roomId).delete();
 
       // Delete from legacy 'Chats' collection
       try {
@@ -834,7 +834,7 @@ class ChatDataSources {
       if (kDebugMode) {
         print('✅ Chat room deleted: $roomId');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -889,9 +889,9 @@ class ChatDataSources {
   }
 
   // =================== UTILITY METHODS ===================
-  
+
   /// Compare two lists for equality
-  bool _listsEqual<T>(List<T> list1, List<T> list2) {
+  static bool _listsEqual<T>(List<T> list1, List<T> list2) {
     if (list1.length != list2.length) return false;
     for (int i = 0; i < list1.length; i++) {
       if (list1[i] != list2[i]) return false;
@@ -904,7 +904,7 @@ class ChatDataSources {
   //   try {
   //     final chatRoom = await getChatRoomById(roomId);
   //     if (chatRoom == null) return false;
-      
+
   //     // Assuming there's an admins field in ChatRoom model
   //     // You might need to add this field to your ChatRoom model
   //     final adminIds = chatRoom.adminIds ?? [];
@@ -916,7 +916,6 @@ class ChatDataSources {
   //     return false;
   //   }
   // }
-  
 
   /// Get chat room members count
   Future<int> getMemberCount(String roomId) async {

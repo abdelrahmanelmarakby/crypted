@@ -3,6 +3,7 @@ import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.d
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:intl/intl.dart';
 
 /// Service layer for chat-related business logic
 /// Handles all chat operations and data management
@@ -194,7 +195,6 @@ class ChatService {
     try {
       return await _chatDataSource.getMemberCount(roomId);
     } catch (e) {
-      print('❌ Error getting member count: $e');
       return 0;
     }
   }
@@ -204,7 +204,6 @@ class ChatService {
     try {
       return await _chatDataSource.chatRoomExists();
     } catch (e) {
-      print('❌ Error checking chat room existence: $e');
       return false;
     }
   }
@@ -212,7 +211,7 @@ class ChatService {
   /// Validate chat room exists and user has access
   Future<bool> validateChatAccess(String roomId) async {
     try {
-      final chatRoom = await getChatRoom(roomId);
+      final chatRoom = await _chatDataSource.getChatRoomById(roomId);
       return chatRoom != null;
     } catch (e) {
       print('❌ Error validating chat access: $e');
@@ -223,7 +222,7 @@ class ChatService {
   /// Check if user can perform admin actions on chat
   Future<bool> canPerformAdminActions(String roomId) async {
     try {
-      final chatRoom = await getChatRoom(roomId);
+      final chatRoom = await _chatDataSource.getChatRoomById(roomId);
       if (chatRoom == null) return false;
 
       // For now, assume group chat creators are admins
