@@ -436,8 +436,21 @@ class ChatDataSources {
         .collection('chat')
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Message.fromMap(doc.data())).toList());
+        .map((snapshot) {
+          final allMessages = snapshot.docs.map((doc) => Message.fromMap(doc.data())).toList();
+
+          // Filter messages based on soft delete rules:
+          // - Show all messages for the sender (including deleted ones so they can restore)
+          // - Hide deleted messages for other users
+          final currentUserId = UserService.currentUser.value?.uid ?? '';
+          return allMessages.where((message) {
+            // If message is not deleted, show it to everyone
+            if (!message.isDeleted) return true;
+
+            // If message is deleted, only show it to the sender
+            return message.senderId == currentUserId;
+          }).toList();
+        });
   }
 
   /// Send a message to a chat room

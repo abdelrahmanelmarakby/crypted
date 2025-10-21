@@ -165,6 +165,70 @@ class MessageBuilder extends GetView<ChatController> {
   }
 
   Widget buildMessageContent(BuildContext context, Message msg) {
+    // Handle deleted messages
+    if (msg.isDeleted) {
+      // Only show deleted messages to the sender for restore option
+      if (msg.senderId != UserService.currentUser.value?.uid) {
+        return const SizedBox(); // Hide deleted messages from other users
+      }
+
+      // Show deleted message with restore option for the sender
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.delete_outline,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'This message was deleted',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => controller.restoreMessage(msg),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: ColorsManager.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Restore',
+                  style: TextStyle(
+                    color: ColorsManager.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Handle non-deleted messages normally
     switch (msg) {
       case AudioMessage():
         return AudioMessageWidget(

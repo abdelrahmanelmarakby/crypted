@@ -17,11 +17,13 @@ class MessageActionsBottomSheet extends StatelessWidget {
     required this.onFavorite,
     required this.onReport,
     required this.onDelete,
+    this.onRestore,
     this.isPinned = false,
     this.isFavorite = false,
     this.canPin = true,
     this.canFavorite = true,
     this.canDelete = true,
+    this.canRestore = false,
     this.canReply = true,
     this.canForward = true,
     this.canCopy = true,
@@ -34,6 +36,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
   final VoidCallback onForward;
   final VoidCallback onPin;
   final VoidCallback onFavorite;
+  final VoidCallback? onRestore;
   final VoidCallback onReport;
   final VoidCallback onDelete;
   final bool isPinned;
@@ -41,6 +44,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
   final bool canPin;
   final bool canFavorite;
   final bool canDelete;
+  final bool canRestore;
   final bool canReply;
   final bool canForward;
   final bool canCopy;
@@ -56,11 +60,13 @@ class MessageActionsBottomSheet extends StatelessWidget {
     required VoidCallback onFavorite,
     required VoidCallback onReport,
     required VoidCallback onDelete,
+    VoidCallback? onRestore,
     bool isPinned = false,
     bool isFavorite = false,
     bool canPin = true,
     bool canFavorite = true,
     bool canDelete = true,
+    bool canRestore = false,
     bool canReply = true,
     bool canForward = true,
     bool canCopy = true,
@@ -81,11 +87,13 @@ class MessageActionsBottomSheet extends StatelessWidget {
         onFavorite: onFavorite,
         onReport: onReport,
         onDelete: onDelete,
+        onRestore: onRestore,
         isPinned: isPinned,
         isFavorite: isFavorite,
         canPin: canPin,
         canFavorite: canFavorite,
         canDelete: canDelete,
+        canRestore: canRestore,
         canReply: canReply,
         canForward: canForward,
         canCopy: canCopy,
@@ -226,18 +234,17 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       iconColor: ColorsManager.error2,
                     ),
 
-                  if (canDelete)
+                  if (canRestore && onRestore != null)
                     _buildActionItem(
                       context: context,
-                      iconPath: 'assets/icons/trash.svg',
-                      title: 'Delete',
+                      iconPath: 'assets/icons/undo.svg',
+                      title: 'Restore',
                       onTap: () {
                         Navigator.pop(context);
-                        onDelete();
+                        onRestore!();
                       },
-                      textColor: ColorsManager.error2,
-                      iconColor: ColorsManager.error2,
-                      isDestructive: true,
+                      textColor: ColorsManager.primary,
+                      iconColor: ColorsManager.primary,
                     ),
                 ],
               ),

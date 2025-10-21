@@ -609,6 +609,36 @@ class ChatController extends GetxController {
     }
   }
 
+  /// Restore a deleted message
+  Future<void> restoreMessage(Message message) async {
+    try {
+      _showLoading();
+
+      // Update message to mark as not deleted
+      final updatedMessage = message.copyWith(id: message.id, isDeleted: false) as Message;
+
+      // Update in Firestore
+      await chatDataSource.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {'isDeleted': false},
+      );
+
+      // Update local messages list
+      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+      if (messageIndex != -1) {
+        messages[messageIndex] = updatedMessage;
+        update();
+      }
+
+      _showToast('Message restored');
+    } catch (e) {
+      _showErrorToast('Failed to restore message: ${e.toString()}');
+    } finally {
+      _hideLoading();
+    }
+  }
+
   /// Pin/Unpin a message
   Future<void> togglePinMessage(Message message) async {
     try {
@@ -810,14 +840,16 @@ class ChatController extends GetxController {
       onFavorite: () => toggleFavoriteMessage(message),
       onReport: () => reportMessage(message),
       onDelete: () => deleteMessage(message),
+      onRestore: message.isDeleted ? () => restoreMessage(message) : null,
       isPinned: message.isPinned,
       isFavorite: message.isFavorite,
       canPin: true,
       canFavorite: true,
-      canDelete: message.senderId == currentUser?.uid, // Only allow delete for own messages
+      canDelete: message.senderId == currentUser?.uid && !message.isDeleted, // Only allow delete for own non-deleted messages
+      canRestore: message.isDeleted && message.senderId == currentUser?.uid, // Only allow restore for own deleted messages
       canReply: true,
       canForward: true,
-      canCopy: true,
+      canCopy: message is TextMessage,
       canReport: true,
     );
   }
