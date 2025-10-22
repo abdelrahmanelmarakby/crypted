@@ -178,7 +178,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                   if (canForward)
                     _buildActionItem(
                       context: context,
-                      iconPath: 'assets/icons/fi_9630774.svg',
+                      iconPath: 'assets/icons/export.svg',
                       title: 'Forward',
                       onTap: () {
                         Navigator.pop(context);
@@ -200,7 +200,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                   if (canFavorite)
                     _buildActionItem(
                       context: context,
-                      iconPath: isFavorite ? 'assets/icons/star_filled.svg' : 'assets/icons/star.svg',
+                      iconPath: 'assets/icons/star.svg',
                       title: isFavorite ? 'Unfavorite' : 'Favorite',
                       onTap: () {
                         Navigator.pop(context);
@@ -212,7 +212,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                   if (canPin)
                     _buildActionItem(
                       context: context,
-                      iconPath: isPinned ? 'assets/icons/unpin.svg' : 'assets/icons/fi_3648797.svg',
+                      iconPath: 'assets/icons/fi_3648797.svg',
                       title: isPinned ? 'Unpin' : 'Pin',
                       onTap: () {
                         Navigator.pop(context);
@@ -237,7 +237,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                   if (canRestore && onRestore != null)
                     _buildActionItem(
                       context: context,
-                      iconPath: 'assets/icons/undo.svg',
+                      iconPath: 'assets/icons/fi_8114095.svg',
                       title: 'Restore',
                       onTap: () {
                         Navigator.pop(context);
@@ -245,6 +245,20 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       },
                       textColor: ColorsManager.primary,
                       iconColor: ColorsManager.primary,
+                    ),
+
+                  if (canDelete)
+                    _buildActionItem(
+                      context: context,
+                      iconPath: 'assets/icons/trash.svg',
+                      title: 'Delete',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onDelete();
+                      },
+                      textColor: ColorsManager.error2,
+                      iconColor: ColorsManager.error2,
+                      isDestructive: true,
                     ),
                 ],
               ),

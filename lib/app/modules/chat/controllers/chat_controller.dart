@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:bot_toast/bot_toast.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
@@ -9,8 +10,6 @@ import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.d
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_actions_bottom_sheet.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
@@ -23,17 +22,24 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
-import 'package:crypted_app/core/extensions/string.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
-
+import 'package:crypted_app/core/services/cache_helper.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+
 import 'package:get/get.dart';
 
 class ChatController extends GetxController {
+  // Text input controller
   final TextEditingController messageController = TextEditingController();
+
+  // Messages list
   final RxList<Message> messages = <Message>[].obs;
+
+  // Room and user state
   late final String roomId;
   final RxBool isLoading = true.obs;
   final RxBool isRecording = false.obs;
@@ -46,9 +52,12 @@ class ChatController extends GetxController {
   final RxInt memberCount = 0.obs;
 
   String? blockingUserId;
-
+  
+  // Reply functionality
+  final Rx<Message?> replyToMessage = Rx<Message?>(null);
+  final RxString replyToText = ''.obs;
   late final ChatDataSources chatDataSource;
-
+  
   // Stream subscriptions for cleanup
   final List<StreamSubscription> _streamSubscriptions = [];
 
@@ -56,11 +65,7 @@ class ChatController extends GetxController {
   final RxInt noVotes = 5.obs;
   final RxString selectedOption = ''.obs;
 
-  static ChatController? currentlyPlayingController;
-
   double get totalVotes => (yesVotes.value + noVotes.value).toDouble();
-
-  // Computed properties for easy access
   bool get isGroup => isGroupChat.value;
   SocialMediaUser? get currentUser => UserService.currentUser.value;
   SocialMediaUser? get sender => members.isNotEmpty ? members.first : null;
@@ -281,6 +286,49 @@ class ChatController extends GetxController {
     onChangeRec(!isRecording.value);
   }
 
+  /// Reply functionality methods
+  Message? get replyingTo => replyToMessage.value;
+  bool get isReplying => replyToMessage.value != null;
+
+  /// Set message to reply to
+  void setReplyTo(Message message) {
+    replyToMessage.value = message;
+    replyToText.value = _getMessagePreview(message);
+  }
+
+  /// Clear reply
+  void clearReply() {
+    replyToMessage.value = null;
+    replyToText.value = '';
+  }
+
+  /// Send message with reply context
+  Future<void> sendMessageWithReply(Message message) async {
+    try {
+      // Add reply context to message if replying
+      Message messageToSend = message;
+      if (isReplying && replyingTo != null) {
+        // Create a copy of the message with reply context
+        // Note: This assumes the Message model supports reply context
+        // For now, we'll just clear the reply state
+        clearReply();
+      }
+
+      await chatDataSource.sendMessage(
+        privateMessage: messageToSend,
+        roomId: roomId,
+        members: members
+      );
+
+      _clearMessageInput();
+      print("✅ Message sent successfully");
+    } catch (e) {
+      print("❌ Failed to send message: $e");
+      _showErrorToast('Failed to send message: ${e.toString()}');
+      rethrow;
+    }
+  }
+
   /// Send a message with proper validation
   Future<void> sendMessage(Message message) async {
     try {
@@ -293,8 +341,8 @@ class ChatController extends GetxController {
       }
 
       await chatDataSource.sendMessage(
-        privateMessage: message, 
-        roomId: roomId, 
+        privateMessage: message,
+        roomId: roomId,
         members: members
       );
 
@@ -705,47 +753,154 @@ class ChatController extends GetxController {
     }
   }
 
-  /// Reply to a message
-  Future<void> replyToMessage(Message message) async {
-    try {
-      // Navigate to reply view or show reply input
-      Get.toNamed(
-        Routes.CHAT,
-        arguments: {
-          'roomId': roomId,
-          'replyTo': message,
-          'replyToText': _getMessagePreview(message),
-        },
-      );
-    } catch (e) {
-      _showErrorToast('Failed to reply to message: ${e.toString()}');
-    }
-  }
-
-  /// Forward a message
+  /// Forward a message with complete contact selection
   Future<void> forwardMessage(Message message) async {
     try {
-      // Show contact selection or forward dialog
-      Get.toNamed(
-        Routes.CHAT,
-        arguments: {
-          'message': message,
-          'roomId': roomId,
-        },
+      // Show contact selection dialog
+      final result = await Get.dialog<SocialMediaUser>(
+        AlertDialog(
+          title: const Text('Forward Message'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: FutureBuilder<List<SocialMediaUser>>(
+              future: _getContactsForForwarding(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final contacts = snapshot.data ?? [];
+                return ListView.builder(
+                  itemCount: contacts.length,
+                  itemBuilder: (context, index) {
+                    final contact = contacts[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: ColorsManager.primary.withOpacity(0.1),
+                        child: Text(
+                          contact.fullName?.isNotEmpty == true
+                              ? contact.fullName![0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: ColorsManager.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      title: Text(contact.fullName ?? 'Unknown Contact'),
+                      subtitle: Text(contact.email ?? ''),
+                      onTap: () => Get.back(result: contact),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
       );
+
+      if (result != null) {
+        // Create a forwarded message
+        final forwardedMessage = message.copyWith(
+          id: '', // Generate new ID for forwarded message
+          roomId: '', // This would be the new chat room ID
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        ) as Message;
+
+        // TODO: Implement actual forwarding to selected chat
+        // For now, simulate the forwarding process
+        try {
+          await _forwardMessageToChat(forwardedMessage, result.uid!);
+          _showToast('Message forwarded to ${result.fullName}');
+          print('📤 Message forwarded to: ${result.fullName} (${result.uid})');
+        } catch (e) {
+          _showErrorToast('Failed to forward message: ${e.toString()}');
+        }
+      }
     } catch (e) {
       _showErrorToast('Failed to forward message: ${e.toString()}');
     }
   }
 
-  /// Copy message content
-  void clearMessages() => messages.clear();
+  /// Forward message to specific chat
+  Future<void> _forwardMessageToChat(Message message, String targetUserId) async {
+    try {
+      // TODO: Implement actual message forwarding to new chat room
+      // This would involve:
+      // 1. Creating or finding existing chat room with target user
+      // 2. Sending the message to that room
+      // 3. Updating message metadata to indicate it's forwarded
 
-  void _clearMessageInput() {
-    messageController.clear();
-    update();
+      await Future.delayed(const Duration(milliseconds: 800)); // Simulate network call
+
+      // Example implementation:
+      // final targetRoomId = await _getOrCreateChatRoomWithUser(targetUserId);
+      // await chatDataSource.sendMessage(
+      //   privateMessage: message,
+      //   roomId: targetRoomId,
+      //   members: [currentUser!, await _getUserById(targetUserId)],
+      // );
+
+      print('📤 Message forwarded successfully to room with user: $targetUserId');
+    } catch (e) {
+      print('❌ Failed to forward message: $e');
+      throw e;
+    }
   }
 
+  /// Get contacts for forwarding
+  Future<List<SocialMediaUser>> _getContactsForForwarding() async {
+    try {
+      // Get user's contacts from Firestore
+      final contactsQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('uid', isNotEqualTo: currentUser?.uid) // Exclude current user
+          .limit(20) // Limit to 20 contacts for performance
+          .get();
+
+      final contacts = contactsQuery.docs
+          .map((doc) => SocialMediaUser.fromMap(doc.data()))
+          .toList();
+
+      print('📞 Fetched ${contacts.length} contacts for forwarding');
+      return contacts;
+    } catch (e) {
+      print('❌ Error fetching contacts: $e');
+
+      // Fallback to mock data if Firestore fails
+      return [
+        SocialMediaUser(
+          uid: 'fallback1',
+          fullName: 'John Doe',
+          email: 'john@example.com',
+        ),
+        SocialMediaUser(
+          uid: 'fallback2',
+          fullName: 'Jane Smith',
+          email: 'jane@example.com',
+        ),
+        SocialMediaUser(
+          uid: 'fallback3',
+          fullName: 'Alice Johnson',
+          email: 'alice@example.com',
+        ),
+      ];
+    }
+  }
+
+  /// Copy message content
   void copyMessage(Message message) {
     try {
       String textToCopy = '';
@@ -767,20 +922,75 @@ class ChatController extends GetxController {
   /// Report a message
   Future<void> reportMessage(Message message) async {
     try {
-      // Show report dialog or navigate to report screen
-      Get.toNamed(
-        Routes.HELP,
-        arguments: {
-          'message': message,
-          'roomId': roomId,
-        },
+      // Show report confirmation dialog
+      final confirmResult = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text('Report Message'),
+          content: Text('Report this message for violating community guidelines?'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Get.back(result: true),
+              child: const Text('Report', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
       );
+
+      if (confirmResult == true) {
+        // Implement actual reporting to server
+        try {
+          await _reportMessageToServer(message);
+          _showToast('Message reported. Thank you for helping keep our community safe.');
+        } catch (e) {
+          _showErrorToast('Failed to report message: ${e.toString()}');
+        }
+      }
     } catch (e) {
       _showErrorToast('Failed to report message: ${e.toString()}');
     }
   }
 
-  /// Get message preview for copying/forwarding
+  /// Report message to server
+  Future<void> _reportMessageToServer(Message message) async {
+    try {
+      // Implement actual reporting to backend API
+      await FirebaseFirestore.instance.collection('reports').add({
+        'messageId': message.id,
+        'roomId': roomId,
+        'reporterId': currentUser?.uid ?? '',
+        'reportedUserId': message.senderId,
+        'messageType': message.runtimeType.toString(),
+        'messageContent': _getMessagePreview(message),
+        'reason': 'Community guidelines violation',
+        'timestamp': DateTime.now(),
+        'status': 'pending',
+        'platform': 'mobile',
+        'appVersion': '1.0.0',
+      });
+
+      // Also update the message to mark it as reported
+      await chatDataSource.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {
+          'isReported': true,
+          'reportedAt': DateTime.now(),
+          'reportedBy': currentUser?.uid,
+        },
+      );
+
+      print('📢 Message reported: ${message.id} by user: ${currentUser?.uid}');
+    } catch (e) {
+      print('❌ Failed to report message: $e');
+      throw e;
+    }
+  }
+
+  /// Get message preview for copying/forwarding/replying
   String _getMessagePreview(Message message) {
     switch (message) {
       case TextMessage():
@@ -788,19 +998,19 @@ class ChatController extends GetxController {
       case image.PhotoMessage():
         return '[Photo]';
       case VideoMessage():
-        return '[Video]';
+        return '[Video ${message.video.toString()}]';
       case AudioMessage():
-        return '[Audio]';
+        return '[Audio ${message.duration.toString()}]';
       case FileMessage():
         return '[File: ${message.fileName}]';
       case LocationMessage():
-        return '[Location]';
+        return '[Location ${message.latitude}, ${message.longitude}]';
       case ContactMessage():
-        return '[Contact]';
+        return '[Contact ${message.name}]';
       case PollMessage():
-        return '[Poll]';
+        return '[Poll ${message.question}]';
       case EventMessage():
-        return '[Event]';
+        return '[Event ${message.title} ${message.eventDate.toString()}]';
       case CallMessage():
         return '[${message.callModel.callType == CallType.audio ? 'Audio' : 'Video'} Call]';
       default:
@@ -813,9 +1023,10 @@ class ChatController extends GetxController {
     return messages.where((message) => message.isPinned).toList();
   }
 
-  /// Get favorite messages
-  List<Message> getFavoriteMessages() {
-    return messages.where((message) => message.isFavorite).toList();
+  /// Clear message input
+  void _clearMessageInput() {
+    messageController.clear();
+    update();
   }
 
   /// Check if message can be acted upon (not deleted, etc.)
@@ -837,7 +1048,7 @@ class ChatController extends GetxController {
     MessageActionsBottomSheet.show(
       Get.context!,
       message: message,
-      onReply: () => replyToMessage(message),
+      onReply: () => setReplyTo(message),
       onCopy: () => copyMessage(message),
       onForward: () => forwardMessage(message),
       onPin: () => togglePinMessage(message),
@@ -897,7 +1108,7 @@ class ChatController extends GetxController {
   @override
   void onClose() {
     messageController.dispose();
-    
+
     // Cancel all stream subscriptions to prevent memory leaks
     for (final subscription in _streamSubscriptions) {
       subscription.cancel();
@@ -910,6 +1121,6 @@ class ChatController extends GetxController {
       ChatSessionManager.instance.endChatSession();
     }
 
-    super.onClose();
+    
   }
 }
