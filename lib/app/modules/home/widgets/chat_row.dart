@@ -13,18 +13,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-class ChatRow extends StatelessWidget {
+class ChatRow extends StatefulWidget {
   ChatRow({super.key, required this.chatRoom});
   final ChatRoom? chatRoom;
 
+  @override
+  State<ChatRow> createState() => _ChatRowState();
+}
+
+class _ChatRowState extends State<ChatRow> {
   final ChatDataSources chatDataSource = ChatDataSources();
+  bool _isLoading = false;
 
   Future<void> _toggleMute() async {
     try {
-      await chatDataSource.toggleMuteChat(chatRoom?.id ?? '');
+      await chatDataSource.toggleMuteChat(widget.chatRoom?.id ?? '');
       Get.snackbar(
         'Success',
-        chatRoom?.isMuted == true ? 'Chat unmuted' : 'Chat muted',
+        widget.chatRoom?.isMuted == true ? 'Chat unmuted' : 'Chat muted',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.primary,
         colorText: ColorsManager.white,
@@ -42,10 +48,10 @@ class ChatRow extends StatelessWidget {
 
   Future<void> _togglePin() async {
     try {
-      await chatDataSource.togglePinChat(chatRoom?.id ?? '');
+      await chatDataSource.togglePinChat(widget.chatRoom?.id ?? '');
       Get.snackbar(
         'Success',
-        chatRoom?.isPinned == true ? 'Chat unpinned' : 'Chat pinned',
+        widget.chatRoom?.isPinned == true ? 'Chat unpinned' : 'Chat pinned',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.primary,
         colorText: ColorsManager.white,
@@ -62,156 +68,323 @@ class ChatRow extends StatelessWidget {
   }
 
   Future<void> _blockUser() async {
-    try {
-      final otherUser = _getChatDisplayUser();
-      if (otherUser == null) {
-        throw Exception('User not found');
-      }
+    if (_isLoading) return;
 
-      await chatDataSource.blockUser(chatRoom?.id ?? '', otherUser.uid ?? '');
-      Get.snackbar(
-        'Success',
-        'User blocked',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: ColorsManager.primary,
-        colorText: ColorsManager.white,
-      );
-    } catch (e) {
+    final otherUser = _getChatDisplayUser();
+    if (otherUser == null) {
       Get.snackbar(
         'Error',
-        'Failed to block user: ${e.toString()}',
+        'User not found',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
       );
+      return;
+    }
+
+    // Show confirmation dialog for blocking
+    final confirmResult = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(
+          'Block User',
+          style: TextStyle(
+            fontSize: FontSize.medium,
+            fontWeight: FontWeights.bold,
+            color: ColorsManager.red,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to block ${otherUser.fullName}? You won\'t receive messages from this user anymore.',
+          style: TextStyle(
+            fontSize: FontSize.small,
+            color: ColorsManager.black,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: ColorsManager.grey,
+                fontSize: FontSize.small,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(
+              'Block',
+              style: TextStyle(
+                color: ColorsManager.red,
+                fontSize: FontSize.small,
+                fontWeight: FontWeights.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmResult != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await chatDataSource.blockUser(widget.chatRoom?.id ?? '', otherUser.uid ?? '');
+
+      if (mounted) {
+        Get.snackbar(
+          'User Blocked',
+          '${otherUser.fullName} has been blocked. You won\'t receive messages from this user.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.primary,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 3),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        Get.snackbar(
+          'Error',
+          'Failed to block user: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.red,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _toggleFavorite() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
     try {
-      await chatDataSource.toggleFavoriteChat(chatRoom?.id ?? '');
-      Get.snackbar(
-        'Success',
-        chatRoom?.isFavorite == true ? 'Chat removed from favorites' : 'Chat added to favorites',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: ColorsManager.primary,
-        colorText: ColorsManager.white,
-      );
+      await chatDataSource.toggleFavoriteChat(widget.chatRoom?.id ?? '');
+
+      if (mounted) {
+        Get.snackbar(
+          'Success',
+          widget.chatRoom?.isFavorite == true ? 'Chat removed from favorites' : 'Chat added to favorites',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.primary,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 2),
+        );
+        setState(() {});
+      }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to toggle favorite: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: ColorsManager.red,
-        colorText: ColorsManager.white,
-      );
+      if (mounted) {
+        Get.snackbar(
+          'Error',
+          'Failed to toggle favorite: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.red,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _toggleArchive() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
     try {
-      await chatDataSource.toggleArchiveChat(chatRoom?.id ?? '');
-      Get.snackbar(
-        'Success',
-        chatRoom?.isArchived == true ? 'Chat unarchived' : 'Chat archived',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: ColorsManager.primary,
-        colorText: ColorsManager.white,
-      );
+      await chatDataSource.toggleArchiveChat(widget.chatRoom?.id ?? '');
+
+      if (mounted) {
+        Get.snackbar(
+          'Success',
+          widget.chatRoom?.isArchived == true ? 'Chat unarchived' : 'Chat archived',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.primary,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 2),
+        );
+        setState(() {});
+      }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to toggle archive: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: ColorsManager.red,
-        colorText: ColorsManager.white,
-      );
+      if (mounted) {
+        Get.snackbar(
+          'Error',
+          'Failed to toggle archive: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.red,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _deleteChat() async {
-    try {
-      // عرض dialog للتأكيد
-      final result = await Get.dialog<bool>(
-        AlertDialog(
-          title: Text(
-            'Delete Chat',
-            style: TextStyle(
-              fontSize: FontSize.medium,
-              fontWeight: FontWeights.bold,
-            ),
+    if (_isLoading) return;
+
+    // Enhanced confirmation dialog for delete
+    final confirmResult = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(
+          'Delete Chat',
+          style: TextStyle(
+            fontSize: FontSize.medium,
+            fontWeight: FontWeights.bold,
+            color: ColorsManager.red,
           ),
-          content: Text(
-            'Are you sure you want to delete this chat?',
-            style: TextStyle(
-              fontSize: FontSize.small,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(result: false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: ColorsManager.grey,
-                  fontSize: FontSize.small,
-                ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This action cannot be undone.',
+              style: TextStyle(
+                fontSize: FontSize.small,
+                fontWeight: FontWeights.bold,
+                color: ColorsManager.red,
               ),
             ),
-            TextButton(
-              onPressed: () => Get.back(result: true),
-              child: Text(
-                'Delete',
-                style: TextStyle(
-                  color: ColorsManager.red,
-                  fontSize: FontSize.small,
-                  fontWeight: FontWeights.bold,
-                ),
+            SizedBox(height: 8),
+            Text(
+              'Are you sure you want to delete this chat? All messages will be permanently removed.',
+              style: TextStyle(
+                fontSize: FontSize.small,
+                color: ColorsManager.black,
               ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: ColorsManager.grey,
+                fontSize: FontSize.small,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(
+              'Delete Forever',
+              style: TextStyle(
+                color: ColorsManager.red,
+                fontSize: FontSize.small,
+                fontWeight: FontWeights.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmResult != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      print("🔄 Attempting to delete chat room: ${widget.chatRoom?.id}");
+
+      // Show loading indicator
+      Get.dialog(
+        Center(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Deleting chat...',
+                  style: TextStyle(
+                    fontSize: FontSize.small,
+                    color: ColorsManager.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
       );
 
-      if (result == true) {
-        // حذف الشات
-        print("🔄 Attempting to delete chat room: ${chatRoom?.id}");
+      // Delete the chat room and all its messages
+      final success = await chatDataSource.deleteRoom(widget.chatRoom?.id ?? '');
 
-        // TODO: Implement delete functionality
-        Get.snackbar(
-          'Chat Deleted',
-          'Chat deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: ColorsManager.primary,
-          colorText: ColorsManager.white,
-        );
+      // Close loading dialog
+      Get.back();
+
+      if (success) {
+        if (mounted) {
+          Get.snackbar(
+            'Chat Deleted',
+            widget.chatRoom?.isGroupChat == true
+                ? 'Group chat deleted successfully'
+                : 'Chat deleted successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: ColorsManager.primary,
+            colorText: ColorsManager.white,
+            duration: const Duration(seconds: 3),
+          );
+          // The chat list will be automatically updated via the stream
+          // No need to manually refresh
+        }
+      } else {
+        throw Exception('Delete operation failed');
       }
     } catch (e) {
       print('Error deleting chat: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to delete chat',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: ColorsManager.red,
-        colorText: ColorsManager.white,
-      );
+
+      // Close loading dialog if it's still open
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
+
+      if (mounted) {
+        Get.snackbar(
+          'Delete Failed',
+          'Failed to delete chat: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.red,
+          colorText: ColorsManager.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
   Widget build(BuildContext context) {
     return Material(
       child: CupertinoContextMenu(
         actions: <Widget>[
-          CupertinoContextMenuAction(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteChat();
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: ColorsManager.red),
-            ),
-          ),
-          if (chatRoom?.isGroupChat == true)
+          
+          if (widget.chatRoom?.isGroupChat == true)
             CupertinoContextMenuAction(
               onPressed: () {
                 Navigator.pop(context);
@@ -226,7 +399,7 @@ class ChatRow extends StatelessWidget {
             },
             child: Text('Pin'),
           ),
-          if (chatRoom?.isGroupChat != true)
+          if (widget.chatRoom?.isGroupChat != true)
             CupertinoContextMenuAction(
               onPressed: () {
                 Navigator.pop(context);
@@ -248,6 +421,16 @@ class ChatRow extends StatelessWidget {
             },
             child: Text('Archive'),
           ),
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteChat();
+            },
+            child: Text(
+              'Delete',
+              style: TextStyle(color: ColorsManager.red),
+            ),
+          ),
         ],
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -263,10 +446,10 @@ class ChatRow extends StatelessWidget {
             child: GestureDetector(
               onTap: () {
                 Map<String, dynamic> arg = {
-                  'members': chatRoom?.members,
-                  "blockingUserId": chatRoom?.blockingUserId,
-                  "roomId": chatRoom?.id,
-                  "isGroupChat": chatRoom?.isGroupChat,
+                  'members': widget.chatRoom?.members,
+                  "blockingUserId": widget.chatRoom?.blockingUserId,
+                  "roomId": widget.chatRoom?.id,
+                  "isGroupChat": widget.chatRoom?.isGroupChat,
                 };
                 Get.toNamed(Routes.CHAT, arguments: arg);
               },
@@ -281,14 +464,14 @@ class ChatRow extends StatelessWidget {
                           Routes.CHAT,
                           arguments: {
                             "user": _getChatDisplayUser(),
-                            "roomId": chatRoom?.id,
-                            "members": chatRoom?.members,
-                            "isGroupChat": chatRoom?.isGroupChat,
+                            "roomId": widget.chatRoom?.id,
+                            "members": widget.chatRoom?.members,
+                            "isGroupChat": widget.chatRoom?.isGroupChat,
                           },
                         );
                       },
                       child: ClipOval(
-                        child: chatRoom?.isGroupChat == true
+                        child: widget.chatRoom?.isGroupChat == true
                             ? _buildGroupAvatar()
                             : _buildPrivateAvatar(),
                       ),
@@ -318,7 +501,7 @@ class ChatRow extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            if (chatRoom?.isGroupChat == true)
+                            if (widget.chatRoom?.isGroupChat == true)
                               Padding(
                                 padding: const EdgeInsets.only(left: 4),
                                 child: Icon(
@@ -336,7 +519,7 @@ class ChatRow extends StatelessWidget {
                                   color: ColorsManager.grey,
                                 ),
                               ),
-                            if (chatRoom?.isPinned == true)
+                            if (widget.chatRoom?.isPinned == true)
                               Padding(
                                 padding: const EdgeInsets.only(left: 4),
                                 child: Icon(
@@ -345,7 +528,7 @@ class ChatRow extends StatelessWidget {
                                   color: ColorsManager.primary,
                                 ),
                               ),
-                            if (chatRoom?.isArchived == true)
+                            if (widget.chatRoom?.isArchived == true)
                               Padding(
                                 padding: const EdgeInsets.only(left: 4),
                                 child: Icon(
@@ -354,7 +537,7 @@ class ChatRow extends StatelessWidget {
                                   color: ColorsManager.grey,
                                 ),
                               ),
-                            if (chatRoom?.isFavorite == true)
+                            if (widget.chatRoom?.isFavorite == true)
                               Padding(
                                 padding: const EdgeInsets.only(left: 4),
                                 child: Icon(
@@ -388,7 +571,7 @@ class ChatRow extends StatelessWidget {
                       children: [
                         Text(
                           timeago.format(
-                              _parseDateSafely(chatRoom?.lastChat) ?? DateTime.now()),
+                              _parseDateSafely(widget.chatRoom?.lastChat) ?? DateTime.now()),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: const TextStyle(
@@ -399,7 +582,7 @@ class ChatRow extends StatelessWidget {
                         ),
                         SizedBox(height: 8),
                         // Show unread indicator for current user
-                        if (chatRoom?.lastSender != UserService.currentUser.value?.uid)
+                        if (widget.chatRoom?.lastSender != UserService.currentUser.value?.uid)
                           Container(
                             width: 8,
                             height: 8,
@@ -424,21 +607,21 @@ class ChatRow extends StatelessWidget {
 
   /// Get the appropriate display name for the chat
   String _getChatDisplayName() {
-    if (chatRoom?.isGroupChat == true) {
+    if (widget.chatRoom?.isGroupChat == true) {
       // For group chats, show group name or fallback to member names
-      final groupName = chatRoom?.name;
+      final groupName = widget.chatRoom?.name;
       if (groupName != null && groupName.trim().isNotEmpty) {
         return groupName;
       }
 
       // Try to generate group name from members
-      final generatedName = _generateGroupName(chatRoom?.members ?? []);
+      final generatedName = _generateGroupName(widget.chatRoom?.members ?? []);
       if (generatedName != null && generatedName.trim().isNotEmpty) {
         return generatedName;
       }
 
       // Final fallback: show member count or generic group name
-      final memberCount = chatRoom?.members?.length ?? 0;
+      final memberCount = widget.chatRoom?.members?.length ?? 0;
       if (memberCount >= 2) {
         return "Group Chat ($memberCount members)";
       } else {
@@ -446,7 +629,7 @@ class ChatRow extends StatelessWidget {
       }
     } else {
       // For private chats, show the other user's name
-      final otherUser = chatRoom?.members?.firstWhere(
+      final otherUser = widget.chatRoom?.members?.firstWhere(
         (user) => user.uid != UserService.currentUser.value?.uid,
         orElse: () => SocialMediaUser(fullName: Constants.kUnknownUser.tr),
       );
@@ -456,9 +639,9 @@ class ChatRow extends StatelessWidget {
 
   /// Get the appropriate display image for the chat
   String _getChatDisplayImage() {
-    if (chatRoom?.isGroupChat == true) {
+    if (widget.chatRoom?.isGroupChat == true) {
       // For group chats, use group image URL if available, otherwise fallback to first member's image
-      return chatRoom?.groupImageUrl ?? _getChatDisplayUser()?.imageUrl ?? "";
+      return widget.chatRoom?.groupImageUrl ?? _getChatDisplayUser()?.imageUrl ?? "";
     } else {
       // For private chats, show the other user's image
       final displayUser = _getChatDisplayUser();
@@ -534,12 +717,12 @@ class ChatRow extends StatelessWidget {
 
   /// Get the user to display for this chat (for avatars and interactions)
   SocialMediaUser? _getChatDisplayUser() {
-    if (chatRoom?.isGroupChat == true) {
+    if (widget.chatRoom?.isGroupChat == true) {
       // For group chats, return the first member (could be enhanced to show group avatar)
-      return chatRoom?.members?.isNotEmpty == true ? chatRoom!.members!.first : null;
+      return widget.chatRoom?.members?.isNotEmpty == true ? widget.chatRoom!.members!.first : null;
     } else {
       // For private chats, return the other user
-      return chatRoom?.members?.firstWhere(
+      return widget.chatRoom?.members?.firstWhere(
         (user) => user.uid != UserService.currentUser.value?.uid,
         orElse: () => SocialMediaUser(fullName: Constants.kUnknownUser.tr),
       );
@@ -593,22 +776,22 @@ class ChatRow extends StatelessWidget {
 
   /// Get chat subtitle (last message or member info)
   String _getChatSubtitle() {
-    if (chatRoom?.isGroupChat == true) {
+    if (widget.chatRoom?.isGroupChat == true) {
       // For group chats, show last message or member count
-      if (chatRoom?.lastMsg?.isNotEmpty == true) {
-        return chatRoom!.lastMsg!;
+      if (widget.chatRoom?.lastMsg?.isNotEmpty == true) {
+        return widget.chatRoom!.lastMsg!;
       } else {
         return "${_getMemberCount()} members";
       }
     } else {
       // For private chats, show last message or status
-      return chatRoom?.lastMsg ?? "Start a conversation";
+      return widget.chatRoom?.lastMsg ?? "Start a conversation";
     }
   }
 
   /// Get member count for display
   String _getMemberCount() {
-    final count = chatRoom?.members?.length ?? 0;
+    final count = widget.chatRoom?.members?.length ?? 0;
     return count.toString();
   }
 

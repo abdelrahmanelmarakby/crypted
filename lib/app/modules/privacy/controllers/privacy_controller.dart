@@ -1,4 +1,3 @@
-import 'package:crypted_app/app/data/models/privacy_model.dart';
 import 'package:crypted_app/app/data/data_source/privacy_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -8,128 +7,104 @@ class PrivacyController extends GetxController {
   var isReadReceiptsEnabled = false.obs;
   var isCameraEffectsEnabled = false.obs;
 
-  // Observable variables for dropdown items using enums
-  var lastSeenValue = PrivacyLevel.nobody.obs;
-  var profilePictureValue = ProfilePictureLevel.everyone.obs;
-  var aboutValue = PrivacyLevel.everyone.obs;
-  var groupsValue = PrivacyLevel.everyone.obs;
-  var statusValue = PrivacyLevel.myContacts.obs;
-  var liveLocationValue = LiveLocationLevel.none.obs;
-  var blockedValue = BlockedLevel.contacts.obs;
-  var defaultMessageTimerValue = MessageTimerLevel.off.obs;
+  // Observable variables for privacy settings using the comprehensive PrivacySettings model
+  var privacySettings = PrivacySettings.defaultSettings().obs;
 
   final PrivacyDataSource _privacyDataSource = PrivacyDataSource();
 
   void toggleReadReceipts(bool value) {
-    isReadReceiptsEnabled.value = value;
+    privacySettings.value = privacySettings.value.copyWith(readReceiptsEnabled: value);
     _updatePrivacyData();
   }
 
   void toggleCameraEffects(bool value) {
-    isCameraEffectsEnabled.value = value;
+    privacySettings.value = privacySettings.value.copyWith(
+      allowCamera: value,
+    );
     _updatePrivacyData();
   }
 
-  // Functions to update dropdown values
+  // Functions to update privacy settings based on the UI dropdowns
   void updateLastSeen(String value) {
     print('Updating lastSeen to: $value');
-    lastSeenValue.value = PrivacyLevel.fromString(value);
+    final lastSeenValue = value == 'Nobody' ? false : value == 'My Contacts' ? true : null;
+    privacySettings.value = privacySettings.value.copyWith(
+      showLastSeenInOneToOne: lastSeenValue == true ? true : false,
+      showLastSeenInGroups: lastSeenValue == true ? true : false,
+    );
     _updatePrivacyData();
   }
 
   void updateProfilePicture(String value) {
     print('Updating profilePicture to: $value');
-    profilePictureValue.value = ProfilePictureLevel.fromString(value);
+    final showToNonContacts = value == 'Everyone' ? true : false;
+    privacySettings.value = privacySettings.value.copyWith(
+      showProfilePhotoToNonContacts: showToNonContacts,
+    );
     _updatePrivacyData();
   }
 
   void updateAbout(String value) {
     print('Updating about to: $value');
-    aboutValue.value = PrivacyLevel.fromString(value);
+    final showToContactsOnly = value == 'My Contacts' ? true : false;
+    privacySettings.value = privacySettings.value.copyWith(
+      showStatusToContactsOnly: showToContactsOnly,
+    );
     _updatePrivacyData();
   }
 
   void updateGroups(String value) {
     print('Updating groups to: $value');
-    groupsValue.value = PrivacyLevel.fromString(value);
+    final allowInvites = value == 'Everyone' ? true : false;
+    privacySettings.value = privacySettings.value.copyWith(
+      allowGroupInvitesFromAnyone: allowInvites,
+    );
     _updatePrivacyData();
   }
 
   void updateStatus(String value) {
     print('Updating status to: $value');
-    statusValue.value = PrivacyLevel.fromString(value);
+    final showToContactsOnly = value == 'My Contacts' ? true : false;
+    privacySettings.value = privacySettings.value.copyWith(
+      showStatusToContactsOnly: showToContactsOnly,
+    );
     _updatePrivacyData();
   }
 
   void updateLiveLocation(String value) {
     print('Updating liveLocation to: $value');
-    liveLocationValue.value = LiveLocationLevel.fromString(value);
+    // Live location settings can be mapped to allowOnlineStatus
+    final allowLocation = value != 'None';
+    privacySettings.value = privacySettings.value.copyWith(
+      allowOnlineStatus: allowLocation,
+    );
     _updatePrivacyData();
   }
 
   void updateBlocked(String value) {
     print('Updating blocked to: $value');
-    blockedValue.value = BlockedLevel.fromString(value);
+    // Blocked level affects allowMessagesFromNonContacts
+    final allowMessages = value == 'Everyone';
+    privacySettings.value = privacySettings.value.copyWith(
+      allowMessagesFromNonContacts: allowMessages,
+    );
     _updatePrivacyData();
   }
 
   void updateDefaultMessageTimer(String value) {
     print('Updating defaultMessageTimer to: $value');
-    defaultMessageTimerValue.value = MessageTimerLevel.fromString(value);
+    // Message timer affects forwarding settings
+    final allowForwarding = value == 'Off';
+    privacySettings.value = privacySettings.value.copyWith(
+      allowForwardingMessages: allowForwarding,
+    );
     _updatePrivacyData();
   }
 
-  // Update privacy data model and save to Firebase
+  // Update privacy data and save to Firebase
   void _updatePrivacyData() {
-    final updatedPrivacy = privacyData.value.copyWith(
-      lastSeen: lastSeenValue.value,
-      profilePicture: profilePictureValue.value,
-      about: aboutValue.value,
-      groups: groupsValue.value,
-      status: statusValue.value,
-      liveLocation: liveLocationValue.value,
-      blocked: blockedValue.value,
-      defaultMessageTimer: defaultMessageTimerValue.value,
-      receipts: isReadReceiptsEnabled.value,
-      allowCamera: isCameraEffectsEnabled.value,
-    );
-
-    privacyData.value = updatedPrivacy;
     _savePrivacyData();
   }
-
-  // Initialize privacy data from model
-  void _initializeFromModel(Privacy privacy) {
-    lastSeenValue.value = privacy.lastSeen;
-    profilePictureValue.value = privacy.profilePicture;
-    aboutValue.value = privacy.about;
-    groupsValue.value = privacy.groups;
-    statusValue.value = privacy.status;
-    liveLocationValue.value = privacy.liveLocation;
-    blockedValue.value = privacy.blocked;
-    defaultMessageTimerValue.value = privacy.defaultMessageTimer;
-    isReadReceiptsEnabled.value = privacy.receipts;
-    isCameraEffectsEnabled.value = privacy.allowCamera;
-  }
-
-  Rx<Privacy> privacyData = Privacy(
-    lastSeen: PrivacyLevel.nobody,
-    profilePicture: ProfilePictureLevel.everyone,
-    about: PrivacyLevel.everyone,
-    groups: PrivacyLevel.everyone,
-    status: PrivacyLevel.myContacts,
-    liveLocation: LiveLocationLevel.none,
-    calls: '',
-    blocked: BlockedLevel.contacts,
-    timer: false,
-    receipts: true,
-    appLock: '',
-    chatLock: '',
-    allowCamera: true,
-    advanced: '',
-    checkup: '',
-    defaultMessageTimer: MessageTimerLevel.off,
-  ).obs;
 
   @override
   void onInit() {
@@ -140,24 +115,76 @@ class PrivacyController extends GetxController {
   /// Load privacy data from Firebase
   Future<void> _loadPrivacyData() async {
     try {
-      final privacy = await _privacyDataSource.getPrivacySettings();
-      if (privacy != null) {
-        _initializeFromModel(privacy);
-        privacyData.value = privacy;
+      final currentUser = UserService.currentUserValue;
+      if (currentUser != null && currentUser.privacySettings != null) {
+        privacySettings.value = currentUser.privacySettings!;
+        _syncWithUI();
       }
     } catch (e) {
       print('❌ Error loading privacy data: $e');
     }
   }
 
+  /// Sync privacy settings with UI variables for backward compatibility
+  void _syncWithUI() {
+    isReadReceiptsEnabled.value = privacySettings.value.readReceiptsEnabled ?? false;
+    isCameraEffectsEnabled.value = privacySettings.value.allowCamera ?? false;
+  }
+
   /// Save privacy data to Firebase
   Future<void> _savePrivacyData() async {
     try {
-      await _privacyDataSource.savePrivacySettings(privacyData.value);
+      final currentUserId = UserService.currentUserValue?.uid;
+      if (currentUserId != null) {
+        // Update the current user with new privacy settings
+        final updatedUser = UserService.currentUserValue?.copyWith(
+          privacySettings: privacySettings.value,
+        );
+
+        if (updatedUser != null) {
+          await UserService().updateUser(user: updatedUser);
+          print('✅ Privacy settings saved successfully');
+        }
+      }
     } catch (e) {
       print('❌ Error saving privacy data: $e');
     }
   }
+
+  // Getter methods for backward compatibility with the view
+  String get lastSeenValue => privacySettings.value.showLastSeenInOneToOne == false
+      ? 'Nobody'
+      : privacySettings.value.showLastSeenInOneToOne == true
+          ? 'My Contacts'
+          : 'Everyone';
+
+  String get profilePictureValue => privacySettings.value.showProfilePhotoToNonContacts == true
+      ? 'Everyone'
+      : 'Nobody';
+
+  String get aboutValue => privacySettings.value.showStatusToContactsOnly == true
+      ? 'My Contacts'
+      : 'Everyone';
+
+  String get groupsValue => privacySettings.value.allowGroupInvitesFromAnyone == true
+      ? 'Everyone'
+      : 'My Contacts';
+
+  String get statusValue => privacySettings.value.showStatusToContactsOnly == true
+      ? 'My Contacts'
+      : 'Everyone';
+
+  String get liveLocationValue => privacySettings.value.allowOnlineStatus == true
+      ? 'My Contacts'
+      : 'None';
+
+  String get blockedValue => privacySettings.value.allowMessagesFromNonContacts == true
+      ? 'Everyone'
+      : 'My Contacts';
+
+  String get defaultMessageTimerValue => privacySettings.value.allowForwardingMessages == true
+      ? 'Off'
+      : '24 Hours';
 
   /// Public method to refresh privacy data
   Future<void> refreshPrivacyData() async {
@@ -172,13 +199,7 @@ class PrivacyController extends GetxController {
   /// Get list of blocked users
   Future<List<SocialMediaUser>> getBlockedUsers() async {
     try {
-      // Ensure current user data is fresh
-      final currentUserId = UserService.currentUser.value?.uid;
-      if (currentUserId != null) {
-        await UserService().getProfile(currentUserId);
-      }
-
-      final currentUser = UserService.currentUser.value;
+      final currentUser = UserService.currentUserValue;
       print('🔍 Getting blocked users for current user: ${currentUser?.uid}');
 
       if (currentUser == null) {
@@ -211,6 +232,13 @@ class PrivacyController extends GetxController {
   /// Get list of chats where user is sharing live location
   Future<List<String>> getLiveLocationChats() async {
     try {
+      final currentUserId = UserService.currentUserValue?.uid;
+      if (currentUserId == null || currentUserId.isEmpty) {
+        return [];
+      }
+
+      // Query chats where current user is sharing live location
+      // This would need to be implemented based on your chat system
       return await _privacyDataSource.getLiveLocationChats();
     } catch (e) {
       print('❌ Error getting live location chats: $e');

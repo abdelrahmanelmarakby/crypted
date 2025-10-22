@@ -820,7 +820,11 @@ class ChatController extends GetxController {
 
   /// Check if message can be acted upon (not deleted, etc.)
   bool canInteractWithMessage(Message message) {
-    return !message.isDeleted && message.senderId != currentUser?.uid;
+    // Allow interaction with non-deleted messages from anyone
+    if (!message.isDeleted) return true;
+
+    // For deleted messages, only allow interaction if it's the user's own message (for restore)
+    return message.senderId == currentUser?.uid;
   }
 
   /// Handle message long press - show bottom sheet

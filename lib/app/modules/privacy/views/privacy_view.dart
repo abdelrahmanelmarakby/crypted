@@ -37,7 +37,7 @@ class PrivacyView extends GetView<PrivacyController> {
                 // Last Seen - يستخدم القائمة الافتراضية
                 Obx(() => PrivacyItem(
                       title: Constants.kLastSeenOnline.tr,
-                      type: controller.lastSeenValue.value.value,
+                      type: controller.lastSeenValue,
                       showDropdown: true,
                       onTypeChanged: (value) {
                         print('Selected lastSeen: $value');
@@ -48,7 +48,7 @@ class PrivacyView extends GetView<PrivacyController> {
                 // Profile Picture - يستخدم قائمة مخصصة
                 Obx(() => PrivacyItem(
                       title: Constants.kProfilePicture.tr,
-                      type: controller.profilePictureValue.value.value,
+                      type: controller.profilePictureValue,
                       showDropdown: true,
                       onTypeChanged: (value) {
                         print('Selected profilePicture: $value');
@@ -65,7 +65,7 @@ class PrivacyView extends GetView<PrivacyController> {
                 // About - يستخدم قائمة مخصصة
                 Obx(() => PrivacyItem(
                       title: Constants.kAbout.tr,
-                      type: controller.aboutValue.value.value,
+                      type: controller.aboutValue,
                       showDropdown: true,
                       onTypeChanged: (value) {
                         print('Selected about: $value');
@@ -82,7 +82,7 @@ class PrivacyView extends GetView<PrivacyController> {
                 // Groups - يستخدم القائمة الافتراضية
                 Obx(() => PrivacyItem(
                       title: Constants.kGroups.tr,
-                      type: controller.groupsValue.value.value,
+                      type: controller.groupsValue,
                       showDropdown: true,
                       onTypeChanged: (value) {
                         print('Selected groups: $value');
@@ -93,7 +93,7 @@ class PrivacyView extends GetView<PrivacyController> {
                 // Status - يستخدم القائمة الافتراضية
                 Obx(() => PrivacyItem(
                       title: Constants.kStatus.tr,
-                      type: controller.statusValue.value.value,
+                      type: controller.statusValue,
                       showDropdown: true,
                       onTypeChanged: (value) {
                         print('Selected status: $value');
@@ -101,7 +101,6 @@ class PrivacyView extends GetView<PrivacyController> {
                       },
                     )),
               ]),
-              
               SizedBox(height: Sizes.size16),
               PrivacyCover([
                 // Blocked - يستخدم قائمة مخصصة
@@ -109,7 +108,7 @@ class PrivacyView extends GetView<PrivacyController> {
                   onTap: () => _showBlockedUsers(),
                   child: Obx(() => PrivacyItem(
                         title: Constants.kBlocked.tr,
-                        type: controller.blockedValue.value.value,
+                        type: controller.blockedValue,
                         showDropdown: true,
                         onTypeChanged: (value) {
                           print('Selected blocked: $value');
@@ -132,7 +131,7 @@ class PrivacyView extends GetView<PrivacyController> {
                   onTap: () => _showLiveLocationChats(),
                   child: Obx(() => PrivacyItem(
                         title: Constants.kLiveLocation.tr,
-                        type: controller.liveLocationValue.value.value,
+                        type: controller.liveLocationValue,
                         showDropdown: true,
                         onTypeChanged: (value) {
                           print('Selected liveLocation: $value');
@@ -165,7 +164,7 @@ class PrivacyView extends GetView<PrivacyController> {
                 // Default Message Timer - يستخدم قائمة مخصصة
                 Obx(() => PrivacyItem(
                       title: Constants.kDefaultMessageTimer.tr,
-                      type: controller.defaultMessageTimerValue.value.value,
+                      type: controller.defaultMessageTimerValue,
                       showDropdown: true,
                       onTypeChanged: (value) {
                         print('Selected defaultMessageTimer: $value');

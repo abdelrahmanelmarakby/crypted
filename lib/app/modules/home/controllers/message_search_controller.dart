@@ -1,5 +1,6 @@
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
+import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
@@ -11,6 +12,7 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:get/get.dart';
 
 class MessageSearchController extends GetxController {
@@ -44,46 +46,95 @@ class MessageSearchController extends GetxController {
   }
 
   void _searchInMessages() {
-    // This is a simplified search - in a real implementation,
-    // you would search through all messages across all chats
-    // For now, we'll implement a basic search that would need
-    // to be expanded based on your data structure
-
-    // TODO: Implement proper message search across all chats
-    // This would require:
-    // 1. Getting all chat rooms for current user
-    // 2. Searching messages in each chat
-    // 3. Filtering and ranking results
-
     _chatDataSources.getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
-        .listen((chatRooms) {
+        .listen((chatRooms) async {
       List<Message> results = [];
+      Map<String, String> chatNames = {}; // Cache for chat names
 
       // For each chat room, search through recent messages
       for (var chatRoom in chatRooms) {
-        // Get recent messages from this chat room
-        _chatDataSources.getLivePrivateMessage(chatRoom.id ?? "").listen((messages) {
+        try {
+          // Get chat name for display
+          String chatName = await _getChatNameForSearch(chatRoom);
+          chatNames[chatRoom.id ?? ''] = chatName;
+
+          // Get recent messages from this chat room
+          final messages = await _chatDataSources.getLivePrivateMessage(chatRoom.id ?? "").first;
+
           // Search through messages in this chat room
           for (var message in messages) {
             if (_messageMatchesQuery(message, _searchQuery.value)) {
-              results.add(message);
+              // Create a copy of the message with chat name info
+              final messageWithChatName = await _enhanceMessageWithChatInfo(message, chatName);
+              results.add(messageWithChatName);
             }
           }
-
-          // Update results (this will cause duplicates if multiple rooms have results)
-          // In a real implementation, you'd want to deduplicate and limit results
-          _searchResults.assignAll(results);
-          _isSearching.value = false;
-        });
+        } catch (e) {
+          print('Error searching in chat ${chatRoom.id}: $e');
+        }
       }
 
-      // If no chat rooms or no results after a delay, mark as not searching
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (results.isEmpty) {
-          _isSearching.value = false;
-        }
+      // Sort results by relevance and timestamp
+      results.sort((a, b) {
+        // More recent messages first
+        final aTime = a.timestamp;
+        final bTime = b.timestamp;
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return bTime.compareTo(aTime);
       });
+
+      // Limit results to prevent UI overload
+      if (results.length > 50) {
+        results = results.sublist(0, 50);
+      }
+
+      _searchResults.assignAll(results);
+      _isSearching.value = false;
     });
+  }
+
+  Future<String> _getChatNameForSearch(ChatRoom chatRoom) async {
+    try {
+      final currentUserId = UserService.currentUserValue?.uid ?? '';
+
+      // Handle group chats
+      if (chatRoom.isGroupChat == true && chatRoom.name != null && chatRoom.name!.isNotEmpty) {
+        return chatRoom.name!;
+      }
+
+      // Handle private chats (1-on-1)
+      if (chatRoom.membersIds != null && chatRoom.membersIds!.length == 2) {
+        // Find the other user (not current user)
+        final otherUserId = chatRoom.membersIds!.firstWhere((id) => id != currentUserId);
+        if (otherUserId.isNotEmpty) {
+          // Get the other user's profile
+          final otherUser = await UserService().getProfile(otherUserId);
+          if (otherUser != null && otherUser.fullName != null && otherUser.fullName!.isNotEmpty) {
+            return otherUser.fullName!;
+          }
+        }
+      }
+
+      // Fallback to group name if available
+      if (chatRoom.name != null && chatRoom.name!.isNotEmpty) {
+        return chatRoom.name!;
+      }
+
+      // Final fallback
+      return chatRoom.id ?? 'Unknown Chat';
+    } catch (e) {
+      print('Error resolving chat name: $e');
+      return chatRoom.id ?? 'Unknown Chat';
+    }
+  }
+
+  Future<Message> _enhanceMessageWithChatInfo(Message message, String chatName) async {
+    // For now, just return the original message
+    // In a more advanced implementation, you could create a wrapper
+    // that includes chat name information
+    return message;
   }
 
   bool _messageMatchesQuery(Message message, String query) {
@@ -129,11 +180,33 @@ class MessageSearchController extends GetxController {
 
   void _searchInUsers() {
     // Search for users to start new chats
-    // TODO: Implement user search functionality
-    // This would search through your user database
+    if (_searchQuery.value.isEmpty) {
+      _userResults.clear();
+      _isSearching.value = false;
+      return;
+    }
 
-    _userResults.clear();
-    _isSearching.value = false;
+    try {
+      // Search for users using UserService
+      UserService().getAllUsers(searchQuery: _searchQuery.value).then((users) {
+        // Filter out current user and limit results
+        final filteredUsers = users
+            .where((user) => user.uid != UserService.currentUserValue?.uid)
+            .take(20) // Limit to 20 results
+            .toList();
+
+        _userResults.assignAll(filteredUsers);
+        _isSearching.value = false;
+      }).catchError((e) {
+        print('Error searching users: $e');
+        _userResults.clear();
+        _isSearching.value = false;
+      });
+    } catch (e) {
+      print('Error in user search: $e');
+      _userResults.clear();
+      _isSearching.value = false;
+    }
   }
 
   void _clearResults() {

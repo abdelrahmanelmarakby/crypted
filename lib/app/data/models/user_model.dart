@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_contacts/contact.dart';
+import 'package:crypted_app/app/data/models/notification_model.dart';
 
 // Privacy Settings Model
 class PrivacySettings {
@@ -19,6 +20,7 @@ class PrivacySettings {
   final bool? allowOnlineStatus;
   final bool? allowTypingIndicator;
   final bool? allowSeenIndicator;
+  final bool? allowCamera;
 
   const PrivacySettings({
     this.oneToOneNotificationSoundEnabled,
@@ -35,6 +37,7 @@ class PrivacySettings {
     this.allowOnlineStatus,
     this.allowTypingIndicator,
     this.allowSeenIndicator,
+    this.allowCamera,
   });
 
   // Default privacy settings factory
@@ -54,6 +57,7 @@ class PrivacySettings {
       allowOnlineStatus: true,
       allowTypingIndicator: true,
       allowSeenIndicator: true,
+      allowCamera: true,
     );
   }
 
@@ -72,6 +76,7 @@ class PrivacySettings {
     bool? allowOnlineStatus,
     bool? allowTypingIndicator,
     bool? allowSeenIndicator,
+    bool? allowCamera,
   }) {
     return PrivacySettings(
       oneToOneNotificationSoundEnabled: oneToOneNotificationSoundEnabled ?? this.oneToOneNotificationSoundEnabled,
@@ -88,6 +93,7 @@ class PrivacySettings {
       allowOnlineStatus: allowOnlineStatus ?? this.allowOnlineStatus,
       allowTypingIndicator: allowTypingIndicator ?? this.allowTypingIndicator,
       allowSeenIndicator: allowSeenIndicator ?? this.allowSeenIndicator,
+      allowCamera: allowCamera ?? this.allowCamera,
     );
   }
 
@@ -107,6 +113,7 @@ class PrivacySettings {
       'allowOnlineStatus': allowOnlineStatus,
       'allowTypingIndicator': allowTypingIndicator,
       'allowSeenIndicator': allowSeenIndicator,
+      'allowCamera': allowCamera,
     };
   }
 
@@ -126,6 +133,7 @@ class PrivacySettings {
       allowOnlineStatus: map['allowOnlineStatus'] as bool?,
       allowTypingIndicator: map['allowTypingIndicator'] as bool?,
       allowSeenIndicator: map['allowSeenIndicator'] as bool?,
+      allowCamera: map['allowCamera'] as bool?,
     );
   }
 
@@ -136,7 +144,7 @@ class PrivacySettings {
 
   @override
   String toString() {
-    return 'PrivacySettings(oneToOneNotificationSoundEnabled: $oneToOneNotificationSoundEnabled, showLastSeenInOneToOne: $showLastSeenInOneToOne, showLastSeenInGroups: $showLastSeenInGroups, allowMessagesFromNonContacts: $allowMessagesFromNonContacts, showProfilePhotoToNonContacts: $showProfilePhotoToNonContacts, showStatusToContactsOnly: $showStatusToContactsOnly, readReceiptsEnabled: $readReceiptsEnabled, allowGroupInvitesFromAnyone: $allowGroupInvitesFromAnyone, allowAddToGroupsWithoutApproval: $allowAddToGroupsWithoutApproval, allowForwardingMessages: $allowForwardingMessages, allowScreenshotInChats: $allowScreenshotInChats, allowOnlineStatus: $allowOnlineStatus, allowTypingIndicator: $allowTypingIndicator, allowSeenIndicator: $allowSeenIndicator)';
+    return 'PrivacySettings(oneToOneNotificationSoundEnabled: $oneToOneNotificationSoundEnabled, showLastSeenInOneToOne: $showLastSeenInOneToOne, showLastSeenInGroups: $showLastSeenInGroups, allowMessagesFromNonContacts: $allowMessagesFromNonContacts, showProfilePhotoToNonContacts: $showProfilePhotoToNonContacts, showStatusToContactsOnly: $showStatusToContactsOnly, readReceiptsEnabled: $readReceiptsEnabled, allowGroupInvitesFromAnyone: $allowGroupInvitesFromAnyone, allowAddToGroupsWithoutApproval: $allowAddToGroupsWithoutApproval, allowForwardingMessages: $allowForwardingMessages, allowScreenshotInChats: $allowScreenshotInChats, allowOnlineStatus: $allowOnlineStatus, allowTypingIndicator: $allowTypingIndicator, allowSeenIndicator: $allowSeenIndicator, allowCamera: $allowCamera)';
   }
 
   @override
@@ -156,7 +164,8 @@ class PrivacySettings {
         other.allowScreenshotInChats == allowScreenshotInChats &&
         other.allowOnlineStatus == allowOnlineStatus &&
         other.allowTypingIndicator == allowTypingIndicator &&
-        other.allowSeenIndicator == allowSeenIndicator;
+        other.allowSeenIndicator == allowSeenIndicator &&
+        other.allowCamera == allowCamera;
   }
 
   @override
@@ -174,7 +183,8 @@ class PrivacySettings {
         allowScreenshotInChats.hashCode ^
         allowOnlineStatus.hashCode ^
         allowTypingIndicator.hashCode ^
-        allowSeenIndicator.hashCode;
+        allowSeenIndicator.hashCode ^
+        allowCamera.hashCode;
   }
 }
 
@@ -361,6 +371,7 @@ class SocialMediaUser {
   // Settings models
   final PrivacySettings? privacySettings;
   final ChatSettings? chatSettings;
+  final NotificationModel? notificationSettings;
 
   const SocialMediaUser({
     this.fullName,
@@ -380,6 +391,7 @@ class SocialMediaUser {
     this.deviceInfo,
     this.privacySettings,
     this.chatSettings,
+    this.notificationSettings,
   });
 
   // Factory constructor with default settings
@@ -418,6 +430,18 @@ class SocialMediaUser {
       deviceInfo: deviceInfo ?? {},
       privacySettings: PrivacySettings.defaultSettings(),
       chatSettings: ChatSettings.defaultSettings(),
+      notificationSettings: NotificationModel(
+        showMessageNotification: true,
+        soundMessage: 'Note',
+        reactionMessageNotification: true,
+        showGroupNotification: true,
+        soundGroup: 'Note',
+        reactionGroupNotification: true,
+        soundStatus: 'Note',
+        reactionStatusNotification: true,
+        reminderNotification: true,
+        showPreviewNotification: true,
+      ),
     );
   }
 
@@ -439,6 +463,7 @@ class SocialMediaUser {
     Map<String, dynamic>? deviceInfo,
     PrivacySettings? privacySettings,
     ChatSettings? chatSettings,
+    NotificationModel? notificationSettings,
   }) {
     return SocialMediaUser(
       fullName: fullName ?? this.fullName,
@@ -458,6 +483,7 @@ class SocialMediaUser {
       deviceInfo: deviceInfo ?? this.deviceInfo,
       privacySettings: privacySettings ?? this.privacySettings,
       chatSettings: chatSettings ?? this.chatSettings,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 
@@ -519,6 +545,7 @@ class SocialMediaUser {
       'deviceInfo': deviceInfo ?? {},
       'privacySettings': privacySettings?.toMap(),
       'chatSettings': chatSettings?.toMap(),
+      'notificationSettings': notificationSettings?.toMap(),
     };
   }
 
@@ -553,6 +580,9 @@ class SocialMediaUser {
       chatSettings: map['chatSettings'] != null
           ? ChatSettings.fromMap(Map<String, dynamic>.from(map['chatSettings']))
           : null,
+      notificationSettings: map['notificationSettings'] != null
+          ? NotificationModel.fromMap(Map<String, dynamic>.from(map['notificationSettings']))
+          : null,
     );
   }
 
@@ -563,7 +593,7 @@ class SocialMediaUser {
 
   @override
   String toString() {
-    return 'SocialMediaUser(fullName: $fullName, email: $email, imageUrl: $imageUrl, provider: $provider, uid: $uid, phoneNumber: $phoneNumber, address: $address, bio: $bio, following: $following, followers: $followers, blockedUser: $blockedUser, fcmToken: $fcmToken, privacySettings: $privacySettings, chatSettings: $chatSettings)';
+    return 'SocialMediaUser(fullName: $fullName, email: $email, imageUrl: $imageUrl, provider: $provider, uid: $uid, phoneNumber: $phoneNumber, address: $address, bio: $bio, following: $following, followers: $followers, blockedUser: $blockedUser, fcmToken: $fcmToken, privacySettings: $privacySettings, chatSettings: $chatSettings, notificationSettings: $notificationSettings)';
   }
 
   @override
@@ -586,7 +616,8 @@ class SocialMediaUser {
         other.fcmToken == fcmToken &&
         mapEquals(other.deviceInfo, deviceInfo) &&
         other.privacySettings == privacySettings &&
-        other.chatSettings == chatSettings;
+        other.chatSettings == chatSettings &&
+        other.notificationSettings == notificationSettings;
   }
 
   @override
@@ -607,6 +638,7 @@ class SocialMediaUser {
         fcmToken.hashCode ^
         deviceInfo.hashCode ^
         privacySettings.hashCode ^
-        chatSettings.hashCode;
+        chatSettings.hashCode ^
+        notificationSettings.hashCode;
   }
 }

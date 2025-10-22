@@ -1,4 +1,6 @@
 import 'package:crypted_app/app/data/models/notification_model.dart';
+import 'package:crypted_app/app/data/data_source/notification_data_source.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:get/get.dart';
 
 class NotificationsController extends GetxController {
@@ -15,6 +17,8 @@ class NotificationsController extends GetxController {
     reminderNotification: true,
     showPreviewNotification: true,
   ).obs;
+
+  final NotificationDataSource _notificationDataSource = NotificationDataSource();
 
   // Getters for reactive UI - return RxBool that react to notificationData changes
   RxBool get isShowNotificationEnabled =>
@@ -114,20 +118,52 @@ class NotificationsController extends GetxController {
     notificationData.value = model;
   }
 
-  // Save notification data
-  void _saveNotificationData() {
-    // هنا تحط كود لحفظ البيانات في API أو Firebase
-    print('Saving notification data: ${notificationData.value.toMap()}');
-    // await apiService.updateNotification(notificationData.value.toMap());
+  // Save notification data to Firebase
+  Future<void> _saveNotificationData() async {
+    try {
+      final currentUserId = UserService.currentUserValue?.uid;
+      if (currentUserId != null) {
+        // Update the current user with new notification settings
+        final updatedUser = UserService.currentUserValue?.copyWith(
+          notificationSettings: notificationData.value,
+        );
+
+        if (updatedUser != null) {
+          await UserService().updateUser(user: updatedUser);
+          print('✅ Notification settings saved successfully');
+        }
+      }
+    } catch (e) {
+      print('❌ Error saving notification data: $e');
+    }
   }
 
-  // Load notification data
+  // Load notification data from Firebase
   Future<void> loadNotificationData() async {
-    // هنا تحط كود لتحميل البيانات من API أو Firebase
-    // final data = await apiService.getNotification();
-    // if (data != null) {
-    //   _initializeFromModel(NotificationModel.fromMap(data));
-    // }
+    try {
+      final currentUser = UserService.currentUserValue;
+      if (currentUser != null && currentUser.notificationSettings != null) {
+        notificationData.value = currentUser.notificationSettings!;
+        print('✅ Notification settings loaded successfully');
+      } else {
+        // Use default settings if none exist
+        notificationData.value = NotificationModel(
+          showMessageNotification: true,
+          soundMessage: 'Note',
+          reactionMessageNotification: true,
+          showGroupNotification: true,
+          soundGroup: 'Note',
+          reactionGroupNotification: true,
+          soundStatus: 'Note',
+          reactionStatusNotification: true,
+          reminderNotification: true,
+          showPreviewNotification: true,
+        );
+        print('ℹ️ Using default notification settings');
+      }
+    } catch (e) {
+      print('❌ Error loading notification data: $e');
+    }
   }
 
   // Reset all notification settings
