@@ -169,6 +169,7 @@ class Constants {
   static const String kReEnterpaswword = 'Re-enter password';
   static const String kSignUpToCrypted = 'Sign up to Crypted!';
   static const String kEnteryourfullname = 'Enter your full name';
+  static const String kEnteravalidemailaddress = 'Enter a valid email address';
   static const String kFullNameisrequired = 'Full name is required';
   static const String kEnteryouremail = 'Enter your email';
   static const String kEmailisrequired = 'Email is required';
@@ -177,7 +178,6 @@ class Constants {
   static const String kPasswordmustbeatleast6characters = 'Password must be at least 6 characters';
   static const String kLogin = 'Login';
   static const String kLogInToCrypted = 'Login to Crypted!';
-  static const String kEnteravalidemailaddress = 'Enter a valid email address';
   static const String kForgetPassword = 'Forgot Password?';
   static const String kEnterOTP = 'Enter OTP';
   static const String kDidntreceivecode = 'Didn\'t receive code?';

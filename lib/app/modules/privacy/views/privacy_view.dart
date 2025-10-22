@@ -1,4 +1,5 @@
 import 'package:crypted_app/app/data/models/privacy_model.dart';
+import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/notifications/widgets/reactive_switch_item.dart';
 import 'package:crypted_app/app/modules/privacy/widgets/privacy_cover.dart';
 import 'package:crypted_app/app/modules/privacy/widgets/privacy_item.dart';
@@ -100,50 +101,55 @@ class PrivacyView extends GetView<PrivacyController> {
                       },
                     )),
               ]),
+              
+              SizedBox(height: Sizes.size16),
+              PrivacyCover([
+                // Blocked - يستخدم قائمة مخصصة
+                GestureDetector(
+                  onTap: () => _showBlockedUsers(),
+                  child: Obx(() => PrivacyItem(
+                        title: Constants.kBlocked.tr,
+                        type: controller.blockedValue.value.value,
+                        showDropdown: true,
+                        onTypeChanged: (value) {
+                          print('Selected blocked: $value');
+                          controller.updateBlocked(value);
+                        },
+                        dropdownItems: BlockedLevel.values
+                            .map((level) => DropdownItem(
+                                  value: level.value,
+                                  label: level.value,
+                                ))
+                            .toList(),
+                      )),
+                ),
+              ]),
+              _buildSmallText(Constants.kListofcontactsyouhaveblocked.tr),
               SizedBox(height: Sizes.size16),
               PrivacyCover([
                 // Live Location - يستخدم قائمة مخصصة
-                Obx(() => PrivacyItem(
-                      title: Constants.kLiveLocation.tr,
-                      type: controller.liveLocationValue.value.value,
-                      showDropdown: true,
-                      onTypeChanged: (value) {
-                        print('Selected liveLocation: $value');
-                        controller.updateLiveLocation(value);
-                      },
-                      dropdownItems: LiveLocationLevel.values
-                          .map((level) => DropdownItem(
-                                value: level.value,
-                                label: level.value,
-                              ))
-                          .toList(),
-                    ))
+                GestureDetector(
+                  onTap: () => _showLiveLocationChats(),
+                  child: Obx(() => PrivacyItem(
+                        title: Constants.kLiveLocation.tr,
+                        type: controller.liveLocationValue.value.value,
+                        showDropdown: true,
+                        onTypeChanged: (value) {
+                          print('Selected liveLocation: $value');
+                          controller.updateLiveLocation(value);
+                        },
+                        dropdownItems: LiveLocationLevel.values
+                            .map((level) => DropdownItem(
+                                  value: level.value,
+                                  label: level.value,
+                                ))
+                            .toList(),
+                      )),
+                ),
               ]),
               _buildSmallText(
                 Constants.kListofchatswhereyouaresharingyourlivelocation.tr,
               ),
-              SizedBox(height: Sizes.size16),
-              PrivacyCover([PrivacyItem(title: Constants.kCalls.tr)]),
-              SizedBox(height: Sizes.size16),
-              PrivacyCover([
-                // Blocked - يستخدم قائمة مخصصة
-                Obx(() => PrivacyItem(
-                      title: Constants.kBlocked.tr,
-                      type: controller.blockedValue.value.value,
-                      showDropdown: true,
-                      onTypeChanged: (value) {
-                        print('Selected blocked: $value');
-                        controller.updateBlocked(value);
-                      },
-                      dropdownItems: BlockedLevel.values
-                          .map((level) => DropdownItem(
-                                value: level.value,
-                                label: level.value,
-                              ))
-                          .toList(),
-                    )),
-              ]),
-              _buildSmallText(Constants.kListofcontactsyouhaveblocked.tr),
               SizedBox(height: Sizes.size16),
               Padding(
                 padding: EdgeInsets.only(bottom: Paddings.xXSmall),
@@ -177,6 +183,8 @@ class PrivacyView extends GetView<PrivacyController> {
                 Constants
                     .kStartnewchatwithdisappearingmessagessettoyourtimer.tr,
               ),
+              SizedBox(height: Sizes.size16),
+              PrivacyCover([PrivacyItem(title: Constants.kCalls.tr)]),
               SizedBox(height: Sizes.size16),
               ReactiveSwitchItem(
                 title: Constants.kReadReceipts.tr,
@@ -235,6 +243,149 @@ class PrivacyView extends GetView<PrivacyController> {
         style: StylesManager.medium(
           fontSize: FontSize.xSmall,
           color: ColorsManager.grey,
+        ),
+      ),
+    );
+  }
+
+  /// Show blocked users dialog
+  void _showBlockedUsers() {
+    Get.dialog(
+      Dialog(
+        child: Container(
+          width: double.maxFinite,
+          height: 400,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(
+                "Blocked Users",
+                style: StylesManager.bold(fontSize: FontSize.large),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: FutureBuilder<List<SocialMediaUser>>(
+                  future: controller.getBlockedUsers(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error loading blocked users',
+                          style: StylesManager.regular(color: ColorsManager.error),
+                        ),
+                      );
+                    }
+
+                    final blockedUsers = snapshot.data ?? [];
+
+                    if (blockedUsers.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No blocked users',
+                          style: StylesManager.regular(color: ColorsManager.grey),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: blockedUsers.length,
+                      itemBuilder: (context, index) {
+                        final user = blockedUsers[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: user.imageUrl != null && user.imageUrl!.isNotEmpty
+                                ? NetworkImage(user.imageUrl!)
+                                : null,
+                            child: user.imageUrl == null || user.imageUrl!.isEmpty
+                                ? Text(user.fullName?.substring(0, 1).toUpperCase() ?? '?')
+                                : null,
+                          ),
+                          title: Text(user.fullName ?? 'Unknown'),
+                          subtitle: Text(user.uid ?? ''),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('Close'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show live location chats dialog
+  void _showLiveLocationChats() {
+    Get.dialog(
+      Dialog(
+        child: Container(
+          width: double.maxFinite,
+          height: 400,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(
+                "Live Location Sharing",
+                style: StylesManager.bold(fontSize: FontSize.large),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: FutureBuilder<List<String>>(
+                  future: controller.getLiveLocationChats(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error loading live location chats',
+                          style: StylesManager.regular(color: ColorsManager.error),
+                        ),
+                      );
+                    }
+
+                    final chatIds = snapshot.data ?? [];
+
+                    if (chatIds.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No live location sharing active',
+                          style: StylesManager.regular(color: ColorsManager.grey),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: chatIds.length,
+                      itemBuilder: (context, index) {
+                        final chatId = chatIds[index];
+                        return ListTile(
+                          leading: Icon(Icons.location_on, color: ColorsManager.primary),
+                          title: Text('Chat ID: $chatId'),
+                          subtitle: Text('Sharing live location'),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('Close'),
+              ),
+            ],
+          ),
         ),
       ),
     );
