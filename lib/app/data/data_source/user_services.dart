@@ -301,9 +301,31 @@ class UserService {
     }
   }
 
-  Future deleteUser(String uid) async {
-    await firebaseFirestore.collection("users").doc(uid).delete();
-    await FirebaseAuth.instance.currentUser!.delete();
+  static Future deleteUser(String uid) async {
+    try {
+      print("🗑️ Starting user deletion process for UID: $uid");
+
+      // Use FirebaseFirestore instance directly since we're in a static method
+      final firebaseFirestore = FirebaseFirestore.instance;
+      final firebaseAuth = FirebaseAuth.instance;
+
+      // Delete user data from Firestore
+      await firebaseFirestore.collection("users").doc(uid).delete();
+      print("✅ User data deleted from Firestore");
+
+      // Delete user authentication
+      await firebaseAuth.currentUser!.delete();
+      print("✅ User authentication deleted");
+
+      // Clear current user
+      updateCurrentUser(null);
+      print("✅ Current user cleared");
+
+      print("🗑️ User deletion completed successfully");
+    } catch (e) {
+      print("❌ Error deleting user: $e");
+      rethrow;
+    }
   }
 
   Future<bool> blockUser(String blockedUserId, String chatRoomId) async {

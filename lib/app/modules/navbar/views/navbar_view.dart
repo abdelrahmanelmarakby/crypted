@@ -4,7 +4,6 @@ import 'package:crypted_app/app/modules/home/views/home_view.dart';
 import 'package:crypted_app/app/modules/settings/views/settings_view.dart';
 import 'package:crypted_app/app/modules/stories/views/stories_view.dart';
 import 'package:crypted_app/core/locale/constant.dart';
-//import 'package:crypted_app/app/modules/templates/stories2/src/views/main_view.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -20,19 +19,17 @@ class NavbarView extends GetView<NavbarController> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> bottomBarPages = [
-      const HomeView(),
-      const CallsView(),
-      const StoriesView(),
-      const SettingsView(),
-    ];
-
     return Obx(
       () => Scaffold(
         body: PageView(
           controller: controller.pageController,
           physics: const NeverScrollableScrollPhysics(),
-          children: bottomBarPages,
+          children: [
+            const HomeView(),
+            const CallsView(),
+            const StoriesView(),
+            const SettingsView(), // Direct widget usage in navbar is fine
+          ],
         ),
         extendBody: true,
         bottomNavigationBar: AnimatedNotchBottomBar(
@@ -40,7 +37,7 @@ class NavbarView extends GetView<NavbarController> {
             index: controller.selectedIndex.value,
           ),
           color: ColorsManager.navbarColor,
-          
+
           showLabel: true,
           textOverflow: TextOverflow.visible,
           maxLine: 1,

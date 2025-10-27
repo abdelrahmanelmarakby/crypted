@@ -65,9 +65,10 @@ class ColorsManager {
     return hslDark.toColor();
   }
 
-  static LinearGradient primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFfABDCFF), Color(0xFF0396FF)],
-  );
+  static const Color background = scaffoldBackground;
+  static const Color textPrimary = black;
+  static const Color textSecondary = grey;
+  static const Color surface = white;
+  static const Color border = borderColor;
+  static const Color shadow = Color(0xFF000000);
 }

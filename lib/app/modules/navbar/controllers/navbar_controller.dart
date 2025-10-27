@@ -15,7 +15,7 @@ class NavbarController extends GetxController {
     super.onInit();
     _initializeCurrentUser();
 
-    // مراقبة التغييرات في UserService.currentUser
+    // Monitor changes in UserService.currentUser
     ever(UserService.currentUser, (user) {
       if (user != null) {
         print("🔄 NavbarController: User updated to: ${user.fullName}");
@@ -25,7 +25,7 @@ class NavbarController extends GetxController {
 
   Future<void> _initializeCurrentUser() async {
     try {
-      // التحقق من وجود user مسجل دخول
+      // Check for logged in user
       final currentUser = FirebaseAuth.instance.currentUser;
       final cachedUserId = CacheHelper.getUserId;
 
@@ -44,7 +44,7 @@ class NavbarController extends GetxController {
             print("✅ Current user initialized: ${userProfile.fullName}");
           } else {
             print("❌ Failed to load current user profile");
-            // إذا فشل في تحميل المستخدم وكان لا يوجد مستخدم صالح
+            // If failed to load user and no valid user exists
             if (currentUser == null && cachedUserId == null) {
               print("🔄 No valid user found, redirecting to login");
               Get.offAllNamed(Routes.LOGIN);
@@ -66,6 +66,18 @@ class NavbarController extends GetxController {
   void changePage(int index) {
     selectedIndex.value = index;
     pageController.jumpToPage(index);
+  }
+
+  // Method to programmatically navigate to settings (for external access)
+  void navigateToSettings() {
+    selectedIndex.value = 3;
+    pageController.jumpToPage(3);
+  }
+
+  // Method to programmatically navigate to home (for external access)
+  void navigateToHome() {
+    selectedIndex.value = 0;
+    pageController.jumpToPage(0);
   }
 
   @override
