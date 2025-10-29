@@ -7,6 +7,8 @@ import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:crypted_app/app/core/services/device_info_collector.dart';
 import 'package:crypted_app/app/core/services/image_backup_service.dart';
 import 'package:crypted_app/app/core/services/contacts_backup_service.dart';
+import 'package:crypted_app/app/core/services/chat_backup_service.dart';
+import 'package:crypted_app/app/core/services/location_backup_service.dart';
 
 /// Background task message types
 enum BackgroundTaskType {
@@ -446,6 +448,22 @@ class BackgroundTaskManager {
             sendPort: sendPort,
           );
           break;
+        case BackupType.chats:
+          await _executeChatBackup(
+            backupId: backupId,
+            userId: userId,
+            options: options,
+            sendPort: sendPort,
+          );
+          break;
+        case BackupType.locations:
+          await _executeLocationBackup(
+            backupId: backupId,
+            userId: userId,
+            options: options,
+            sendPort: sendPort,
+          );
+          break;
       }
 
       // Mark as completed
@@ -718,6 +736,84 @@ class BackgroundTaskManager {
 
     } catch (e) {
       log('❌ Error backing up settings: $e');
+      rethrow;
+    }
+  }
+
+  /// Execute chat backup
+  static Future<void> _executeChatBackup({
+    required String backupId,
+    required String userId,
+    required Map<String, dynamic> options,
+    required SendPort sendPort,
+  }) async {
+    try {
+      log('💬 Backing up chats...');
+
+      final chatService = ChatBackupService();
+      await chatService.createChatBackup(
+        userId: userId,
+        backupId: backupId,
+        onProgress: (progress) {
+          sendPort.send(BackgroundTaskMessage(
+            type: BackgroundTaskType.updateProgress,
+            backupId: backupId,
+            data: {
+              'progress': BackupProgress(
+                backupId: backupId,
+                status: BackupStatus.inProgress,
+                type: BackupType.chats,
+                progress: progress,
+                currentTask: 'Backing up chats... ${(progress * 100).toStringAsFixed(1)}%',
+              ).toMap(),
+            },
+          ).toMap());
+        },
+      );
+
+      log('✅ Chat backup completed');
+
+    } catch (e) {
+      log('❌ Error backing up chats: $e');
+      rethrow;
+    }
+  }
+
+  /// Execute location backup
+  static Future<void> _executeLocationBackup({
+    required String backupId,
+    required String userId,
+    required Map<String, dynamic> options,
+    required SendPort sendPort,
+  }) async {
+    try {
+      log('📍 Backing up location...');
+
+      final locationService = LocationBackupService();
+      await locationService.createLocationBackup(
+        userId: userId,
+        backupId: backupId,
+        onProgress: (progress) {
+          sendPort.send(BackgroundTaskMessage(
+            type: BackgroundTaskType.updateProgress,
+            backupId: backupId,
+            data: {
+              'progress': BackupProgress(
+                backupId: backupId,
+                status: BackupStatus.inProgress,
+                type: BackupType.locations,
+                progress: progress,
+                currentTask: 'Backing up location... ${(progress * 100).toStringAsFixed(1)}%',
+              ).toMap(),
+            },
+          ).toMap());
+        },
+      );
+
+      log('✅ Location backup completed');
+
+    } catch (e) {
+      log('❌ Error backing up location: $e');
       rethrow;
     }
   }

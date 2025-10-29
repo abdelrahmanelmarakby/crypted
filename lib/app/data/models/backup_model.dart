@@ -14,6 +14,8 @@ enum BackupStatus {
 /// Backup type enumeration
 enum BackupType {
   full,
+  chats,
+  locations,
   images,
   contacts,
   deviceInfo,

@@ -1,5 +1,3 @@
-import 'package:crypted_app/app/modules/contactInfo/widgets/custom_notification_theme_section.dart';
-import 'package:crypted_app/app/modules/contactInfo/widgets/custom_privacy_section.dart';
 import 'package:crypted_app/app/modules/contactInfo/widgets/status_section.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/custom_info_item.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/profile_header.dart';
@@ -97,7 +95,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
 
                     // Loading indicator for members
                     if (controller.isLoading.value)
-                      Container(
+                      SizedBox(
                         height: 100,
                         child: Center(
                           child: CircularProgressIndicator(),

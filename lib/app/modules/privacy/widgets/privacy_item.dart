@@ -1,10 +1,8 @@
-import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class PrivacyItem extends StatelessWidget {
   const PrivacyItem({

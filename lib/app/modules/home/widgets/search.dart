@@ -25,7 +25,6 @@ import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
-import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 class Search extends StatelessWidget {

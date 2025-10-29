@@ -4,6 +4,9 @@ import 'dart:developer';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
+import 'package:crypted_app/app/core/services/typing_service.dart';
+import 'package:crypted_app/app/core/services/read_receipt_service.dart';
+import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
@@ -22,7 +25,6 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
-import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,6 +59,15 @@ class ChatController extends GetxController {
   final Rx<Message?> replyToMessage = Rx<Message?>(null);
   final RxString replyToText = ''.obs;
   late final ChatDataSources chatDataSource;
+  
+  // Real-time services
+  final typingService = TypingService();
+  final readReceiptService = ReadReceiptService();
+  final presenceService = PresenceService();
+  
+  // Typing indicators
+  final RxList<String> typingUsers = <String>[].obs;
+  final RxString typingText = ''.obs;
   
   // Stream subscriptions for cleanup
   final List<StreamSubscription> _streamSubscriptions = [];
@@ -101,6 +112,29 @@ class ChatController extends GetxController {
       ChatSessionManager.instance.chatNameStream.listen((String name) {
         chatName.value = name;
         update();
+      })
+    );
+    
+    // Setup typing indicator listener
+    _setupTypingListener();
+  }
+  
+  /// Setup typing indicator listener
+  void _setupTypingListener() {
+    if (roomId.isEmpty) return;
+    
+    _streamSubscriptions.add(
+      typingService.listenToTypingUsers(roomId).listen((users) async {
+        if (users.isEmpty) {
+          typingUsers.clear();
+          typingText.value = '';
+          return;
+        }
+        
+        final userIds = users.map((u) => u.userId).toList();
+        final names = await typingService.getTypingUsersNames(roomId, userIds);
+        typingUsers.value = names;
+        typingText.value = typingService.formatTypingText(names);
       })
     );
   }
@@ -332,6 +366,9 @@ class ChatController extends GetxController {
   /// Send a message with proper validation
   Future<void> sendMessage(Message message) async {
     try {
+      // Stop typing indicator before sending
+      await typingService.stopTyping(roomId);
+      
       // Verify that message sender is current user
       if (message.senderId != currentUser?.uid) {
         print("❌ ERROR: Message sender is not current user!");
@@ -835,28 +872,184 @@ class ChatController extends GetxController {
   }
 
   /// Forward message to specific chat
+  /// Creates or finds existing chat room and sends the forwarded message
   Future<void> _forwardMessageToChat(Message message, String targetUserId) async {
     try {
-      // TODO: Implement actual message forwarding to new chat room
-      // This would involve:
-      // 1. Creating or finding existing chat room with target user
-      // 2. Sending the message to that room
-      // 3. Updating message metadata to indicate it's forwarded
-
-      await Future.delayed(const Duration(milliseconds: 800)); // Simulate network call
-
-      // Example implementation:
-      // final targetRoomId = await _getOrCreateChatRoomWithUser(targetUserId);
-      // await chatDataSource.sendMessage(
-      //   privateMessage: message,
-      //   roomId: targetRoomId,
-      //   members: [currentUser!, await _getUserById(targetUserId)],
-      // );
-
-      print('📤 Message forwarded successfully to room with user: $targetUserId');
+      _showLoading();
+      
+      // Get target user data
+      final targetUser = await _getUserById(targetUserId);
+      if (targetUser == null) {
+        throw Exception('Target user not found');
+      }
+      
+      // Get or create chat room with target user
+      final targetRoomId = await _getOrCreateChatRoomWithUser(targetUser);
+      
+      // Create forwarded message with new room ID and timestamp
+      Message forwardedMessage;
+      
+      if (message is TextMessage) {
+        forwardedMessage = TextMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          text: message.text,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else if (message is image.PhotoMessage) {
+        forwardedMessage = image.PhotoMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          imageUrl: message.imageUrl,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else if (message is VideoMessage) {
+        forwardedMessage = VideoMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          video: message.video,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else if (message is AudioMessage) {
+        forwardedMessage = AudioMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          audioUrl: message.audioUrl,
+          duration: message.duration,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else if (message is FileMessage) {
+        forwardedMessage = FileMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          file: message.file,
+          fileName: message.fileName,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else if (message is LocationMessage) {
+        forwardedMessage = LocationMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          latitude: message.latitude,
+          longitude: message.longitude,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else if (message is ContactMessage) {
+        forwardedMessage = ContactMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          name: message.name,
+          phoneNumber: message.phoneNumber,
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      } else {
+        // For unsupported message types, forward as text with description
+        forwardedMessage = TextMessage(
+          id: '',
+          roomId: targetRoomId,
+          senderId: currentUser?.uid ?? '',
+          timestamp: DateTime.now(),
+          text: '[Forwarded: ${_getMessagePreview(message)}]',
+          isForwarded: true,
+          forwardedFrom: message.senderId,
+        );
+      }
+      
+      // Send forwarded message to target chat room
+      await chatDataSource.sendMessage(
+        privateMessage: forwardedMessage,
+        roomId: targetRoomId,
+        members: [currentUser!, targetUser],
+      );
+      
+      print('📤 Message forwarded successfully to room: $targetRoomId with user: ${targetUser.fullName}');
     } catch (e) {
       print('❌ Failed to forward message: $e');
-      throw e;
+      rethrow;
+    } finally {
+      _hideLoading();
+    }
+  }
+  
+  /// Get or create chat room with specific user
+  Future<String> _getOrCreateChatRoomWithUser(SocialMediaUser targetUser) async {
+    try {
+      // Create members list (current user and target user)
+      final members = [currentUser!, targetUser];
+      final memberIds = members.map((user) => user.uid).toList()..sort();
+      
+      // Check if chat room already exists
+      final existingRooms = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('membersIds', isEqualTo: memberIds)
+          .where('isGroupChat', isEqualTo: false)
+          .limit(1)
+          .get();
+      
+      if (existingRooms.docs.isNotEmpty) {
+        // Return existing room ID
+        return existingRooms.docs.first.id;
+      }
+      
+      // Create new chat room
+      final newRoomRef = FirebaseFirestore.instance.collection('chats').doc();
+      final roomId = newRoomRef.id;
+      
+      await newRoomRef.set({
+        'membersIds': memberIds,
+        'members': members.map((user) => user.toMap()).toList(),
+        'isGroupChat': false,
+        'lastChat': FieldValue.serverTimestamp(),
+        'lastMessage': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      print('✅ Created new chat room: $roomId');
+      return roomId;
+    } catch (e) {
+      print('❌ Error getting or creating chat room: $e');
+      rethrow;
+    }
+  }
+  
+  /// Get user by ID from Firestore
+  Future<SocialMediaUser?> _getUserById(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (userDoc.exists) {
+        return SocialMediaUser.fromMap(userDoc.data()!);
+      }
+      
+      return null;
+    } catch (e) {
+      print('❌ Error getting user by ID: $e');
+      return null;
     }
   }
 
@@ -986,7 +1179,7 @@ class ChatController extends GetxController {
       print('📢 Message reported: ${message.id} by user: ${currentUser?.uid}');
     } catch (e) {
       print('❌ Failed to report message: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -1105,9 +1298,27 @@ class ChatController extends GetxController {
     print("   Has Active Session: ${ChatSessionManager.instance.hasActiveSession}");
   }
 
+  /// Handle text input changes for typing indicator
+  void onTextChanged(String text) {
+    if (text.trim().isNotEmpty) {
+      typingService.startTyping(roomId);
+    } else {
+      typingService.stopTyping(roomId);
+    }
+  }
+  
+  /// Mark visible messages as read
+  void markMessagesAsRead(List<String> messageIds) {
+    if (messageIds.isEmpty) return;
+    readReceiptService.markMessagesAsRead(messageIds);
+  }
+
   @override
   void onClose() {
     messageController.dispose();
+    
+    // Stop typing indicator
+    typingService.stopTyping(roomId);
 
     // Cancel all stream subscriptions to prevent memory leaks
     for (final subscription in _streamSubscriptions) {
@@ -1121,6 +1332,6 @@ class ChatController extends GetxController {
       ChatSessionManager.instance.endChatSession();
     }
 
-    
+    super.onClose();
   }
 }

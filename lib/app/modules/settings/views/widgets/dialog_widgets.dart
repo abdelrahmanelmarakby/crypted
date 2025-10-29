@@ -194,7 +194,7 @@ class BackupSettingsSheetWidget extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: ColorsManager.primary,
+            activeThumbColor: ColorsManager.primary,
           ),
         ],
       ),

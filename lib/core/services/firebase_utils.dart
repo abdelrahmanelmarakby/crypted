@@ -6,7 +6,6 @@ import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/image_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/file_message_model.dart';
-import 'package:crypted_app/app/data/models/user_model.dart';
 
 class FirebaseUtils {
   // ⏺️ رفع صوت + يرجّع AudioMessage

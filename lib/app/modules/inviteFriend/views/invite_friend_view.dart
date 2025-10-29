@@ -113,7 +113,7 @@ class InviteFriendView extends GetView<InviteFriendController> {
                   // مؤشر التحميل وحالة الإذن
                   Obx(() {
                     if (controller.isLoadingContacts.value) {
-                      return Container(
+                      return SizedBox(
                         height: 100,
                         child: Center(
                           child: Column(
@@ -137,7 +137,7 @@ class InviteFriendView extends GetView<InviteFriendController> {
                     }
 
                     if (!controller.hasPermission.value) {
-                      return Container(
+                      return SizedBox(
                         height: 100,
                         child: Center(
                           child: Column(

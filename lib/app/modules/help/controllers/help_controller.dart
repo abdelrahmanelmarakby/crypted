@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:crypted_app/app/data/data_source/help_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/help_message_model.dart';
@@ -5,6 +6,7 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -263,19 +265,108 @@ class HelpController extends GetxController {
   }
 
   /// Upload attachments to Firebase Storage
+  /// Returns list of download URLs for uploaded files
   Future<List<String>?> _uploadAttachments() async {
     if (attachmentFiles.isEmpty) return null;
 
     try {
-      // TODO: Implement file upload to Firebase Storage
-      // For now, we'll just return the local file paths
-      // In a real implementation, you'd upload to Firebase Storage and return the URLs
-      return attachmentFiles.toList();
+      final uploadedUrls = <String>[];
+      final currentUser = UserService.currentUser.value ?? UserService.currentUserValue;
+      final authUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser == null && authUser == null) {
+        if (kDebugMode) {
+          print('No authenticated user for file upload');
+        }
+        return null;
+      }
+      
+      final userId = currentUser?.uid ?? authUser?.uid ?? 'anonymous';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      // Upload each file to Firebase Storage
+      for (int i = 0; i < attachmentFiles.length; i++) {
+        final filePath = attachmentFiles[i];
+        final file = File(filePath);
+        
+        if (!await file.exists()) {
+          if (kDebugMode) {
+            print('File does not exist: $filePath');
+          }
+          continue;
+        }
+        
+        // Generate unique filename
+        final fileExtension = filePath.split('.').last;
+        final fileName = 'help_attachment_${userId}_${timestamp}_$i.$fileExtension';
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('help_attachments')
+            .child(userId)
+            .child(fileName);
+        
+        // Upload file with metadata
+        final metadata = SettableMetadata(
+          contentType: _getContentType(fileExtension),
+          customMetadata: {
+            'uploadedBy': userId,
+            'uploadedAt': timestamp.toString(),
+            'originalName': filePath.split('/').last,
+          },
+        );
+        
+        if (kDebugMode) {
+          print('Uploading file: $fileName');
+        }
+        
+        // Upload file
+        final uploadTask = await storageRef.putFile(file, metadata);
+        
+        // Get download URL
+        final downloadUrl = await uploadTask.ref.getDownloadURL();
+        uploadedUrls.add(downloadUrl);
+        
+        if (kDebugMode) {
+          print('File uploaded successfully: $downloadUrl');
+        }
+      }
+      
+      return uploadedUrls.isNotEmpty ? uploadedUrls : null;
     } catch (e) {
       if (kDebugMode) {
         print('Error uploading attachments: $e');
       }
+      
+      Get.snackbar(
+        'Upload Error',
+        'Some files could not be uploaded. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.error,
+        colorText: ColorsManager.white,
+      );
+      
       return null;
+    }
+  }
+  
+  /// Get content type based on file extension
+  String _getContentType(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'txt':
+        return 'text/plain';
+      default:
+        return 'application/octet-stream';
     }
   }
 
@@ -306,13 +397,13 @@ class HelpController extends GetxController {
   /// Pick images for attachment
   Future<void> pickImages() async {
     try {
-      final List<XFile>? images = await _imagePicker.pickMultiImage(
+      final List<XFile> images = await _imagePicker.pickMultiImage(
         maxHeight: 1800,
         maxWidth: 1800,
         imageQuality: 85,
       );
 
-      if (images != null && images.isNotEmpty) {
+      if (images.isNotEmpty) {
         attachmentFiles.addAll(images.map((image) => image.path));
       }
     } catch (e) {

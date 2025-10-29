@@ -318,27 +318,27 @@ class InviteFriendController extends GetxController {
 
     // إذا كان الرقم يبدأ بـ 0، استبدله بـ +966 (رمز السعودية)
     if (cleanNumber.startsWith('0')) {
-      cleanNumber = '+966' + cleanNumber.substring(1);
+      cleanNumber = '+966${cleanNumber.substring(1)}';
     }
 
     // إذا كان الرقم يبدأ بـ 966، أضف +
     if (cleanNumber.startsWith('966')) {
-      cleanNumber = '+' + cleanNumber;
+      cleanNumber = '+$cleanNumber';
     }
 
     // إذا كان الرقم يبدأ بـ 966، أضف +
     if (cleanNumber.startsWith('966')) {
-      cleanNumber = '+' + cleanNumber;
+      cleanNumber = '+$cleanNumber';
     }
 
     // إذا كان الرقم 10 أرقام، أضف +966
     if (cleanNumber.length == 10 && !cleanNumber.startsWith('+')) {
-      cleanNumber = '+966' + cleanNumber;
+      cleanNumber = '+966$cleanNumber';
     }
 
     // إذا كان الرقم 9 أرقام، أضف +966
     if (cleanNumber.length == 9 && !cleanNumber.startsWith('+')) {
-      cleanNumber = '+966' + cleanNumber;
+      cleanNumber = '+966$cleanNumber';
     }
 
     return cleanNumber;

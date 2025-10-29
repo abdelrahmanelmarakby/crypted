@@ -220,7 +220,7 @@ class ContactsBackupService {
           try {
             // Convert contact to JSON
             final contactJson = contact.toJson();
-            final fileName = 'contact_${contact.id}_${globalIndex}.json';
+            final fileName = 'contact_${contact.id}_$globalIndex.json';
 
             // Upload contact data
             final url = await _backupDataSource.uploadJsonData(
@@ -521,12 +521,12 @@ class ContactsBackupService {
       phones: mergedPhones.toSet().toList(),
       emails: mergedEmails.toSet().toList(),
       addresses: mergedAddresses.toSet().toList(),
-      organizations: [...contact1.organizations, ...contact2.organizations].toSet().toList(),
-      websites: [...contact1.websites, ...contact2.websites].toSet().toList(),
-      socialMedias: [...contact1.socialMedias, ...contact2.socialMedias].toSet().toList(),
-      events: [...contact1.events, ...contact2.events].toSet().toList(),
-      notes: [], // Notes field requires List<Note> type, simplified for now
-      groups: [...contact1.groups, ...contact2.groups].toSet().toList(),
+      organizations: <Organization>{...contact1.organizations, ...contact2.organizations}.toList(),
+      websites: <Website>{...contact1.websites, ...contact2.websites}.toList(),
+      socialMedias: <SocialMedia>{...contact1.socialMedias, ...contact2.socialMedias}.toList(),
+      events: <Event>{...contact1.events, ...contact2.events}.toList(),
+      notes: <Note>{...contact1.notes, ...contact2.notes}.toList(),
+      groups: <Group>{...contact1.groups, ...contact2.groups}.toList(),
       photo: contact1.photo ?? contact2.photo,
       thumbnail: contact1.thumbnail ?? contact2.thumbnail,
     );

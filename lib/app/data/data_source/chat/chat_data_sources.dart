@@ -360,7 +360,7 @@ class ChatDataSources {
       );
       
       if (kDebugMode) {
-        print('✅ Member removed from chat room: ${memberToRemove?.fullName}');
+        print('✅ Member removed from chat room: ${memberToRemove.fullName}');
       }
       
       return true;

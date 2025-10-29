@@ -450,7 +450,7 @@ class AutoBackupToggleWidget extends StatelessWidget {
                       value ? ColorsManager.success : ColorsManager.grey,
                     );
                   },
-                  activeColor: ColorsManager.primary,
+                  activeThumbColor: ColorsManager.primary,
                   inactiveTrackColor: ColorsManager.borderColor,
                 ),
               )),

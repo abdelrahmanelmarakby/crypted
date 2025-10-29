@@ -243,3 +243,666 @@ const sendNotifications = onDocumentCreated(
 
 // Export the function
 exports.sendNotifications = sendNotifications;
+
+// ============================================================================
+// READ RECEIPTS & DELIVERY STATUS
+// ============================================================================
+
+/**
+ * Update message delivery status when user comes online
+ * Marks messages as delivered when recipient is online
+ */
+exports.updateDeliveryStatus = functions.firestore
+  .document('users/{userId}/presence/{sessionId}')
+  .onWrite(async (change, context) => {
+    const { userId } = context.params;
+    const after = change.after.exists ? change.after.data() : null;
+    
+    if (!after || after.status !== 'online') {
+      return null;
+    }
+
+    try {
+      // Get all undelivered messages for this user
+      const messagesSnapshot = await db
+        .collection('messages')
+        .where('recipientId', '==', userId)
+        .where('status', '==', 'sent')
+        .limit(100)
+        .get();
+
+      if (messagesSnapshot.empty) {
+        return null;
+      }
+
+      // Batch update messages to delivered
+      const batch = db.batch();
+      messagesSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, {
+          status: 'delivered',
+          deliveredAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+
+      await batch.commit();
+      functions.logger.log(`Updated ${messagesSnapshot.size} messages to delivered for user ${userId}`);
+      
+      return { updated: messagesSnapshot.size };
+    } catch (error) {
+      functions.logger.error('Error updating delivery status:', error);
+      return null;
+    }
+  });
+
+/**
+ * Update read receipts when user reads messages
+ * Triggered when readReceipts subcollection is updated
+ */
+exports.updateReadReceipts = functions.firestore
+  .document('messages/{messageId}/readReceipts/{userId}')
+  .onCreate(async (snap, context) => {
+    const { messageId, userId } = context.params;
+    const readData = snap.data();
+
+    try {
+      // Update the main message document
+      await db.collection('messages').doc(messageId).update({
+        status: 'read',
+        readAt: readData.readAt || admin.firestore.FieldValue.serverTimestamp(),
+        [`readBy.${userId}`]: true
+      });
+
+      // Get message data to notify sender
+      const messageDoc = await db.collection('messages').doc(messageId).get();
+      const messageData = messageDoc.data();
+
+      if (!messageData || !messageData.senderId) {
+        return null;
+      }
+
+      // Send read receipt notification to sender
+      const senderTokens = await getRecipientTokens([messageData.senderId]);
+      
+      if (senderTokens.length > 0) {
+        const payload = {
+          data: {
+            type: 'read_receipt',
+            messageId,
+            readBy: userId,
+            readAt: new Date().toISOString()
+          },
+          android: {
+            priority: 'normal',
+            ttl: 60 * 5 // 5 minutes
+          }
+        };
+
+        await messaging.sendEachForMulticast({
+          tokens: senderTokens,
+          ...payload
+        });
+      }
+
+      functions.logger.log(`Read receipt updated for message ${messageId} by user ${userId}`);
+      return { success: true };
+    } catch (error) {
+      functions.logger.error('Error updating read receipt:', error);
+      return null;
+    }
+  });
+
+// ============================================================================
+// TYPING INDICATORS
+// ============================================================================
+
+/**
+ * Broadcast typing indicator to chat participants
+ * Triggered when user starts/stops typing
+ */
+exports.broadcastTypingIndicator = functions.firestore
+  .document('chats/{chatId}/typing/{userId}')
+  .onWrite(async (change, context) => {
+    const { chatId, userId } = context.params;
+    const after = change.after.exists ? change.after.data() : null;
+    const before = change.before.exists ? change.before.data() : null;
+
+    // Only process if typing status changed
+    if (before?.isTyping === after?.isTyping) {
+      return null;
+    }
+
+    try {
+      // Get chat participants
+      const chatDoc = await db.collection('chats').doc(chatId).get();
+      if (!chatDoc.exists) {
+        return null;
+      }
+
+      const chatData = chatDoc.data();
+      const participants = (chatData.participants || []).filter(id => id !== userId);
+
+      if (participants.length === 0) {
+        return null;
+      }
+
+      // Get user info
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+
+      // Get FCM tokens for participants
+      const tokens = await getRecipientTokens(participants);
+
+      if (tokens.length === 0) {
+        return null;
+      }
+
+      // Send typing indicator
+      const payload = {
+        data: {
+          type: 'typing_indicator',
+          chatId,
+          userId,
+          userName: userData.fullName || 'Someone',
+          isTyping: after?.isTyping ? 'true' : 'false',
+          timestamp: new Date().toISOString()
+        },
+        android: {
+          priority: 'high',
+          ttl: 10 // 10 seconds
+        }
+      };
+
+      await messaging.sendEachForMulticast({
+        tokens,
+        ...payload
+      });
+
+      functions.logger.log(`Typing indicator sent for chat ${chatId}, user ${userId}: ${after?.isTyping}`);
+      return { success: true };
+    } catch (error) {
+      functions.logger.error('Error broadcasting typing indicator:', error);
+      return null;
+    }
+  });
+
+/**
+ * Clean up stale typing indicators
+ * Runs every minute to remove old typing indicators
+ */
+exports.cleanupTypingIndicators = functions.pubsub
+  .schedule('every 1 minutes')
+  .onRun(async (context) => {
+    try {
+      const cutoffTime = admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() - 30000) // 30 seconds ago
+      );
+
+      // Query all typing indicators older than cutoff
+      const chatsSnapshot = await db.collection('chats').get();
+      const batch = db.batch();
+      let cleanupCount = 0;
+
+      for (const chatDoc of chatsSnapshot.docs) {
+        const typingSnapshot = await chatDoc.ref
+          .collection('typing')
+          .where('timestamp', '<', cutoffTime)
+          .get();
+
+        typingSnapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+          cleanupCount++;
+        });
+      }
+
+      if (cleanupCount > 0) {
+        await batch.commit();
+        functions.logger.log(`Cleaned up ${cleanupCount} stale typing indicators`);
+      }
+
+      return { cleaned: cleanupCount };
+    } catch (error) {
+      functions.logger.error('Error cleaning up typing indicators:', error);
+      return null;
+    }
+  });
+
+// ============================================================================
+// ONLINE/OFFLINE STATUS
+// ============================================================================
+
+/**
+ * Update user online status
+ * Triggered when user presence changes
+ */
+exports.updateOnlineStatus = functions.firestore
+  .document('users/{userId}/presence/{sessionId}')
+  .onWrite(async (change, context) => {
+    const { userId } = context.params;
+    const after = change.after.exists ? change.after.data() : null;
+    const before = change.before.exists ? change.before.data() : null;
+
+    // Only process if status changed
+    if (before?.status === after?.status) {
+      return null;
+    }
+
+    try {
+      const isOnline = after?.status === 'online';
+      const lastSeen = isOnline ? null : admin.firestore.FieldValue.serverTimestamp();
+
+      // Update user's main document
+      await db.collection('users').doc(userId).update({
+        isOnline,
+        lastSeen: lastSeen || admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Get user's active chats
+      const chatsSnapshot = await db
+        .collection('chats')
+        .where('participants', 'array-contains', userId)
+        .get();
+
+      if (chatsSnapshot.empty) {
+        return null;
+      }
+
+      // Notify participants in each chat
+      const notificationPromises = [];
+
+      for (const chatDoc of chatsSnapshot.docs) {
+        const chatData = chatDoc.data();
+        const participants = (chatData.participants || []).filter(id => id !== userId);
+
+        if (participants.length === 0) continue;
+
+        const tokens = await getRecipientTokens(participants);
+
+        if (tokens.length > 0) {
+          const payload = {
+            data: {
+              type: 'presence_update',
+              userId,
+              status: isOnline ? 'online' : 'offline',
+              lastSeen: lastSeen ? new Date().toISOString() : '',
+              chatId: chatDoc.id
+            },
+            android: {
+              priority: 'normal',
+              ttl: 60 * 5 // 5 minutes
+            }
+          };
+
+          notificationPromises.push(
+            messaging.sendEachForMulticast({
+              tokens,
+              ...payload
+            })
+          );
+        }
+      }
+
+      await Promise.allSettled(notificationPromises);
+      functions.logger.log(`Online status updated for user ${userId}: ${isOnline ? 'online' : 'offline'}`);
+      
+      return { success: true, chatsNotified: chatsSnapshot.size };
+    } catch (error) {
+      functions.logger.error('Error updating online status:', error);
+      return null;
+    }
+  });
+
+/**
+ * Set user offline after timeout
+ * Runs every 5 minutes to check for inactive sessions
+ */
+exports.setInactiveUsersOffline = functions.pubsub
+  .schedule('every 5 minutes')
+  .onRun(async (context) => {
+    try {
+      const cutoffTime = admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() - 5 * 60 * 1000) // 5 minutes ago
+      );
+
+      // Query all users with stale presence
+      const usersSnapshot = await db.collection('users').get();
+      const batch = db.batch();
+      let offlineCount = 0;
+
+      for (const userDoc of usersSnapshot.docs) {
+        const presenceSnapshot = await userDoc.ref
+          .collection('presence')
+          .where('lastUpdate', '<', cutoffTime)
+          .where('status', '==', 'online')
+          .get();
+
+        if (!presenceSnapshot.empty) {
+          // Set user offline
+          batch.update(userDoc.ref, {
+            isOnline: false,
+            lastSeen: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          // Update presence documents
+          presenceSnapshot.docs.forEach(doc => {
+            batch.update(doc.ref, {
+              status: 'offline',
+              lastUpdate: admin.firestore.FieldValue.serverTimestamp()
+            });
+          });
+
+          offlineCount++;
+        }
+      }
+
+      if (offlineCount > 0) {
+        await batch.commit();
+        functions.logger.log(`Set ${offlineCount} inactive users offline`);
+      }
+
+      return { offlineCount };
+    } catch (error) {
+      functions.logger.error('Error setting inactive users offline:', error);
+      return null;
+    }
+  });
+
+// ============================================================================
+// ENHANCED NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Send notification for new call
+ */
+exports.sendCallNotification = functions.firestore
+  .document('calls/{callId}')
+  .onCreate(async (snap, context) => {
+    const callData = snap.data();
+    const { calleeId, callerId, type, status } = callData;
+
+    if (status !== 'ringing') {
+      return null;
+    }
+
+    try {
+      // Get caller info
+      const callerDoc = await db.collection('users').doc(callerId).get();
+      const callerData = callerDoc.exists ? callerDoc.data() : {};
+
+      // Get callee tokens
+      const tokens = await getRecipientTokens([calleeId]);
+
+      if (tokens.length === 0) {
+        return null;
+      }
+
+      const payload = {
+        notification: {
+          title: `${callerData.fullName || 'Someone'} is calling`,
+          body: `Incoming ${type} call`,
+          sound: 'call_ringtone',
+          priority: 'high'
+        },
+        data: {
+          type: 'incoming_call',
+          callId: context.params.callId,
+          callerId,
+          callerName: callerData.fullName || 'Unknown',
+          callerImage: callerData.imageUrl || '',
+          callType: type
+        },
+        android: {
+          priority: 'high',
+          ttl: 30, // 30 seconds
+          notification: {
+            sound: 'call_ringtone',
+            channelId: 'calls',
+            priority: 'max',
+            visibility: 'public'
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'call_ringtone.caf',
+              'content-available': 1,
+              category: 'CALL'
+            }
+          }
+        }
+      };
+
+      await messaging.sendEachForMulticast({
+        tokens,
+        ...payload
+      });
+
+      functions.logger.log(`Call notification sent for call ${context.params.callId}`);
+      return { success: true };
+    } catch (error) {
+      functions.logger.error('Error sending call notification:', error);
+      return null;
+    }
+  });
+
+/**
+ * Send notification for new story
+ */
+exports.sendStoryNotification = functions.firestore
+  .document('stories/{storyId}')
+  .onCreate(async (snap, context) => {
+    const storyData = snap.data();
+    const { userId, type } = storyData;
+
+    try {
+      // Get user info
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+
+      // Get user's followers
+      const followersSnapshot = await db
+        .collection('users')
+        .doc(userId)
+        .collection('followers')
+        .get();
+
+      if (followersSnapshot.empty) {
+        return null;
+      }
+
+      const followerIds = followersSnapshot.docs.map(doc => doc.id);
+      const tokens = await getRecipientTokens(followerIds);
+
+      if (tokens.length === 0) {
+        return null;
+      }
+
+      const payload = {
+        notification: {
+          title: `${userData.fullName || 'Someone'} posted a story`,
+          body: `Check out their new ${type} story`,
+          icon: userData.imageUrl || ''
+        },
+        data: {
+          type: 'new_story',
+          storyId: context.params.storyId,
+          userId,
+          userName: userData.fullName || 'Unknown'
+        },
+        android: {
+          priority: 'normal',
+          ttl: 60 * 60 * 24 // 24 hours
+        }
+      };
+
+      // Send in batches
+      const batchSize = MAX_RECIPIENTS_PER_BATCH;
+      for (let i = 0; i < tokens.length; i += batchSize) {
+        const batchTokens = tokens.slice(i, i + batchSize);
+        await messaging.sendEachForMulticast({
+          tokens: batchTokens,
+          ...payload
+        });
+      }
+
+      functions.logger.log(`Story notification sent to ${tokens.length} followers`);
+      return { success: true, recipientCount: tokens.length };
+    } catch (error) {
+      functions.logger.error('Error sending story notification:', error);
+      return null;
+    }
+  });
+
+/**
+ * Send notification for backup completion
+ */
+exports.sendBackupNotification = functions.firestore
+  .document('backups/{backupId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Only notify when backup completes
+    if (before.status !== 'completed' && after.status === 'completed') {
+      const { userId, type, itemCount, size } = after;
+
+      try {
+        const tokens = await getRecipientTokens([userId]);
+
+        if (tokens.length === 0) {
+          return null;
+        }
+
+        const sizeInMB = (size / (1024 * 1024)).toFixed(2);
+
+        const payload = {
+          notification: {
+            title: 'Backup Completed',
+            body: `Your ${type} backup is complete. ${itemCount} items (${sizeInMB} MB) backed up successfully.`
+          },
+          data: {
+            type: 'backup_completed',
+            backupId: context.params.backupId,
+            backupType: type,
+            itemCount: itemCount.toString(),
+            size: size.toString()
+          },
+          android: {
+            priority: 'normal'
+          }
+        };
+
+        await messaging.sendEachForMulticast({
+          tokens,
+          ...payload
+        });
+
+        functions.logger.log(`Backup completion notification sent for backup ${context.params.backupId}`);
+        return { success: true };
+      } catch (error) {
+        functions.logger.error('Error sending backup notification:', error);
+        return null;
+      }
+    }
+
+    return null;
+  });
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Clean up old notifications
+ * Runs daily to remove old notification logs
+ */
+exports.cleanupOldNotifications = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async (context) => {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 30); // 30 days ago
+
+      const snapshot = await db
+        .collection('notificationLogs')
+        .where('createdAt', '<', admin.firestore.Timestamp.fromDate(cutoffDate))
+        .limit(500)
+        .get();
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      functions.logger.log(`Deleted ${snapshot.size} old notification logs`);
+      
+      return { deleted: snapshot.size };
+    } catch (error) {
+      functions.logger.error('Error cleaning up old notifications:', error);
+      return null;
+    }
+  });
+
+/**
+ * Send scheduled notifications
+ * For reminders, scheduled messages, etc.
+ */
+exports.sendScheduledNotifications = functions.pubsub
+  .schedule('every 1 minutes')
+  .onRun(async (context) => {
+    try {
+      const now = admin.firestore.Timestamp.now();
+
+      const snapshot = await db
+        .collection('scheduledNotifications')
+        .where('scheduledFor', '<=', now)
+        .where('sent', '==', false)
+        .limit(100)
+        .get();
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const batch = db.batch();
+      const sendPromises = [];
+
+      for (const doc of snapshot.docs) {
+        const notificationData = doc.data();
+        const { userId, title, body, data } = notificationData;
+
+        const tokens = await getRecipientTokens([userId]);
+
+        if (tokens.length > 0) {
+          sendPromises.push(
+            messaging.sendEachForMulticast({
+              tokens,
+              notification: { title, body },
+              data: data || {}
+            })
+          );
+        }
+
+        // Mark as sent
+        batch.update(doc.ref, {
+          sent: true,
+          sentAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      await Promise.all([
+        batch.commit(),
+        ...sendPromises
+      ]);
+
+      functions.logger.log(`Sent ${snapshot.size} scheduled notifications`);
+      return { sent: snapshot.size };
+    } catch (error) {
+      functions.logger.error('Error sending scheduled notifications:', error);
+      return null;
+    }
+  });

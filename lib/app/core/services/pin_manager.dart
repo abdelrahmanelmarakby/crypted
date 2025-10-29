@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
-import 'package:crypted_app/app/core/services/chat_service.dart';
 
 class PinManager {
   static const String _pinnedChatsCollection = 'pinned_chats';

@@ -12,11 +12,9 @@ import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
-import 'package:crypted_app/core/extensions/string.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
-import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -439,7 +437,7 @@ class PrivateChatScreen extends GetView<ChatController> {
     final Message currentMsg = messages[index];
     
     final bool isMe = currentMsg.senderId == UserService.currentUser.value?.uid;
-    final DateTime currentTime = currentMsg.timestamp!;
+    final DateTime currentTime = currentMsg.timestamp;
     final DateTime? previousTime = previousMsg?.timestamp;
 
     return Column(
@@ -625,7 +623,7 @@ class PrivateChatScreen extends GetView<ChatController> {
       }
     } catch (e) {
       print('❌ Error handling call: $e');
-      throw e;
+      rethrow;
     }
   }
 

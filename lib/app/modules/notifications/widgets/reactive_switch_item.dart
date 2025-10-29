@@ -41,7 +41,7 @@ class ReactiveSwitchItem extends StatelessWidget {
                 inactiveTrackColor: ColorsManager.veryLightGrey,
                 inactiveThumbColor: ColorsManager.white,
                 activeTrackColor: ColorsManager.primary,
-                activeColor: ColorsManager.white,
+                activeThumbColor: ColorsManager.white,
                 value: switchValue.value,
                 onChanged: (val) => onChanged(val),
               ),

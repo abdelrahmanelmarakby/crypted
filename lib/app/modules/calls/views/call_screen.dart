@@ -7,7 +7,6 @@ import 'package:crypted_app/core/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -277,10 +276,8 @@ class _CallScreenState extends State<CallScreen> {
                 onCallEnd: (call, callEndEvent) {
                   log('Call ended: ${call.callID}');
                   // Update call status in database
-                  if (call.callID != null) {
-                    CallDataSources().updateCallStatus(call.callID!, CallStatus.ended);
-                  }
-                  Get.back(); // Go back to chat screen
+                  CallDataSources().updateCallStatus(call.callID, CallStatus.ended);
+                                  Get.back(); // Go back to chat screen
                 },
               ),
             ),

@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, must_be_immutable, use_build_context_synchronously, library_private_types_in_public_api, deprecated_member_use
 
-import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
@@ -357,7 +356,7 @@ class AttachmentWidget extends GetView<ChatController> {
                                     .millisecondsSinceEpoch
                                     .toString(),
                                 roomId: controller.roomId,
-                                senderId: UserService.currentUser?.value?.uid??"",
+                                senderId: UserService.currentUser.value?.uid??"",
                                 timestamp: DateTime.now(),
                                 name: contact.fullName ?? 'Unknown Contact',
                                 phoneNumber: contact.phoneNumbers!.first,

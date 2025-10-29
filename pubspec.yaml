@@ -33,6 +33,8 @@ dependencies:
   flutter_native_contact_picker: ^0.0.10
   story: ^1.1.0
   firebase_messaging: ^15.2.8
+  flutter_local_notifications: ^18.0.1
+  uuid: ^4.3.3
   zego_uikit: ^2.14.0
   zego_uikit_prebuilt_call: ^4.17.3
   zego_uikit_signaling_plugin: ^2.8.13

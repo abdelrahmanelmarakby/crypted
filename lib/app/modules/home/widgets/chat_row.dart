@@ -14,7 +14,7 @@ import 'package:get/get.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class ChatRow extends StatefulWidget {
-  ChatRow({super.key, required this.chatRoom});
+  const ChatRow({super.key, required this.chatRoom});
   final ChatRoom? chatRoom;
 
   @override
@@ -379,6 +379,7 @@ class _ChatRowState extends State<ChatRow> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     return Material(
       child: CupertinoContextMenu(
