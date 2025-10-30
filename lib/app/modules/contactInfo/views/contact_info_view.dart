@@ -74,22 +74,31 @@ class ContactInfoView extends GetView<ContactInfoController> {
   Widget _buildContactDetailsSection() {
     return CustomContainer(
       children: [
-        CustomInfoItem(
-          image: 'assets/icons/fi_13193798.svg',
-          title: Constants.kContactDetails.tr,
-          type: '9',
+        GestureDetector(
+          onTap: controller.viewContactDetails,
+          child: CustomInfoItem(
+            image: 'assets/icons/fi_13193798.svg',
+            title: Constants.kContactDetails.tr,
+            type: '9',
+          ),
         ),
         buildDivider(),
-        CustomInfoItem(
-          image: 'assets/icons/fi_833281.svg',
-          title: Constants.kmediaLinksdocuments.tr,
-          type: '9',
+        GestureDetector(
+          onTap: controller.viewMediaLinksDocuments,
+          child: CustomInfoItem(
+            image: 'assets/icons/fi_833281.svg',
+            title: Constants.kmediaLinksdocuments.tr,
+            type: '9',
+          ),
         ),
         buildDivider(),
-        CustomInfoItem(
-          image: 'assets/icons/star.svg',
-          title: Constants.kstarredmessages.tr,
-          type: '9',
+        GestureDetector(
+          onTap: controller.viewStarredMessages,
+          child: CustomInfoItem(
+            image: 'assets/icons/star.svg',
+            title: Constants.kstarredmessages.tr,
+            type: '9',
+          ),
         ),
       ],
     );
@@ -98,9 +107,14 @@ class ContactInfoView extends GetView<ContactInfoController> {
   Widget _buildExtrasSection() {
     return CustomContainer(
       children: [
-        _buildEndContactInfoItem(
-          image: 'assets/icons/star.svg',
-          title: Constants.kAddtofavourite.tr,
+        GestureDetector(
+          onTap: controller.toggleFavorite,
+          child: Obx(() => _buildEndContactInfoItem(
+                image: 'assets/icons/star.svg',
+                title: controller.isFavorite.value
+                    ? 'Remove from favourite'
+                    : Constants.kAddtofavourite.tr,
+              )),
         ),
         buildDivider(),
         _buildEndContactInfoItem(
@@ -108,40 +122,46 @@ class ContactInfoView extends GetView<ContactInfoController> {
           title: Constants.kAddtolist.tr,
         ),
         buildDivider(),
-        _buildEndContactInfoItem(
-          image: 'assets/icons/export (1).svg',
-          title: Constants.kExportchat.tr,
+        GestureDetector(
+          onTap: controller.exportChat,
+          child: _buildEndContactInfoItem(
+            image: 'assets/icons/export (1).svg',
+            title: Constants.kExportchat.tr,
+          ),
         ),
         buildDivider(),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: Paddings.xXSmall,
-            horizontal: Paddings.normal,
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: ColorsManager.backgroundError,
-                radius: Radiuss.large,
-                child: SvgPicture.asset(
-                  'assets/icons/trash.svg',
-                  colorFilter: ColorFilter.mode(
-                    ColorsManager.error2,
-                    BlendMode.srcIn,
+        GestureDetector(
+          onTap: controller.clearChat,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: Paddings.xXSmall,
+              horizontal: Paddings.normal,
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: ColorsManager.backgroundError,
+                  radius: Radiuss.large,
+                  child: SvgPicture.asset(
+                    'assets/icons/trash.svg',
+                    colorFilter: ColorFilter.mode(
+                      ColorsManager.error2,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: Sizes.size4),
-              Expanded(
-                child: Text(
-                  Constants.kClearChat.tr,
-                  style: StylesManager.medium(
-                    fontSize: FontSize.small,
-                    color: ColorsManager.error2,
+                SizedBox(width: Sizes.size4),
+                Expanded(
+                  child: Text(
+                    Constants.kClearChat.tr,
+                    style: StylesManager.medium(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.error2,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         SizedBox(height: Sizes.size10),

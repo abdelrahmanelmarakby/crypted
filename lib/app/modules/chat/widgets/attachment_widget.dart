@@ -125,25 +125,51 @@ class AttachmentWidget extends GetView<ChatController> {
                           sendRequestFunction: (soundFile, time) async {
                             controller.onChangeRec(false);
                             try {
+                              print("🎤 Sending audio message...");
+                              print("  File path: ${soundFile.path}");
+                              print("  Duration: $time");
+                              print("  Room ID: ${controller.roomId}");
+
                               final audioMessage =
                                   await FirebaseUtils.uploadAudio(
                                       soundFile.path,
                                       controller.roomId,
                                       time);
+
                               if (audioMessage != null) {
+                                print("✅ Audio message created, sending to chat...");
                                 await controller.sendMessage(audioMessage);
+                                print("✅ Audio message sent successfully");
+
+                                Get.snackbar(
+                                  "Success",
+                                  "Audio message sent",
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: ColorsManager.success.withOpacity(0.9),
+                                  colorText: Colors.white,
+                                  duration: const Duration(seconds: 2),
+                                  margin: const EdgeInsets.all(16),
+                                );
                               } else {
-                                throw Exception("Failed to upload audio");
+                                print("❌ Failed to upload audio to Firebase Storage");
+                                throw Exception("Failed to upload audio to Firebase Storage");
                               }
-                            } catch (e) {
+                            } catch (e, stackTrace) {
+                              print("❌ Error sending audio message: $e");
+                              print("Stack trace: $stackTrace");
+
                               Get.snackbar(
                                 "Error",
-                                "Failed to send audio message",
+                                "Failed to send audio message: ${e.toString()}",
+                                snackPosition: SnackPosition.BOTTOM,
                                 backgroundColor: Colors.red.withOpacity(0.8),
                                 colorText: Colors.white,
+                                duration: const Duration(seconds: 3),
+                                margin: const EdgeInsets.all(16),
                               );
+                            } finally {
+                              controller.onChangeRec(false);
                             }
-                            controller.onChangeRec(false);
                           },
                           encode: AudioEncoderType.AAC,
                         ),

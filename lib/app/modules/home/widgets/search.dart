@@ -15,6 +15,7 @@ import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 
 import 'package:crypted_app/app/modules/home/controllers/message_search_controller.dart';
+export 'package:crypted_app/app/modules/home/controllers/message_search_controller.dart' show MessageTypeFilter;
 import 'package:crypted_app/app/modules/home/widgets/search_result_items.dart';
 import 'package:crypted_app/app/widgets/custom_loading.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
@@ -119,6 +120,14 @@ class Search extends StatelessWidget {
                 ),
               ),
 
+              // Filter Chips (shown when there are search results)
+              Obx(() {
+                if (controller.searchQuery.isNotEmpty && !controller.isSearching) {
+                  return _buildFilterChips(controller);
+                }
+                return const SizedBox.shrink();
+              }),
+
               // Search Results
               Expanded(
                 child: Container(
@@ -133,7 +142,7 @@ class Search extends StatelessWidget {
                     }
 
                     if (controller.searchQuery.isEmpty) {
-                      return _buildSearchSuggestions();
+                      return _buildRecentSearches(controller);
                     }
 
                     if (controller.searchResults.isEmpty && controller.userResults.isEmpty) {
@@ -147,6 +156,174 @@ class Search extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  static Widget _buildFilterChips(MessageSearchController controller) {
+    final filters = [
+      {'type': MessageTypeFilter.all, 'label': 'All', 'icon': Iconsax.message},
+      {'type': MessageTypeFilter.text, 'label': 'Text', 'icon': Iconsax.message_text},
+      {'type': MessageTypeFilter.photo, 'label': 'Photos', 'icon': Iconsax.gallery},
+      {'type': MessageTypeFilter.video, 'label': 'Videos', 'icon': Iconsax.video_play},
+      {'type': MessageTypeFilter.audio, 'label': 'Audio', 'icon': Iconsax.music},
+      {'type': MessageTypeFilter.file, 'label': 'Files', 'icon': Iconsax.document_text},
+      {'type': MessageTypeFilter.poll, 'label': 'Polls', 'icon': Iconsax.chart},
+      {'type': MessageTypeFilter.call, 'label': 'Calls', 'icon': Iconsax.call},
+      {'type': MessageTypeFilter.contact, 'label': 'Contacts', 'icon': Iconsax.user},
+      {'type': MessageTypeFilter.location, 'label': 'Location', 'icon': Iconsax.location},
+    ];
+
+    return Container(
+      height: 60,
+      margin: const EdgeInsets.only(left: 20, right: 20, bottom: 12),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: filters.length,
+        itemBuilder: (context, index) {
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Obx(() {
+                        final filter = filters[index];
+          final filterType = filter['type'] as MessageTypeFilter;
+          final isSelected = controller.selectedFilter == filterType;
+
+              return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: FilterChip(
+                selected: isSelected,
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      filter['icon'] as IconData,
+                      size: 18,
+                      color: isSelected ? Colors.white : ColorsManager.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      filter['label'] as String,
+                      style: StylesManager.semiBold(
+                        fontSize: FontSize.small,
+                        color: isSelected ? Colors.white : ColorsManager.black,
+                      ),
+                    ),
+                  ],
+                ),
+                onSelected: (_) => controller.selectFilter(filterType),
+                backgroundColor: Colors.white,
+                selectedColor: ColorsManager.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected ? ColorsManager.primary : ColorsManager.navbarColor,
+                    width: 2,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                showCheckmark: false,
+              ),
+            );
+            }),
+          );
+        },
+      ),
+    );
+  }
+
+  static Widget _buildRecentSearches(MessageSearchController controller) {
+    return Container(
+      padding: const EdgeInsets.all(Paddings.large),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Searches',
+                style: StylesManager.bold(
+                  fontSize: FontSize.xLarge,
+                  color: ColorsManager.primary,
+                ),
+              ),
+              if (controller.recentSearches.isNotEmpty)
+                TextButton(
+                  onPressed: () => controller.clearRecentSearches(),
+                  child: Text(
+                    'Clear',
+                    style: StylesManager.medium(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.grey,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: Sizes.size16),
+
+          Expanded(
+            child: Obx(() {
+              if (controller.recentSearches.isEmpty) {
+                return _buildSearchSuggestions();
+              }
+
+              return ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                itemCount: controller.recentSearches.length,
+                itemBuilder: (context, index) {
+                  final search = controller.recentSearches[index];
+                  return _buildRecentSearchItem(search, controller);
+                },
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildRecentSearchItem(String search, MessageSearchController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: Sizes.size8),
+      decoration: BoxDecoration(
+        color: ColorsManager.offWhite,
+        borderRadius: BorderRadius.circular(Radiuss.normal),
+        border: Border.all(
+          color: ColorsManager.navbarColor,
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(Radiuss.small),
+          ),
+          child: Icon(
+            Iconsax.clock,
+            color: ColorsManager.grey,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          search,
+          style: StylesManager.medium(
+            fontSize: FontSize.medium,
+            color: ColorsManager.black,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Icon(
+          Iconsax.arrow_right_3,
+          color: ColorsManager.primary,
+          size: 18,
+        ),
+        onTap: () => controller.searchFromRecent(search),
       ),
     );
   }
@@ -235,38 +412,91 @@ class Search extends StatelessWidget {
 
   static Widget _buildNoResults() {
     return Container(
-      color: ColorsManager.offWhite,
+      padding: const EdgeInsets.all(40),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Animated icon with background
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
-              child: Icon(
-                Iconsax.search_status_1,
+              child: Container(
                 key: const ValueKey('no-results'),
-                size: Sizes.size70,
-                color: ColorsManager.grey,
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: ColorsManager.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(60),
+                ),
+                child: Icon(
+                  Iconsax.search_status_1,
+                  size: Sizes.size60,
+                  color: ColorsManager.primary,
+                ),
               ),
             ),
-            const SizedBox(height: Sizes.size20),
+            const SizedBox(height: Sizes.size32),
+
+            // Title
             Text(
               'No results found',
-              style: StylesManager.semiBold(
-                fontSize: FontSize.large,
-                color: ColorsManager.grey,
+              style: StylesManager.bold(
+                fontSize: FontSize.xLarge,
+                color: ColorsManager.black,
               ),
             ),
-            const SizedBox(height: Sizes.size8),
+            const SizedBox(height: Sizes.size12),
+
+            // Subtitle
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                'Try searching for messages, users, photos, videos, or documents',
+                'Try using different keywords or check your spelling',
                 style: StylesManager.regular(
-                  fontSize: FontSize.small,
+                  fontSize: FontSize.medium,
                   color: ColorsManager.grey,
                 ),
                 textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: Sizes.size24),
+
+            // Suggestions
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: ColorsManager.offWhite,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: ColorsManager.navbarColor,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Iconsax.information,
+                        size: 20,
+                        color: ColorsManager.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Search Tips',
+                        style: StylesManager.semiBold(
+                          fontSize: FontSize.medium,
+                          color: ColorsManager.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTipItem('Use filters to narrow your search'),
+                  _buildTipItem('Search by message type'),
+                  _buildTipItem('Try shorter or more general keywords'),
+                ],
               ),
             ),
           ],
@@ -275,51 +505,127 @@ class Search extends StatelessWidget {
     );
   }
 
+  static Widget _buildTipItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: ColorsManager.primary,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: StylesManager.regular(
+                fontSize: FontSize.small,
+                color: ColorsManager.grey,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   static Widget _buildSearchResults(MessageSearchController controller) {
     return ListView(
+      physics: const BouncingScrollPhysics(),
       children: [
+        const SizedBox(height: 16),
+
         // Message Results
         if (controller.searchResults.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.all(Paddings.large),
-            child: Text(
-              'Messages',
-              style: StylesManager.semiBold(fontSize: FontSize.large),
+            padding: const EdgeInsets.symmetric(horizontal: Paddings.large, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  'Messages',
+                  style: StylesManager.bold(fontSize: FontSize.large),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${controller.searchResults.length}',
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 8),
           ...controller.searchResults.map((message) => _buildMessageResultItem(message)),
         ],
 
         // User Results
         if (controller.userResults.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.all(Paddings.large),
-            child: Text(
-              'Users',
-              style: StylesManager.semiBold(fontSize: FontSize.large),
+            padding: const EdgeInsets.symmetric(horizontal: Paddings.large, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  'Users',
+                  style: StylesManager.bold(fontSize: FontSize.large),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${controller.userResults.length}',
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 8),
           ...controller.userResults.map((user) => UserSearchResultItem(user: user)),
         ],
+
+        const SizedBox(height: 20),
       ],
     );
   }
 
   static Widget _buildMessageResultItem(Message message) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: ColorsManager.navbarColor,
-          width: 1,
+          width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -327,87 +633,131 @@ class Search extends StatelessWidget {
         onTap: () {
           // Navigate to chat - this will be handled by the MessageSearchResultItem
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Chat avatar
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: ColorsManager.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Icon(
-                  Iconsax.message_text_1,
-                  color: ColorsManager.primary,
-                  size: 24,
-                ),
-              ),
+              // Header Row: Chat name, type badge, and time
+              Row(
+                children: [
+                  // Chat avatar
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _getMessageTypeColor(message).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      _getMessageTypeIcon(message),
+                      color: _getMessageTypeColor(message),
+                      size: 24,
+                    ),
+                  ),
 
-              const SizedBox(width: 16),
+                  const SizedBox(width: 12),
 
-              // Message content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Chat name and time
-                    Row(
+                  // Chat name and type badge
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            _getChatNameForMessage(message),
-                            style: StylesManager.semiBold(
-                              fontSize: FontSize.medium,
-                              color: ColorsManager.black,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
                         Text(
-                          _formatMessageTime(message.timestamp ?? DateTime.now()),
-                          style: StylesManager.regular(
-                            fontSize: FontSize.xSmall,
-                            color: ColorsManager.grey,
+                          _getChatNameForMessage(message),
+                          style: StylesManager.semiBold(
+                            fontSize: FontSize.medium,
+                            color: ColorsManager.black,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        // Type badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getMessageTypeColor(message).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _getMessageTypeLabel(message),
+                            style: StylesManager.medium(
+                              fontSize: FontSize.xSmall,
+                              color: _getMessageTypeColor(message),
+                            ),
                           ),
                         ),
                       ],
                     ),
+                  ),
 
-                    const SizedBox(height: 4),
+                  const SizedBox(width: 8),
 
-                    // Message preview
-                    Text(
-                      _getMessageContent(message),
-                      style: StylesManager.regular(
-                        fontSize: FontSize.small,
-                        color: ColorsManager.grey,
+                  // Time
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _formatMessageTime(message.timestamp ?? DateTime.now()),
+                        style: StylesManager.regular(
+                          fontSize: FontSize.xSmall,
+                          color: ColorsManager.grey,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                  ],
-                ),
+                      const SizedBox(height: 8),
+                      Icon(
+                        Iconsax.arrow_right_3,
+                        color: ColorsManager.primary,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ],
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(height: 12),
 
-              // Arrow icon
-              Icon(
-                Iconsax.arrow_right_3,
-                color: ColorsManager.primary,
-                size: 16,
+              // Message preview
+              Text(
+                _getMessageContent(message),
+                style: StylesManager.regular(
+                  fontSize: FontSize.small,
+                  color: ColorsManager.grey,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  static IconData _getMessageTypeIcon(Message message) {
+    if (message is TextMessage) {
+      return Iconsax.message_text;
+    } else if (message is PhotoMessage) {
+      return Iconsax.gallery;
+    } else if (message is VideoMessage) {
+      return Iconsax.video_play;
+    } else if (message is AudioMessage) {
+      return Iconsax.music;
+    } else if (message is FileMessage) {
+      return Iconsax.document_text;
+    } else if (message is ContactMessage) {
+      return Iconsax.user;
+    } else if (message is LocationMessage) {
+      return Iconsax.location;
+    } else if (message is PollMessage) {
+      return Iconsax.chart;
+    } else if (message is CallMessage) {
+      return Iconsax.call;
+    } else {
+      return Iconsax.message;
+    }
   }
 
   static String _formatMessageTime(DateTime time) {

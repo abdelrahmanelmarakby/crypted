@@ -14,19 +14,133 @@ import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum MessageTypeFilter {
+  all,
+  text,
+  photo,
+  video,
+  audio,
+  file,
+  poll,
+  call,
+  contact,
+  location,
+}
 
 class MessageSearchController extends GetxController {
   final ChatDataSources _chatDataSources = ChatDataSources();
 
   final RxList<Message> _searchResults = <Message>[].obs;
+  final RxList<Message> _allSearchResults = <Message>[].obs; // Store all results before filtering
   final RxList<SocialMediaUser> _userResults = <SocialMediaUser>[].obs;
   final RxString _searchQuery = ''.obs;
   final RxBool _isSearching = false.obs;
+  final Rx<MessageTypeFilter> _selectedFilter = MessageTypeFilter.all.obs;
+  final RxList<String> _recentSearches = <String>[].obs;
 
   List<Message> get searchResults => _searchResults;
   List<SocialMediaUser> get userResults => _userResults;
   String get searchQuery => _searchQuery.value;
   bool get isSearching => _isSearching.value;
+  MessageTypeFilter get selectedFilter => _selectedFilter.value;
+  List<String> get recentSearches => _recentSearches;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadRecentSearches();
+  }
+
+  // Filter methods
+  void selectFilter(MessageTypeFilter filter) {
+    _selectedFilter.value = filter;
+    _applyFilter();
+  }
+
+  void _applyFilter() {
+    if (_selectedFilter.value == MessageTypeFilter.all) {
+      _searchResults.assignAll(_allSearchResults);
+      return;
+    }
+
+    final filtered = _allSearchResults.where((message) {
+      switch (_selectedFilter.value) {
+        case MessageTypeFilter.text:
+          return message is TextMessage;
+        case MessageTypeFilter.photo:
+          return message is PhotoMessage;
+        case MessageTypeFilter.video:
+          return message is VideoMessage;
+        case MessageTypeFilter.audio:
+          return message is AudioMessage;
+        case MessageTypeFilter.file:
+          return message is FileMessage;
+        case MessageTypeFilter.poll:
+          return message is PollMessage;
+        case MessageTypeFilter.call:
+          return message is CallMessage;
+        case MessageTypeFilter.contact:
+          return message is ContactMessage;
+        case MessageTypeFilter.location:
+          return message is LocationMessage;
+        default:
+          return true;
+      }
+    }).toList();
+
+    _searchResults.assignAll(filtered);
+  }
+
+  // Recent searches methods
+  Future<void> _loadRecentSearches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final searches = prefs.getStringList('recent_searches') ?? [];
+      _recentSearches.assignAll(searches);
+    } catch (e) {
+      print('Error loading recent searches: $e');
+    }
+  }
+
+  Future<void> _saveRecentSearch(String query) async {
+    if (query.trim().isEmpty) return;
+
+    try {
+      // Remove if already exists (to move to top)
+      _recentSearches.remove(query);
+
+      // Add to beginning
+      _recentSearches.insert(0, query);
+
+      // Keep only last 10 searches
+      if (_recentSearches.length > 10) {
+        _recentSearches.removeRange(10, _recentSearches.length);
+      }
+
+      // Save to storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('recent_searches', _recentSearches);
+    } catch (e) {
+      print('Error saving recent search: $e');
+    }
+  }
+
+  Future<void> clearRecentSearches() async {
+    try {
+      _recentSearches.clear();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('recent_searches');
+    } catch (e) {
+      print('Error clearing recent searches: $e');
+    }
+  }
+
+  void searchFromRecent(String query) {
+    _searchQuery.value = query;
+    searchMessages(query);
+  }
 
   void searchMessages(String query) {
     _searchQuery.value = query.trim();
@@ -37,6 +151,12 @@ class MessageSearchController extends GetxController {
     }
 
     _isSearching.value = true;
+
+    // Save to recent searches
+    _saveRecentSearch(_searchQuery.value);
+
+    // Reset filter to "All" when starting a new search
+    _selectedFilter.value = MessageTypeFilter.all;
 
     // Search in messages
     _searchInMessages();
@@ -77,9 +197,8 @@ class MessageSearchController extends GetxController {
       // Sort results by relevance and timestamp
       results.sort((a, b) {
         // More recent messages first
-        final aTime = a.timestamp;
-        final bTime = b.timestamp;
-        if (aTime == null && bTime == null) return 0;
+        final aTime = a.timestamp ?? DateTime.now();
+        final bTime = b.timestamp ?? DateTime.now();
         return bTime.compareTo(aTime);
       });
 
@@ -88,7 +207,9 @@ class MessageSearchController extends GetxController {
         results = results.sublist(0, 50);
       }
 
-      _searchResults.assignAll(results);
+      // Store all results and filtered results
+      _allSearchResults.assignAll(results);
+      _applyFilter(); // Apply current filter
       _isSearching.value = false;
     });
   }
@@ -209,21 +330,26 @@ class MessageSearchController extends GetxController {
 
   void _clearResults() {
     _searchResults.clear();
+    _allSearchResults.clear();
     _userResults.clear();
     _isSearching.value = false;
   }
 
   void clearSearch() {
     _searchQuery.value = '';
+    _selectedFilter.value = MessageTypeFilter.all;
     _clearResults();
   }
 
   @override
   void onClose() {
     _searchResults.close();
+    _allSearchResults.close();
     _userResults.close();
     _searchQuery.close();
     _isSearching.close();
+    _selectedFilter.close();
+    _recentSearches.close();
     super.onClose();
   }
 }

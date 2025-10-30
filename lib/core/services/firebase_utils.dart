@@ -15,22 +15,46 @@ class FirebaseUtils {
     String duration,
   ) async {
     try {
+      log("🎤 Starting audio upload...");
+      log("  Path: $path");
+      log("  RoomId: $roomId");
+      log("  Duration: $duration");
+
+      // Verify file exists
+      final file = File(path);
+      if (!await file.exists()) {
+        log("❌ Audio file does not exist at path: $path");
+        return null;
+      }
+
+      final fileSize = await file.length();
+      log("  File size: ${formatFileSize(fileSize)}");
+
       final now = DateTime.now();
       final id = generateUniqueId("audio", roomId);
-      final url = await _uploadFile(File(path), "audios", id);
 
-      return url == null
-          ? null
-          : AudioMessage(
-              id: id,
-              roomId: roomId,
-              senderId: UserService.currentUser.value?.uid ?? '',
-              timestamp: now,
-              audioUrl: url,
-              duration: duration,
-            );
-    } catch (e) {
+      log("  Uploading to Firebase Storage...");
+      final url = await _uploadFile(file, "audios", id);
+
+      if (url == null) {
+        log("❌ Failed to get download URL");
+        return null;
+      }
+
+      log("✅ Audio uploaded successfully");
+      log("  Download URL: $url");
+
+      return AudioMessage(
+        id: id,
+        roomId: roomId,
+        senderId: UserService.currentUser.value?.uid ?? '',
+        timestamp: now,
+        audioUrl: url,
+        duration: duration,
+      );
+    } catch (e, stackTrace) {
       log("❌ Error uploading audio: $e");
+      log("Stack trace: $stackTrace");
       return null;
     }
   }

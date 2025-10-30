@@ -2,6 +2,7 @@ import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/stories/controllers/stories_controller.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async'; // Added for Timer
@@ -26,6 +27,21 @@ class _StoryViewerState extends State<StoryViewer>
   bool _isLongPressing = false;
   Timer? _longPressTimer;
 
+  // متغيرات للتحكم في السحب
+  double _verticalDragDistance = 0.0;
+  double _horizontalDragDistance = 0.0;
+  bool _isDragging = false;
+
+  // متغيرات للتحكم في الردود والتفاعلات
+  final TextEditingController _replyController = TextEditingController();
+  final FocusNode _replyFocusNode = FocusNode();
+  bool _showReplyField = false;
+
+  // متغيرات للتفاعلات السريعة
+  bool _showReactions = false;
+  String? _selectedReaction;
+  final List<String> _reactionEmojis = ['❤️', '😂', '😮', '😢', '👏', '🔥'];
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +52,8 @@ class _StoryViewerState extends State<StoryViewer>
   void dispose() {
     _progressController.dispose();
     _longPressTimer?.cancel();
+    _replyController.dispose();
+    _replyFocusNode.dispose();
     super.dispose();
   }
 
@@ -291,6 +309,7 @@ class _StoryViewerState extends State<StoryViewer>
     if (!_isLongPressing) {
       setState(() {
         _isLongPressing = true;
+        _showReactions = true; // إظهار التفاعلات
       });
 
       // إيقاف التشغيل عند الضغط الطويل
@@ -298,7 +317,7 @@ class _StoryViewerState extends State<StoryViewer>
         _progressController.stop();
       }
 
-      print('⏸️ Long press started - Story paused');
+      print('⏸️ Long press started - Story paused, reactions shown');
     }
   }
 
@@ -307,6 +326,7 @@ class _StoryViewerState extends State<StoryViewer>
     if (_isLongPressing) {
       setState(() {
         _isLongPressing = false;
+        _showReactions = false; // إخفاء التفاعلات
       });
 
       // استئناف التشغيل عند رفع الإصبع
@@ -322,7 +342,7 @@ class _StoryViewerState extends State<StoryViewer>
         });
       }
 
-      print('▶️ Long press ended - Story resumed');
+      print('▶️ Long press ended - Story resumed, reactions hidden');
     }
   }
 
@@ -345,6 +365,178 @@ class _StoryViewerState extends State<StoryViewer>
       print('⏸️ Tap on center - Toggle pause');
       _togglePause();
     }
+  }
+
+  // دوال للتعامل مع السحب العمودي والأفقي
+  void _onVerticalDragStart(DragStartDetails details) {
+    setState(() {
+      _isDragging = true;
+      _verticalDragDistance = 0;
+    });
+    // إيقاف التشغيل مؤقتاً أثناء السحب
+    if (_progressController.isAnimating) {
+      _progressController.stop();
+    }
+  }
+
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      _verticalDragDistance += details.delta.dy;
+    });
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    setState(() {
+      _isDragging = false;
+    });
+
+    // إذا سحب لأسفل أكثر من 150 بكسل، إغلاق المشاهد
+    if (_verticalDragDistance > 150) {
+      print('⬇️ Swipe down detected - Closing story viewer');
+      _closeStoryViewer();
+    } else {
+      // العودة للموضع الأصلي واستكمال التشغيل
+      setState(() {
+        _verticalDragDistance = 0;
+      });
+      if (!_isPaused && _progressController.value < 1.0) {
+        _progressController.forward().then((_) {
+          if (_progressController.value >= 1.0) {
+            _nextStory();
+          }
+        });
+      }
+    }
+  }
+
+  void _onHorizontalDragStart(DragStartDetails details) {
+    setState(() {
+      _isDragging = true;
+      _horizontalDragDistance = 0;
+    });
+    if (_progressController.isAnimating) {
+      _progressController.stop();
+    }
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      _horizontalDragDistance += details.delta.dx;
+    });
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    setState(() {
+      _isDragging = false;
+    });
+
+    // السحب لليسار = المستخدم التالي
+    if (_horizontalDragDistance < -100) {
+      print('⬅️ Swipe left detected - Next user');
+      _nextUser();
+    }
+    // السحب لليمين = المستخدم السابق
+    else if (_horizontalDragDistance > 100) {
+      print('➡️ Swipe right detected - Previous user');
+      _previousUser();
+    } else {
+      // العودة للموضع الأصلي واستكمال التشغيل
+      setState(() {
+        _horizontalDragDistance = 0;
+      });
+      if (!_isPaused && _progressController.value < 1.0) {
+        _progressController.forward().then((_) {
+          if (_progressController.value >= 1.0) {
+            _nextStory();
+          }
+        });
+      }
+    }
+  }
+
+  // دالة لإظهار حقل الرد
+  void _toggleReplyField() {
+    setState(() {
+      _showReplyField = !_showReplyField;
+    });
+    if (_showReplyField) {
+      _replyFocusNode.requestFocus();
+      // إيقاف التشغيل عند فتح حقل الرد
+      if (_progressController.isAnimating) {
+        setState(() {
+          _isPaused = true;
+        });
+        _progressController.stop();
+      }
+    } else {
+      _replyFocusNode.unfocus();
+      // استكمال التشغيل عند إغلاق حقل الرد
+      if (_isPaused) {
+        setState(() {
+          _isPaused = false;
+        });
+        if (_progressController.value < 1.0) {
+          _progressController.forward().then((_) {
+            if (_progressController.value >= 1.0) {
+              _nextStory();
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // دالة لإرسال الرد
+  void _sendReply() {
+    final replyText = _replyController.text.trim();
+    if (replyText.isEmpty) return;
+
+    print('💬 Sending reply: $replyText');
+    // TODO: Implement reply sending to Firebase
+
+    Get.snackbar(
+      'Reply Sent',
+      'Your reply has been sent',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      backgroundColor: ColorsManager.success,
+      colorText: Colors.white,
+    );
+
+    _replyController.clear();
+    _toggleReplyField();
+  }
+
+  // دالة لإرسال التفاعل
+  void _sendReaction(String emoji) {
+    setState(() {
+      _selectedReaction = emoji;
+      _showReactions = false;
+      _isLongPressing = false;
+    });
+
+    print('❤️ Sending reaction: $emoji');
+    // TODO: Implement reaction sending to Firebase
+
+    // استئناف التشغيل بعد إرسال التفاعل
+    if (!_isPaused && _progressController.value < 1.0) {
+      _progressController.forward().then((_) {
+        if (_progressController.value >= 1.0) {
+          _nextStory();
+        }
+      });
+    }
+
+    // إظهار إشعار بسيط
+    Get.snackbar(
+      'Reaction Sent',
+      'You reacted with $emoji',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 1),
+      backgroundColor: ColorsManager.success.withOpacity(0.9),
+      colorText: Colors.white,
+      margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
+    );
   }
 
   @override
@@ -372,12 +564,27 @@ class _StoryViewerState extends State<StoryViewer>
       final currentStory = _currentUserStories[_currentStoryIndex];
       final currentUser = _usersWithStories[_currentUserIndex];
 
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            // Story content
-            _buildStoryContent(currentStory),
+      return GestureDetector(
+        onVerticalDragStart: _onVerticalDragStart,
+        onVerticalDragUpdate: _onVerticalDragUpdate,
+        onVerticalDragEnd: _onVerticalDragEnd,
+        onHorizontalDragStart: _onHorizontalDragStart,
+        onHorizontalDragUpdate: _onHorizontalDragUpdate,
+        onHorizontalDragEnd: _onHorizontalDragEnd,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.identity()
+            ..translate(
+              _horizontalDragDistance * 0.5,
+              _verticalDragDistance * 0.5,
+            )
+            ..scale(1.0 - (_verticalDragDistance.abs() / 1000)),
+          child: Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
+              children: [
+                // Story content
+                _buildStoryContent(currentStory),
 
             // Progress bars for all stories
             Positioned(
@@ -447,7 +654,7 @@ class _StoryViewerState extends State<StoryViewer>
               ),
             ),
 
-            // Long press indicator
+            // Long press indicator with reactions
             if (_isLongPressing)
               Positioned(
                 top: 0,
@@ -456,90 +663,66 @@ class _StoryViewerState extends State<StoryViewer>
                 bottom: 0,
                 child: Container(
                   color: Colors.black.withOpacity(0.3),
-                  child: Center(
-                    child: Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.pause,
-                            color: Colors.white,
-                            size: 48,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Story Paused',
-                            style: TextStyle(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Reactions Bar
+                      if (_showReactions) _buildReactionsBar(),
+
+                      const SizedBox(height: 20),
+
+                      // Pause Indicator
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.pause,
                               color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              size: 48,
                             ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Release to continue',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Story Paused',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              _showReactions ? 'Tap reaction to send' : 'Release to continue',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
 
-            // Close button in center area
-            Positioned(
-              bottom: 50,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: _closeStoryViewer,
-                  onLongPressStart: (_) => _onLongPressStart(),
-                  onLongPressEnd: (_) => _onLongPressEnd(),
-                  onLongPressCancel: () => _onLongPressEnd(),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Close',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // Floating Reply Button
+            _buildFloatingReplyButton(),
 
             // Navigation controls with new gesture handling
             _buildNavigationControls(),
+
+            // Reply Input Field
+            _buildReplyField(),
           ],
         ),
+      ),
+    ),
       );
     });
   }
@@ -869,5 +1052,177 @@ class _StoryViewerState extends State<StoryViewer>
       print('Error parsing color: $e');
     }
     return Colors.white;
+  }
+
+  // بناء حقل الرد مع الأنيميشن
+  Widget _buildReplyField() {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      bottom: _showReplyField ? 0 : -100,
+      left: 0,
+      right: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.9),
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.2), width: 1),
+          ),
+        ),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 12,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _replyController,
+                focusNode: _replyFocusNode,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Reply to story...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                ),
+                maxLines: 3,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendReply(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: _sendReply,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ColorsManager.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.send,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // بناء زر الرد العائم
+  Widget _buildFloatingReplyButton() {
+    if (_showReplyField) return const SizedBox.shrink();
+
+    return Positioned(
+      bottom: 30,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: GestureDetector(
+          onTap: _toggleReplyField,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.reply,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Reply',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // بناء شريط التفاعلات السريعة
+  Widget _buildReactionsBar() {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 300),
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(40),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: _reactionEmojis.map((emoji) {
+                return GestureDetector(
+                  onTap: () => _sendReaction(emoji),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _selectedReaction == emoji
+                          ? ColorsManager.primary.withOpacity(0.2)
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      emoji,
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

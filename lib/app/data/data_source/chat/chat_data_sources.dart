@@ -429,6 +429,142 @@ class ChatDataSources {
     }
   }
 
+  /// Vote on a poll message
+  Future<void> votePoll({
+    required String roomId,
+    required String messageId,
+    required int optionIndex,
+    required String userId,
+    required bool allowMultipleVotes,
+  }) async {
+    try {
+      final messageRef = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .doc(messageId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(messageRef);
+
+        if (!snapshot.exists) {
+          throw Exception('Poll message not found');
+        }
+
+        final data = snapshot.data()!;
+
+        // Check if poll is closed
+        final closedAtStr = data['closedAt'] as String?;
+        if (closedAtStr != null) {
+          final closedAt = DateTime.parse(closedAtStr);
+          if (DateTime.now().isAfter(closedAt)) {
+            throw Exception('Poll is closed');
+          }
+        }
+
+        // Parse current votes
+        final votesData = data['votes'] as Map<String, dynamic>? ?? {};
+        final votes = votesData.map(
+          (key, value) => MapEntry(key, List<String>.from(value as List? ?? [])),
+        );
+
+        final optionKey = optionIndex.toString();
+
+        // Remove previous votes if not allowing multiple votes
+        if (!allowMultipleVotes) {
+          for (var entry in votes.entries) {
+            entry.value.remove(userId);
+          }
+        }
+
+        // Toggle vote on the selected option
+        final currentVoters = votes[optionKey] ?? [];
+        if (currentVoters.contains(userId)) {
+          // Remove vote (toggle off)
+          currentVoters.remove(userId);
+        } else {
+          // Add vote (toggle on)
+          currentVoters.add(userId);
+        }
+        votes[optionKey] = currentVoters;
+
+        // Calculate total votes
+        final totalVotes = votes.values.fold<int>(
+          0,
+          (sum, voters) => sum + voters.length,
+        );
+
+        // Update Firestore
+        transaction.update(messageRef, {
+          'votes': votes.map((key, value) => MapEntry(key, value)),
+          'totalVotes': totalVotes,
+        });
+      });
+
+      if (kDebugMode) {
+        print('✅ Poll vote recorded: option $optionIndex by user $userId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error voting on poll: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Remove vote from a poll message
+  Future<void> removeVote({
+    required String roomId,
+    required String messageId,
+    required String userId,
+  }) async {
+    try {
+      final messageRef = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .doc(messageId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(messageRef);
+
+        if (!snapshot.exists) {
+          throw Exception('Poll message not found');
+        }
+
+        final data = snapshot.data()!;
+        final votesData = data['votes'] as Map<String, dynamic>? ?? {};
+        final votes = votesData.map(
+          (key, value) => MapEntry(key, List<String>.from(value as List? ?? [])),
+        );
+
+        // Remove user's vote from all options
+        for (var entry in votes.entries) {
+          entry.value.remove(userId);
+        }
+
+        // Calculate total votes
+        final totalVotes = votes.values.fold<int>(
+          0,
+          (sum, voters) => sum + voters.length,
+        );
+
+        // Update Firestore
+        transaction.update(messageRef, {
+          'votes': votes.map((key, value) => MapEntry(key, value)),
+          'totalVotes': totalVotes,
+        });
+      });
+
+      if (kDebugMode) {
+        print('✅ Vote removed for user $userId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error removing vote: $error');
+      }
+      rethrow;
+    }
+  }
+
   /// Get live messages for a chat room
   Stream<List<Message>> getLivePrivateMessage(String roomId) {
     return chatCollection
@@ -716,6 +852,37 @@ class ChatDataSources {
     }
   }
 
+  /// Unblock a user in a private chat
+  Future<void> unblockUser(String roomId, String userId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      if (chatRoom.isGroupChat == true) {
+        throw Exception('Cannot unblock users in group chats');
+      }
+
+      final currentBlockedUsers = chatRoom.blockedUsers ?? [];
+      if (!currentBlockedUsers.contains(userId)) {
+        throw Exception('User is not blocked');
+      }
+
+      currentBlockedUsers.remove(userId);
+      await updateChatRoomProperties(roomId: roomId, updates: {'blockedUsers': currentBlockedUsers});
+
+      if (kDebugMode) {
+        print('✅ User unblocked: $userId in room: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error unblocking user: $error');
+      }
+      rethrow;
+    }
+  }
+
   /// Toggle favorite status for a chat room
   Future<void> toggleFavoriteChat(String roomId) async {
     try {
@@ -928,6 +1095,205 @@ class ChatDataSources {
         print('Error getting member count: $e');
       }
       return 0;
+    }
+  }
+
+  /// Clear all messages in a chat (but keep the room)
+  Future<void> clearChat(String roomId) async {
+    try {
+      final messagesQuery = await chatCollection.doc(roomId).collection('chat').get();
+
+      // Delete all message files
+      await _deleteMessageFiles(messagesQuery.docs);
+
+      // Delete all message documents
+      for (var doc in messagesQuery.docs) {
+        await doc.reference.delete();
+      }
+
+      // Update chat room's last message
+      await updateChatRoomProperties(roomId: roomId, updates: {
+        'lastMessage': '',
+        'lastMessageTime': FieldValue.serverTimestamp(),
+      });
+
+      if (kDebugMode) {
+        print('✅ Chat cleared: $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error clearing chat: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Exit a group chat
+  Future<void> exitGroup(String roomId, String userId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      if (chatRoom.isGroupChat != true) {
+        throw Exception('This is not a group chat');
+      }
+
+      final currentMembers = chatRoom.membersIds ?? [];
+      if (!currentMembers.contains(userId)) {
+        throw Exception('User is not a member of this group');
+      }
+
+      currentMembers.remove(userId);
+      await updateChatRoomProperties(roomId: roomId, updates: {
+        'membersIds': currentMembers,
+      });
+
+      // Add system message about user leaving
+      final systemMessage = TextMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        roomId: roomId,
+        senderId: 'system',
+        timestamp: DateTime.now(),
+        text: 'User left the group',
+      );
+      await postMessageToChat(systemMessage, roomId);
+
+      if (kDebugMode) {
+        print('✅ User exited group: $userId from $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error exiting group: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Report a user or group
+  Future<void> reportContent({
+    required String contentId,
+    required String contentType, // 'user' or 'group'
+    required String reporterId,
+    required String reason,
+    String? description,
+  }) async {
+    try {
+      final reportData = {
+        'contentId': contentId,
+        'contentType': contentType,
+        'reporterId': reporterId,
+        'reason': reason,
+        'description': description ?? '',
+        'reportedAt': FieldValue.serverTimestamp(),
+        'status': 'pending', // pending, reviewed, resolved
+      };
+
+      await FirebaseFirestore.instance.collection('reports').add(reportData);
+
+      if (kDebugMode) {
+        print('✅ Content reported: $contentType - $contentId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error reporting content: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get starred/favorite messages in a chat
+  Future<List<Message>> getStarredMessages(String roomId) async {
+    try {
+      final messagesQuery = await chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .where('isFavorite', isEqualTo: true)
+          .orderBy('timestamp', descending: true)
+          .limit(100)
+          .get();
+
+      return messagesQuery.docs.map((doc) => Message.fromMap(doc.data() as Map<String, dynamic>)).toList();
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error getting starred messages: $error');
+      }
+      return [];
+    }
+  }
+
+  /// Get media messages (photos, videos, audio, files) in a chat
+  Future<List<Message>> getMediaMessages(String roomId, {String? mediaType}) async {
+    try {
+      Query query = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .orderBy('timestamp', descending: true)
+          .limit(100);
+
+      if (mediaType != null) {
+        query = query.where('type', isEqualTo: mediaType);
+      } else {
+        // Get all media types
+        query = query.where('type', whereIn: ['photo', 'video', 'audio', 'file']);
+      }
+
+      final messagesQuery = await query.get();
+      return messagesQuery.docs.map((doc) => Message.fromMap(doc.data() as Map<String, dynamic>)).toList();
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error getting media messages: $error');
+      }
+      return [];
+    }
+  }
+
+  /// Remove a member from group (admin only)
+  Future<void> removeMemberFromGroup(String roomId, String memberId, String adminId) async {
+    try {
+      final chatRoom = await getChatRoomById(roomId);
+      if (chatRoom == null) {
+        throw Exception('Chat room not found');
+      }
+
+      if (chatRoom.isGroupChat != true) {
+        throw Exception('This is not a group chat');
+      }
+
+      final currentMembers = chatRoom.membersIds ?? [];
+      if (!currentMembers.contains(memberId)) {
+        throw Exception('User is not a member of this group');
+      }
+
+      // Check if remover is admin (first member)
+      if (currentMembers.isNotEmpty && currentMembers.first != adminId) {
+        throw Exception('Only admin can remove members');
+      }
+
+      currentMembers.remove(memberId);
+      await updateChatRoomProperties(roomId: roomId, updates: {
+        'membersIds': currentMembers,
+      });
+
+      // Add system message about member removal
+      final systemMessage = TextMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        roomId: roomId,
+        senderId: 'system',
+        timestamp: DateTime.now(),
+        text: 'Member removed from group',
+      );
+      await postMessageToChat(systemMessage, roomId);
+
+      if (kDebugMode) {
+        print('✅ Member removed from group: $memberId from $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error removing member: $error');
+      }
+      rethrow;
     }
   }
 }

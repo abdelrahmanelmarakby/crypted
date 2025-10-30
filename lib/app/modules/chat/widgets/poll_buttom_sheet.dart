@@ -109,6 +109,12 @@ class _PollBottomSheetState extends State<PollBottomSheet>
     }
 
     try {
+      // Initialize votes map with empty lists for each option
+      final votes = <String, List<String>>{};
+      for (int i = 0; i < options.length; i++) {
+        votes[i.toString()] = [];
+      }
+
       final pollMessage = PollMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         roomId: widget.controller.roomId,
@@ -116,6 +122,11 @@ class _PollBottomSheetState extends State<PollBottomSheet>
         timestamp: DateTime.now(),
         question: questionController.text.trim(),
         options: options,
+        votes: votes,
+        totalVotes: 0,
+        allowMultipleVotes: false,
+        closedAt: null,
+        isAnonymous: false,
       );
 
       await widget.controller.sendMessage(pollMessage);
