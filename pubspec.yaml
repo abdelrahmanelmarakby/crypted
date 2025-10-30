@@ -118,7 +118,15 @@ dev_dependencies:
     sdk: flutter
   freezed: ^3.0.0-0.0.dev
   json_serializable: ^6.7.1
-
+  flutter_launcher_icons: ^0.14.4 
+  flutter_native_splash: ^2.4.7
+  
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 16 
+  remove_alpha_ios: true
 flutter_gen:
   output: lib/gen/ # Optional (default: lib/gen/)
   line_length: 80 # Optional (default: 80)

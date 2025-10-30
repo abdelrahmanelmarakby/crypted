@@ -128,7 +128,8 @@ class ContactInfoController extends GetxController {
 
   /// Block or unblock user
   Future<void> toggleBlockUser() async {
-    if (user.value?.uid == null || roomId == null) {
+    final userId = user.value?.uid;
+    if (userId == null || roomId == null) {
       Get.snackbar(
         "Error",
         "Cannot block user: No user or room data available",
@@ -144,7 +145,7 @@ class ContactInfoController extends GetxController {
 
       if (isBlocked.value) {
         // Unblock user
-        await _chatDataSources.unblockUser(roomId!, user.value!.uid);
+        await _chatDataSources.unblockUser(roomId!, userId);
         isBlocked.value = false;
         Get.snackbar(
           "Success",
@@ -173,7 +174,7 @@ class ContactInfoController extends GetxController {
         );
 
         if (confirmed == true) {
-          await _chatDataSources.blockUser(roomId!, user.value!.uid);
+          await _chatDataSources.blockUser(roomId!, userId);
           isBlocked.value = true;
           Get.snackbar(
             "Success",

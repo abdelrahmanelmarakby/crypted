@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 
 class GroupInfoController extends GetxController {
   var isLockContactInfoEnabled = false.obs;
@@ -13,9 +14,16 @@ class GroupInfoController extends GetxController {
   final Rx<int?> memberCount = Rx<int?>(null);
   final Rx<List<SocialMediaUser>?> members = Rx<List<SocialMediaUser>?>(null);
 
+  // Room data
+  String? roomId;
+
   // Loading states
   final RxBool isLoading = false.obs;
   final RxBool isRefreshing = false.obs;
+  final RxBool isFavorite = false.obs;
+
+  // Data source
+  final ChatDataSources _chatDataSources = ChatDataSources();
 
   // Current user for admin checks
   SocialMediaUser? get currentUser => UserService.currentUser.value;
@@ -26,7 +34,7 @@ class GroupInfoController extends GetxController {
     _loadGroupData();
   }
 
-  void _loadGroupData() {
+  Future<void> _loadGroupData() async {
     final arguments = Get.arguments;
     if (arguments != null) {
       groupName.value = arguments['chatName'] as String?;
@@ -34,6 +42,7 @@ class GroupInfoController extends GetxController {
       memberCount.value = arguments['memberCount'] as int?;
       members.value = arguments['members'] as List<SocialMediaUser>?;
       groupImageUrl.value = arguments['groupImageUrl'] as String?;
+      roomId = arguments['roomId'] as String?;
 
       print("✅ Loaded group data:");
       print("   Name: ${groupName.value}");
@@ -42,9 +51,28 @@ class GroupInfoController extends GetxController {
 
       // Ensure current user is in members list if not present
       _ensureCurrentUserInMembers();
+
+      // Load favorite status if we have a room ID
+      if (roomId != null) {
+        await _loadGroupStatus();
+      }
     } else {
       print("❌ No group data provided to group info screen");
       isLoading.value = false;
+    }
+  }
+
+  /// Load group status (favorite)
+  Future<void> _loadGroupStatus() async {
+    if (roomId == null) return;
+
+    try {
+      final chatRoom = await _chatDataSources.getChatRoomById(roomId!);
+      if (chatRoom != null) {
+        isFavorite.value = chatRoom.isFavorite ?? false;
+      }
+    } catch (e) {
+      print("❌ Error loading group status: $e");
     }
   }
 
@@ -121,6 +149,17 @@ class GroupInfoController extends GetxController {
 
   /// Remove a member from the group
   Future<void> removeMember(String userId) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot remove member: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     try {
       if (members.value == null) return;
 
@@ -130,39 +169,301 @@ class GroupInfoController extends GetxController {
           "Error",
           "You cannot remove yourself from the group",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.red.withOpacity(0.8),
           colorText: Colors.white,
         );
         return;
       }
 
+      // Check if current user is admin
+      if (!isCurrentUserAdmin) {
+        Get.snackbar(
+          "Error",
+          "Only admins can remove members",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      final currentUserUid = currentUser?.uid;
+      if (currentUserUid == null) return;
+
       isLoading.value = true;
+
+      // Remove member using data source
+      await _chatDataSources.removeMemberFromGroup(roomId!, userId, currentUserUid);
 
       // Remove member from local list
       members.value = members.value!.where((member) => member.uid != userId).toList();
       memberCount.value = members.value!.length;
 
-      // In a real implementation, this would call an API to remove the member
-      // For now, we'll simulate a successful removal
-      await Future.delayed(const Duration(milliseconds: 300));
-
       Get.snackbar(
         "Success",
         "Member removed from group",
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
       );
     } catch (e) {
       print("❌ Error removing member: $e");
       Get.snackbar(
         "Error",
-        "Failed to remove member",
+        "Failed to remove member: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
       );
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Exit group
+  Future<void> exitGroup() async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot exit group: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final currentUserUid = currentUser?.uid;
+    if (currentUserUid == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot exit group: No user ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text("Exit Group"),
+        content: Text("Are you sure you want to leave ${groupName.value ?? 'this group'}?"),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text("Exit", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      isLoading.value = true;
+      await _chatDataSources.exitGroup(roomId!, currentUserUid);
+
+      Get.snackbar(
+        "Success",
+        "You have left the group",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+
+      // Go back to chat list
+      Get.back();
+      Get.back();
+    } catch (e) {
+      print("❌ Error exiting group: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to exit group: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Report group
+  Future<void> reportGroup() async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot report group: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final currentUserUid = currentUser?.uid;
+    if (currentUserUid == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot report group: No user ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Show reason selection dialog
+    final reason = await Get.dialog<String>(
+      AlertDialog(
+        title: const Text("Report Group"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text("Inappropriate content"),
+              onTap: () => Get.back(result: "Inappropriate content"),
+            ),
+            ListTile(
+              title: const Text("Spam"),
+              onTap: () => Get.back(result: "Spam"),
+            ),
+            ListTile(
+              title: const Text("Harassment"),
+              onTap: () => Get.back(result: "Harassment"),
+            ),
+            ListTile(
+              title: const Text("Other"),
+              onTap: () => Get.back(result: "Other"),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (reason == null) return;
+
+    try {
+      isLoading.value = true;
+      await _chatDataSources.reportContent(
+        contentId: roomId!,
+        contentType: 'group',
+        reporterId: currentUserUid,
+        reason: reason,
+      );
+
+      Get.snackbar(
+        "Success",
+        "Group reported successfully",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print("❌ Error reporting group: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to report group: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Toggle favorite status
+  Future<void> toggleFavorite() async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot update favorite: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+      final oldStatus = isFavorite.value;
+      await _chatDataSources.toggleFavoriteChat(roomId!);
+      isFavorite.value = !oldStatus;
+
+      Get.snackbar(
+        "Success",
+        !oldStatus ? "Added to favorites" : "Removed from favorites",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      print("❌ Error toggling favorite: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to update favorite status: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Navigate to starred messages
+  void viewStarredMessages() {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot view starred messages: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // TODO: Navigate to starred messages screen
+    Get.snackbar(
+      "Coming Soon",
+      "Starred messages view will be implemented",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.blue.withOpacity(0.9),
+      colorText: Colors.white,
+    );
+  }
+
+  /// Navigate to media/links/documents
+  void viewMediaLinksDocuments() {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot view media: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // TODO: Navigate to media screen
+    Get.snackbar(
+      "Coming Soon",
+      "Media/Links/Documents view will be implemented",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.blue.withOpacity(0.9),
+      colorText: Colors.white,
+    );
   }
 
   /// Check if current user is an admin (first member or creator)

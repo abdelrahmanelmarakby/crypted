@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDulqa7QJUuFaXAfcd0xM0uDusC6lvqyc4',
-    appId: '1:129583430741:android:c85f747891671468f328dc',
+    appId: '1:129583430741:android:f15e63e7b98988dff328dc',
     messagingSenderId: '129583430741',
     projectId: 'crypted-8468f',
     storageBucket: 'crypted-8468f.firebasestorage.app',
@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCkUko_aEXVJsMnavvKYixO78rtVueZUCA',
-    appId: '1:129583430741:ios:c196cea3b447779df328dc',
+    appId: '1:129583430741:ios:fa624ab95b53bab2f328dc',
     messagingSenderId: '129583430741',
     projectId: 'crypted-8468f',
     storageBucket: 'crypted-8468f.firebasestorage.app',
-    iosBundleId: 'com.example.cryptedApp',
+    iosBundleId: 'com.rasad.sa.crypted',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

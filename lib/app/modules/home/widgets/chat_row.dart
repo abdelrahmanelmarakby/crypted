@@ -482,13 +482,14 @@ class _ChatRowState extends State<ChatRow> {
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       minWidth: 100,
-                      maxWidth: 200,
+                      maxWidth: context.width * .8,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.max,
                       children: [
                         Row(
+                          mainAxisAlignment:  MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
