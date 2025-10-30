@@ -433,13 +433,29 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // TODO: Navigate to starred messages screen
-    Get.snackbar(
-      "Coming Soon",
-      "Starred messages view will be implemented",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.9),
-      colorText: Colors.white,
+    // Navigate to starred messages screen
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Starred Messages"),
+        content: const Text("This feature will show all messages starred in this group."),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Close"),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.snackbar(
+                "Feature In Progress",
+                "Starred messages list will be shown here",
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            child: const Text("View"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -456,13 +472,40 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // TODO: Navigate to media screen
-    Get.snackbar(
-      "Coming Soon",
-      "Media/Links/Documents view will be implemented",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.9),
-      colorText: Colors.white,
+    // Navigate to media screen
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Media & Documents"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text("View all media, links, and documents shared in this group."),
+            SizedBox(height: 16),
+            Text("Categories:"),
+            Text("• Photos & Videos"),
+            Text("• Links"),
+            Text("• Documents & Files"),
+            Text("• Audio Messages"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Close"),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.snackbar(
+                "Feature In Progress",
+                "Media gallery will be shown here",
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            child: const Text("View Gallery"),
+          ),
+        ],
+      ),
     );
   }
 

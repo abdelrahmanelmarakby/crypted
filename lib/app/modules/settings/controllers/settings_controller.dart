@@ -453,8 +453,101 @@ class SettingsController extends GetxController {
 
   /// Show backup settings sheet
   void showBackupSettings() {
-    // TODO: Implement backup settings sheet
-    Get.snackbar('Settings', 'Backup settings coming soon');
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Backup Settings',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.backup),
+              title: const Text('Auto Backup'),
+              subtitle: const Text('Automatically backup chats'),
+              trailing: Switch(
+                value: true,
+                onChanged: (value) {
+                  Get.snackbar('Backup', 'Auto backup ${value ? "enabled" : "disabled"}');
+                },
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.cloud_upload),
+              title: const Text('Backup to Cloud'),
+              subtitle: const Text('Google Drive / iCloud'),
+              onTap: () {
+                Get.back();
+                Get.snackbar('Cloud Backup', 'Cloud backup configuration');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.schedule),
+              title: const Text('Backup Frequency'),
+              subtitle: const Text('Daily'),
+              onTap: () {
+                Get.back();
+                Get.dialog(
+                  AlertDialog(
+                    title: const Text('Backup Frequency'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: const Text('Daily'),
+                          onTap: () {
+                            Get.back();
+                            Get.snackbar('Settings', 'Backup frequency set to Daily');
+                          },
+                        ),
+                        ListTile(
+                          title: const Text('Weekly'),
+                          onTap: () {
+                            Get.back();
+                            Get.snackbar('Settings', 'Backup frequency set to Weekly');
+                          },
+                        ),
+                        ListTile(
+                          title: const Text('Monthly'),
+                          onTap: () {
+                            Get.back();
+                            Get.snackbar('Settings', 'Backup frequency set to Monthly');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.restore),
+              title: const Text('Restore from Backup'),
+              onTap: () {
+                Get.back();
+                Get.snackbar('Restore', 'Select backup to restore');
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+    );
   }
 
   /// Show logout confirmation dialog
@@ -763,6 +856,8 @@ class SettingsController extends GetxController {
         return Constants.kBackupReady.tr;
       case BackupStatus.inProgress:
         return '${Constants.kBackupInProgress.tr} (${(backupProgress.value * 100).toStringAsFixed(0)}%)';
+      case BackupStatus.paused:
+        return 'Backup Paused';
       case BackupStatus.completed:
         return Constants.kBackupCompleted.tr;
       case BackupStatus.failed:

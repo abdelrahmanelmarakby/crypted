@@ -220,7 +220,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                 "chatDescription": controller.chatDescription.value,
                 "memberCount": controller.memberCount.value,
                 "members": controller.members,
-                "groupImageUrl": "", // TODO: Get from chat room data
+                "groupImageUrl": controller.groupImageUrl.value,
+                "roomId": controller.roomId,
               },
             );
           } else {
@@ -857,8 +858,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                 title: Text("Change Group Photo"),
                 onTap: () {
                   Get.back();
-                  // TODO: Implement group photo change
-                  Get.snackbar("Coming Soon", "Group photo change will be available soon");
+                  _showChangeGroupPhotoDialog();
                 },
               ),
             ],
@@ -936,6 +936,73 @@ class PrivateChatScreen extends GetView<ChatController> {
   /// Remove a member from the group
   void _removeMember(String userId) {
     controller.removeMemberFromGroup(userId);
+  }
+
+  /// Show dialog to change group photo
+  void _showChangeGroupPhotoDialog() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  const Icon(Icons.photo_camera, color: ColorsManager.primary),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Change Group Photo",
+                    style: StylesManager.bold(
+                      fontSize: FontSize.large,
+                      color: ColorsManager.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // Options
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: ColorsManager.primary),
+              title: const Text("Take Photo"),
+              onTap: () {
+                Get.back();
+                controller.changeGroupPhoto(fromCamera: true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: ColorsManager.primary),
+              title: const Text("Choose from Gallery"),
+              onTap: () {
+                Get.back();
+                controller.changeGroupPhoto(fromCamera: false);
+              },
+            ),
+            if (controller.groupImageUrl.value.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete, color: ColorsManager.error),
+                title: const Text("Remove Photo"),
+                onTap: () {
+                  Get.back();
+                  controller.removeGroupPhoto();
+                },
+              ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+    );
   }
 
   String _formatDate(DateTime date) {

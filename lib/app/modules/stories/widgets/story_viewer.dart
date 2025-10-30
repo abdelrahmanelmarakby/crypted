@@ -487,36 +487,85 @@ class _StoryViewerState extends State<StoryViewer>
   }
 
   // دالة لإرسال الرد
-  void _sendReply() {
+  void _sendReply() async {
     final replyText = _replyController.text.trim();
     if (replyText.isEmpty) return;
 
-    print('💬 Sending reply: $replyText');
-    // TODO: Implement reply sending to Firebase
+    if (_currentStoryIndex >= _currentUserStories.length) return;
+    final currentStory = _currentUserStories[_currentStoryIndex];
 
-    Get.snackbar(
-      'Reply Sent',
-      'Your reply has been sent',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-      backgroundColor: ColorsManager.success,
-      colorText: Colors.white,
+    if (currentStory.id == null || currentStory.uid == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot send reply to this story',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    print('💬 Sending reply: $replyText');
+
+    final controller = Get.find<StoriesController>();
+    final success = await controller.sendStoryReply(
+      storyId: currentStory.id!,
+      storyOwnerId: currentStory.uid!,
+      replyText: replyText,
     );
 
-    _replyController.clear();
-    _toggleReplyField();
+    if (success) {
+      Get.snackbar(
+        'Reply Sent',
+        'Your reply has been sent',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        backgroundColor: ColorsManager.success,
+        colorText: Colors.white,
+      );
+      _replyController.clear();
+      _toggleReplyField();
+    } else {
+      Get.snackbar(
+        'Error',
+        'Failed to send reply. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    }
   }
 
   // دالة لإرسال التفاعل
-  void _sendReaction(String emoji) {
+  void _sendReaction(String emoji) async {
     setState(() {
       _selectedReaction = emoji;
       _showReactions = false;
       _isLongPressing = false;
     });
 
+    if (_currentStoryIndex >= _currentUserStories.length) return;
+    final currentStory = _currentUserStories[_currentStoryIndex];
+
+    if (currentStory.id == null || currentStory.uid == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot send reaction to this story',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     print('❤️ Sending reaction: $emoji');
-    // TODO: Implement reaction sending to Firebase
+
+    final controller = Get.find<StoriesController>();
+    final success = await controller.sendStoryReaction(
+      storyId: currentStory.id!,
+      storyOwnerId: currentStory.uid!,
+      emoji: emoji,
+    );
 
     // استئناف التشغيل بعد إرسال التفاعل
     if (!_isPaused && _progressController.value < 1.0) {
@@ -528,15 +577,27 @@ class _StoryViewerState extends State<StoryViewer>
     }
 
     // إظهار إشعار بسيط
-    Get.snackbar(
-      'Reaction Sent',
-      'You reacted with $emoji',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-      backgroundColor: ColorsManager.success.withOpacity(0.9),
-      colorText: Colors.white,
-      margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
-    );
+    if (success) {
+      Get.snackbar(
+        'Reaction Sent',
+        'You reacted with $emoji',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 1),
+        backgroundColor: ColorsManager.success.withOpacity(0.9),
+        colorText: Colors.white,
+        margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
+      );
+    } else {
+      Get.snackbar(
+        'Error',
+        'Failed to send reaction',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+        margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
+      );
+    }
   }
 
   @override

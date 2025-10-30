@@ -484,6 +484,8 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
         return Colors.grey;
       case BackupStatus.inProgress:
         return Colors.blue;
+      case BackupStatus.paused:
+        return Colors.amber;
       case BackupStatus.completed:
         return Colors.green;
       case BackupStatus.failed:

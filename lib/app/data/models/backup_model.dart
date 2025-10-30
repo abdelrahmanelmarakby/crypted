@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 enum BackupStatus {
   pending,
   inProgress,
+  paused,
   completed,
   failed,
   cancelled,

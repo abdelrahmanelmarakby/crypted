@@ -10,6 +10,7 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/modules/home/controllers/home_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -244,21 +245,43 @@ class UserSearchResultItem extends StatelessWidget {
     );
   }
 
-  void _startNewConversation(BuildContext context) {
-    // TODO: Implement starting a new conversation with this user
-    // This would typically involve:
-    // 1. Creating a new chat room with this user
-    // 2. Navigating to the new chat screen
-    // For now, just show a placeholder
+  void _startNewConversation(BuildContext context) async {
+    try {
+      print('🔍 Starting conversation with: ${user.fullName} (${user.uid})');
 
-    Get.snackbar(
-      'Coming Soon',
-      'Starting new conversations will be available soon!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: ColorsManager.primary,
-      colorText: Colors.white,
-    );
+      // Get the HomeController to create a new chat
+      final homeController = Get.find<HomeController>();
 
-    print('🔍 Starting conversation with: ${user.fullName} (${user.uid})');
+      // Show loading indicator
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Create a new private chat room with this user
+      await homeController.createNewPrivateChatRoom(user);
+
+      // Close the loading dialog
+      Get.back();
+
+      print('✅ Successfully navigated to chat with: ${user.fullName}');
+    } catch (e) {
+      print('❌ Error starting conversation: $e');
+
+      // Close loading dialog if it's open
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Failed to start conversation. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.error,
+        colorText: Colors.white,
+      );
+    }
   }
 }

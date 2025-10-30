@@ -257,4 +257,153 @@ class StoryDataSources {
       log('❌ Error deleting expired stories: $e');
     }
   }
+
+  // إرسال رد على story
+  Future<bool> sendStoryReply({
+    required String storyId,
+    required String storyOwnerId,
+    required String replyText,
+  }) async {
+    try {
+      final currentUser = UserService.currentUser.value;
+      if (currentUser?.uid == null) {
+        log('❌ Current user ID is null');
+        return false;
+      }
+
+      log('💬 Sending reply to story $storyId from ${currentUser!.uid}');
+
+      // إنشاء مرجع لمجموعة الردود تحت الـ story
+      final repliesRef = storiesCollection.doc(storyId).collection('replies');
+
+      final replyData = {
+        'uid': currentUser.uid,
+        'userName': currentUser.fullName,
+        'userImageUrl': currentUser.imageUrl,
+        'replyText': replyText,
+        'createdAt': Timestamp.now(),
+      };
+
+      await repliesRef.add(replyData);
+
+      // إرسال إشعار لصاحب الـ story (يمكن تنفيذه لاحقاً)
+      // TODO: Send notification to story owner
+
+      log('✅ Reply sent successfully to story $storyId');
+      return true;
+    } catch (e) {
+      log('❌ Error sending story reply: $e');
+      return false;
+    }
+  }
+
+  // إرسال تفاعل على story
+  Future<bool> sendStoryReaction({
+    required String storyId,
+    required String storyOwnerId,
+    required String emoji,
+  }) async {
+    try {
+      final currentUser = UserService.currentUser.value;
+      if (currentUser?.uid == null) {
+        log('❌ Current user ID is null');
+        return false;
+      }
+
+      log('❤️ Sending reaction $emoji to story $storyId from ${currentUser!.uid}');
+
+      // إنشاء مرجع لمجموعة التفاعلات تحت الـ story
+      final reactionsRef =
+          storiesCollection.doc(storyId).collection('reactions');
+
+      // التحقق من وجود تفاعل سابق لنفس المستخدم
+      final existingReaction = await reactionsRef
+          .where('uid', isEqualTo: currentUser.uid)
+          .limit(1)
+          .get();
+
+      if (existingReaction.docs.isNotEmpty) {
+        // تحديث التفاعل الحالي
+        await existingReaction.docs.first.reference.update({
+          'emoji': emoji,
+          'updatedAt': Timestamp.now(),
+        });
+        log('✅ Reaction updated for story $storyId');
+      } else {
+        // إضافة تفاعل جديد
+        final reactionData = {
+          'uid': currentUser.uid,
+          'userName': currentUser.fullName,
+          'userImageUrl': currentUser.imageUrl,
+          'emoji': emoji,
+          'createdAt': Timestamp.now(),
+        };
+
+        await reactionsRef.add(reactionData);
+        log('✅ New reaction added to story $storyId');
+      }
+
+      // إرسال إشعار لصاحب الـ story (يمكن تنفيذه لاحقاً)
+      // TODO: Send notification to story owner
+
+      return true;
+    } catch (e) {
+      log('❌ Error sending story reaction: $e');
+      return false;
+    }
+  }
+
+  // جلب ردود story
+  Stream<List<Map<String, dynamic>>> getStoryReplies(String storyId) {
+    return storiesCollection
+        .doc(storyId)
+        .collection('replies')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  // جلب تفاعلات story
+  Stream<List<Map<String, dynamic>>> getStoryReactions(String storyId) {
+    return storiesCollection
+        .doc(storyId)
+        .collection('reactions')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  // حذف رد
+  Future<bool> deleteStoryReply(String storyId, String replyId) async {
+    try {
+      await storiesCollection
+          .doc(storyId)
+          .collection('replies')
+          .doc(replyId)
+          .delete();
+      log('✅ Reply deleted successfully: $replyId');
+      return true;
+    } catch (e) {
+      log('❌ Error deleting reply: $e');
+      return false;
+    }
+  }
+
+  // حذف تفاعل
+  Future<bool> deleteStoryReaction(String storyId, String reactionId) async {
+    try {
+      await storiesCollection
+          .doc(storyId)
+          .collection('reactions')
+          .doc(reactionId)
+          .delete();
+      log('✅ Reaction deleted successfully: $reactionId');
+      return true;
+    } catch (e) {
+      log('❌ Error deleting reaction: $e');
+      return false;
+    }
+  }
 }

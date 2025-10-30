@@ -49,17 +49,32 @@ class StoriesView extends GetView<StoriesController> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        // Add Story Button
+                        // Add Story Button with animation
                         GestureDetector(
                           onTap: () {
                             _showAddStoryDialog(context);
                           },
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
                             width: 70,
                             height: 70,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: ColorsManager.primary,
+                              gradient: LinearGradient(
+                                colors: [
+                                  ColorsManager.primary,
+                                  ColorsManager.primary.withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ColorsManager.primary.withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Icon(
                               Icons.add,
@@ -94,19 +109,30 @@ class StoriesView extends GetView<StoriesController> {
                             controller.openUserStories(currentUser.uid!);
                           }
                         },
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: userStories.isNotEmpty
                                 ? ColorsManager.primary.withOpacity(0.1)
                                 : ColorsManager.navbarColor,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: userStories.isNotEmpty
                                   ? ColorsManager.primary.withOpacity(0.5)
                                   : Colors.grey.withOpacity(0.2),
-                              width: 1.5,
+                              width: 2,
                             ),
+                            boxShadow: userStories.isNotEmpty
+                                ? [
+                                    BoxShadow(
+                                      color:
+                                          ColorsManager.primary.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
                           ),
                           child: Row(
                             children: [

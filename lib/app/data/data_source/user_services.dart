@@ -457,4 +457,333 @@ class UserService {
 
     return users;
   }
+
+  // ==================== USER ACTIONS ====================
+
+  /// Block a user globally
+  Future<bool> blockUserGlobally(String currentUserId, String targetUserId) async {
+    try {
+      log('🚫 Blocking user globally: $targetUserId by $currentUserId');
+
+      await firebaseFirestore.collection('users').doc(currentUserId).update({
+        'blockedUser': FieldValue.arrayUnion([targetUserId]),
+      });
+
+      log('✅ User blocked successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error blocking user: $e');
+      return false;
+    }
+  }
+
+  /// Unblock a user globally
+  Future<bool> unblockUserGlobally(String currentUserId, String targetUserId) async {
+    try {
+      log('✅ Unblocking user globally: $targetUserId by $currentUserId');
+
+      await firebaseFirestore.collection('users').doc(currentUserId).update({
+        'blockedUser': FieldValue.arrayRemove([targetUserId]),
+      });
+
+      log('✅ User unblocked successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error unblocking user: $e');
+      return false;
+    }
+  }
+
+  /// Report a user
+  Future<bool> reportUser({
+    required String reporterId,
+    required String reportedUserId,
+    required String reason,
+    String? additionalInfo,
+  }) async {
+    try {
+      log('🚨 Reporting user: $reportedUserId by $reporterId');
+
+      await firebaseFirestore.collection('reports').add({
+        'reporterId': reporterId,
+        'reportedUserId': reportedUserId,
+        'reason': reason,
+        'additionalInfo': additionalInfo,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'user',
+      });
+
+      log('✅ User reported successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error reporting user: $e');
+      return false;
+    }
+  }
+
+  /// Clear chat history with a user
+  Future<bool> clearChatHistory(String roomId) async {
+    try {
+      log('🗑️ Clearing chat history for room: $roomId');
+
+      // Get all messages in the chat
+      final messagesRef = firebaseFirestore
+          .collection('chats')
+          .doc(roomId)
+          .collection('chat');
+
+      final messagesSnapshot = await messagesRef.get();
+
+      // Delete messages in batches
+      final batch = firebaseFirestore.batch();
+      for (var doc in messagesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      // Update last message
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'lastMsg': '',
+        'lastSender': '',
+        'lastChat': FieldValue.serverTimestamp(),
+      });
+
+      log('✅ Chat history cleared successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error clearing chat history: $e');
+      return false;
+    }
+  }
+
+  /// Delete chat (remove from user's view)
+  Future<bool> deleteChat(String roomId, String userId) async {
+    try {
+      log('🗑️ Deleting chat for user: $userId in room: $roomId');
+
+      // Add user to deletedFor array
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'deletedFor': FieldValue.arrayUnion([userId]),
+      });
+
+      log('✅ Chat deleted successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error deleting chat: $e');
+      return false;
+    }
+  }
+
+  // ==================== GROUP ACTIONS ====================
+
+  /// Exit group
+  Future<bool> exitGroup(String roomId, String userId) async {
+    try {
+      log('🚪 User $userId exiting group: $roomId');
+
+      final chatDoc = await firebaseFirestore.collection('chats').doc(roomId).get();
+      if (!chatDoc.exists) {
+        throw Exception('Group not found');
+      }
+
+      final data = chatDoc.data()!;
+      final members = List<String>.from(data['membersIds'] ?? []);
+      final membersList = List<Map<String, dynamic>>.from(data['members'] ?? []);
+
+      // Remove user from members
+      members.remove(userId);
+      membersList.removeWhere((m) => m['uid'] == userId);
+
+      // Update group
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'membersIds': members,
+        'members': membersList,
+      });
+
+      // Add system message
+      await firebaseFirestore
+          .collection('chats')
+          .doc(roomId)
+          .collection('chat')
+          .add({
+        'type': 'event',
+        'eventType': 'userLeft',
+        'text': 'left the group',
+        'senderId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      log('✅ User exited group successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error exiting group: $e');
+      return false;
+    }
+  }
+
+  /// Remove member from group
+  Future<bool> removeMemberFromGroup(
+    String roomId,
+    String memberId,
+    String adminId,
+  ) async {
+    try {
+      log('🚫 Admin $adminId removing member $memberId from group: $roomId');
+
+      final chatDoc = await firebaseFirestore.collection('chats').doc(roomId).get();
+      if (!chatDoc.exists) {
+        throw Exception('Group not found');
+      }
+
+      final data = chatDoc.data()!;
+      final members = List<String>.from(data['membersIds'] ?? []);
+      final membersList = List<Map<String, dynamic>>.from(data['members'] ?? []);
+
+      // Remove member
+      members.remove(memberId);
+      membersList.removeWhere((m) => m['uid'] == memberId);
+
+      // Update group
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'membersIds': members,
+        'members': membersList,
+      });
+
+      // Add system message
+      await firebaseFirestore
+          .collection('chats')
+          .doc(roomId)
+          .collection('chat')
+          .add({
+        'type': 'event',
+        'eventType': 'userRemoved',
+        'text': 'was removed from the group',
+        'senderId': memberId,
+        'removedBy': adminId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      log('✅ Member removed from group successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error removing member from group: $e');
+      return false;
+    }
+  }
+
+  /// Report group
+  Future<bool> reportGroup({
+    required String reporterId,
+    required String groupId,
+    required String reason,
+    String? additionalInfo,
+  }) async {
+    try {
+      log('🚨 Reporting group: $groupId by $reporterId');
+
+      await firebaseFirestore.collection('reports').add({
+        'reporterId': reporterId,
+        'reportedGroupId': groupId,
+        'reason': reason,
+        'additionalInfo': additionalInfo,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'group',
+      });
+
+      log('✅ Group reported successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error reporting group: $e');
+      return false;
+    }
+  }
+
+  /// Mute chat
+  Future<bool> muteChat(String roomId, String userId, bool mute) async {
+    try {
+      log('🔇 ${mute ? "Muting" : "Unmuting"} chat: $roomId for user: $userId');
+
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'mutedBy': mute
+            ? FieldValue.arrayUnion([userId])
+            : FieldValue.arrayRemove([userId]),
+      });
+
+      log('✅ Chat mute status updated successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error updating chat mute status: $e');
+      return false;
+    }
+  }
+
+  /// Pin chat
+  Future<bool> pinChat(String roomId, bool pin) async {
+    try {
+      log('📌 ${pin ? "Pinning" : "Unpinning"} chat: $roomId');
+
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'isPinned': pin,
+      });
+
+      log('✅ Chat pin status updated successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error updating chat pin status: $e');
+      return false;
+    }
+  }
+
+  /// Archive chat
+  Future<bool> archiveChat(String roomId, bool archive) async {
+    try {
+      log('📦 ${archive ? "Archiving" : "Unarchiving"} chat: $roomId');
+
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'isArchived': archive,
+      });
+
+      log('✅ Chat archive status updated successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error updating chat archive status: $e');
+      return false;
+    }
+  }
+
+  /// Add admin to group
+  Future<bool> addGroupAdmin(String roomId, String userId) async {
+    try {
+      log('👑 Adding admin $userId to group: $roomId');
+
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'admins': FieldValue.arrayUnion([userId]),
+      });
+
+      log('✅ Admin added successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error adding admin: $e');
+      return false;
+    }
+  }
+
+  /// Remove admin from group
+  Future<bool> removeGroupAdmin(String roomId, String userId) async {
+    try {
+      log('👑 Removing admin $userId from group: $roomId');
+
+      await firebaseFirestore.collection('chats').doc(roomId).update({
+        'admins': FieldValue.arrayRemove([userId]),
+      });
+
+      log('✅ Admin removed successfully');
+      return true;
+    } catch (e) {
+      log('❌ Error removing admin: $e');
+      return false;
+    }
+  }
 }

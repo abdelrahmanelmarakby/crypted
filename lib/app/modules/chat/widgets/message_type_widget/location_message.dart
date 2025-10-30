@@ -7,16 +7,68 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class LocationMessageWidget extends StatelessWidget {
+class LocationMessageWidget extends StatefulWidget {
   const LocationMessageWidget({super.key, required this.message});
 
   final LocationMessage message;
 
+  @override
+  State<LocationMessageWidget> createState() => _LocationMessageWidgetState();
+}
+
+class _LocationMessageWidgetState extends State<LocationMessageWidget> {
+  String? _address;
+  bool _isLoadingAddress = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAddress();
+  }
+
+  Future<void> _fetchAddress() async {
+    setState(() {
+      _isLoadingAddress = true;
+    });
+
+    try {
+      // Using OpenStreetMap Nominatim API for reverse geocoding (free, no API key)
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${widget.message.latitude}&lon=${widget.message.longitude}&zoom=18&addressdetails=1',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'Crypted-App'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['display_name'] != null) {
+          setState(() {
+            _address = data['display_name'] as String;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching address: $e');
+      setState(() {
+        _address = null;
+      });
+    } finally {
+      setState(() {
+        _isLoadingAddress = false;
+      });
+    }
+  }
+
   // Generate static map image URL (Google Maps Static API)
   String get _staticMapUrl {
-    final lat = message.latitude;
-    final lng = message.longitude;
+    final lat = widget.message.latitude;
+    final lng = widget.message.longitude;
     const zoom = 15;
     const size = '400x200';
     const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your API key or use alternative
@@ -169,6 +221,70 @@ class LocationMessageWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
+                  // Address
+                  if (_isLoadingAddress)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.navbarColor,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ColorsManager.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Loading address...',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.xSmall,
+                              color: ColorsManager.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (_address != null)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: ColorsManager.primary.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.location_tick_copy,
+                            size: 16,
+                            color: ColorsManager.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _address!,
+                              style: StylesManager.medium(
+                                fontSize: FontSize.xSmall,
+                                color: ColorsManager.black,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_address != null || _isLoadingAddress)
+                    const SizedBox(height: 12),
+
                   // Coordinates
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -186,7 +302,7 @@ class LocationMessageWidget extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${message.latitude.toStringAsFixed(6)}, ${message.longitude.toStringAsFixed(6)}',
+                            '${widget.message.latitude.toStringAsFixed(6)}, ${widget.message.longitude.toStringAsFixed(6)}',
                             style: StylesManager.regular(
                               fontSize: FontSize.xSmall,
                               color: ColorsManager.grey,
@@ -202,7 +318,7 @@ class LocationMessageWidget extends StatelessWidget {
                   InkWell(
                     onTap: () async {
                       final url = Uri.parse(
-                        'https://www.google.com/maps/search/?api=1&query=${message.latitude},${message.longitude}',
+                        'https://www.google.com/maps/search/?api=1&query=${widget.message.latitude},${widget.message.longitude}',
                       );
 
                       try {

@@ -513,4 +513,58 @@ class StoriesController extends GetxController {
       update();
     }
   }
+
+  // إرسال رد على story
+  Future<bool> sendStoryReply({
+    required String storyId,
+    required String storyOwnerId,
+    required String replyText,
+  }) async {
+    try {
+      final success = await _storyDataSources.sendStoryReply(
+        storyId: storyId,
+        storyOwnerId: storyOwnerId,
+        replyText: replyText,
+      );
+      if (success) {
+        print('✅ Reply sent successfully via controller');
+      }
+      return success;
+    } catch (e) {
+      print('❌ Error sending reply via controller: $e');
+      return false;
+    }
+  }
+
+  // إرسال تفاعل على story
+  Future<bool> sendStoryReaction({
+    required String storyId,
+    required String storyOwnerId,
+    required String emoji,
+  }) async {
+    try {
+      final success = await _storyDataSources.sendStoryReaction(
+        storyId: storyId,
+        storyOwnerId: storyOwnerId,
+        emoji: emoji,
+      );
+      if (success) {
+        print('✅ Reaction sent successfully via controller');
+      }
+      return success;
+    } catch (e) {
+      print('❌ Error sending reaction via controller: $e');
+      return false;
+    }
+  }
+
+  // جلب ردود story
+  Stream<List<Map<String, dynamic>>> getStoryReplies(String storyId) {
+    return _storyDataSources.getStoryReplies(storyId);
+  }
+
+  // جلب تفاعلات story
+  Stream<List<Map<String, dynamic>>> getStoryReactions(String storyId) {
+    return _storyDataSources.getStoryReactions(storyId);
+  }
 }

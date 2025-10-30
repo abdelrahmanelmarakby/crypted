@@ -360,7 +360,12 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildSuggestionItem(IconData icon, String title, String subtitle) {
+  static Widget _buildSuggestionItem(
+    IconData icon,
+    String title,
+    String subtitle, {
+    VoidCallback? onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: Sizes.size12),
       decoration: BoxDecoration(
@@ -403,9 +408,18 @@ class Search extends StatelessWidget {
           color: ColorsManager.primary,
           size: 20,
         ),
-        onTap: () {
-          // TODO: Implement suggestion tap functionality
-        },
+        onTap: onTap ??
+            () {
+              Get.snackbar(
+                'Feature Coming Soon',
+                'Search filtering by $title will be available soon!',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+                backgroundColor: ColorsManager.primary,
+                colorText: Colors.white,
+                margin: const EdgeInsets.all(16),
+              );
+            },
       ),
     );
   }

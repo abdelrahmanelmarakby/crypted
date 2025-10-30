@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/typing_service.dart';
 import 'package:crypted_app/app/core/services/read_receipt_service.dart';
@@ -52,6 +55,7 @@ class ChatController extends GetxController {
   final RxString chatName = ''.obs;
   final RxString chatDescription = ''.obs;
   final RxInt memberCount = 0.obs;
+  final RxString groupImageUrl = ''.obs;
 
   String? blockingUserId;
   
@@ -265,7 +269,7 @@ class ChatController extends GetxController {
 
   void _updateChatInfo() {
     memberCount.value = members.length;
-    
+
     if (!isGroupChat.value && members.length == 2) {
       // Update 1-on-1 chat name with the other person's name
       final otherUser = members.firstWhere(
@@ -275,6 +279,31 @@ class ChatController extends GetxController {
       if (chatName.value.isEmpty || chatName.value == 'Chat') {
         chatName.value = otherUser.fullName ?? 'Chat';
       }
+    }
+
+    // Load group image URL if it's a group chat
+    if (isGroupChat.value) {
+      _loadGroupImageUrl();
+    }
+  }
+
+  /// Load group image URL from Firestore
+  Future<void> _loadGroupImageUrl() async {
+    try {
+      final chatRoomDoc = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(roomId)
+          .get();
+
+      if (chatRoomDoc.exists) {
+        final data = chatRoomDoc.data();
+        if (data != null && data['groupImageUrl'] != null) {
+          groupImageUrl.value = data['groupImageUrl'] as String;
+          print('✅ Loaded group image URL: ${groupImageUrl.value}');
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading group image URL: $e');
     }
   }
 
@@ -856,8 +885,7 @@ class ChatController extends GetxController {
           forwardedFrom: message.senderId,
         ) as Message;
 
-        // TODO: Implement actual forwarding to selected chat
-        // For now, simulate the forwarding process
+        // Forward message to selected chat
         try {
           await _forwardMessageToChat(forwardedMessage, result.uid!);
           _showToast('Message forwarded to ${result.fullName}');
@@ -1313,10 +1341,92 @@ class ChatController extends GetxController {
     readReceiptService.markMessagesAsRead(messageIds);
   }
 
+  /// Change group photo
+  Future<void> changeGroupPhoto({required bool fromCamera}) async {
+    try {
+      _showLoading();
+
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+
+      if (pickedFile == null) {
+        _hideLoading();
+        return;
+      }
+
+      // Upload image to Firebase Storage
+      final file = File(pickedFile.path);
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('group_photos')
+          .child('${roomId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      await storageRef.putFile(file);
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(roomId)
+          .update({'groupImageUrl': downloadUrl});
+
+      // Update local state
+      groupImageUrl.value = downloadUrl;
+
+      _hideLoading();
+      _showToast('Group photo updated successfully');
+      print('✅ Group photo updated: $downloadUrl');
+    } catch (e) {
+      _hideLoading();
+      print('❌ Error changing group photo: $e');
+      _showErrorToast('Failed to update group photo. Please try again.');
+    }
+  }
+
+  /// Remove group photo
+  Future<void> removeGroupPhoto() async {
+    try {
+      _showLoading();
+
+      // Delete from Storage if exists
+      if (groupImageUrl.value.isNotEmpty) {
+        try {
+          final storageRef =
+              FirebaseStorage.instance.refFromURL(groupImageUrl.value);
+          await storageRef.delete();
+        } catch (e) {
+          print('⚠️ Could not delete old group photo from storage: $e');
+        }
+      }
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(roomId)
+          .update({'groupImageUrl': FieldValue.delete()});
+
+      // Update local state
+      groupImageUrl.value = '';
+
+      _hideLoading();
+      _showToast('Group photo removed successfully');
+      print('✅ Group photo removed');
+    } catch (e) {
+      _hideLoading();
+      print('❌ Error removing group photo: $e');
+      _showErrorToast('Failed to remove group photo. Please try again.');
+    }
+  }
+
   @override
   void onClose() {
     messageController.dispose();
-    
+
     // Stop typing indicator
     typingService.stopTyping(roomId);
 

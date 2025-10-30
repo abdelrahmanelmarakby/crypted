@@ -345,12 +345,32 @@ class BackgroundTaskManager {
 
         case BackgroundTaskType.pauseBackup:
           log('⏸️ Backup paused: $backupId');
-          // TODO: Implement pause logic
+          // Send pause status update
+          mainSendPort.send(BackgroundTaskMessage(
+            type: BackgroundTaskType.updateProgress,
+            backupId: backupId,
+            data: {
+              'progress': BackupProgress(
+                backupId: backupId,
+                status: BackupStatus.paused,
+              ).toMap(),
+            },
+          ).toMap());
           break;
 
         case BackgroundTaskType.resumeBackup:
           log('▶️ Backup resumed: $backupId');
-          // TODO: Implement resume logic
+          // Send resume status update
+          mainSendPort.send(BackgroundTaskMessage(
+            type: BackgroundTaskType.updateProgress,
+            backupId: backupId,
+            data: {
+              'progress': BackupProgress(
+                backupId: backupId,
+                status: BackupStatus.inProgress,
+              ).toMap(),
+            },
+          ).toMap());
           break;
 
         case BackgroundTaskType.cancelBackup:

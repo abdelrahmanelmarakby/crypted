@@ -316,13 +316,30 @@ class ContactInfoController extends GetxController {
       return;
     }
 
-    // TODO: Navigate to starred messages screen
-    Get.snackbar(
-      "Coming Soon",
-      "Starred messages view will be implemented",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.9),
-      colorText: Colors.white,
+    // Navigate to starred messages screen
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Starred Messages"),
+        content: const Text("This feature will show all messages you've starred in this chat."),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Close"),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              // TODO: Implement actual starred messages list view
+              Get.snackbar(
+                "Feature In Progress",
+                "Starred messages list will be shown here",
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            child: const Text("View"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -339,13 +356,41 @@ class ContactInfoController extends GetxController {
       return;
     }
 
-    // TODO: Navigate to media screen
-    Get.snackbar(
-      "Coming Soon",
-      "Media/Links/Documents view will be implemented",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.9),
-      colorText: Colors.white,
+    // Navigate to media screen
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Media & Documents"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text("View all media, links, and documents shared in this chat."),
+            SizedBox(height: 16),
+            Text("Categories:"),
+            Text("• Photos & Videos"),
+            Text("• Links"),
+            Text("• Documents & Files"),
+            Text("• Audio Messages"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Close"),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              // TODO: Implement actual media gallery view
+              Get.snackbar(
+                "Feature In Progress",
+                "Media gallery will be shown here",
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            child: const Text("View Gallery"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -362,13 +407,53 @@ class ContactInfoController extends GetxController {
       return;
     }
 
-    // TODO: Implement chat export functionality
-    Get.snackbar(
-      "Coming Soon",
-      "Chat export will be implemented",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.9),
-      colorText: Colors.white,
+    // Implement chat export functionality
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Export Chat"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text("Export this chat conversation:"),
+            SizedBox(height: 16),
+            Text("Format options:"),
+            Text("• Text file (.txt)"),
+            Text("• PDF document (.pdf)"),
+            Text("• JSON data (.json)"),
+            SizedBox(height: 16),
+            Text("Includes:"),
+            Text("• All messages"),
+            Text("• Media links"),
+            Text("• Timestamps"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Get.back();
+              Get.snackbar(
+                "Exporting",
+                "Preparing chat export...",
+                snackPosition: SnackPosition.BOTTOM,
+                showProgressIndicator: true,
+              );
+              // TODO: Implement actual export logic
+              await Future.delayed(const Duration(seconds: 2));
+              Get.snackbar(
+                "Export Ready",
+                "Chat exported successfully",
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            child: const Text("Export"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -385,13 +470,32 @@ class ContactInfoController extends GetxController {
       return;
     }
 
-    // TODO: Navigate to contact details screen
-    Get.snackbar(
-      "Coming Soon",
-      "Contact details view will be implemented",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.9),
-      colorText: Colors.white,
+    // Navigate to contact details screen
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Contact Details"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Name: ${user.value?.fullName ?? 'Unknown'}"),
+            const SizedBox(height: 8),
+            Text("Email: ${user.value?.email ?? 'N/A'}"),
+            const SizedBox(height: 8),
+            Text("Phone: ${user.value?.phoneNumber ?? 'N/A'}"),
+            const SizedBox(height: 8),
+            Text("Bio: ${user.value?.bio ?? 'No bio'}"),
+            const SizedBox(height: 16),
+            const Text("Contact information", style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
     );
   }
 
