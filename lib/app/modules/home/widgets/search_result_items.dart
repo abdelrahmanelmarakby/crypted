@@ -255,7 +255,7 @@ class UserSearchResultItem extends StatelessWidget {
       // Show loading indicator
       Get.dialog(
         const Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator.adaptive(),
         ),
         barrierDismissible: false,
       );

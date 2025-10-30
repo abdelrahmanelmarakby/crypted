@@ -267,7 +267,7 @@ class PrivacyView extends GetView<PrivacyController> {
                   future: controller.getBlockedUsers(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator.adaptive());
                     }
 
                     if (snapshot.hasError) {
@@ -342,7 +342,7 @@ class PrivacyView extends GetView<PrivacyController> {
                   future: controller.getLiveLocationChats(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator.adaptive());
                     }
 
                     if (snapshot.hasError) {

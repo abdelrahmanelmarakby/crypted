@@ -22,7 +22,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
+          CircularProgressIndicator.adaptive(),
           SizedBox(height: Sizes.size10),
           Text(
             "Loading group information...",
@@ -98,7 +98,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                       SizedBox(
                         height: 100,
                         child: Center(
-                          child: CircularProgressIndicator(),
+                          child: CircularProgressIndicator.adaptive(),
                         ),
                       )
                     else

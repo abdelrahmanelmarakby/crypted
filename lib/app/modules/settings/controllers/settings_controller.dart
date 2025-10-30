@@ -1138,7 +1138,7 @@ class SettingsController extends GetxController {
       // Show loading
       Get.dialog(
         const Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator.adaptive(),
         ),
         barrierDismissible: false,
       );
