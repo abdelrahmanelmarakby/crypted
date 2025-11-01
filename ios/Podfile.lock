@@ -1222,6 +1222,8 @@ PODS:
   - CryptoSwift (1.8.4)
   - device_info_plus (0.0.1):
     - Flutter
+  - disk_space (0.0.1):
+    - Flutter
   - DKImagePickerController/Core (4.3.9):
     - DKImagePickerController/ImageDataManager
     - DKImagePickerController/Resource
@@ -1358,6 +1360,8 @@ PODS:
     - Flutter
     - ZIPFoundation
   - flutter_native_contact_picker (0.0.1):
+    - Flutter
+  - flutter_native_splash (2.4.3):
     - Flutter
   - flutter_ringtone_player (0.0.1):
     - Flutter
@@ -1595,6 +1599,7 @@ DEPENDENCIES:
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
+  - disk_space (from `.symlinks/plugins/disk_space/ios`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
@@ -1606,6 +1611,7 @@ DEPENDENCIES:
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_logs (from `.symlinks/plugins/flutter_logs/ios`)
   - flutter_native_contact_picker (from `.symlinks/plugins/flutter_native_contact_picker/ios`)
+  - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - flutter_ringtone_player (from `.symlinks/plugins/flutter_ringtone_player/ios`)
   - flutter_volume_controller (from `.symlinks/plugins/flutter_volume_controller/ios`)
   - fluttertoast (from `.symlinks/plugins/fluttertoast/ios`)
@@ -1694,6 +1700,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/connectivity_plus/ios"
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
+  disk_space:
+    :path: ".symlinks/plugins/disk_space/ios"
   file_picker:
     :path: ".symlinks/plugins/file_picker/ios"
   firebase_auth:
@@ -1716,6 +1724,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_logs/ios"
   flutter_native_contact_picker:
     :path: ".symlinks/plugins/flutter_native_contact_picker/ios"
+  flutter_native_splash:
+    :path: ".symlinks/plugins/flutter_native_splash/ios"
   flutter_ringtone_player:
     :path: ".symlinks/plugins/flutter_ringtone_player/ios"
   flutter_volume_controller:
@@ -1790,6 +1800,7 @@ SPEC CHECKSUMS:
   connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
   CryptoSwift: e64e11850ede528a02a0f3e768cec8e9d92ecb90
   device_info_plus: bf2e3232933866d73fe290f2942f2156cdd10342
+  disk_space: e94d34bbdf77954adfb39e60bde9cc5c7233eda6
   DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
   DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
   file_picker: b159e0c068aef54932bb15dc9fd1571818edaf49
@@ -1816,6 +1827,7 @@ SPEC CHECKSUMS:
   flutter_local_notifications: df98d66e515e1ca797af436137b4459b160ad8c9
   flutter_logs: 5d0dca26963e0f30b11a995a764744ef77d5d428
   flutter_native_contact_picker: 390f08cc44058386ee91499f05360d647dddfc66
+  flutter_native_splash: df59bb2e1421aa0282cb2e95618af4dcb0c56c29
   flutter_ringtone_player: 15eba85187230b87b2512f0e1b92225618bc03e7
   flutter_volume_controller: e4d5832f08008180f76e30faf671ffd5a425e529
   fluttertoast: 21eecd6935e7064cc1fcb733a4c5a428f3f24f0f

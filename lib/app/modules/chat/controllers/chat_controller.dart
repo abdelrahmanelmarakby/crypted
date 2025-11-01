@@ -1100,24 +1100,8 @@ class ChatController extends GetxController {
     } catch (e) {
       print('❌ Error fetching contacts: $e');
 
-      // Fallback to mock data if Firestore fails
-      return [
-        SocialMediaUser(
-          uid: 'fallback1',
-          fullName: 'John Doe',
-          email: 'john@example.com',
-        ),
-        SocialMediaUser(
-          uid: 'fallback2',
-          fullName: 'Jane Smith',
-          email: 'jane@example.com',
-        ),
-        SocialMediaUser(
-          uid: 'fallback3',
-          fullName: 'Alice Johnson',
-          email: 'alice@example.com',
-        ),
-      ];
+      // Return empty list on error - DO NOT use mock data in production
+      return [];
     }
   }
 

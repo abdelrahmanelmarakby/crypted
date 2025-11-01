@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:crypted_app/app/modules/settings/controllers/settings_controller.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/header_section_widget.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/backup_section_widget.dart';
+import 'package:crypted_app/app/modules/settings/views/widgets/enhanced_backup_settings_widget.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/settings_section_widget.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/progress_widgets.dart';
 
@@ -35,9 +36,13 @@ class SettingsView extends GetView<SettingsController> {
                   ),
                 ),
               ),
-              // Backup Section
+              // Backup Section (Original)
               SliverToBoxAdapter(
                 child: const BackupSectionWidget(),
+              ),
+              // Enhanced Backup Section (New)
+              SliverToBoxAdapter(
+                child: const EnhancedBackupSettingsWidget(),
               ),
               // Settings Section
               SliverToBoxAdapter(

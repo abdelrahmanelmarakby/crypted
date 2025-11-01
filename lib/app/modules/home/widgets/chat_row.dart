@@ -482,7 +482,7 @@ class _ChatRowState extends State<ChatRow> {
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       minWidth: 100,
-                      maxWidth: context.width * .8,
+                      maxWidth: context.width * .5,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,13 +610,11 @@ class _ChatRowState extends State<ChatRow> {
   /// Get the appropriate display name for the chat
   String _getChatDisplayName() {
     if (widget.chatRoom?.isGroupChat == true) {
-      // For group chats, show group name or fallback to member names
       final groupName = widget.chatRoom?.name;
       if (groupName != null && groupName.trim().isNotEmpty) {
         return groupName;
       }
 
-      // Try to generate group name from members
       final generatedName = _generateGroupName(widget.chatRoom?.members ?? []);
       if (generatedName != null && generatedName.trim().isNotEmpty) {
         return generatedName;
@@ -748,7 +746,6 @@ class _ChatRowState extends State<ChatRow> {
         .toList();
 
     if (otherMembers.isEmpty) {
-      // If no other members found, use all members (including current user)
       final allMembers = members
           .where((user) => user.fullName != null && user.fullName!.trim().isNotEmpty)
           .take(3)

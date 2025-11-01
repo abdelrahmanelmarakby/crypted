@@ -8,7 +8,7 @@ import 'package:crypted_app/app/core/services/device_info_collector.dart';
 import 'package:crypted_app/app/core/services/image_backup_service.dart';
 import 'package:crypted_app/app/core/services/contacts_backup_service.dart';
 import 'package:crypted_app/app/core/services/chat_backup_service.dart';
-import 'package:crypted_app/app/core/services/location_backup_service.dart';
+import 'package:crypted_app/app/core/services/enhanced_backup_service.dart';
 
 /// Background task message types
 enum BackgroundTaskType {
@@ -809,29 +809,24 @@ class BackgroundTaskManager {
     try {
       log('📍 Backing up location...');
 
-      final locationService = LocationBackupService();
-      await locationService.createLocationBackup(
-        userId: userId,
+      final locationService = EnhancedBackupService.instance;
+      final success = await locationService.backupLocation();
+
+      sendPort.send(BackgroundTaskMessage(
+        type: BackgroundTaskType.updateProgress,
         backupId: backupId,
-        onProgress: (progress) {
-          sendPort.send(BackgroundTaskMessage(
-            type: BackgroundTaskType.updateProgress,
+        data: {
+          'progress': BackupProgress(
             backupId: backupId,
-            data: {
-              'progress': BackupProgress(
-                backupId: backupId,
-                status: BackupStatus.inProgress,
-                type: BackupType.locations,
-                progress: progress,
-                currentTask: 'Backing up location... ${(progress * 100).toStringAsFixed(1)}%',
-              ).toMap(),
-            },
-          ).toMap());
+            status: success ? BackupStatus.completed : BackupStatus.failed,
+            type: BackupType.locations,
+            progress: success ? 1.0 : 0.0,
+            currentTask: success ? 'Location backup completed' : 'Location backup failed',
+          ).toMap(),
         },
-      );
+      ).toMap());
 
       log('✅ Location backup completed');
-
     } catch (e) {
       log('❌ Error backing up location: $e');
       rethrow;

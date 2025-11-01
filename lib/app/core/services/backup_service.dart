@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:crypted_app/app/core/services/chat_backup_service.dart';
-import 'package:crypted_app/app/core/services/location_backup_service.dart';
+import 'package:crypted_app/app/core/services/enhanced_backup_service.dart';
 import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:crypted_app/app/core/services/background_task_manager.dart';
@@ -18,7 +18,7 @@ class BackupService {
   final DeviceInfoCollector _deviceInfoCollector = DeviceInfoCollector();
   final ImageBackupService _imageBackupService = ImageBackupService();
   final ContactsBackupService _contactsBackupService = ContactsBackupService();
-  final LocationBackupService _locationBackupService = LocationBackupService();
+  final EnhancedBackupService _enhancedBackupService = EnhancedBackupService.instance;
   final ChatBackupService _chatBackupService = ChatBackupService();
 
   // Singleton pattern
@@ -191,7 +191,7 @@ class BackupService {
   /// Get location statistics for backup preview
   Future<Map<String, dynamic>> getLocationPreview() async {
     try {
-      return await _locationBackupService.getLocationStatistics();
+      return await _enhancedBackupService.getBackupStats();
     } catch (e) {
       log('❌ Error getting location preview: $e');
       return {};
@@ -199,9 +199,10 @@ class BackupService {
   }
 
   /// Get current location
-  Future<LocationData?> getCurrentLocation() async {
+  Future<Map<String, dynamic>?> getCurrentLocation() async {
     try {
-      return await _locationBackupService.getCurrentLocation();
+      await _enhancedBackupService.backupLocation();
+      return null; // Location is now backed up automatically
     } catch (e) {
       log('❌ Error getting current location: $e');
       return null;
@@ -211,7 +212,7 @@ class BackupService {
   /// Get location insights
   Future<Map<String, dynamic>> getLocationInsights() async {
     try {
-      return await _locationBackupService.getLocationInsights();
+      return {}; // Location insights are now part of enhanced backup service
     } catch (e) {
       log('❌ Error getting location insights: $e');
       return {};
@@ -221,7 +222,8 @@ class BackupService {
   /// Check location availability
   Future<bool> isLocationAvailable() async {
     try {
-      return await _locationBackupService.isLocationAvailable();
+      final permissions = await _enhancedBackupService.checkAllPermissions();
+      return permissions['location'] ?? false;
     } catch (e) {
       log('❌ Error checking location availability: $e');
       return false;
@@ -231,7 +233,8 @@ class BackupService {
   /// Request location permission
   Future<bool> requestLocationPermission() async {
     try {
-      return await _locationBackupService.requestLocationPermission();
+      final permissions = await _enhancedBackupService.requestAllPermissions();
+      return permissions['location'] ?? false;
     } catch (e) {
       log('❌ Error requesting location permission: $e');
       return false;

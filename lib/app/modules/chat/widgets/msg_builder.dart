@@ -128,8 +128,31 @@ class MessageBuilder extends GetView<ChatController> {
                     ),
                     padding: const EdgeInsets.all(Sizes.size12),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Forwarded message indicator
+                        if (messageModel.isForwarded)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: Sizes.size8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.forward_rounded,
+                                  size: Sizes.size14,
+                                  color: ColorsManager.grey.withOpacity(0.7),
+                                ),
+                                const SizedBox(width: Sizes.size4),
+                                Text(
+                                  'Forwarded',
+                                  style: StylesManager.regular(
+                                    fontSize: FontSize.xSmall,
+                                    color: ColorsManager.grey.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         buildMessageContent(context, messageModel),
                         const SizedBox(height: Sizes.size4),
                         Row(

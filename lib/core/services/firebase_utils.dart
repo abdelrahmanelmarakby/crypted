@@ -190,4 +190,41 @@ class FirebaseUtils {
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
+
+  // 🖼️ رفع صورة المجموعة + يرجّع URL
+  static Future<String?> uploadGroupPhoto(String path) async {
+    try {
+      log("📸 Starting group photo upload...");
+      log("  Path: $path");
+
+      // Verify file exists
+      final file = File(path);
+      if (!await file.exists()) {
+        log("❌ Group photo file does not exist at path: $path");
+        return null;
+      }
+
+      final fileSize = await file.length();
+      log("  File size: ${formatFileSize(fileSize)}");
+
+      final id = generateUniqueId("group_photo", null);
+      log("  Uploading to Firebase Storage...");
+
+      final url = await _uploadFile(file, "group_photos", id);
+
+      if (url == null) {
+        log("❌ Failed to get download URL for group photo");
+        return null;
+      }
+
+      log("✅ Group photo uploaded successfully");
+      log("  Download URL: $url");
+
+      return url;
+    } catch (e, stackTrace) {
+      log("❌ Error uploading group photo: $e");
+      log("Stack trace: $stackTrace");
+      return null;
+    }
+  }
 }

@@ -1,8 +1,6 @@
 import 'dart:io';
 
-import 'package:avatar_stack/animated_avatar_stack.dart';
 import 'package:bot_toast/bot_toast.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -184,41 +182,61 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: ColorsManager.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            ColorsManager.primary.withOpacity(0.15),
+                            ColorsManager.primary.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ColorsManager.primary.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Icon(
-                        Icons.people,
+                        Icons.chat_bubble_rounded,
                         color: ColorsManager.primary,
-                        size: 24,
+                        size: 26,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            Constants.kSelectUser.tr,
+                            'New Chat',
                             style: StylesManager.bold(
-                              fontSize: 22,
+                              fontSize: 24,
                               color: Colors.black,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Obx(() {
                             final selectedCount = controller.selectedUsers.length;
-                            return Text(
-                              selectedCount > 1 
-                                ? '$selectedCount users selected for group chat'
-                                : selectedCount == 1 
-                                  ? '1 user selected for private chat'
-                                  : Constants.kSelectUserToStartChat.tr,
-                              style: StylesManager.regular(
-                                fontSize: FontSize.small,
-                                color: ColorsManager.grey,
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: Text(
+                                selectedCount > 1
+                                  ? '$selectedCount members selected'
+                                  : selectedCount == 1
+                                    ? 'Start private conversation'
+                                    : 'Select people to chat with',
+                                key: ValueKey<int>(selectedCount),
+                                style: StylesManager.regular(
+                                  fontSize: FontSize.small,
+                                  color: selectedCount > 0
+                                    ? ColorsManager.primary.withOpacity(0.8)
+                                    : ColorsManager.grey,
+                                ),
                               ),
                             );
                           }),
@@ -230,54 +248,63 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
 
                 const SizedBox(height: 20),
 
-                // Search field with Apple-style design
+                // Search field with enhanced design
                 Container(
                   decoration: BoxDecoration(
-                    color: ColorsManager.lightGrey.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    color: ColorsManager.offWhite,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: ColorsManager.lightGrey.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: TextField(
                     onChanged: (value) {
                       controller.searchQuery.value = value;
                     },
-                    style: StylesManager.regular(
+                    style: StylesManager.medium(
                       fontSize: FontSize.medium,
                       color: Colors.black,
                     ),
                     decoration: InputDecoration(
-                      fillColor: ColorsManager.offWhite,
-                      hintText: 'Search users...',
+                      hintText: 'Search by name or email...',
                       hintStyle: StylesManager.regular(
                         fontSize: FontSize.medium,
-                        color: ColorsManager.grey.withOpacity(0.8),
-
+                        color: ColorsManager.grey.withOpacity(0.6),
                       ),
                       prefixIcon: Padding(
-                        padding: const EdgeInsets.only(left: 12, right: 8),
+                        padding: const EdgeInsets.only(left: 14, right: 10),
                         child: Icon(
-                          Icons.search,
-                          color: ColorsManager.grey.withOpacity(0.8),
-                          size: 20,
+                          Icons.search_rounded,
+                          color: ColorsManager.grey.withOpacity(0.7),
+                          size: 22,
                         ),
                       ),
                       suffixIcon: Obx(() {
                         return controller.searchQuery.value.isNotEmpty
                             ? Padding(
-                                padding: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.only(right: 10),
                                 child: IconButton(
                                   onPressed: () {
                                     controller.searchQuery.value = '';
                                   },
                                   icon: Container(
-                                    padding: const EdgeInsets.all(4),
+                                    padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
-                                      color: ColorsManager.grey.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: ColorsManager.grey.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Icon(
-                                      Icons.close,
+                                      Icons.close_rounded,
                                       color: ColorsManager.grey,
-                                      size: 14,
+                                      size: 16,
                                     ),
                                   ),
                                 ),
@@ -286,8 +313,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       }),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+                        horizontal: 18,
+                        vertical: 16,
                       ),
                     ),
                   ),
@@ -298,65 +325,158 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
 
           // Selected users preview and group creation form (when multiple selected)
           Obx(() {
-            
+
             if (controller.selectedUsers.isEmpty) return const SizedBox.shrink();
-            
+
             final isGroupChat = controller.selectedUsers.length > 1;
-            
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    ColorsManager.primary.withOpacity(0.03),
+                    ColorsManager.primary.withOpacity(0.01),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: ColorsManager.primary.withOpacity(0.15),
+                  width: 1.5,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                    // Selected users avatars
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    height: isGroupChat ? 30 : 20,
-                    child: AnimatedAvatarStack(
-                      height: isGroupChat ? 30 : 20,
-                      avatars: [
-                        for (var user in controller.selectedUsers)
-                          if (user.imageUrl?.isNotEmpty == true)
-                            CachedNetworkImageProvider(user.imageUrl!)
-                          else
-                            // Fallback for users without images
-                            const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                      ]
-                    ),
-                  ),
-                  
-                  // Header text
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: Text(
-                      isGroupChat ? 'Create Group Chat' : 'Selected User',
-                      key: ValueKey<bool>(isGroupChat),
-                      style: StylesManager.medium(
-                        fontSize: FontSize.small,
-                        color: ColorsManager.grey,
+                  Row(
+                    children: [
+                      // Selected users avatars - Custom stack implementation
+                      if (controller.selectedUsers.isNotEmpty)
+                        SizedBox(
+                          height: 35,
+                          width: controller.selectedUsers.length > 1
+                            ? (20 + (controller.selectedUsers.length.clamp(1, 4) - 1) * 16).toDouble()
+                            : 35,
+                          child: Stack(
+                            children: List.generate(
+                              controller.selectedUsers.length.clamp(1, 4),
+                              (index) {
+                                final user = controller.selectedUsers[index];
+                                return Positioned(
+                                  left: (index * 16).toDouble(),
+                                  child: Container(
+                                    width: 35,
+                                    height: 35,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: user.imageUrl?.isNotEmpty == true
+                                        ? AppCachedNetworkImage(
+                                            imageUrl: user.imageUrl!,
+                                            width: 35,
+                                            height: 35,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            color: ColorsManager.primary.withOpacity(0.1),
+                                            child: Center(
+                                              child: Text(
+                                                (user.fullName?.isNotEmpty == true
+                                                  ? user.fullName!.substring(0, 1)
+                                                  : '?').toUpperCase(),
+                                                style: StylesManager.bold(
+                                                  fontSize: FontSize.small,
+                                                  color: ColorsManager.primary,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 12),
+                      // Header text
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 300),
+                              style: StylesManager.semiBold(
+                                fontSize: FontSize.medium,
+                                color: Colors.black87,
+                              ),
+                              child: Text(
+                                isGroupChat ? 'Group Chat Setup' : 'Private Chat',
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 300),
+                              style: StylesManager.regular(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.grey.withOpacity(0.8),
+                              ),
+                              child: Text(
+                                isGroupChat
+                                  ? 'Customize your group'
+                                  : 'Ready to start chatting',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   
                   // Group creation form (only for group chats)
                   if (isGroupChat) ...[
-                    // Group name input with staggered animation
+                    // Group name input with enhanced design
                     AnimatedOpacity(
                       opacity: isGroupChat ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 300),
                       child: AnimatedSlide(
                         offset: isGroupChat ? Offset.zero : const Offset(0, -0.1),
                         duration: const Duration(milliseconds: 300),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
+                        child: Container(
                           decoration: BoxDecoration(
-                            color: ColorsManager.offWhite,
-                            borderRadius: BorderRadius.circular(12),
-                          
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: ColorsManager.lightGrey.withOpacity(0.3),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
                           ),
                           child: TextField(
+                            controller: controller.groupNameController,
                             onChanged: (value) {
                               controller.groupName.value = value;
                             },
@@ -365,52 +485,55 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               color: Colors.black,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'Enter group name...',
+                              hintText: 'Group name (required)',
                               hintStyle: StylesManager.regular(
                                 fontSize: FontSize.medium,
-                                color: ColorsManager.grey.withOpacity(0.6),
+                                color: ColorsManager.grey.withOpacity(0.5),
                               ),
                               prefixIcon: Padding(
-                                padding: const EdgeInsets.only(left: 16, right: 12),
-                                child: AnimatedSwitcher(
+                                padding: const EdgeInsets.only(left: 14, right: 10),
+                                child: Obx(() => AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 200),
                                   child: Icon(
-                                    controller.groupName.value.isNotEmpty ? Icons.group : Icons.group_outlined,
+                                    controller.groupName.value.isNotEmpty
+                                      ? Icons.group_rounded
+                                      : Icons.group_outlined,
                                     color: controller.groupName.value.isNotEmpty
                                         ? ColorsManager.primary
-                                        : ColorsManager.primary.withOpacity(0.7),
-                                    size: 20,
+                                        : ColorsManager.grey.withOpacity(0.6),
+                                    size: 22,
                                     key: ValueKey<bool>(controller.groupName.value.isNotEmpty),
                                   ),
-                                ),
+                                )),
                               ),
-                              fillColor: ColorsManager.offWhite,
                               suffixIcon: Obx(() {
                                 return controller.groupName.value.isNotEmpty
                                     ? Padding(
-                                        padding: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.only(right: 10),
                                         child: IconButton(
                                           onPressed: () {
+                                            controller.groupNameController.clear();
                                             controller.groupName.value = '';
                                           },
-                                          icon: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 200),
-                                            padding: const EdgeInsets.all(4),
-
+                                          icon: Container(
+                                            padding: const EdgeInsets.all(5),
                                             decoration: BoxDecoration(
-                                              
-                                              color: ColorsManager.primary.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(8),
+                                              color: ColorsManager.grey.withOpacity(0.15),
+                                              borderRadius: BorderRadius.circular(20),
                                             ),
-                                            
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              color: ColorsManager.grey,
+                                              size: 16,
+                                            ),
                                           ),
                                         ),
                                       )
                                     : const SizedBox.shrink();
                               }),
-                             
+                              border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
+                                horizontal: 18,
                                 vertical: 16,
                               ),
                             ),
@@ -418,214 +541,190 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 12),
                     
-                    const SizedBox(height: 16),
-                    
-                    // Group photo selection with staggered animation
+                    // Group photo selection with enhanced design
                     AnimatedOpacity(
                       opacity: isGroupChat ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 300),
                       child: AnimatedSlide(
                         offset: isGroupChat ? Offset.zero : const Offset(0, -0.1),
                         duration: const Duration(milliseconds: 400),
-                        child: Row(
-                          children: [
-                            // Photo preview/upload area
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  controller.pickGroupPhoto();
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: ColorsManager.lightGrey.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: controller.groupPhotoUrl.value.isNotEmpty
-                                          ? ColorsManager.primary.withOpacity(0.4)
-                                          : ColorsManager.primary.withOpacity(0.2),
-                                      width: 2,
-                                      style: BorderStyle.solid,
-                                    ),
-                                  ),
-                                  child: Obx(() {
-                                    final photoUrl = controller.groupPhotoUrl.value;
-
-                                    // Show loading state
-                                    if (controller.isLoadingGroupPhoto.value) {
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          color: ColorsManager.lightGrey.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                        child: const Center(
-                                          child: SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-
-                                    return Row(
-                                      children: [
-                                        const SizedBox(width: 16),
-                                        // Photo or placeholder
-                                        Container(
-                                          width: 60,
-                                          height: 60,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(
-                                              color: photoUrl.isNotEmpty
-                                                  ? ColorsManager.primary.withOpacity(0.5)
-                                                  : ColorsManager.primary.withOpacity(0.3),
-                                              width: photoUrl.isNotEmpty ? 2 : 2,
-                                            ),
-                                          ),
-                                          child: GestureDetector(
-                                            onTap: photoUrl.isNotEmpty ? () {
-                                              // Show full screen preview on tap when photo is selected
-                                              _showPhotoPreview(context, photoUrl);
-                                            } : () {
-                                              controller.pickGroupPhoto();
-                                            },
-                                            onLongPress: photoUrl.isNotEmpty ? () {
-                                              // Show remove confirmation on long press
-                                              _showRemovePhotoDialog(context);
-                                            } : null,
-                                            child: Stack(
-                                              children: [
-                                                photoUrl.isNotEmpty
-                                                    ? ClipRRect(
-                                                        borderRadius: BorderRadius.circular(10),
-                                                        child: photoUrl.startsWith('http')
-                                                            ? AppCachedNetworkImage(
-                                                                imageUrl: photoUrl,
-                                                                height: 56,
-                                                                width: 56,
-                                                                fit: BoxFit.cover,
-                                                              )
-                                                            : Image.file(
-                                                                File(photoUrl),
-                                                                height: 56,
-                                                                width: 56,
-                                                                fit: BoxFit.cover,
-                                                                errorBuilder: (context, error, stackTrace) {
-                                                                  return Container(
-                                                                    color: ColorsManager.lightGrey.withOpacity(0.1),
-                                                                    child: Icon(
-                                                                      Icons.broken_image,
-                                                                      color: ColorsManager.grey,
-                                                                      size: 24,
-                                                                    ),
-                                                                  );
-                                                                },
-                                                              ),
-                                                      )
-                                                    : Center(
-                                                      child: Icon(
-                                                              Iconsax.image_copy,
-                                                              color: ColorsManager.primary.withOpacity(0.7),
-                                                              size: 24,
-                                                            ),
-                                                    ),
-
-                                                // Remove button overlay (only when photo is selected)
-                                                if (photoUrl.isNotEmpty)
-                                                  Positioned(
-                                                    top: 2,
-                                                    right: 2,
-                                                    child: GestureDetector(
-                                                      onTap: () {
-                                                        _showRemovePhotoDialog(context);
-                                                      },
-                                                      child: Container(
-                                                        padding: const EdgeInsets.all(2),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.red.withOpacity(0.8),
-                                                          shape: BoxShape.circle,
-                                                        ),
-                                                        child: const Icon(
-                                                          Icons.close,
-                                                          color: Colors.white,
-                                                          size: 12,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-
-                                                // Selected indicator
-                                                if (photoUrl.isNotEmpty)
-                                                  Positioned(
-                                                    bottom: 2,
-                                                    right: 2,
-                                                    child: Container(
-                                                      padding: const EdgeInsets.all(2),
-                                                      decoration: BoxDecoration(
-                                                        color: ColorsManager.primary,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.check,
-                                                        color: Colors.white,
-                                                        size: 10,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(width: 16),
-
-                                        // Group photo info
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'Group Photo',
-                                                style: StylesManager.medium(
-                                                  fontSize: FontSize.small,
-                                                  color: ColorsManager.grey,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                photoUrl.isNotEmpty
-                                                    ? 'Photo selected • Tap to preview'
-                                                    : 'Tap to select group photo',
-                                                style: StylesManager.regular(
-                                                  fontSize: FontSize.small,
-                                                  color: photoUrl.isNotEmpty
-                                                      ? ColorsManager.primary.withOpacity(0.8)
-                                                      : ColorsManager.grey.withOpacity(0.8),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }),
-                                ),
+                        child: GestureDetector(
+                          onTap: () {
+                            controller.pickGroupPhoto();
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: controller.groupPhotoUrl.value.isNotEmpty
+                                    ? ColorsManager.primary.withOpacity(0.3)
+                                    : ColorsManager.lightGrey.withOpacity(0.3),
+                                width: 1,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.02),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
                             ),
-                          ],
+                            child: Obx(() {
+                              final photoUrl = controller.groupPhotoUrl.value;
+
+                              // Show loading state
+                              if (controller.isLoadingGroupPhoto.value) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 28,
+                                        height: 28,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            ColorsManager.primary,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Loading...',
+                                        style: StylesManager.regular(
+                                          fontSize: FontSize.small,
+                                          color: ColorsManager.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  children: [
+                                    // Photo or placeholder
+                                    Container(
+                                      width: 62,
+                                      height: 62,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(14),
+                                        color: photoUrl.isNotEmpty
+                                          ? Colors.transparent
+                                          : ColorsManager.primary.withOpacity(0.05),
+                                        border: Border.all(
+                                          color: photoUrl.isNotEmpty
+                                              ? ColorsManager.primary.withOpacity(0.2)
+                                              : ColorsManager.lightGrey.withOpacity(0.3),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: photoUrl.isNotEmpty
+                                          ? (photoUrl.startsWith('http')
+                                              ? AppCachedNetworkImage(
+                                                  imageUrl: photoUrl,
+                                                  height: 62,
+                                                  width: 62,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Image.file(
+                                                  File(photoUrl),
+                                                  height: 62,
+                                                  width: 62,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      color: ColorsManager.lightGrey.withOpacity(0.1),
+                                                      child: Icon(
+                                                        Icons.broken_image_rounded,
+                                                        color: ColorsManager.grey,
+                                                        size: 28,
+                                                      ),
+                                                    );
+                                                  },
+                                                ))
+                                          : Center(
+                                              child: Icon(
+                                                Icons.add_photo_alternate_outlined,
+                                                color: ColorsManager.primary.withOpacity(0.6),
+                                                size: 30,
+                                              ),
+                                            ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 16),
+
+                                    // Group photo info
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Group Photo',
+                                            style: StylesManager.semiBold(
+                                              fontSize: FontSize.medium,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            photoUrl.isNotEmpty
+                                                ? 'Tap to change or remove'
+                                                : 'Optional • Tap to add',
+                                            style: StylesManager.regular(
+                                              fontSize: FontSize.small,
+                                              color: ColorsManager.grey.withOpacity(0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Action button
+                                    if (photoUrl.isNotEmpty)
+                                      IconButton(
+                                        onPressed: () {
+                                          _showRemovePhotoDialog(context);
+                                        },
+                                        icon: Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: Colors.red.shade400,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: ColorsManager.grey.withOpacity(0.4),
+                                        size: 24,
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ),
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 8),
                   ],
                   
                 
@@ -887,17 +986,44 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
             final hasValidGroupName = !isGroupChat || (controller.groupName.value.trim().isNotEmpty);
 
             return Container(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-              child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0.0),
+                    Colors.white.withOpacity(0.8),
+                    Colors.white,
+                  ],
+                ),
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
                 width: double.infinity,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: hasValidGroupName ? ColorsManager.primary : ColorsManager.grey.withOpacity(0.5),
+                  gradient: hasValidGroupName
+                    ? LinearGradient(
+                        colors: [
+                          ColorsManager.primary,
+                          ColorsManager.primary.withOpacity(0.85),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : LinearGradient(
+                        colors: [
+                          ColorsManager.grey.withOpacity(0.3),
+                          ColorsManager.grey.withOpacity(0.25),
+                        ],
+                      ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: hasValidGroupName ? [
                     BoxShadow(
-                      color: ColorsManager.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: ColorsManager.primary.withOpacity(0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ] : null,
                 ),
@@ -922,31 +1048,43 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       }
                       Get.back();
                     } : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 250),
                             child: Icon(
-                              selectedUsers.length > 1 ? Icons.group_add : Icons.chat,
-                              color: hasValidGroupName ? Colors.white : Colors.white.withOpacity(0.7),
-                              size: 20,
+                              selectedUsers.length > 1
+                                ? Icons.group_add_rounded
+                                : Icons.chat_bubble_rounded,
+                              color: hasValidGroupName
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.6),
+                              size: 22,
                               key: ValueKey<bool>(hasValidGroupName),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          
-                          Text(
-                            isGroupChat
-                                ? (hasValidGroupName
-                                    ? 'Create Group Chat (${selectedUsers.length})'
-                                    : 'Enter group name to continue')
-                                : 'Start Private Chat',
-                            style: StylesManager.bold(
-                              fontSize: FontSize.medium,
-                              color: hasValidGroupName ? Colors.white : Colors.white.withOpacity(0.7),
+                          const SizedBox(width: 10),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            child: Text(
+                              isGroupChat
+                                  ? (hasValidGroupName
+                                      ? 'Create Group (${selectedUsers.length} members)'
+                                      : 'Enter group name to continue')
+                                  : 'Start Private Chat',
+                              key: ValueKey<String>(
+                                isGroupChat
+                                  ? (hasValidGroupName ? 'valid' : 'invalid')
+                                  : 'private',
+                              ),
+                              style: StylesManager.bold(
+                                fontSize: FontSize.medium,
+                                color: hasValidGroupName
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.6),
+                              ),
                             ),
                           ),
                         ],

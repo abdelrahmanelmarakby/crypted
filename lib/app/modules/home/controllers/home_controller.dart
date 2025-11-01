@@ -5,6 +5,7 @@ import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
+import 'package:crypted_app/core/services/firebase_utils.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
@@ -47,6 +48,7 @@ class HomeController extends GetxController {
 
   // Group chat creation properties
   final RxString groupName = ''.obs;
+  final TextEditingController groupNameController = TextEditingController();
   final RxString groupPhotoUrl = ''.obs;
   final RxBool isLoadingGroupPhoto = false.obs;
 
@@ -248,7 +250,27 @@ class HomeController extends GetxController {
       print('👤 Current User: ${currentUser.fullName} (${currentUser.uid})');
       print('👥 Group Members: ${selectedUsersList.length}');
 
-      // Step 1: Start group chat session using ChatSessionManager
+      // Step 1: Upload group photo to Firebase Storage if provided
+      String? uploadedPhotoUrl;
+      if (groupPhotoUrl.value.isNotEmpty && !groupPhotoUrl.value.startsWith('http')) {
+        print('📸 Uploading group photo...');
+        isLoadingGroupPhoto.value = true;
+
+        uploadedPhotoUrl = await FirebaseUtils.uploadGroupPhoto(groupPhotoUrl.value);
+
+        if (uploadedPhotoUrl != null) {
+          print('✅ Group photo uploaded: $uploadedPhotoUrl');
+          groupPhotoUrl.value = uploadedPhotoUrl; // Update to use the uploaded URL
+        } else {
+          print('⚠️ Failed to upload group photo, continuing without it');
+        }
+
+        isLoadingGroupPhoto.value = false;
+      } else if (groupPhotoUrl.value.startsWith('http')) {
+        uploadedPhotoUrl = groupPhotoUrl.value; // Already uploaded
+      }
+
+      // Step 2: Start group chat session using ChatSessionManager
       final sessionStarted = ChatSessionManager.instance.startGroupChatSession(
         participants: allMembers,
         groupName: groupName.value.isNotEmpty ? groupName.value : _generateGroupName(selectedUsersList),
@@ -259,10 +281,10 @@ class HomeController extends GetxController {
         throw Exception('Failed to start group chat session');
       }
 
-      // Step 2: Initialize ChatService with members
+      // Step 3: Initialize ChatService with members
       ChatService.instance.initializeChatDataSource(allMembers);
 
-      // Step 3: Create chat room using ChatService
+      // Step 4: Create chat room using ChatService
       final chatRoom = await ChatService.instance.createChatRoom(
         members: allMembers,
         isGroupChat: true,
@@ -275,18 +297,20 @@ class HomeController extends GetxController {
         throw Exception('Failed to create group chat room');
       }
 
-      // Step 2.5: Update chat room with group photo if provided
-      if (groupPhotoUrl.value.isNotEmpty) {
+      // Step 5: Update chat room with group photo if uploaded
+      if (uploadedPhotoUrl != null && uploadedPhotoUrl.isNotEmpty) {
+        print('🖼️ Updating chat room with group photo...');
         await ChatService.instance.updateChatRoomInfo(
           roomId: chatRoom.id!,
-          groupImageUrl: groupPhotoUrl.value,
+          groupImageUrl: uploadedPhotoUrl,
         );
+        print('✅ Chat room updated with group photo');
       }
 
-      // Step 3.5: Clear group creation properties
+      // Step 6: Clear group creation properties
       _clearGroupCreationProperties();
 
-      // Step 4: Navigate to chat screen
+      // Step 7: Navigate to chat screen
       await _navigateToChat(
         roomId: chatRoom.id!,
         members: allMembers,
@@ -298,6 +322,7 @@ class HomeController extends GetxController {
       _showErrorToast('Failed to create group chat. Please try again.');
     } finally {
       isCreatingChat.value = false;
+      isLoadingGroupPhoto.value = false;
     }
   }
 
@@ -337,6 +362,7 @@ class HomeController extends GetxController {
   /// Clear all selected users
   void clearUserSelection() {
     selectedUsers.clear();
+    _clearGroupCreationProperties();
   }
 
   /// Get count of selected users
@@ -386,6 +412,7 @@ class HomeController extends GetxController {
   /// Clear group creation properties
   void _clearGroupCreationProperties() {
     groupName.value = '';
+    groupNameController.clear();
     groupPhotoUrl.value = '';
   }
 
@@ -402,6 +429,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     searchController.dispose();
+    groupNameController.dispose();
     super.onClose();
   }
 

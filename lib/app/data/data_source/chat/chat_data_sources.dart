@@ -200,7 +200,7 @@ class ChatDataSources {
         lastSender: userId,
         lastChat: DateTime.now().toIso8601String(),
         isGroupChat: isGroupChat,
-        name: finalGroupName.isNotEmpty ? finalGroupName : null, // Store null if no name
+        name: finalGroupName, // Always store the group name (even if empty string)
         description: groupDescription,
       );
       
