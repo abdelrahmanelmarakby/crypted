@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Box, CircularProgress } from '@mui/material';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,18 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, loading, isAuthenticated } = useAuth();
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner fullScreen size="large" />;
   }
 
   if (!isAuthenticated) {

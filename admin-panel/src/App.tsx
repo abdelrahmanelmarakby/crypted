@@ -11,14 +11,13 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import { useAuth } from './hooks/useAuth';
 
-// Placeholder pages (to be implemented)
-const Chats = () => <div>Chats Page - Coming Soon</div>;
-const Stories = () => <div>Stories Page - Coming Soon</div>;
-const Reports = () => <div>Reports Page - Coming Soon</div>;
-const Calls = () => <div>Calls Page - Coming Soon</div>;
-const Analytics = () => <div>Analytics Page - Coming Soon</div>;
-const Notifications = () => <div>Notifications Page - Coming Soon</div>;
-const Settings = () => <div>Settings Page - Coming Soon</div>;
+import Stories from './pages/Stories';
+import Reports from './pages/Reports';
+import Chats from './pages/Chats';
+import Calls from './pages/Calls';
+import Analytics from './pages/Analytics';
+import Notifications from './pages/Notifications';
+import Settings from './pages/Settings';
 
 const drawerWidth = 240;
 

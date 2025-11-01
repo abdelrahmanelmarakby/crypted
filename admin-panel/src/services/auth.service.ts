@@ -73,10 +73,11 @@ class AuthService {
               email: firebaseUser.email || '',
             });
           } else {
+            console.warn('User not found in admin_users collection');
             callback(null);
           }
         } catch (error) {
-          console.error('Error fetching admin user:', error);
+          console.error('Error in auth state change:', error);
           callback(null);
         }
       } else {
