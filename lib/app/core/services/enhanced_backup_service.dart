@@ -205,28 +205,73 @@ class EnhancedBackupService {
     final permissionStatus = <String, bool>{};
 
     try {
-      // Location permission
-      final locationStatus = await Permission.location.request();
-      permissionStatus['location'] = locationStatus.isGranted;
-
-      // Contacts permission
-      permissionStatus['contacts'] = await FlutterContacts.requestPermission();
-
-      // Photos permission
-      final photoPermission = await PhotoManager.requestPermissionExtend();
-      permissionStatus['photos'] = photoPermission.isAuth;
-
-      // Storage permission (for Android)
-      if (Platform.isAndroid) {
-        final storageStatus = await Permission.storage.request();
-        permissionStatus['storage'] = storageStatus.isGranted;
-      } else {
-        permissionStatus['storage'] = true;
+      // Location permission with timeout
+      try {
+        final locationStatus = await Permission.location.request().timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => Permission.location.status.then((value) => value),
+        );
+        permissionStatus['location'] = await locationStatus.isGranted;
+        log('📍 Location permission: ${permissionStatus['location']}');
+      } catch (e) {
+        log('⚠️ Location permission error: $e');
+        permissionStatus['location'] = false;
       }
 
-      // Notification permission (optional)
-      final notificationStatus = await Permission.notification.request();
-      permissionStatus['notifications'] = notificationStatus.isGranted;
+      // Contacts permission with timeout
+      try {
+        permissionStatus['contacts'] = await FlutterContacts.requestPermission().timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => false,
+        );
+        log('👥 Contacts permission: ${permissionStatus['contacts']}');
+      } catch (e) {
+        log('⚠️ Contacts permission error: $e');
+        permissionStatus['contacts'] = false;
+      }
+
+      // Photos permission with timeout
+      try {
+        final photoPermission = await PhotoManager.requestPermissionExtend().timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => PermissionState.denied,
+        );
+        permissionStatus['photos'] = photoPermission.isAuth;
+        log('📸 Photos permission: ${permissionStatus['photos']}');
+      } catch (e) {
+        log('⚠️ Photos permission error: $e');
+        permissionStatus['photos'] = false;
+      }
+
+      // Storage permission (for Android) with timeout
+      if (Platform.isAndroid) {
+        try {
+          final storageStatus = await Permission.storage.request().timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => Permission.storage.status.then((value) => value),
+          );
+          permissionStatus['storage'] = await storageStatus.isGranted;
+          log('💾 Storage permission: ${permissionStatus['storage']}');
+        } catch (e) {
+          log('⚠️ Storage permission error: $e');
+          permissionStatus['storage'] = false;
+        }
+      } else {
+        permissionStatus['storage'] = true; // iOS handles this differently
+      }
+
+      // Notification permission (optional) with timeout
+      try {
+        final notificationStatus = await Permission.notification.request().timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => Permission.notification.status.then((value) => value),
+        );
+        permissionStatus['notifications'] = await notificationStatus.isGranted;
+        log('🔔 Notification permission: ${permissionStatus['notifications']}');
+      } catch (e) {
+        log('⚠️ Notification permission error: $e');
+        permissionStatus['notifications'] = false;
+      }
 
     } catch (e) {
       log('❌ Error requesting permissions: $e');

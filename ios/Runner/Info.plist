@@ -58,5 +58,22 @@
 	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة حتى في الخلفية</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول إلى معرض الصور لإرسال الصور ومقاطع الفيديو</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>نحتاج إذن حفظ الصور ومقاطع الفيديو إلى معرض الصور</string>
+	<key>NSContactsUsageDescription</key>
+	<string>نحتاج الوصول إلى جهات الاتصال لمساعدتك في العثور على الأصدقاء</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>نحتاج الوصول إلى الشبكة المحلية للمكالمات الصوتية والفيديو</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>نستخدم البيانات لتحسين تجربتك في التطبيق</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.rasad.sa.crypted.backup</string>
+		<string>com.rasad.sa.crypted.refresh</string>
+	</array>
 </dict>
 </plist>

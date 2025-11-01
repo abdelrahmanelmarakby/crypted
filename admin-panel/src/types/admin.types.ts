@@ -68,3 +68,36 @@ export interface DashboardStats {
   storageUsed: number;
   userGrowth: number;
 }
+
+export const DEFAULT_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
+  [AdminRole.SUPER_ADMIN]: {
+    canManageUsers: true,
+    canDeleteContent: true,
+    canBanUsers: true,
+    canManageAdmins: true,
+    canViewAnalytics: true,
+    canSendNotifications: true,
+    canManageSettings: true,
+    canAccessAuditLogs: true,
+  },
+  [AdminRole.MODERATOR]: {
+    canManageUsers: true,
+    canDeleteContent: true,
+    canBanUsers: false,
+    canManageAdmins: false,
+    canViewAnalytics: true,
+    canSendNotifications: false,
+    canManageSettings: false,
+    canAccessAuditLogs: false,
+  },
+  [AdminRole.SUPPORT]: {
+    canManageUsers: false,
+    canDeleteContent: false,
+    canBanUsers: false,
+    canManageAdmins: false,
+    canViewAnalytics: true,
+    canSendNotifications: false,
+    canManageSettings: false,
+    canAccessAuditLogs: false,
+  },
+};
