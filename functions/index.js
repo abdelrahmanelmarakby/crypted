@@ -129,15 +129,31 @@ const sendNotifications = onDocumentCreated(
         return null;
       }
 
-      // 3. Get FCM tokens for recipients
-      const tokens = await getRecipientTokens(recipientUserIds);
-      
+      // 3. Filter recipients based on notification preferences
+      const activeRecipients = [];
+      for (const recipientId of recipientUserIds) {
+        const shouldSend = await shouldSendNotification(recipientId, 'message');
+        if (shouldSend) {
+          activeRecipients.push(recipientId);
+        } else {
+          functions.logger.log(`Skipping notification for user ${recipientId} - notifications disabled`);
+        }
+      }
+
+      if (activeRecipients.length === 0) {
+        functions.logger.log('All recipients have disabled message notifications.');
+        return null;
+      }
+
+      // 4. Get FCM tokens for active recipients
+      const tokens = await getRecipientTokens(activeRecipients);
+
       if (tokens.length === 0) {
         functions.logger.log('No FCM tokens found for recipients.');
         return null;
       }
 
-      // 4. Prepare notification payload
+      // 5. Prepare notification payload
       const chatName = chatData.name || 'a chat';
       const truncatedText = text.length > NOTIFICATION_BODY_MAX_LENGTH 
         ? `${text.substring(0, NOTIFICATION_BODY_MAX_LENGTH - 3)}...`
@@ -174,7 +190,7 @@ const sendNotifications = onDocumentCreated(
         }
       };
 
-      // 5. Send notifications in batches if needed
+      // 6. Send notifications in batches if needed
       const batchSize = MAX_RECIPIENTS_PER_BATCH;
       const batches = [];
       
@@ -188,7 +204,7 @@ const sendNotifications = onDocumentCreated(
         );
       }
 
-      // 6. Process all batches
+      // 7. Process all batches
       const responses = await Promise.allSettled(batches);
       let successCount = 0;
       let failureCount = 0;
@@ -220,7 +236,7 @@ const sendNotifications = onDocumentCreated(
         }
       });
 
-      // 7. Clean up invalid tokens
+      // 8. Clean up invalid tokens
       if (tokensToCleanup.length > 0) {
         const cleanedUpCount = await cleanupInvalidTokens(
           tokensToCleanup.map(t => t.token),
@@ -710,7 +726,22 @@ exports.sendStoryNotification = functions.firestore
       }
 
       const followerIds = followersSnapshot.docs.map(doc => doc.id);
-      const tokens = await getRecipientTokens(followerIds);
+
+      // Filter followers based on notification preferences
+      const activeFollowers = [];
+      for (const followerId of followerIds) {
+        const shouldSend = await shouldSendNotification(followerId, 'story');
+        if (shouldSend) {
+          activeFollowers.push(followerId);
+        }
+      }
+
+      if (activeFollowers.length === 0) {
+        functions.logger.log('All followers have disabled story notifications.');
+        return null;
+      }
+
+      const tokens = await getRecipientTokens(activeFollowers);
 
       if (tokens.length === 0) {
         return null;
@@ -806,6 +837,268 @@ exports.sendBackupNotification = functions.firestore
 
     return null;
   });
+
+// ============================================================================
+// PRIVACY & NOTIFICATION SETTINGS
+// ============================================================================
+
+/**
+ * Sync privacy settings changes to related documents
+ * Triggered when user updates their privacy settings
+ */
+exports.syncPrivacySettings = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change, context) => {
+    const { userId } = context.params;
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Check if privacy settings changed
+    const privacyBefore = before.privacySettings;
+    const privacyAfter = after.privacySettings;
+
+    if (!privacyAfter || JSON.stringify(privacyBefore) === JSON.stringify(privacyAfter)) {
+      return null;
+    }
+
+    try {
+      functions.logger.log(`Privacy settings changed for user ${userId}`);
+
+      // Handle profile photo visibility changes
+      if (privacyBefore?.showProfilePhotoToNonContacts !== privacyAfter.showProfilePhotoToNonContacts) {
+        functions.logger.log(`Profile photo visibility changed to: ${privacyAfter.showProfilePhotoToNonContacts ? 'Everyone' : 'Contacts Only'}`);
+
+        // Notify all active chat participants about visibility change
+        const chatsSnapshot = await db
+          .collection('chats')
+          .where('participants', 'array-contains', userId)
+          .get();
+
+        const notificationPromises = [];
+
+        for (const chatDoc of chatsSnapshot.docs) {
+          const chatData = chatDoc.data();
+          const participants = (chatData.participants || []).filter(id => id !== userId);
+
+          if (participants.length > 0) {
+            const tokens = await getRecipientTokens(participants);
+
+            if (tokens.length > 0) {
+              notificationPromises.push(
+                messaging.sendEachForMulticast({
+                  tokens,
+                  data: {
+                    type: 'privacy_update',
+                    userId,
+                    setting: 'profile_photo',
+                    value: privacyAfter.showProfilePhotoToNonContacts.toString()
+                  },
+                  android: { priority: 'normal', ttl: 60 * 5 }
+                })
+              );
+            }
+          }
+        }
+
+        await Promise.allSettled(notificationPromises);
+      }
+
+      // Handle last seen visibility changes
+      if (privacyBefore?.showLastSeenInOneToOne !== privacyAfter.showLastSeenInOneToOne) {
+        functions.logger.log(`Last seen visibility changed for user ${userId}`);
+
+        // Update user's presence visibility based on new settings
+        const presenceSnapshot = await db
+          .collection('users')
+          .doc(userId)
+          .collection('presence')
+          .get();
+
+        const batch = db.batch();
+        presenceSnapshot.docs.forEach(doc => {
+          batch.update(doc.ref, {
+            visible: privacyAfter.showLastSeenInOneToOne,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        });
+
+        if (!presenceSnapshot.empty) {
+          await batch.commit();
+        }
+      }
+
+      // Handle read receipts changes
+      if (privacyBefore?.readReceiptsEnabled !== privacyAfter.readReceiptsEnabled) {
+        functions.logger.log(`Read receipts ${privacyAfter.readReceiptsEnabled ? 'enabled' : 'disabled'} for user ${userId}`);
+
+        // If disabled, stop broadcasting read receipts
+        if (!privacyAfter.readReceiptsEnabled) {
+          // Delete pending read receipt updates for this user
+          const readReceiptsSnapshot = await db
+            .collectionGroup('readReceipts')
+            .where('userId', '==', userId)
+            .where('broadcasted', '==', false)
+            .get();
+
+          const batch = db.batch();
+          readReceiptsSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+
+          if (!readReceiptsSnapshot.empty) {
+            await batch.commit();
+          }
+        }
+      }
+
+      // Handle message forwarding settings
+      if (privacyBefore?.allowForwardingMessages !== privacyAfter.allowForwardingMessages) {
+        functions.logger.log(`Message forwarding ${privacyAfter.allowForwardingMessages ? 'enabled' : 'disabled'} for user ${userId}`);
+      }
+
+      // Handle group invites settings
+      if (privacyBefore?.allowGroupInvitesFromAnyone !== privacyAfter.allowGroupInvitesFromAnyone) {
+        functions.logger.log(`Group invites from anyone ${privacyAfter.allowGroupInvitesFromAnyone ? 'enabled' : 'disabled'} for user ${userId}`);
+      }
+
+      return { success: true, settingsUpdated: true };
+    } catch (error) {
+      functions.logger.error('Error syncing privacy settings:', error);
+      return null;
+    }
+  });
+
+/**
+ * Handle notification settings changes
+ * Triggered when user updates notification preferences
+ */
+exports.syncNotificationSettings = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change, context) => {
+    const { userId } = context.params;
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Check if notification settings changed
+    const notifBefore = before.notificationSettings;
+    const notifAfter = after.notificationSettings;
+
+    if (!notifAfter || JSON.stringify(notifBefore) === JSON.stringify(notifAfter)) {
+      return null;
+    }
+
+    try {
+      functions.logger.log(`Notification settings changed for user ${userId}`);
+
+      // Update FCM token subscription topics based on notification preferences
+      const tokensSnapshot = await db
+        .collection('fcmTokens')
+        .where('uid', '==', userId)
+        .get();
+
+      if (tokensSnapshot.empty) {
+        return null;
+      }
+
+      const tokens = tokensSnapshot.docs.map(doc => doc.id);
+      const topicPromises = [];
+
+      // Subscribe/unsubscribe from message notifications
+      if (notifAfter.showMessageNotification !== notifBefore?.showMessageNotification) {
+        if (notifAfter.showMessageNotification) {
+          topicPromises.push(messaging.subscribeToTopic(tokens, 'messages'));
+          functions.logger.log(`Subscribed user ${userId} to message notifications`);
+        } else {
+          topicPromises.push(messaging.unsubscribeFromTopic(tokens, 'messages'));
+          functions.logger.log(`Unsubscribed user ${userId} from message notifications`);
+        }
+      }
+
+      // Subscribe/unsubscribe from group notifications
+      if (notifAfter.showGroupNotification !== notifBefore?.showGroupNotification) {
+        if (notifAfter.showGroupNotification) {
+          topicPromises.push(messaging.subscribeToTopic(tokens, 'groups'));
+          functions.logger.log(`Subscribed user ${userId} to group notifications`);
+        } else {
+          topicPromises.push(messaging.unsubscribeFromTopic(tokens, 'groups'));
+          functions.logger.log(`Unsubscribed user ${userId} from group notifications`);
+        }
+      }
+
+      // Subscribe/unsubscribe from story notifications
+      if (notifAfter.reactionStatusNotification !== notifBefore?.reactionStatusNotification) {
+        if (notifAfter.reactionStatusNotification) {
+          topicPromises.push(messaging.subscribeToTopic(tokens, 'stories'));
+          functions.logger.log(`Subscribed user ${userId} to story notifications`);
+        } else {
+          topicPromises.push(messaging.unsubscribeFromTopic(tokens, 'stories'));
+          functions.logger.log(`Unsubscribed user ${userId} from story notifications`);
+        }
+      }
+
+      // Subscribe/unsubscribe from reminder notifications
+      if (notifAfter.reminderNotification !== notifBefore?.reminderNotification) {
+        if (notifAfter.reminderNotification) {
+          topicPromises.push(messaging.subscribeToTopic(tokens, 'reminders'));
+          functions.logger.log(`Subscribed user ${userId} to reminder notifications`);
+        } else {
+          topicPromises.push(messaging.unsubscribeFromTopic(tokens, 'reminders'));
+          functions.logger.log(`Unsubscribed user ${userId} from reminder notifications`);
+        }
+      }
+
+      await Promise.allSettled(topicPromises);
+
+      // Store notification preferences for analytics
+      await db.collection('notificationPreferences').doc(userId).set({
+        ...notifAfter,
+        userId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      return { success: true, preferencesUpdated: true };
+    } catch (error) {
+      functions.logger.error('Error syncing notification settings:', error);
+      return null;
+    }
+  });
+
+/**
+ * Send notification based on user preferences
+ * Helper function to check notification settings before sending
+ */
+async function shouldSendNotification(userId, notificationType) {
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      return true; // Default to sending if user not found
+    }
+
+    const userData = userDoc.data();
+    const notifSettings = userData.notificationSettings;
+
+    if (!notifSettings) {
+      return true; // Default to sending if no settings
+    }
+
+    // Check notification type and user preferences
+    switch (notificationType) {
+      case 'message':
+        return notifSettings.showMessageNotification !== false;
+      case 'group':
+        return notifSettings.showGroupNotification !== false;
+      case 'story':
+        return notifSettings.reactionStatusNotification !== false;
+      case 'reminder':
+        return notifSettings.reminderNotification !== false;
+      default:
+        return true;
+    }
+  } catch (error) {
+    functions.logger.error('Error checking notification preferences:', error);
+    return true; // Default to sending on error
+  }
+}
 
 // ============================================================================
 // UTILITY FUNCTIONS

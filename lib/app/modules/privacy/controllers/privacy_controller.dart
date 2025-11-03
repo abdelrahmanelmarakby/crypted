@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:crypted_app/app/data/data_source/privacy_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -26,7 +27,10 @@ class PrivacyController extends GetxController {
 
   // Functions to update privacy settings based on the UI dropdowns
   void updateLastSeen(String value) {
-    print('Updating lastSeen to: $value');
+    developer.log(
+      'Updating lastSeen to: $value',
+      name: 'PrivacyController',
+    );
     final lastSeenValue = value == 'Nobody' ? false : value == 'My Contacts' ? true : null;
     privacySettings.value = privacySettings.value.copyWith(
       showLastSeenInOneToOne: lastSeenValue == true ? true : false,
@@ -36,7 +40,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateProfilePicture(String value) {
-    print('Updating profilePicture to: $value');
+    developer.log(
+      'Updating profilePicture to: $value',
+      name: 'PrivacyController',
+    );
     final showToNonContacts = value == 'Everyone' ? true : false;
     privacySettings.value = privacySettings.value.copyWith(
       showProfilePhotoToNonContacts: showToNonContacts,
@@ -45,7 +52,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateAbout(String value) {
-    print('Updating about to: $value');
+    developer.log(
+      'Updating about to: $value',
+      name: 'PrivacyController',
+    );
     final showToContactsOnly = value == 'My Contacts' ? true : false;
     privacySettings.value = privacySettings.value.copyWith(
       showStatusToContactsOnly: showToContactsOnly,
@@ -54,7 +64,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateGroups(String value) {
-    print('Updating groups to: $value');
+    developer.log(
+      'Updating groups to: $value',
+      name: 'PrivacyController',
+    );
     final allowInvites = value == 'Everyone' ? true : false;
     privacySettings.value = privacySettings.value.copyWith(
       allowGroupInvitesFromAnyone: allowInvites,
@@ -63,7 +76,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateStatus(String value) {
-    print('Updating status to: $value');
+    developer.log(
+      'Updating status to: $value',
+      name: 'PrivacyController',
+    );
     final showToContactsOnly = value == 'My Contacts' ? true : false;
     privacySettings.value = privacySettings.value.copyWith(
       showStatusToContactsOnly: showToContactsOnly,
@@ -72,7 +88,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateLiveLocation(String value) {
-    print('Updating liveLocation to: $value');
+    developer.log(
+      'Updating liveLocation to: $value',
+      name: 'PrivacyController',
+    );
     // Live location settings can be mapped to allowOnlineStatus
     final allowLocation = value != 'None';
     privacySettings.value = privacySettings.value.copyWith(
@@ -82,7 +101,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateBlocked(String value) {
-    print('Updating blocked to: $value');
+    developer.log(
+      'Updating blocked to: $value',
+      name: 'PrivacyController',
+    );
     // Blocked level affects allowMessagesFromNonContacts
     final allowMessages = value == 'Everyone';
     privacySettings.value = privacySettings.value.copyWith(
@@ -92,7 +114,10 @@ class PrivacyController extends GetxController {
   }
 
   void updateDefaultMessageTimer(String value) {
-    print('Updating defaultMessageTimer to: $value');
+    developer.log(
+      'Updating defaultMessageTimer to: $value',
+      name: 'PrivacyController',
+    );
     // Message timer affects forwarding settings
     final allowForwarding = value == 'Off';
     privacySettings.value = privacySettings.value.copyWith(
@@ -119,9 +144,19 @@ class PrivacyController extends GetxController {
       if (currentUser != null && currentUser.privacySettings != null) {
         privacySettings.value = currentUser.privacySettings!;
         _syncWithUI();
+        developer.log(
+          'Privacy settings loaded successfully',
+          name: 'PrivacyController',
+        );
       }
-    } catch (e) {
-      print('❌ Error loading privacy data: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error loading privacy data',
+        name: 'PrivacyController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
     }
   }
 
@@ -143,11 +178,20 @@ class PrivacyController extends GetxController {
 
         if (updatedUser != null) {
           await UserService().updateUser(user: updatedUser);
-          print('✅ Privacy settings saved successfully');
+          developer.log(
+            'Privacy settings saved successfully for user: $currentUserId',
+            name: 'PrivacyController',
+          );
         }
       }
-    } catch (e) {
-      print('❌ Error saving privacy data: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error saving privacy data',
+        name: 'PrivacyController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
     }
   }
 
@@ -200,31 +244,57 @@ class PrivacyController extends GetxController {
   Future<List<SocialMediaUser>> getBlockedUsers() async {
     try {
       final currentUser = UserService.currentUserValue;
-      print('🔍 Getting blocked users for current user: ${currentUser?.uid}');
+      developer.log(
+        'Getting blocked users for current user: ${currentUser?.uid}',
+        name: 'PrivacyController',
+      );
 
       if (currentUser == null) {
-        print('❌ Current user is null');
+        developer.log(
+          'Current user is null',
+          name: 'PrivacyController',
+          level: 900,
+        );
         return [];
       }
 
       if (currentUser.blockedUser == null) {
-        print('❌ Current user blockedUser list is null');
+        developer.log(
+          'Current user blockedUser list is null',
+          name: 'PrivacyController',
+          level: 900,
+        );
         return [];
       }
 
-      print('📋 Blocked users IDs: ${currentUser.blockedUser}');
+      developer.log(
+        'Blocked users IDs: ${currentUser.blockedUser}',
+        name: 'PrivacyController',
+      );
 
       if (currentUser.blockedUser!.isEmpty) {
-        print('ℹ️ No blocked users found');
+        developer.log(
+          'No blocked users found',
+          name: 'PrivacyController',
+        );
         return [];
       }
 
       final blockedUsers = await UserService().getUsersFromBlockedUsersList(currentUser.blockedUser!);
-      print('✅ Retrieved ${blockedUsers.length} blocked users');
+      developer.log(
+        'Retrieved ${blockedUsers.length} blocked users',
+        name: 'PrivacyController',
+      );
 
       return blockedUsers;
-    } catch (e) {
-      print('❌ Error getting blocked users: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error getting blocked users',
+        name: 'PrivacyController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
       return [];
     }
   }
@@ -234,14 +304,30 @@ class PrivacyController extends GetxController {
     try {
       final currentUserId = UserService.currentUserValue?.uid;
       if (currentUserId == null || currentUserId.isEmpty) {
+        developer.log(
+          'No current user found for live location chats',
+          name: 'PrivacyController',
+          level: 900,
+        );
         return [];
       }
 
       // Query chats where current user is sharing live location
       // This would need to be implemented based on your chat system
-      return await _privacyDataSource.getLiveLocationChats();
-    } catch (e) {
-      print('❌ Error getting live location chats: $e');
+      final chats = await _privacyDataSource.getLiveLocationChats();
+      developer.log(
+        'Retrieved ${chats.length} live location chats',
+        name: 'PrivacyController',
+      );
+      return chats;
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error getting live location chats',
+        name: 'PrivacyController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
       return [];
     }
   }

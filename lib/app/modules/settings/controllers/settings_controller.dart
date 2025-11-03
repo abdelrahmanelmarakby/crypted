@@ -4,6 +4,7 @@ import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:crypted_app/app/core/services/backup_service.dart';
+import 'package:crypted_app/app/widgets/bottom_sheets/custom_bottom_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -499,39 +500,37 @@ class SettingsController extends GetxController {
               leading: const Icon(Icons.schedule),
               title: const Text('Backup Frequency'),
               subtitle: const Text('Daily'),
-              onTap: () {
+              onTap: () async {
                 Get.back();
-                Get.dialog(
-                  AlertDialog(
-                    title: const Text('Backup Frequency'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          title: const Text('Daily'),
-                          onTap: () {
-                            Get.back();
-                            Get.snackbar('Settings', 'Backup frequency set to Daily');
-                          },
-                        ),
-                        ListTile(
-                          title: const Text('Weekly'),
-                          onTap: () {
-                            Get.back();
-                            Get.snackbar('Settings', 'Backup frequency set to Weekly');
-                          },
-                        ),
-                        ListTile(
-                          title: const Text('Monthly'),
-                          onTap: () {
-                            Get.back();
-                            Get.snackbar('Settings', 'Backup frequency set to Monthly');
-                          },
-                        ),
-                      ],
+
+                final selected = await CustomBottomSheet.showOptions<String>(
+                  title: 'Backup Frequency',
+                  subtitle: 'Choose how often to backup your data',
+                  options: [
+                    BottomSheetOption(
+                      title: 'Daily',
+                      subtitle: 'Backup every day',
+                      icon: Icons.today,
+                      value: 'daily',
                     ),
-                  ),
+                    BottomSheetOption(
+                      title: 'Weekly',
+                      subtitle: 'Backup once a week',
+                      icon: Icons.date_range,
+                      value: 'weekly',
+                    ),
+                    BottomSheetOption(
+                      title: 'Monthly',
+                      subtitle: 'Backup once a month',
+                      icon: Icons.calendar_month,
+                      value: 'monthly',
+                    ),
+                  ],
                 );
+
+                if (selected != null) {
+                  Get.snackbar('Settings', 'Backup frequency set to ${selected.capitalize}');
+                }
               },
             ),
             ListTile(
@@ -550,45 +549,29 @@ class SettingsController extends GetxController {
     );
   }
 
-  /// Show logout confirmation dialog
+  /// Show logout confirmation bottom sheet
   void showLogoutConfirmationDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: logout,
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
+    CustomBottomSheet.showConfirmation(
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      confirmText: 'Sign Out',
+      confirmColor: Colors.red,
+      icon: Icons.logout,
+      iconColor: Colors.red,
+      onConfirm: logout,
     );
   }
 
-  /// Show delete account confirmation dialog
+  /// Show delete account confirmation bottom sheet
   void showDeleteAccountConfirmationDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text('Are you sure you want to permanently delete your account? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: deleteAccount,
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    CustomBottomSheet.showConfirmation(
+      title: 'Delete Account',
+      message: 'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      confirmText: 'Delete',
+      confirmColor: Colors.red,
+      icon: Icons.warning_rounded,
+      iconColor: Colors.red,
+      onConfirm: deleteAccount,
     );
   }
 
@@ -1114,34 +1097,20 @@ class SettingsController extends GetxController {
         return;
       }
 
-      // Show confirmation dialog
-      final confirmed = await Get.dialog<bool>(
-        AlertDialog(
-          title: const Text('Delete Account'),
-          content: const Text('Are you sure you want to permanently delete your account? This action cannot be undone.'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(result: false),
-              child: Text(Constants.kCancel.tr),
-            ),
-            TextButton(
-              onPressed: () => Get.back(result: true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
+      // Show confirmation bottom sheet
+      final confirmed = await CustomBottomSheet.showConfirmation(
+        title: 'Delete Account',
+        message: 'Are you sure you want to permanently delete your account? This action cannot be undone.',
+        confirmText: 'Delete',
+        confirmColor: Colors.red,
+        icon: Icons.warning_rounded,
+        iconColor: Colors.red,
       );
 
       if (confirmed != true) return;
 
-      // Show loading
-      Get.dialog(
-        const Center(
-          child: CircularProgressIndicator.adaptive(),
-        ),
-        barrierDismissible: false,
-      );
+      // Show loading bottom sheet
+      CustomBottomSheet.showLoading(message: 'Deleting account...');
 
       // Delete account
       await UserService.deleteUser(user.uid!);

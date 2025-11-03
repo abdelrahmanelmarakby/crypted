@@ -1,4 +1,5 @@
 import 'package:crypted_app/app/modules/login/widgets/auth_footer.dart';
+import 'package:crypted_app/app/modules/register/widgets/terms_and_conditions_bottom_sheet.dart';
 import 'package:crypted_app/app/widgets/app_progress_button.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
 import 'package:crypted_app/core/locale/constant.dart';
@@ -13,6 +14,85 @@ import '../controllers/register_controller.dart';
 
 class RegisterView extends GetView<RegisterController> {
   const RegisterView({super.key});
+
+  Widget _buildTermsCheckbox(BuildContext context) {
+    return Obx(() {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: Sizes.size24,
+            width: Sizes.size24,
+            child: Checkbox(
+              value: controller.acceptedTerms.value,
+              onChanged: controller.toggleTermsAcceptance,
+              activeColor: ColorsManager.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          SizedBox(width: Sizes.size10),
+          Expanded(
+            child: Wrap(
+              children: [
+                Text(
+                  Constants.kIAgreeToThe.tr,
+                  style: StylesManager.regular(
+                    fontSize: FontSize.small,
+                    color: ColorsManager.grey,
+                  ),
+                ),
+                Text(' '),
+                GestureDetector(
+                  onTap: () {
+                    _showTermsAndConditions(context);
+                  },
+                  child: Text(
+                    Constants.kTermsAndConditions.tr,
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.primary,
+                    ),
+                  ),
+                ),
+                Text(' '),
+                Text(
+                  Constants.kAndThe.tr,
+                  style: StylesManager.regular(
+                    fontSize: FontSize.small,
+                    color: ColorsManager.grey,
+                  ),
+                ),
+                Text(' '),
+                GestureDetector(
+                  onTap: () {
+                    _showTermsAndConditions(context);
+                  },
+                  child: Text(
+                    Constants.kPrivacy.tr,
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  void _showTermsAndConditions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const TermsAndConditionsBottomSheet(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +227,8 @@ class RegisterView extends GetView<RegisterController> {
                           return null;
                         },
                       ),
+                      SizedBox(height: Sizes.size20),
+                      _buildTermsCheckbox(context),
                       SizedBox(height: Sizes.size20),
                       AppProgressButton(
                         onPressed: (anim) {

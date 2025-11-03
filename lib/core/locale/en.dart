@@ -336,4 +336,23 @@ Map<String, String> en = {
   'story_text_color': 'Story Text Color',
   'story_font_size': 'Font Size',
   'story_text_position': 'Text Position',
+
+  // Terms and Conditions
+  Constants.kIAgreeToThe: 'I agree to the',
+  Constants.kTermsAndConditions: 'Terms and Conditions',
+  Constants.kAndThe: 'and the',
+  Constants.kPleaseAcceptTermsAndConditions: 'Please accept the Terms and Conditions to continue',
+  Constants.kTermsOfService: 'Terms of Service',
+  Constants.kLastUpdated: 'Last Updated',
+  Constants.kAcceptance: 'Acceptance',
+  Constants.kUserAccounts: 'User Accounts',
+  Constants.kPrivacyAndDataProtection: 'Privacy and Data Protection',
+  Constants.kUserContent: 'User Content',
+  Constants.kProhibitedActivities: 'Prohibited Activities',
+  Constants.kIntellectualProperty: 'Intellectual Property',
+  Constants.kTermination: 'Termination',
+  Constants.kDisclaimerOfWarranties: 'Disclaimer of Warranties',
+  Constants.kLimitationOfLiability: 'Limitation of Liability',
+  Constants.kGoverningLaw: 'Governing Law',
+  Constants.kContactInformation: 'Contact Information',
 };

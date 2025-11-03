@@ -406,27 +406,27 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
             ),
           ],
 
-          const SizedBox(height: 24),
+          // const SizedBox(height: 24),
 
-          // Permissions Status
-          Text(
-            'Permissions Status',
-            style: StylesManager.semiBold(
-              fontSize: FontSize.medium,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildPermissionsGrid(),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _requestPermissions,
-            icon: const Icon(Icons.security, size: 18),
-            label: const Text('Request Permissions'),
-            style: TextButton.styleFrom(
-              foregroundColor: ColorsManager.primary,
-            ),
-          ),
+          // // Permissions Status
+          // Text(
+          //   'Permissions Status',
+          //   style: StylesManager.semiBold(
+          //     fontSize: FontSize.medium,
+          //     color: Colors.black87,
+          //   ),
+          // ),
+          // const SizedBox(height: 12),
+          // // _buildPermissionsGrid(),
+          // const SizedBox(height: 8),
+          // TextButton.icon(
+          //   onPressed: _requestPermissions,
+          //   icon: const Icon(Icons.security, size: 18),
+          //   label: const Text('Request Permissions'),
+          //   style: TextButton.styleFrom(
+          //     foregroundColor: ColorsManager.primary,
+          //   ),
+          // ),
 
           const Divider(height: 32),
 
@@ -732,7 +732,6 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       ),
     );
   }
-
   Widget _buildSwitchTile({
     required String title,
     required String subtitle,
@@ -761,14 +760,16 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
           color: ColorsManager.grey,
         ),
       ),
-      trailing: Switch(
+      trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
         activeColor: ColorsManager.primary,
+        activeTrackColor: ColorsManager.primary.withOpacity(0.5),
+        inactiveThumbColor: Colors.white,
+        inactiveTrackColor: Colors.grey.shade300,
       ),
     );
   }
-
   Widget _buildCheckboxTile({
     required String title,
     required String subtitle,
@@ -776,9 +777,9 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
     required bool value,
     required Function(bool?) onChanged,
   }) {
-    return CheckboxListTile(
+    return ListTile(
       contentPadding: EdgeInsets.zero,
-      secondary: Container(
+      leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: value ? ColorsManager.primary.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
@@ -801,9 +802,14 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
           color: ColorsManager.grey,
         ),
       ),
-      value: value,
-      onChanged: onChanged,
-      activeColor: ColorsManager.primary,
+      trailing: Switch.adaptive(
+        value: value,
+        onChanged: (bool newValue) => onChanged(newValue),
+        activeColor: ColorsManager.primary,
+        activeTrackColor: ColorsManager.primary.withOpacity(0.5),
+        inactiveThumbColor: Colors.white,
+        inactiveTrackColor: Colors.grey.shade300,
+      ),
     );
   }
 

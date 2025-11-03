@@ -247,34 +247,105 @@ class PrivacyView extends GetView<PrivacyController> {
     );
   }
 
-  /// Show blocked users dialog
+  /// Show blocked users bottom sheet
   void _showBlockedUsers() {
-    Get.dialog(
-      Dialog(
-        child: Container(
-          width: double.maxFinite,
-          height: 400,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Text(
-                "Blocked Users",
-                style: StylesManager.bold(fontSize: FontSize.large),
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(Radiuss.xLarge),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with drag handle
+            Padding(
+              padding: const EdgeInsets.all(Paddings.large),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  SizedBox(height: Sizes.size16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.block,
+                          color: Colors.red,
+                          size: 24,
+                        ),
+                      ),
+                      SizedBox(width: Sizes.size12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Blocked Users",
+                              style: StylesManager.bold(fontSize: FontSize.large),
+                            ),
+                            Text(
+                              "Users you have blocked",
+                              style: StylesManager.regular(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              Expanded(
+            ),
+            Divider(height: 1),
+            // Content
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(Get.context!).size.height * 0.6,
+                ),
                 child: FutureBuilder<List<SocialMediaUser>>(
                   future: controller.getBlockedUsers(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator.adaptive());
+                      return Container(
+                        height: 200,
+                        child: const Center(child: CircularProgressIndicator.adaptive()),
+                      );
                     }
 
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error loading blocked users',
-                          style: StylesManager.regular(color: ColorsManager.error),
+                      return Container(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline,
+                                size: 48,
+                                color: ColorsManager.error),
+                              SizedBox(height: Sizes.size12),
+                              Text(
+                                'Error loading blocked users',
+                                style: StylesManager.regular(color: ColorsManager.error),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
@@ -282,74 +353,204 @@ class PrivacyView extends GetView<PrivacyController> {
                     final blockedUsers = snapshot.data ?? [];
 
                     if (blockedUsers.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No blocked users',
-                          style: StylesManager.regular(color: ColorsManager.grey),
+                      return Container(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 48,
+                                color: ColorsManager.grey,
+                              ),
+                              SizedBox(height: Sizes.size12),
+                              Text(
+                                'No blocked users',
+                                style: StylesManager.medium(
+                                  fontSize: FontSize.medium,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                              SizedBox(height: Sizes.size4),
+                              Text(
+                                'You haven\'t blocked anyone',
+                                style: StylesManager.regular(
+                                  fontSize: FontSize.small,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
 
-                    return ListView.builder(
+                    return ListView.separated(
+                      padding: EdgeInsets.symmetric(vertical: Paddings.small),
+                      shrinkWrap: true,
                       itemCount: blockedUsers.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        indent: 72,
+                        endIndent: 16,
+                      ),
                       itemBuilder: (context, index) {
                         final user = blockedUsers[index];
                         return ListTile(
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: Paddings.large,
+                            vertical: Paddings.small,
+                          ),
                           leading: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: ColorsManager.primary.withOpacity(0.1),
                             backgroundImage: user.imageUrl != null && user.imageUrl!.isNotEmpty
                                 ? NetworkImage(user.imageUrl!)
                                 : null,
                             child: user.imageUrl == null || user.imageUrl!.isEmpty
-                                ? Text(user.fullName?.substring(0, 1).toUpperCase() ?? '?')
+                                ? Text(
+                                    user.fullName?.substring(0, 1).toUpperCase() ?? '?',
+                                    style: StylesManager.semiBold(
+                                      fontSize: FontSize.large,
+                                      color: ColorsManager.primary,
+                                    ),
+                                  )
                                 : null,
                           ),
-                          title: Text(user.fullName ?? 'Unknown'),
-                          subtitle: Text(user.uid ?? ''),
+                          title: Text(
+                            user.fullName ?? 'Unknown',
+                            style: StylesManager.medium(fontSize: FontSize.medium),
+                          ),
+                          subtitle: Text(
+                            user.phoneNumber ?? user.uid ?? '',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.small,
+                              color: ColorsManager.grey,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.close, color: Colors.red),
+                            onPressed: () {
+                              // TODO: Implement unblock functionality
+                            },
+                          ),
                         );
                       },
                     );
                   },
                 ),
               ),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text('Close'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
     );
   }
 
-  /// Show live location chats dialog
+  /// Show live location chats bottom sheet
   void _showLiveLocationChats() {
-    Get.dialog(
-      Dialog(
-        child: Container(
-          width: double.maxFinite,
-          height: 400,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Text(
-                "Live Location Sharing",
-                style: StylesManager.bold(fontSize: FontSize.large),
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(Radiuss.xLarge),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with drag handle
+            Padding(
+              padding: const EdgeInsets.all(Paddings.large),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  SizedBox(height: Sizes.size16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: ColorsManager.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.location_on,
+                          color: ColorsManager.primary,
+                          size: 24,
+                        ),
+                      ),
+                      SizedBox(width: Sizes.size12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Live Location Sharing",
+                              style: StylesManager.bold(fontSize: FontSize.large),
+                            ),
+                            Text(
+                              "Active location shares",
+                              style: StylesManager.regular(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              Expanded(
+            ),
+            Divider(height: 1),
+            // Content
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(Get.context!).size.height * 0.6,
+                ),
                 child: FutureBuilder<List<String>>(
                   future: controller.getLiveLocationChats(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator.adaptive());
+                      return SizedBox(
+                        height: 200,
+                        child: const Center(child: CircularProgressIndicator.adaptive()),
+                      );
                     }
 
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error loading live location chats',
-                          style: StylesManager.regular(color: ColorsManager.error),
+                      return SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline,
+                                size: 48,
+                                color: ColorsManager.error),
+                              SizedBox(height: Sizes.size12),
+                              Text(
+                                'Error loading live location chats',
+                                style: StylesManager.regular(color: ColorsManager.error),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
@@ -357,36 +558,99 @@ class PrivacyView extends GetView<PrivacyController> {
                     final chatIds = snapshot.data ?? [];
 
                     if (chatIds.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No live location sharing active',
-                          style: StylesManager.regular(color: ColorsManager.grey),
+                      return SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.location_off,
+                                size: 48,
+                                color: ColorsManager.grey,
+                              ),
+                              SizedBox(height: Sizes.size12),
+                              Text(
+                                'No live location sharing active',
+                                style: StylesManager.medium(
+                                  fontSize: FontSize.medium,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                              SizedBox(height: Sizes.size4),
+                              Text(
+                                'Share your location in a chat to see it here',
+                                style: StylesManager.regular(
+                                  fontSize: FontSize.small,
+                                  color: ColorsManager.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
 
-                    return ListView.builder(
+                    return ListView.separated(
+                      padding: EdgeInsets.symmetric(vertical: Paddings.small),
+                      shrinkWrap: true,
                       itemCount: chatIds.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        indent: 60,
+                        endIndent: 16,
+                      ),
                       itemBuilder: (context, index) {
                         final chatId = chatIds[index];
                         return ListTile(
-                          leading: Icon(Icons.location_on, color: ColorsManager.primary),
-                          title: Text('Chat ID: $chatId'),
-                          subtitle: Text('Sharing live location'),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: Paddings.large,
+                            vertical: Paddings.small,
+                          ),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: ColorsManager.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.location_on,
+                              color: ColorsManager.primary,
+                              size: 24,
+                            ),
+                          ),
+                          title: Text(
+                            'Chat ID: $chatId',
+                            style: StylesManager.medium(fontSize: FontSize.medium),
+                          ),
+                          subtitle: Text(
+                            'Sharing live location',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.small,
+                              color: ColorsManager.grey,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.stop_circle, color: Colors.orange),
+                            onPressed: () {
+                              // TODO: Implement stop sharing functionality
+                            },
+                          ),
                         );
                       },
                     );
                   },
                 ),
               ),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text('Close'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
     );
   }
 }

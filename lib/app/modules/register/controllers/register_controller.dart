@@ -21,6 +21,11 @@ class RegisterController extends GetxController {
   final passwordController = TextEditingController();
 
   final formKey = GlobalKey<FormState>();
+  final RxBool acceptedTerms = false.obs;
+
+  void toggleTermsAcceptance(bool? value) {
+    acceptedTerms.value = value ?? false;
+  }
 
   Future<void> pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -34,6 +39,15 @@ class RegisterController extends GetxController {
 
   Future<void> register() async {
     if (!formKey.currentState!.validate()) return;
+
+    if (!acceptedTerms.value) {
+      Get.snackbar(
+        Constants.kError.tr,
+        Constants.kPleaseAcceptTermsAndConditions.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
 
     final fullName = fullNameController.text.trim();
     final email = emailController.text.trim();

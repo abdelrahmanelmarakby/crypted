@@ -286,8 +286,17 @@ class StoryDataSources {
 
       await repliesRef.add(replyData);
 
-      // إرسال إشعار لصاحب الـ story (يمكن تنفيذه لاحقاً)
-      // TODO: Send notification to story owner
+      // Send notification to story owner
+      await _sendStoryNotification(
+        storyOwnerId: storyOwnerId,
+        type: 'story_reply',
+        title: 'New Reply',
+        body: '${currentUser.fullName} replied to your story: $replyText',
+        fromUserId: currentUser?.uid??"",
+        fromUserName: currentUser?.fullName??"",
+        fromUserImage: currentUser?.imageUrl??"",
+        storyId: storyId,
+      );  
 
       log('✅ Reply sent successfully to story $storyId');
       return true;
@@ -325,7 +334,7 @@ class StoryDataSources {
       if (existingReaction.docs.isNotEmpty) {
         // تحديث التفاعل الحالي
         await existingReaction.docs.first.reference.update({
-          'emoji': emoji,
+          'emoji': emoji??"",
           'updatedAt': Timestamp.now(),
         });
         log('✅ Reaction updated for story $storyId');
@@ -343,8 +352,17 @@ class StoryDataSources {
         log('✅ New reaction added to story $storyId');
       }
 
-      // إرسال إشعار لصاحب الـ story (يمكن تنفيذه لاحقاً)
-      // TODO: Send notification to story owner
+      // Send notification to story owner
+      await _sendStoryNotification(
+        storyOwnerId: storyOwnerId,
+        type: 'story_reaction',
+        title: 'New Reaction',
+        body: '${currentUser.fullName} reacted to your story with $emoji',
+        fromUserId: currentUser?.uid??"",
+        fromUserName: currentUser?.fullName??"",
+        fromUserImage: currentUser?.imageUrl??"",
+        storyId: storyId,
+      );
 
       return true;
     } catch (e) {
@@ -404,6 +422,49 @@ class StoryDataSources {
     } catch (e) {
       log('❌ Error deleting reaction: $e');
       return false;
+    }
+  }
+
+  // إرسال إشعار للـ story owner
+  Future<void> _sendStoryNotification({
+    required String storyOwnerId,
+    required String type,
+    required String title,
+    required String body,
+    required String fromUserId,
+    required String fromUserName,
+    required String fromUserImage,
+    required String storyId,
+  }) async {
+    try {
+      // Don't send notification if user is reacting/replying to their own story
+      if (storyOwnerId == fromUserId) {
+        return;
+      }
+
+      // Create notification document
+      final notificationData = {
+        'type': type, // 'story_reply' or 'story_reaction'
+        'title': title,
+        'body': body,
+        'toUserId': storyOwnerId,
+        'fromUserId': fromUserId,
+        'fromUserName': fromUserName,
+        'fromUserImage': fromUserImage,
+        'storyId': storyId,
+        'isRead': false,
+        'createdAt': Timestamp.now(),
+      };
+
+      // Add to notifications collection
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .add(notificationData);
+
+      log('✅ Notification sent to story owner: $storyOwnerId');
+    } catch (e) {
+      log('❌ Error sending notification: $e');
+      // Don't throw error, just log it - notification failure shouldn't break the main flow
     }
   }
 }

@@ -450,4 +450,23 @@ class Constants {
   static const String kBackupReady = 'Ready for backup';
   static const String kCheckingPermissions = 'Checking permissions...';
   static const String kCalculatingSize = 'Calculating size...';
+
+  // Terms and Conditions
+  static const String kIAgreeToThe = 'I agree to the';
+  static const String kTermsAndConditions = 'Terms and Conditions';
+  static const String kAndThe = 'and the';
+  static const String kPleaseAcceptTermsAndConditions = 'Please accept the Terms and Conditions to continue';
+  static const String kTermsOfService = 'Terms of Service';
+  static const String kLastUpdated = 'Last Updated';
+  static const String kAcceptance = 'Acceptance';
+  static const String kUserAccounts = 'User Accounts';
+  static const String kPrivacyAndDataProtection = 'Privacy and Data Protection';
+  static const String kUserContent = 'User Content';
+  static const String kProhibitedActivities = 'Prohibited Activities';
+  static const String kIntellectualProperty = 'Intellectual Property';
+  static const String kTermination = 'Termination';
+  static const String kDisclaimerOfWarranties = 'Disclaimer of Warranties';
+  static const String kLimitationOfLiability = 'Limitation of Liability';
+  static const String kGoverningLaw = 'Governing Law';
+  static const String kContactInformation = 'Contact Information';
 }

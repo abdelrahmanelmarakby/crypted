@@ -75,15 +75,6 @@ class ContactInfoView extends GetView<ContactInfoController> {
     return CustomContainer(
       children: [
         GestureDetector(
-          onTap: controller.viewContactDetails,
-          child: CustomInfoItem(
-            image: 'assets/icons/fi_13193798.svg',
-            title: Constants.kContactDetails.tr,
-            type: '9',
-          ),
-        ),
-        buildDivider(),
-        GestureDetector(
           onTap: controller.viewMediaLinksDocuments,
           child: CustomInfoItem(
             image: 'assets/icons/fi_833281.svg',
@@ -92,6 +83,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
           ),
         ),
         buildDivider(),
+        //
         GestureDetector(
           onTap: controller.viewStarredMessages,
           child: CustomInfoItem(

@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:crypted_app/app/data/models/notification_model.dart';
 import 'package:crypted_app/app/data/data_source/notification_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -130,11 +131,20 @@ class NotificationsController extends GetxController {
 
         if (updatedUser != null) {
           await UserService().updateUser(user: updatedUser);
-          print('✅ Notification settings saved successfully');
+          developer.log(
+            'Notification settings saved successfully for user: $currentUserId',
+            name: 'NotificationsController',
+          );
         }
       }
-    } catch (e) {
-      print('❌ Error saving notification data: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error saving notification data',
+        name: 'NotificationsController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
     }
   }
 
@@ -144,7 +154,10 @@ class NotificationsController extends GetxController {
       final currentUser = UserService.currentUserValue;
       if (currentUser != null && currentUser.notificationSettings != null) {
         notificationData.value = currentUser.notificationSettings!;
-        print('✅ Notification settings loaded successfully');
+        developer.log(
+          'Notification settings loaded successfully',
+          name: 'NotificationsController',
+        );
       } else {
         // Use default settings if none exist
         notificationData.value = NotificationModel(
@@ -159,10 +172,19 @@ class NotificationsController extends GetxController {
           reminderNotification: true,
           showPreviewNotification: true,
         );
-        print('ℹ️ Using default notification settings');
+        developer.log(
+          'Using default notification settings',
+          name: 'NotificationsController',
+        );
       }
-    } catch (e) {
-      print('❌ Error loading notification data: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error loading notification data',
+        name: 'NotificationsController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
     }
   }
 

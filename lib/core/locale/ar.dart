@@ -374,4 +374,23 @@ Map<String, String> ar = {
   Constants.kFailedToClearChat: 'فشل في مسح المحادثة',
   Constants.kCreateNewEvent: 'أدخل تفاصيل الحدث',
   Constants.kCreatePoll: 'إنشاء استطلاع رأي',
+
+  // Terms and Conditions
+  Constants.kIAgreeToThe: 'أوافق على',
+  Constants.kTermsAndConditions: 'الشروط والأحكام',
+  Constants.kAndThe: 'و',
+  Constants.kPleaseAcceptTermsAndConditions: 'يرجى قبول الشروط والأحكام للمتابعة',
+  Constants.kTermsOfService: 'شروط الخدمة',
+  Constants.kLastUpdated: 'آخر تحديث',
+  Constants.kAcceptance: 'القبول',
+  Constants.kUserAccounts: 'حسابات المستخدمين',
+  Constants.kPrivacyAndDataProtection: 'الخصوصية وحماية البيانات',
+  Constants.kUserContent: 'محتوى المستخدم',
+  Constants.kProhibitedActivities: 'الأنشطة المحظورة',
+  Constants.kIntellectualProperty: 'الملكية الفكرية',
+  Constants.kTermination: 'الإنهاء',
+  Constants.kDisclaimerOfWarranties: 'إخلاء المسؤولية عن الضمانات',
+  Constants.kLimitationOfLiability: 'حدود المسؤولية',
+  Constants.kGoverningLaw: 'القانون الحاكم',
+  Constants.kContactInformation: 'معلومات الاتصال',
 };

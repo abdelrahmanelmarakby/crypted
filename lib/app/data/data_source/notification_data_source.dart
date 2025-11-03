@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/data/models/notification_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -10,35 +11,66 @@ class NotificationDataSource {
     try {
       final currentUserId = UserService.currentUserValue?.uid;
       if (currentUserId == null || currentUserId.isEmpty) {
-        print('❌ No current user found for notification settings');
+        developer.log(
+          'No current user found for notification settings',
+          name: 'NotificationDataSource',
+          level: 900, // WARNING level
+        );
         return null;
       }
+
+      developer.log(
+        'Fetching notification settings for user: $currentUserId',
+        name: 'NotificationDataSource',
+      );
 
       // Get user document
       DocumentSnapshot<Map<String, dynamic>> userDoc =
           await firebaseFirestore.collection('users').doc(currentUserId).get();
 
       if (!userDoc.exists) {
-        print('❌ User document not found');
+        developer.log(
+          'User document not found for: $currentUserId',
+          name: 'NotificationDataSource',
+          level: 900,
+        );
         return null;
       }
 
       final userData = userDoc.data();
       if (userData == null) {
-        print('❌ User data is null');
+        developer.log(
+          'User data is null for: $currentUserId',
+          name: 'NotificationDataSource',
+          level: 900,
+        );
         return null;
       }
 
       // Extract notification settings from user document
       final notificationData = userData['notificationSettings'];
       if (notificationData == null) {
-        print('ℹ️ No notification settings found, returning default');
+        developer.log(
+          'No notification settings found, returning default',
+          name: 'NotificationDataSource',
+        );
         return _getDefaultNotificationSettings();
       }
 
+      developer.log(
+        'Successfully loaded notification settings',
+        name: 'NotificationDataSource',
+      );
+
       return NotificationModel.fromMap(Map<String, dynamic>.from(notificationData));
-    } catch (e) {
-      print('❌ Error getting notification settings: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error getting notification settings',
+        name: 'NotificationDataSource',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000, // ERROR level
+      );
       return null;
     }
   }
@@ -48,9 +80,18 @@ class NotificationDataSource {
     try {
       final currentUserId = UserService.currentUserValue?.uid;
       if (currentUserId == null || currentUserId.isEmpty) {
-        print('❌ No current user found for saving notification settings');
+        developer.log(
+          'No current user found for saving notification settings',
+          name: 'NotificationDataSource',
+          level: 900,
+        );
         return false;
       }
+
+      developer.log(
+        'Saving notification settings for user: $currentUserId',
+        name: 'NotificationDataSource',
+      );
 
       // Update user document with notification settings
       await firebaseFirestore.collection('users').doc(currentUserId).update({
@@ -58,10 +99,19 @@ class NotificationDataSource {
         'updatedAt': DateTime.now().toIso8601String(),
       });
 
-      print('✅ Notification settings saved successfully');
+      developer.log(
+        'Notification settings saved successfully',
+        name: 'NotificationDataSource',
+      );
       return true;
-    } catch (e) {
-      print('❌ Error saving notification settings: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error saving notification settings',
+        name: 'NotificationDataSource',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
       return false;
     }
   }

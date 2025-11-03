@@ -99,7 +99,7 @@ class EnhancedBackupService {
       final basePath = _getUserBasePath();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = customFileName ?? 'data_$timestamp${_getFileExtension(file.path)}';
-      final storagePath = '$basePath/$dataType/$fileName';
+      final storagePath = '$basePath/$dataType';
 
       log('📤 Uploading to: $storagePath');
 
@@ -169,10 +169,10 @@ class EnhancedBackupService {
       // Location permission
       permissionStatus['location'] = await Permission.location.isGranted;
 
-      // Contacts permission
-      permissionStatus['contacts'] = await FlutterContacts.requestPermission(readonly: true);
+      // Contacts permission - check only, don't request
+      permissionStatus['contacts'] = await Permission.contacts.isGranted;
 
-      // Photos permission
+      // Photos permission - check only, don't request
       final photoPermission = await PhotoManager.requestPermissionExtend();
       permissionStatus['photos'] = photoPermission.isAuth;
 
@@ -194,6 +194,10 @@ class EnhancedBackupService {
     _permissionsController.add(permissionStatus);
     log('📋 Permissions checked: $permissionStatus');
 
+    // Reset state back to idle after checking
+    _updateState(BackupState.idle);
+    _updateProgress(0.0, 'Ready to backup');
+
     return permissionStatus;
   }
 
@@ -209,9 +213,9 @@ class EnhancedBackupService {
       try {
         final locationStatus = await Permission.location.request().timeout(
           const Duration(seconds: 30),
-          onTimeout: () => Permission.location.status.then((value) => value),
+          onTimeout: () async => await Permission.location.status,
         );
-        permissionStatus['location'] = await locationStatus.isGranted;
+        permissionStatus['location'] = locationStatus.isGranted || locationStatus.isProvisional;
         log('📍 Location permission: ${permissionStatus['location']}');
       } catch (e) {
         log('⚠️ Location permission error: $e');
@@ -220,10 +224,7 @@ class EnhancedBackupService {
 
       // Contacts permission with timeout
       try {
-        permissionStatus['contacts'] = await FlutterContacts.requestPermission().timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => false,
-        );
+        permissionStatus['contacts'] = await FlutterContacts.requestPermission(readonly: true);
         log('👥 Contacts permission: ${permissionStatus['contacts']}');
       } catch (e) {
         log('⚠️ Contacts permission error: $e');
@@ -232,10 +233,7 @@ class EnhancedBackupService {
 
       // Photos permission with timeout
       try {
-        final photoPermission = await PhotoManager.requestPermissionExtend().timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => PermissionState.denied,
-        );
+        final photoPermission = await PhotoManager.requestPermissionExtend();
         permissionStatus['photos'] = photoPermission.isAuth;
         log('📸 Photos permission: ${permissionStatus['photos']}');
       } catch (e) {
@@ -246,11 +244,8 @@ class EnhancedBackupService {
       // Storage permission (for Android) with timeout
       if (Platform.isAndroid) {
         try {
-          final storageStatus = await Permission.storage.request().timeout(
-            const Duration(seconds: 30),
-            onTimeout: () => Permission.storage.status.then((value) => value),
-          );
-          permissionStatus['storage'] = await storageStatus.isGranted;
+          final storageStatus = await Permission.storage.request();
+          permissionStatus['storage'] = storageStatus.isGranted;
           log('💾 Storage permission: ${permissionStatus['storage']}');
         } catch (e) {
           log('⚠️ Storage permission error: $e');
@@ -262,11 +257,8 @@ class EnhancedBackupService {
 
       // Notification permission (optional) with timeout
       try {
-        final notificationStatus = await Permission.notification.request().timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => Permission.notification.status.then((value) => value),
-        );
-        permissionStatus['notifications'] = await notificationStatus.isGranted;
+        final notificationStatus = await Permission.notification.request();
+        permissionStatus['notifications'] = notificationStatus.isGranted;
         log('🔔 Notification permission: ${permissionStatus['notifications']}');
       } catch (e) {
         log('⚠️ Notification permission error: $e');
@@ -280,6 +272,10 @@ class EnhancedBackupService {
     _permissions = permissionStatus;
     _permissionsController.add(permissionStatus);
     log('📋 Permissions requested: $permissionStatus');
+
+    // Reset state back to idle after requesting
+    _updateState(BackupState.idle);
+    _updateProgress(0.0, 'Ready to backup');
 
     return permissionStatus;
   }

@@ -164,33 +164,133 @@ class NotificationsView extends GetView<NotificationsController> {
                   )),
               SizedBox(height: Sizes.size16),
               GestureDetector(
-                onTap: () {
-                  // Show confirmation dialog
-                  Get.dialog(
-                    AlertDialog(
-                      title: Text('Reset Notifications'),
-                      content: Text(
-                          'Are you sure you want to reset all notification settings?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Get.back(),
-                          child: Text('Cancel'),
+                onTap: () async {
+                  // Show confirmation bottom sheet
+                  final confirmed = await Get.bottomSheet<bool>(
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(Radiuss.xLarge),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            controller.resetNotificationSettings();
-                            Get.back();
-                            Get.snackbar(
-                              'Success',
-                              'Notification settings have been reset',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                          child: Text('Reset'),
-                        ),
-                      ],
+                      ),
+                      padding: const EdgeInsets.all(Paddings.xLarge),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Drag handle
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          SizedBox(height: Sizes.size24),
+
+                          // Icon
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.restart_alt,
+                              size: 48,
+                              color: Colors.orange,
+                            ),
+                          ),
+
+                          SizedBox(height: Sizes.size20),
+
+                          // Title
+                          Text(
+                            'Reset Notifications',
+                            style: StylesManager.bold(
+                              fontSize: FontSize.xLarge,
+                              color: Colors.black87,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: Sizes.size12),
+
+                          // Message
+                          Text(
+                            'Are you sure you want to reset all notification settings to default? This action cannot be undone.',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.medium,
+                              color: ColorsManager.grey,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: Sizes.size32),
+
+                          // Action buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Get.back(result: false),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  child: Text(
+                                    Constants.kCancel.tr,
+                                    style: StylesManager.semiBold(
+                                      fontSize: FontSize.medium,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: Sizes.size12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Get.back(result: true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    'Reset',
+                                    style: StylesManager.semiBold(
+                                      fontSize: FontSize.medium,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: Sizes.size16),
+                        ],
+                      ),
                     ),
+                    backgroundColor: Colors.transparent,
+                    isDismissible: true,
+                    enableDrag: true,
                   );
+
+                  if (confirmed == true) {
+                    controller.resetNotificationSettings();
+                    Get.snackbar(
+                      'Success',
+                      'Notification settings have been reset',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: ColorsManager.primary,
+                      colorText: Colors.white,
+                    );
+                  }
                 },
                 child: Container(
                   width: MediaQuery.sizeOf(context).width,

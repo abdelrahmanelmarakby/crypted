@@ -228,7 +228,10 @@ class PrivateChatScreen extends GetView<ChatController> {
             // Navigate to contact info for individual chats
             Get.toNamed(
               Routes.CONTACT_INFO,
-              arguments: {"user": otherUser},
+              arguments: {
+                "user": otherUser,
+                "roomId": controller.roomId,
+              },
             );
           }
         },
