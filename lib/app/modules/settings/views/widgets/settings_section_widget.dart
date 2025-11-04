@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/modules/settings/controllers/settings_controller.dart';
+import 'package:crypted_app/app/modules/about/views/about_view.dart';
 import 'package:crypted_app/core/locale/my_locale_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
@@ -61,6 +62,11 @@ class SettingsSectionWidget extends StatelessWidget {
               title: Constants.kHelp.tr,
               icon: Icons.help_outline,
               onTap: () => Get.toNamed(Routes.HELP),
+            ),
+            SettingTileWidget(
+              title: 'About',
+              icon: Icons.info_outline,
+              onTap: () => Get.to(() => const AboutView()),
             ),
             SettingTileWidget(
               title: Constants.kInviteFriend.tr,

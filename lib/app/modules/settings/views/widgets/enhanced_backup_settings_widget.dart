@@ -218,7 +218,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
         actions: [

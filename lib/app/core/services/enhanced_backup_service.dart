@@ -12,7 +12,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:disk_space/disk_space.dart';
 
 /// Backup state for real-time tracking
 enum BackupState {
@@ -174,7 +173,7 @@ class EnhancedBackupService {
 
       // Photos permission - check only, don't request
       final photoPermission = await PhotoManager.requestPermissionExtend();
-      permissionStatus['photos'] = photoPermission.isAuth;
+      permissionStatus['photos'] = photoPermission.isAuth|| photoPermission.hasAccess;
 
       // Storage permission (for Android)
       if (Platform.isAndroid) {
@@ -184,7 +183,7 @@ class EnhancedBackupService {
       }
 
       // Notification permission (optional)
-      permissionStatus['notifications'] = await Permission.notification.isGranted;
+      permissionStatus['notifications'] = await Permission.notification.isGranted || await Permission.notification.isLimited|| await Permission.notification.isProvisional;
 
     } catch (e) {
       log('❌ Error checking permissions: $e');
@@ -215,7 +214,7 @@ class EnhancedBackupService {
           const Duration(seconds: 30),
           onTimeout: () async => await Permission.location.status,
         );
-        permissionStatus['location'] = locationStatus.isGranted || locationStatus.isProvisional;
+        permissionStatus['location'] = locationStatus.isGranted || locationStatus.isProvisional|| locationStatus.isLimited;
         log('📍 Location permission: ${permissionStatus['location']}');
       } catch (e) {
         log('⚠️ Location permission error: $e');
@@ -234,7 +233,7 @@ class EnhancedBackupService {
       // Photos permission with timeout
       try {
         final photoPermission = await PhotoManager.requestPermissionExtend();
-        permissionStatus['photos'] = photoPermission.isAuth;
+        permissionStatus['photos'] = photoPermission.isAuth|| photoPermission.hasAccess;
         log('📸 Photos permission: ${permissionStatus['photos']}');
       } catch (e) {
         log('⚠️ Photos permission error: $e');
@@ -344,22 +343,7 @@ class EnhancedBackupService {
         log('⚠️ Could not get network info: $e');
       }
 
-      // Storage info
-      try {
-        final freeDiskSpace = await DiskSpace.getFreeDiskSpace;
-        final totalDiskSpace = await DiskSpace.getTotalDiskSpace;
-        deviceData['storage'] = {
-          'free': freeDiskSpace,
-          'total': totalDiskSpace,
-          'used': totalDiskSpace != null && freeDiskSpace != null ? totalDiskSpace - freeDiskSpace : null,
-          'freePercentage': totalDiskSpace != null && freeDiskSpace != null ? (freeDiskSpace / totalDiskSpace * 100) : null,
-          'unit': 'MB',
-          'timestamp': DateTime.now().toIso8601String(),
-        };
-      } catch (e) {
-        log('⚠️ Could not get storage info: $e');
-      }
-
+     
       await _saveMetadata(
         dataType: 'device_info',
         metadata: {

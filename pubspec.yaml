@@ -30,9 +30,13 @@ environment:
 dependencies:
 
   geolocator: ^13.0.3
+  geocoding: ^3.0.0
+  crypto: ^3.0.3
   flutter_native_contact_picker: ^0.0.10
   story: ^1.1.0
+  story_view: ^0.16.5
   firebase_messaging: ^15.2.8
+  workmanager: ^0.5.2
   flutter_local_notifications: ^18.0.1
   uuid: ^4.3.3
   zego_uikit: ^2.14.0
@@ -108,7 +112,6 @@ dependencies:
   battery_plus: ^6.0.2
   package_info_plus: ^8.1.1
   avatar_stack: ^3.0.0
-  disk_space: ^0.2.1
 
 dev_dependencies:
   build_runner: ^2.4.6

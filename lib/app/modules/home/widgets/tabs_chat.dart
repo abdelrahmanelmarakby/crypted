@@ -96,7 +96,7 @@ class TabsChat extends StatelessWidget {
             elevation: 0,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(
-                Radius.circular(12),
+                Radius.circular(16),
               ),
             ),
             backgroundColor: ColorsManager.primary,
@@ -135,17 +135,20 @@ class TabsChat extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: ColorsManager.navbarColor,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: TabBar(
                       isScrollable: false,
                       indicatorSize: TabBarIndicatorSize.label,
+                      indicatorPadding: EdgeInsets.zero,
+
                       indicator: UnderlineTabIndicator(
                         
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
                           color: ColorsManager.primary,
                           width: 1,
+                          
                           
                         ),
                         insets: EdgeInsets.symmetric(horizontal: 1),
@@ -187,9 +190,7 @@ class TabsChat extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        border: hasRightBorder
-            ? Border(right: BorderSide(color: Colors.white, width: 1))
-            : null,
+        border: hasRightBorder ? Border(right: BorderSide(color: Colors.white, width: 1)) : null,
       ),
       child: Tab(text: text),
     );

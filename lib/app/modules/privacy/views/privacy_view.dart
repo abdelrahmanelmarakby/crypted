@@ -323,14 +323,14 @@ class PrivacyView extends GetView<PrivacyController> {
                   future: controller.getBlockedUsers(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Container(
+                      return SizedBox(
                         height: 200,
                         child: const Center(child: CircularProgressIndicator.adaptive()),
                       );
                     }
 
                     if (snapshot.hasError) {
-                      return Container(
+                      return SizedBox(
                         height: 200,
                         child: Center(
                           child: Column(
@@ -353,7 +353,7 @@ class PrivacyView extends GetView<PrivacyController> {
                     final blockedUsers = snapshot.data ?? [];
 
                     if (blockedUsers.isEmpty) {
-                      return Container(
+                      return SizedBox(
                         height: 200,
                         child: Center(
                           child: Column(

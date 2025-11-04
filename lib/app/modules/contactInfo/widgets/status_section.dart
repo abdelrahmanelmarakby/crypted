@@ -1,6 +1,5 @@
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/contactInfo/controllers/contact_info_controller.dart';
-import 'package:crypted_app/app/modules/group_info/controllers/group_info_controller.dart';
 import 'package:crypted_app/app/widgets/custom_container.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
 import 'package:crypted_app/core/locale/constant.dart';

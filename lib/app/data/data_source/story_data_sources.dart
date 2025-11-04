@@ -292,9 +292,9 @@ class StoryDataSources {
         type: 'story_reply',
         title: 'New Reply',
         body: '${currentUser.fullName} replied to your story: $replyText',
-        fromUserId: currentUser?.uid??"",
-        fromUserName: currentUser?.fullName??"",
-        fromUserImage: currentUser?.imageUrl??"",
+        fromUserId: currentUser.uid??"",
+        fromUserName: currentUser.fullName??"",
+        fromUserImage: currentUser.imageUrl??"",
         storyId: storyId,
       );  
 
@@ -358,9 +358,9 @@ class StoryDataSources {
         type: 'story_reaction',
         title: 'New Reaction',
         body: '${currentUser.fullName} reacted to your story with $emoji',
-        fromUserId: currentUser?.uid??"",
-        fromUserName: currentUser?.fullName??"",
-        fromUserImage: currentUser?.imageUrl??"",
+        fromUserId: currentUser.uid??"",
+        fromUserName: currentUser.fullName??"",
+        fromUserImage: currentUser.imageUrl??"",
         storyId: storyId,
       );
 

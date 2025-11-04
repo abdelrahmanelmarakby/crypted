@@ -1214,7 +1214,7 @@ class ChatDataSources {
           .limit(100)
           .get();
 
-      return messagesQuery.docs.map((doc) => Message.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return messagesQuery.docs.map((doc) => Message.fromMap(doc.data())).toList();
     } catch (error) {
       if (kDebugMode) {
         print('❌ Error getting starred messages: $error');

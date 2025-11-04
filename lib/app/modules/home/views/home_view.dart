@@ -2,6 +2,7 @@ import 'package:crypted_app/app/modules/home/controllers/home_controller.dart';
 import 'package:crypted_app/app/modules/home/widgets/search.dart';
 import 'package:crypted_app/app/modules/home/widgets/tabs_chat.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
+import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -32,27 +33,32 @@ class HomeView extends GetView<HomeController> {
             children: [
               Row(
                 children: [
-                  Obx(() {
-                    final user = UserService.currentUser.value;
-                    if (user?.imageUrl != null && user!.imageUrl!.isNotEmpty) {
-                      return ClipOval(
-                        child: AppCachedNetworkImage(
-                          imageUrl: user.imageUrl!,
-                          fit: BoxFit.cover,
-                          height: Radiuss.xLarge * 2,
-                          width: Radiuss.xLarge * 2,
-                          isCircular: true,
-                        ),
-                      );
-                    } else {
-                      return CircleAvatar(
-                        backgroundImage: AssetImage(
-                          'assets/images/Profile Image111.png',
-                        ),
-                        radius: Radiuss.xLarge,
-                      );
-                    }
-                  }),
+                  GestureDetector(
+                    onTap: () {
+                      Get.toNamed(Routes.SETTINGS);
+                    },
+                    child: Obx(() {
+                      final user = UserService.currentUser.value;
+                      if (user?.imageUrl != null && user!.imageUrl!.isNotEmpty) {
+                        return ClipOval(
+                          child: AppCachedNetworkImage(
+                            imageUrl: user.imageUrl!,
+                            fit: BoxFit.cover,
+                            height: Radiuss.xLarge * 2,
+                            width: Radiuss.xLarge * 2,
+                            isCircular: true,
+                          ),
+                        );
+                      } else {
+                        return CircleAvatar(
+                          backgroundImage: AssetImage(
+                            'assets/images/Profile Image111.png',
+                          ),
+                          radius: Radiuss.xLarge,
+                        );
+                      }
+                    }),
+                  ),
                   SizedBox(width: Sizes.size12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +67,7 @@ class HomeView extends GetView<HomeController> {
                         Constants.kHello.tr,
                         style: StylesManager.regular(fontSize: FontSize.small, color: ColorsManager.grey),
                       ),
-                      Obx(() => Text(   
+                      Obx(() => Text(
                             controller.myUser.value?.fullName ??
                                 UserService.currentUser.value?.fullName ??
                                 Constants.kUser.tr,
@@ -90,6 +96,9 @@ class HomeView extends GetView<HomeController> {
                 ],
               ),
               SizedBox(height: Sizes.size14),
+              // Stories Carousel
+              // StoriesCarousel(),
+              // SizedBox(height: Sizes.size12),
               Expanded(child: TabsChat()),
             ],
           ),

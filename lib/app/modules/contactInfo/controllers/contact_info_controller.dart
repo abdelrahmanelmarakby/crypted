@@ -946,7 +946,7 @@ class ContactInfoController extends GetxController {
   Future<String> _exportAsText(List<QueryDocumentSnapshot> messages) async {
     final buffer = StringBuffer();
     buffer.writeln('=' * 50);
-    buffer.writeln('Chat Export - ${displayName}');
+    buffer.writeln('Chat Export - $displayName');
     buffer.writeln('Exported on: ${DateTime.now()}');
     buffer.writeln('Total messages: ${messages.length}');
     buffer.writeln('=' * 50);
