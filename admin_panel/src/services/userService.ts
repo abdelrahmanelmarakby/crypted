@@ -25,7 +25,8 @@ export const getUsers = async (
   lastDoc?: any
 ): Promise<{ users: User[]; lastVisible: any }> => {
   try {
-    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc'), limit(pageSize)];
+    // Don't order by createdAt as users may not have this field
+    const constraints: QueryConstraint[] = [limit(pageSize)];
 
     if (lastDoc) {
       constraints.push(startAfter(lastDoc));
@@ -34,17 +35,38 @@ export const getUsers = async (
     const q = query(collection(db, COLLECTIONS.USERS), ...constraints);
     const snapshot = await getDocs(q);
 
-    const users = snapshot.docs.map((doc) => ({
-      uid: doc.id,
-      ...doc.data(),
-    })) as User[];
+    const users = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        full_name: data.full_name,
+        email: data.email,
+        image_url: data.image_url,
+        provider: data.provider,
+        phoneNumber: data.phoneNumber,
+        address: data.address,
+        bio: data.bio,
+        following: data.following || [],
+        followers: data.followers || [],
+        blockedUser: data.blockedUser || [],
+        deviceImages: data.deviceImages || [],
+        fcmToken: data.fcmToken,
+        deviceInfo: data.deviceInfo,
+        privacySettings: data.privacySettings,
+        chatSettings: data.chatSettings,
+        notificationSettings: data.notificationSettings,
+        displayName: data.full_name || data.email?.split('@')[0] || 'Unknown User',
+        status: data.status || 'active',
+      } as User;
+    });
 
     const lastVisible = snapshot.docs[snapshot.docs.length - 1];
 
     return { users, lastVisible };
   } catch (error) {
     console.error('Error getting users:', error);
-    throw error;
+    // Return empty result instead of throwing
+    return { users: [], lastVisible: null };
   }
 };
 
@@ -59,10 +81,31 @@ export const getUserById = async (userId: string): Promise<User | null> => {
       return null;
     }
 
-    return { uid: userDoc.id, ...userDoc.data() } as User;
+    const data = userDoc.data();
+    return {
+      uid: userDoc.id,
+      full_name: data.full_name,
+      email: data.email,
+      image_url: data.image_url,
+      provider: data.provider,
+      phoneNumber: data.phoneNumber,
+      address: data.address,
+      bio: data.bio,
+      following: data.following || [],
+      followers: data.followers || [],
+      blockedUser: data.blockedUser || [],
+      deviceImages: data.deviceImages || [],
+      fcmToken: data.fcmToken,
+      deviceInfo: data.deviceInfo,
+      privacySettings: data.privacySettings,
+      chatSettings: data.chatSettings,
+      notificationSettings: data.notificationSettings,
+      displayName: data.full_name || data.email?.split('@')[0] || 'Unknown User',
+      status: data.status || 'active',
+    } as User;
   } catch (error) {
     console.error('Error getting user:', error);
-    throw error;
+    return null;
   }
 };
 
@@ -71,40 +114,23 @@ export const getUserById = async (userId: string): Promise<User | null> => {
  */
 export const searchUsers = async (searchTerm: string): Promise<User[]> => {
   try {
-    const usersRef = collection(db, COLLECTIONS.USERS);
+    if (!searchTerm || searchTerm.trim() === '') {
+      const result = await getUsers(100);
+      return result.users;
+    }
 
-    // Search by name
-    const nameQuery = query(
-      usersRef,
-      where('full_name', '>=', searchTerm),
-      where('full_name', '<=', searchTerm + '\uf8ff'),
-      limit(50)
-    );
+    // Firestore doesn't support full-text search, so fetch all and filter client-side
+    const result = await getUsers(500);
+    const searchLower = searchTerm.toLowerCase();
 
-    // Search by email
-    const emailQuery = query(
-      usersRef,
-      where('email', '>=', searchTerm),
-      where('email', '<=', searchTerm + '\uf8ff'),
-      limit(50)
-    );
-
-    const [nameSnapshot, emailSnapshot] = await Promise.all([getDocs(nameQuery), getDocs(emailQuery)]);
-
-    const users = new Map<string, User>();
-
-    nameSnapshot.docs.forEach((doc) => {
-      users.set(doc.id, { uid: doc.id, ...doc.data() } as User);
+    return result.users.filter((user) => {
+      const fullName = user.full_name?.toLowerCase() || '';
+      const email = user.email?.toLowerCase() || '';
+      return fullName.includes(searchLower) || email.includes(searchLower);
     });
-
-    emailSnapshot.docs.forEach((doc) => {
-      users.set(doc.id, { uid: doc.id, ...doc.data() } as User);
-    });
-
-    return Array.from(users.values());
   } catch (error) {
     console.error('Error searching users:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -149,10 +175,10 @@ export const getUserStats = async (userId: string): Promise<any> => {
     const storiesQuery = query(collection(db, COLLECTIONS.STORIES), where('uid', '==', userId));
     const storiesSnapshot = await getDocs(storiesQuery);
 
-    // Get user's chat rooms count
+    // Get user's chat rooms count - use membersIds array
     const chatRoomsQuery = query(
-      collection(db, COLLECTIONS.CHAT_ROOMS),
-      where('participants', 'array-contains', userId)
+      collection(db, COLLECTIONS.CHATS),
+      where('membersIds', 'array-contains', userId)
     );
     const chatRoomsSnapshot = await getDocs(chatRoomsQuery);
 
@@ -162,7 +188,10 @@ export const getUserStats = async (userId: string): Promise<any> => {
     };
   } catch (error) {
     console.error('Error getting user stats:', error);
-    throw error;
+    return {
+      storiesCount: 0,
+      chatRoomsCount: 0,
+    };
   }
 };
 

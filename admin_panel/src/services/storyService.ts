@@ -82,10 +82,16 @@ export const getStories = async (
         storyType: data.storyType || 'text',
         status: data.status || 'active',
         viewedBy: data.viewedBy || [],
-        duration: data.duration,
+        duration: data.duration || 5,
+        backgroundColor: data.backgroundColor,
+        textColor: data.textColor,
+        fontSize: data.fontSize,
+        fontFamily: data.fontFamily,
+        textPosition: data.textPosition,
       } as Story;
     });
 
+    console.log(`Fetched ${stories.length} stories`);
     return stories;
   } catch (error) {
     console.error('Error getting stories:', error);
@@ -105,10 +111,28 @@ export const getStoryById = async (storyId: string): Promise<Story | null> => {
       return null;
     }
 
-    return { id: storyDoc.id, ...storyDoc.data() } as Story;
+    const data = storyDoc.data();
+    return {
+      id: storyDoc.id,
+      uid: data.uid || '',
+      user: data.user || { full_name: 'Unknown', image_url: '' },
+      storyFileUrl: data.storyFileUrl,
+      storyText: data.storyText,
+      createdAt: data.createdAt,
+      expiresAt: data.expiresAt,
+      storyType: data.storyType || 'text',
+      status: data.status || 'active',
+      viewedBy: data.viewedBy || [],
+      duration: data.duration || 5,
+      backgroundColor: data.backgroundColor,
+      textColor: data.textColor,
+      fontSize: data.fontSize,
+      fontFamily: data.fontFamily,
+      textPosition: data.textPosition,
+    } as Story;
   } catch (error) {
     console.error('Error getting story:', error);
-    throw error;
+    return null;
   }
 };
 

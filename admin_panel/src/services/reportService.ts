@@ -65,13 +65,19 @@ export const getReports = async (
       const data = doc.data();
       return {
         id: doc.id,
-        reporterId: data.reporterId || '',
-        reportedUserId: data.reportedUserId,
+        // Flutter model fields
+        reporter: data.reporter, // Full user object
+        reported: data.reported, // Full user object
+        roomId: data.roomId,
+        msg: data.msg, // reason/description
+        // Admin panel fields
+        reporterId: data.reporter?.uid || data.reporterId || '',
+        reportedUserId: data.reported?.uid || data.reportedUserId,
         reportedMessageId: data.reportedMessageId,
         reportedStoryId: data.reportedStoryId,
         contentType: data.contentType || 'user',
-        reason: data.reason || '',
-        description: data.description,
+        reason: data.msg || data.reason || '',
+        description: data.description || data.msg,
         status: data.status || 'pending',
         priority: data.priority || 'medium',
         createdAt: data.createdAt,

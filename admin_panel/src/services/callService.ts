@@ -12,6 +12,24 @@ import {
 import { db } from '@/config/firebase';
 import { Call } from '@/types';
 import { COLLECTIONS } from '@/utils/constants';
+
+/**
+ * Convert time field to Date
+ */
+const parseCallTime = (time: any): Date | undefined => {
+  if (!time) return undefined;
+
+  if (time instanceof Timestamp) {
+    return time.toDate();
+  }
+
+  if (typeof time === 'number') {
+    return new Date(time);
+  }
+
+  return undefined;
+};
+
 /**
  * Get all calls
  */
@@ -19,9 +37,10 @@ export const getCalls = async (pageLimit: number = 100): Promise<Call[]> => {
   try {
     let q;
     try {
+      // Try ordering by time field
       q = query(
         collection(db, COLLECTIONS.CALLS),
-        orderBy('startTime', 'desc'),
+        orderBy('time', 'desc'),
         limit(pageLimit)
       );
     } catch {
@@ -32,28 +51,37 @@ export const getCalls = async (pageLimit: number = 100): Promise<Call[]> => {
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
+      console.log('No calls found');
       return [];
     }
 
     const calls = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
-        id: doc.id,
+        callId: data.callId || doc.id,
+        id: data.callId || doc.id,
+        channelName: data.channelName,
         callerId: data.callerId || '',
-        receiverId: data.receiverId || '',
-        participants: data.participants || [],
-        type: data.type || 'audio',
-        duration: data.duration,
-        status: data.status || 'completed',
-        startTime: data.startTime,
-        endTime: data.endTime,
+        callerImage: data.callerImage,
+        callerUserName: data.callerUserName,
+        calleeId: data.calleeId || '',
+        calleeImage: data.calleeImage,
+        calleeUserName: data.calleeUserName,
+        time: data.time,
+        callDuration: data.callDuration,
+        duration: data.callDuration, // alias
+        callType: data.callType || 'audio',
+        type: data.callType || 'audio', // alias
+        callStatus: data.callStatus || 'ended',
+        status: data.callStatus || 'ended', // alias
+        startTime: parseCallTime(data.time),
       } as Call;
     });
 
+    console.log(`Fetched ${calls.length} calls`);
     return calls;
   } catch (error) {
     console.error('Error getting calls:', error);
-    // Return empty array instead of throwing
     return [];
   }
 };
@@ -69,34 +97,85 @@ export const getCallById = async (callId: string): Promise<Call | null> => {
       return null;
     }
 
-    return { id: callDoc.id, ...callDoc.data() } as Call;
+    const data = callDoc.data();
+    return {
+      callId: data.callId || callDoc.id,
+      id: data.callId || callDoc.id,
+      channelName: data.channelName,
+      callerId: data.callerId || '',
+      callerImage: data.callerImage,
+      callerUserName: data.callerUserName,
+      calleeId: data.calleeId || '',
+      calleeImage: data.calleeImage,
+      calleeUserName: data.calleeUserName,
+      time: data.time,
+      callDuration: data.callDuration,
+      duration: data.callDuration,
+      callType: data.callType || 'audio',
+      type: data.callType || 'audio',
+      callStatus: data.callStatus || 'ended',
+      status: data.callStatus || 'ended',
+      startTime: parseCallTime(data.time),
+    } as Call;
   } catch (error) {
     console.error('Error getting call:', error);
-    throw error;
+    return null;
   }
 };
 
 /**
- * Get calls by user ID
+ * Get calls by user ID (where user is either caller or callee)
  */
 export const getCallsByUser = async (userId: string): Promise<Call[]> => {
   try {
-    const q = query(
+    // Get calls where user is caller
+    const callerQuery = query(
       collection(db, COLLECTIONS.CALLS),
-      where('participants', 'array-contains', userId),
-      orderBy('startTime', 'desc'),
+      where('callerId', '==', userId),
       limit(50)
     );
 
-    const snapshot = await getDocs(q);
+    // Get calls where user is callee
+    const calleeQuery = query(
+      collection(db, COLLECTIONS.CALLS),
+      where('calleeId', '==', userId),
+      limit(50)
+    );
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Call[];
+    const [callerSnapshot, calleeSnapshot] = await Promise.all([
+      getDocs(callerQuery),
+      getDocs(calleeQuery),
+    ]);
+
+    const calls = new Map<string, Call>();
+
+    [...callerSnapshot.docs, ...calleeSnapshot.docs].forEach((doc) => {
+      const data = doc.data();
+      calls.set(doc.id, {
+        callId: data.callId || doc.id,
+        id: data.callId || doc.id,
+        channelName: data.channelName,
+        callerId: data.callerId || '',
+        callerImage: data.callerImage,
+        callerUserName: data.callerUserName,
+        calleeId: data.calleeId || '',
+        calleeImage: data.calleeImage,
+        calleeUserName: data.calleeUserName,
+        time: data.time,
+        callDuration: data.callDuration,
+        duration: data.callDuration,
+        callType: data.callType || 'audio',
+        type: data.callType || 'audio',
+        callStatus: data.callStatus || 'ended',
+        status: data.callStatus || 'ended',
+        startTime: parseCallTime(data.time),
+      } as Call);
+    });
+
+    return Array.from(calls.values());
   } catch (error) {
     console.error('Error getting user calls:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -107,37 +186,57 @@ export const getCallStats = async (): Promise<any> => {
   try {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayTimestamp = Timestamp.fromDate(today);
 
     // Get all calls
     const allCallsSnapshot = await getDocs(collection(db, COLLECTIONS.CALLS));
     const totalCalls = allCallsSnapshot.size;
 
-    // Calls today
-    const todayQuery = query(
-      collection(db, COLLECTIONS.CALLS),
-      where('startTime', '>=', Timestamp.fromDate(today))
-    );
-    const todaySnapshot = await getDocs(todayQuery);
-    const callsToday = todaySnapshot.size;
-
     // Calculate stats
     let audioCallsCount = 0;
     let videoCallsCount = 0;
     let completedCalls = 0;
+    let endedCalls = 0;
+    let connectedCalls = 0;
     let missedCalls = 0;
+    let canceledCalls = 0;
     let totalDuration = 0;
+    let callsToday = 0;
 
     allCallsSnapshot.docs.forEach((doc) => {
-      const call = doc.data() as Call;
+      const data = doc.data();
+      const callType = data.callType || '';
+      const callStatus = data.callStatus || '';
+      const callTime = data.time;
+      const callDuration = data.callDuration || 0;
 
-      if (call.type === 'audio') audioCallsCount++;
-      if (call.type === 'video') videoCallsCount++;
-      if (call.status === 'completed') completedCalls++;
-      if (call.status === 'missed') missedCalls++;
-      if (call.duration) totalDuration += call.duration;
+      // Count by type
+      if (callType === 'audio') audioCallsCount++;
+      if (callType === 'video') videoCallsCount++;
+
+      // Count by status
+      if (callStatus === 'ended') endedCalls++;
+      if (callStatus === 'connected') connectedCalls++;
+      if (callStatus === 'missed') missedCalls++;
+      if (callStatus === 'canceled') canceledCalls++;
+
+      // Completed means ended with duration > 0
+      if (callStatus === 'ended' && callDuration > 0) {
+        completedCalls++;
+        totalDuration += callDuration;
+      }
+
+      // Check if call was today
+      if (callTime) {
+        const callDate = parseCallTime(callTime);
+        if (callDate && callDate >= today) {
+          callsToday++;
+        }
+      }
     });
 
-    const averageDuration = totalCalls > 0 ? Math.floor(totalDuration / totalCalls) : 0;
+    const averageDuration = completedCalls > 0 ? Math.floor(totalDuration / completedCalls) : 0;
+    const successRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
 
     return {
       totalCalls,
@@ -145,13 +244,26 @@ export const getCallStats = async (): Promise<any> => {
       audioCallsCount,
       videoCallsCount,
       completedCalls,
+      endedCalls,
       missedCalls,
+      canceledCalls,
       averageDuration,
-      successRate: totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0,
+      successRate,
     };
   } catch (error) {
     console.error('Error getting call stats:', error);
-    throw error;
+    return {
+      totalCalls: 0,
+      callsToday: 0,
+      audioCallsCount: 0,
+      videoCallsCount: 0,
+      completedCalls: 0,
+      endedCalls: 0,
+      missedCalls: 0,
+      canceledCalls: 0,
+      averageDuration: 0,
+      successRate: 0,
+    };
   }
 };
 
@@ -165,19 +277,37 @@ export const getCallsByDateRange = async (
   try {
     const q = query(
       collection(db, COLLECTIONS.CALLS),
-      where('startTime', '>=', Timestamp.fromDate(startDate)),
-      where('startTime', '<=', Timestamp.fromDate(endDate)),
-      orderBy('startTime', 'desc')
+      where('time', '>=', Timestamp.fromDate(startDate)),
+      where('time', '<=', Timestamp.fromDate(endDate)),
+      orderBy('time', 'desc')
     );
 
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Call[];
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        callId: data.callId || doc.id,
+        id: data.callId || doc.id,
+        channelName: data.channelName,
+        callerId: data.callerId || '',
+        callerImage: data.callerImage,
+        callerUserName: data.callerUserName,
+        calleeId: data.calleeId || '',
+        calleeImage: data.calleeImage,
+        calleeUserName: data.calleeUserName,
+        time: data.time,
+        callDuration: data.callDuration,
+        duration: data.callDuration,
+        callType: data.callType || 'audio',
+        type: data.callType || 'audio',
+        callStatus: data.callStatus || 'ended',
+        status: data.callStatus || 'ended',
+        startTime: parseCallTime(data.time),
+      } as Call;
+    });
   } catch (error) {
     console.error('Error getting calls by date range:', error);
-    throw error;
+    return [];
   }
 };

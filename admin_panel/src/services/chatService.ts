@@ -19,66 +19,44 @@ import { getUserById } from './userService';
  */
 export const getChatRooms = async (pageLimit: number = 50): Promise<ChatRoom[]> => {
   try {
-    // First, try to get all chat rooms without ordering (in case lastMessageTime doesn't exist)
-    let q;
-    try {
-      q = query(
-        collection(db, COLLECTIONS.CHAT_ROOMS),
-        orderBy('lastMessageTime', 'desc'),
-        limit(pageLimit)
-      );
-    } catch (orderError) {
-      // If ordering fails, just get without ordering
-      q = query(collection(db, COLLECTIONS.CHAT_ROOMS), limit(pageLimit));
-    }
-
+    // Use correct collection name: 'chats'
+    const q = query(collection(db, COLLECTIONS.CHATS), limit(pageLimit));
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
+      console.log('No chat rooms found');
       return [];
     }
 
-    const chatRooms = await Promise.all(
-      snapshot.docs.map(async (docSnapshot) => {
-        const data = docSnapshot.data();
+    const chatRooms = snapshot.docs.map((docSnapshot) => {
+      const data = docSnapshot.data();
 
-        // Fetch participant details safely
-        let participantDetails: any[] = [];
-        if (data.participants && Array.isArray(data.participants)) {
-          try {
-            participantDetails = await Promise.all(
-              data.participants.map(async (uid: string) => {
-                try {
-                  return await getUserById(uid);
-                } catch {
-                  return null;
-                }
-              })
-            );
-          } catch {
-            participantDetails = [];
-          }
-        }
+      return {
+        id: docSnapshot.id,
+        name: data.name,
+        lastMsg: data.lastMsg,
+        lastSender: data.lastSender,
+        lastChat: data.lastChat,
+        blockingUserId: data.blockingUserId,
+        keywords: data.keywords || [],
+        members: data.members || [],
+        membersIds: data.membersIds || [],
+        read: data.read,
+        isGroupChat: data.isGroupChat || false,
+        description: data.description,
+        groupImageUrl: data.groupImageUrl,
+        isMuted: data.isMuted || false,
+        isPinned: data.isPinned || false,
+        isArchived: data.isArchived || false,
+        isFavorite: data.isFavorite || false,
+        blockedUsers: data.blockedUsers || [],
+      } as ChatRoom;
+    });
 
-        return {
-          id: docSnapshot.id,
-          participants: data.participants || [],
-          type: data.type || 'private',
-          name: data.name,
-          image: data.image,
-          createdAt: data.createdAt,
-          lastMessage: data.lastMessage,
-          lastMessageTime: data.lastMessageTime,
-          isActive: data.isActive !== false,
-          participantDetails: participantDetails.filter(Boolean),
-        } as ChatRoom;
-      })
-    );
-
+    console.log(`Fetched ${chatRooms.length} chat rooms`);
     return chatRooms;
   } catch (error) {
     console.error('Error getting chat rooms:', error);
-    // Return empty array instead of throwing to prevent UI breaks
     return [];
   }
 };
@@ -88,7 +66,7 @@ export const getChatRooms = async (pageLimit: number = 50): Promise<ChatRoom[]> 
  */
 export const getChatRoomById = async (roomId: string): Promise<ChatRoom | null> => {
   try {
-    const roomDoc = await getDoc(doc(db, COLLECTIONS.CHAT_ROOMS, roomId));
+    const roomDoc = await getDoc(doc(db, COLLECTIONS.CHATS, roomId));
 
     if (!roomDoc.exists()) {
       return null;
@@ -96,31 +74,43 @@ export const getChatRoomById = async (roomId: string): Promise<ChatRoom | null> 
 
     const data = roomDoc.data();
 
-    // Fetch participant details
-    const participantDetails = await Promise.all(
-      (data.participants || []).map((uid: string) => getUserById(uid))
-    );
-
     return {
       id: roomDoc.id,
-      ...data,
-      participantDetails: participantDetails.filter(Boolean),
+      name: data.name,
+      lastMsg: data.lastMsg,
+      lastSender: data.lastSender,
+      lastChat: data.lastChat,
+      blockingUserId: data.blockingUserId,
+      keywords: data.keywords || [],
+      members: data.members || [],
+      membersIds: data.membersIds || [],
+      read: data.read,
+      isGroupChat: data.isGroupChat || false,
+      description: data.description,
+      groupImageUrl: data.groupImageUrl,
+      isMuted: data.isMuted || false,
+      isPinned: data.isPinned || false,
+      isArchived: data.isArchived || false,
+      isFavorite: data.isFavorite || false,
+      blockedUsers: data.blockedUsers || [],
     } as ChatRoom;
   } catch (error) {
     console.error('Error getting chat room:', error);
-    throw error;
+    return null;
   }
 };
 
 /**
  * Get messages from a chat room
+ * Flutter app stores messages in: chats/{roomId}/chat/
  */
 export const getChatMessages = async (
   roomId: string,
   pageLimit: number = 100
 ): Promise<Message[]> => {
   try {
-    const messagesRef = collection(db, COLLECTIONS.CHAT_ROOMS, roomId, 'chat');
+    // Use correct path: chats/{roomId}/chat/
+    const messagesRef = collection(db, COLLECTIONS.CHATS, roomId, 'chat');
     const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(pageLimit));
 
     const snapshot = await getDocs(q);
@@ -133,7 +123,7 @@ export const getChatMessages = async (
     return messages.reverse(); // Return in chronological order
   } catch (error) {
     console.error('Error getting messages:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -142,7 +132,7 @@ export const getChatMessages = async (
  */
 export const deleteMessage = async (roomId: string, messageId: string): Promise<void> => {
   try {
-    const messageRef = doc(db, COLLECTIONS.CHAT_ROOMS, roomId, 'chat', messageId);
+    const messageRef = doc(db, COLLECTIONS.CHATS, roomId, 'chat', messageId);
     await deleteDoc(messageRef);
   } catch (error) {
     console.error('Error deleting message:', error);
@@ -156,14 +146,14 @@ export const deleteMessage = async (roomId: string, messageId: string): Promise<
 export const deleteChatRoom = async (roomId: string): Promise<void> => {
   try {
     // Delete all messages first
-    const messagesRef = collection(db, COLLECTIONS.CHAT_ROOMS, roomId, 'chat');
+    const messagesRef = collection(db, COLLECTIONS.CHATS, roomId, 'chat');
     const messagesSnapshot = await getDocs(messagesRef);
 
     const deletePromises = messagesSnapshot.docs.map((doc) => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
 
     // Delete the chat room
-    await deleteDoc(doc(db, COLLECTIONS.CHAT_ROOMS, roomId));
+    await deleteDoc(doc(db, COLLECTIONS.CHATS, roomId));
   } catch (error) {
     console.error('Error deleting chat room:', error);
     throw error;
@@ -171,37 +161,43 @@ export const deleteChatRoom = async (roomId: string): Promise<void> => {
 };
 
 /**
- * Get chat rooms by user ID
+ * Get chat rooms by user ID (using membersIds field)
  */
 export const getChatRoomsByUser = async (userId: string): Promise<ChatRoom[]> => {
   try {
     const q = query(
-      collection(db, COLLECTIONS.CHAT_ROOMS),
-      where('participants', 'array-contains', userId)
+      collection(db, COLLECTIONS.CHATS),
+      where('membersIds', 'array-contains', userId)
     );
 
     const snapshot = await getDocs(q);
 
-    const chatRooms = await Promise.all(
-      snapshot.docs.map(async (docSnapshot) => {
-        const data = docSnapshot.data();
-
-        const participantDetails = await Promise.all(
-          (data.participants || []).map((uid: string) => getUserById(uid))
-        );
-
-        return {
-          id: docSnapshot.id,
-          ...data,
-          participantDetails: participantDetails.filter(Boolean),
-        } as ChatRoom;
-      })
-    );
-
-    return chatRooms;
+    return snapshot.docs.map((docSnapshot) => {
+      const data = docSnapshot.data();
+      return {
+        id: docSnapshot.id,
+        name: data.name,
+        lastMsg: data.lastMsg,
+        lastSender: data.lastSender,
+        lastChat: data.lastChat,
+        blockingUserId: data.blockingUserId,
+        keywords: data.keywords || [],
+        members: data.members || [],
+        membersIds: data.membersIds || [],
+        read: data.read,
+        isGroupChat: data.isGroupChat || false,
+        description: data.description,
+        groupImageUrl: data.groupImageUrl,
+        isMuted: data.isMuted || false,
+        isPinned: data.isPinned || false,
+        isArchived: data.isArchived || false,
+        isFavorite: data.isFavorite || false,
+        blockedUsers: data.blockedUsers || [],
+      } as ChatRoom;
+    });
   } catch (error) {
     console.error('Error getting user chat rooms:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -211,12 +207,12 @@ export const getChatRoomsByUser = async (userId: string): Promise<ChatRoom[]> =>
 export const searchMessages = async (searchTerm: string): Promise<any[]> => {
   try {
     // This is a simplified version - in production, you'd use Algolia or similar
-    const chatRoomsSnapshot = await getDocs(collection(db, COLLECTIONS.CHAT_ROOMS));
+    const chatRoomsSnapshot = await getDocs(collection(db, COLLECTIONS.CHATS));
 
     const results: any[] = [];
 
     for (const roomDoc of chatRoomsSnapshot.docs) {
-      const messagesRef = collection(db, COLLECTIONS.CHAT_ROOMS, roomDoc.id, 'chat');
+      const messagesRef = collection(db, COLLECTIONS.CHATS, roomDoc.id, 'chat');
       const messagesSnapshot = await getDocs(query(messagesRef, limit(100)));
 
       messagesSnapshot.docs.forEach((messageDoc) => {
@@ -234,7 +230,7 @@ export const searchMessages = async (searchTerm: string): Promise<any[]> => {
     return results;
   } catch (error) {
     console.error('Error searching messages:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -243,13 +239,13 @@ export const searchMessages = async (searchTerm: string): Promise<any[]> => {
  */
 export const getChatStats = async (): Promise<any> => {
   try {
-    const chatRoomsSnapshot = await getDocs(collection(db, COLLECTIONS.CHAT_ROOMS));
+    const chatRoomsSnapshot = await getDocs(collection(db, COLLECTIONS.CHATS));
     const totalChatRooms = chatRoomsSnapshot.size;
 
     // Calculate total messages (approximation)
     let totalMessages = 0;
     for (const roomDoc of chatRoomsSnapshot.docs.slice(0, 10)) {
-      const messagesRef = collection(db, COLLECTIONS.CHAT_ROOMS, roomDoc.id, 'chat');
+      const messagesRef = collection(db, COLLECTIONS.CHATS, roomDoc.id, 'chat');
       const messagesSnapshot = await getDocs(messagesRef);
       totalMessages += messagesSnapshot.size;
     }
@@ -260,6 +256,9 @@ export const getChatStats = async (): Promise<any> => {
     };
   } catch (error) {
     console.error('Error getting chat stats:', error);
-    throw error;
+    return {
+      totalChatRooms: 0,
+      estimatedTotalMessages: 0,
+    };
   }
 };

@@ -84,20 +84,24 @@ export const CALL_TYPES = {
   VIDEO: 'video',
 } as const;
 
-// Call Status
+// Call Status (matches Flutter CallStatus enum)
 export const CALL_STATUS = {
-  COMPLETED: 'completed',
+  UNKNOWN: 'uknown', // Note: Typo exists in Flutter app
+  INCOMING: 'incoming',
+  OUTGOING: 'outgoing',
   MISSED: 'missed',
-  REJECTED: 'rejected',
-  CANCELLED: 'cancelled',
+  RINGING: 'ringing',
+  CONNECTED: 'connected',
+  CANCELED: 'canceled',
+  ENDED: 'ended',
 } as const;
 
-// Firebase Collections
+// Firebase Collections (exact names from Flutter app)
 export const COLLECTIONS = {
   USERS: 'users',
-  STORIES: 'Stories',
-  CHAT_ROOMS: 'chat_rooms',
-  CALLS: 'calls',
+  STORIES: 'Stories', // Note: Capital S
+  CHATS: 'chats', // Chat rooms collection
+  CALLS: 'Calls', // Note: Capital C
   REPORTS: 'reports',
   ADMIN_USERS: 'admin_users',
   ADMIN_LOGS: 'admin_logs',
