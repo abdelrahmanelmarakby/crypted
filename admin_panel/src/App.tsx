@@ -20,6 +20,8 @@ import Calls from '@/pages/Calls';
 import Notifications from '@/pages/Notifications';
 import AdminManagement from '@/pages/AdminManagement';
 import Profile from '@/pages/Profile';
+import HelpMessages from '@/pages/HelpMessages';
+import Backups from '@/pages/Backups';
 
 function App() {
   return (
@@ -46,6 +48,8 @@ function App() {
               <Route path="stories" element={<Stories />} />
               <Route path="reports" element={<Reports />} />
               <Route path="calls" element={<Calls />} />
+              <Route path="help-messages" element={<HelpMessages />} />
+              <Route path="backups" element={<Backups />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<Settings />} />

@@ -222,7 +222,7 @@ const Users: React.FC = () => {
                   </Td>
                   <Td>{user.email}</Td>
                   <Td>{user.phoneNumber || 'N/A'}</Td>
-                  <Td>{formatDate(user.createdAt)}</Td>
+                  <Td>{user.createdAt ? formatDate(user.createdAt) : 'N/A'}</Td>
                   <Td>
                     {user.isOnline ? (
                       <Badge colorScheme="green">Online</Badge>

@@ -199,8 +199,8 @@ const Reports: React.FC = () => {
                     </Badge>
                   </Td>
                   <Td>
-                    <Badge colorScheme={getStatusColor(report.status)}>
-                      {report.status.replace('_', ' ')}
+                    <Badge colorScheme={getStatusColor(report.status || 'pending')}>
+                      {(report.status || 'pending').replace('_', ' ')}
                     </Badge>
                   </Td>
                   <Td>

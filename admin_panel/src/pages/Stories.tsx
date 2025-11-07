@@ -198,8 +198,8 @@ const Stories: React.FC = () => {
 
               {/* Status Badge */}
               <Box position="absolute" top="2" left="2">
-                <Badge colorScheme={getStatusColor(story.status)} fontSize="xs">
-                  {story.status}
+                <Badge colorScheme={getStatusColor(story.status || 'active')} fontSize="xs">
+                  {story.status || 'active'}
                 </Badge>
               </Box>
             </Box>
@@ -207,10 +207,10 @@ const Stories: React.FC = () => {
             {/* Story Info */}
             <Box p="4">
               <HStack spacing="3" mb="2">
-                <Avatar size="sm" name={story.user.full_name} src={story.user.image_url} />
+                <Avatar size="sm" name={story.user?.full_name || 'Unknown'} src={story.user?.image_url} />
                 <Box flex="1" overflow="hidden">
                   <Text fontWeight="medium" fontSize="sm" noOfLines={1}>
-                    {story.user.full_name}
+                    {story.user?.full_name || 'Unknown User'}
                   </Text>
                   <Text fontSize="xs" color="gray.500">
                     {formatRelativeTime(story.createdAt)}

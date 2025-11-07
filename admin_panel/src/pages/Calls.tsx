@@ -239,11 +239,11 @@ const Calls: React.FC = () => {
                   </Td>
                   <Td>
                     <Text fontSize="sm" fontFamily="mono">
-                      {call.participants.length} participants
+                      {call.callerUserName} → {call.calleeUserName}
                     </Text>
                   </Td>
                   <Td>
-                    <Text fontSize="sm">{formatDuration(call.duration || 0)}</Text>
+                    <Text fontSize="sm">{formatDuration(call.callDuration || 0)}</Text>
                   </Td>
                   <Td>
                     <Text fontSize="sm">{formatDate(call.startTime, 'MMM dd, HH:mm')}</Text>
@@ -252,7 +252,7 @@ const Calls: React.FC = () => {
                     </Text>
                   </Td>
                   <Td>
-                    <Badge colorScheme={getStatusColor(call.status)}>{call.status}</Badge>
+                    <Badge colorScheme={getStatusColor(call.callStatus || 'ended')}>{call.callStatus || 'ended'}</Badge>
                   </Td>
                 </Tr>
               ))}

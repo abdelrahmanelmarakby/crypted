@@ -22,6 +22,8 @@ import {
   FiPhone,
   FiBell,
   FiUserCheck,
+  FiHelpCircle,
+  FiDatabase,
 } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -123,6 +125,8 @@ const Sidebar: React.FC = () => {
           <NavItem icon={FiImage} label="Stories" to="/stories" />
           <NavItem icon={FiAlertCircle} label="Reports" to="/reports" />
           <NavItem icon={FiPhone} label="Calls" to="/calls" />
+          <NavItem icon={FiHelpCircle} label="Help Messages" to="/help-messages" />
+          <NavItem icon={FiDatabase} label="Backups" to="/backups" />
           <NavItem icon={FiBarChart2} label="Analytics" to="/analytics" />
           <NavItem icon={FiBell} label="Notifications" to="/notifications" />
           <NavItem icon={FiFileText} label="Logs" to="/logs" />

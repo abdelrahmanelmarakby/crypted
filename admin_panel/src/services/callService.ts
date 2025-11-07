@@ -186,7 +186,6 @@ export const getCallStats = async (): Promise<any> => {
   try {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayTimestamp = Timestamp.fromDate(today);
 
     // Get all calls
     const allCallsSnapshot = await getDocs(collection(db, COLLECTIONS.CALLS));

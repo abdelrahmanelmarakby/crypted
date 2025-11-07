@@ -124,10 +124,12 @@ const UserDetail: React.FC = () => {
                       <Text fontSize="sm">{user.phoneNumber}</Text>
                     </HStack>
                   )}
-                  <HStack>
-                    <FiCalendar />
-                    <Text fontSize="sm">Joined {formatDate(user.createdAt)}</Text>
-                  </HStack>
+                  {user.createdAt && (
+                    <HStack>
+                      <FiCalendar />
+                      <Text fontSize="sm">Joined {formatDate(user.createdAt)}</Text>
+                    </HStack>
+                  )}
                 </VStack>
 
                 <Divider />
@@ -255,12 +257,14 @@ const UserDetail: React.FC = () => {
                       )}
                     </Text>
                   </HStack>
-                  <HStack justify="space-between">
-                    <Text fontWeight="bold" fontSize="sm" color="gray.600">
-                      Account Created
-                    </Text>
-                    <Text>{formatDate(user.createdAt)}</Text>
-                  </HStack>
+                  {user.createdAt && (
+                    <HStack justify="space-between">
+                      <Text fontWeight="bold" fontSize="sm" color="gray.600">
+                        Account Created
+                      </Text>
+                      <Text>{formatDate(user.createdAt)}</Text>
+                    </HStack>
+                  )}
                 </VStack>
               </CardBody>
             </Card>

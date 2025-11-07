@@ -12,7 +12,6 @@ import {
 import { db } from '@/config/firebase';
 import { ChatRoom, Message } from '@/types';
 import { COLLECTIONS } from '@/utils/constants';
-import { getUserById } from './userService';
 
 /**
  * Get all chat rooms

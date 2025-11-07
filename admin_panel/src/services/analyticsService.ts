@@ -14,6 +14,8 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    console.log('Fetching dashboard stats...');
+
     // Get total users
     const usersSnapshot = await getDocs(collection(db, COLLECTIONS.USERS));
     const totalUsers = usersSnapshot.size;
@@ -35,7 +37,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     }).length;
 
     // Get chat rooms
-    const chatRoomsSnapshot = await getDocs(collection(db, COLLECTIONS.CHAT_ROOMS));
+    const chatRoomsSnapshot = await getDocs(collection(db, COLLECTIONS.CHATS));
     const activeChatRooms = chatRoomsSnapshot.size;
 
     // Get active stories (not expired)
@@ -63,27 +65,123 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const reportsSnapshot = await getDocs(reportsQuery);
     const pendingReports = reportsSnapshot.size;
 
+    // Get total reports
+    const totalReportsSnapshot = await getDocs(collection(db, COLLECTIONS.REPORTS));
+    const totalReports = totalReportsSnapshot.size;
+    const reportsToday = totalReportsSnapshot.docs.filter((doc) => {
+      const createdAt = doc.data().createdAt?.toDate();
+      return createdAt && createdAt >= today;
+    }).length;
+
+    // Get total stories
+    const totalStoriesSnapshot = await getDocs(collection(db, COLLECTIONS.STORIES));
+    const totalStories = totalStoriesSnapshot.size;
+    const storiesToday = totalStoriesSnapshot.docs.filter((doc) => {
+      const createdAt = doc.data().createdAt?.toDate();
+      return createdAt && createdAt >= today;
+    }).length;
+
+    // Calculate new users
+    const newUsersToday = usersSnapshot.docs.filter((doc) => {
+      const createdAt = doc.data().createdAt?.toDate();
+      return createdAt && createdAt >= today;
+    }).length;
+
+    const newUsersThisWeek = usersSnapshot.docs.filter((doc) => {
+      const createdAt = doc.data().createdAt?.toDate();
+      return createdAt && createdAt >= last7d;
+    }).length;
+
+    const newUsersThisMonth = usersSnapshot.docs.filter((doc) => {
+      const createdAt = doc.data().createdAt?.toDate();
+      return createdAt && createdAt >= last30d;
+    }).length;
+
+    // Get calls this week
+    const callsWeekQuery = query(
+      collection(db, COLLECTIONS.CALLS),
+      where('startTime', '>=', Timestamp.fromDate(last7d))
+    );
+    const callsWeekSnapshot = await getDocs(callsWeekQuery);
+    const callsThisWeek = callsWeekSnapshot.size;
+
+    // Calculate average call duration
+    let totalDuration = 0;
+    let durationCount = 0;
+    totalCallsSnapshot.docs.forEach((doc) => {
+      const duration = doc.data().callDuration;
+      if (duration) {
+        totalDuration += duration;
+        durationCount++;
+      }
+    });
+    const averageCallDuration = durationCount > 0 ? Math.floor(totalDuration / durationCount) : 0;
+
+    // Count group chats
+    const groupChats = chatRoomsSnapshot.docs.filter((doc) => doc.data().isGroupChat === true).length;
+
     // Estimate messages (this would need a more complex query in production)
     const totalMessages = activeChatRooms * 50; // Placeholder
     const messagesToday = Math.floor(totalMessages * 0.1); // Placeholder
+    const messagesThisWeek = Math.floor(totalMessages * 0.3); // Placeholder
 
     return {
       totalUsers,
       activeUsers24h,
       activeUsers7d,
       activeUsers30d,
+      newUsersToday,
+      newUsersThisWeek,
+      newUsersThisMonth,
       totalMessages,
       messagesToday,
+      messagesThisWeek,
       activeChatRooms,
+      totalChatRooms: activeChatRooms,
+      groupChats,
       activeStories,
+      totalStories,
+      storiesToday,
       totalCalls,
       callsToday,
+      callsThisWeek,
+      averageCallDuration,
       pendingReports,
+      totalReports,
+      reportsToday,
       storageUsage: 0, // Would need Cloud Functions to calculate
+      storageLimit: 0,
     };
   } catch (error) {
     console.error('Error getting dashboard stats:', error);
-    throw error;
+    // Return default values instead of throwing
+    return {
+      totalUsers: 0,
+      activeUsers24h: 0,
+      activeUsers7d: 0,
+      activeUsers30d: 0,
+      newUsersToday: 0,
+      newUsersThisWeek: 0,
+      newUsersThisMonth: 0,
+      totalMessages: 0,
+      messagesToday: 0,
+      messagesThisWeek: 0,
+      activeChatRooms: 0,
+      totalChatRooms: 0,
+      groupChats: 0,
+      activeStories: 0,
+      totalStories: 0,
+      storiesToday: 0,
+      totalCalls: 0,
+      callsToday: 0,
+      callsThisWeek: 0,
+      averageCallDuration: 0,
+      pendingReports: 0,
+      totalReports: 0,
+      reportsToday: 0,
+      storageUsage: 0,
+      storageLimit: 0,
+    };
   }
 };
 

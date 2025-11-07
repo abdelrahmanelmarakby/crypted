@@ -22,10 +22,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from 'recharts';
 import StatCard from '@/components/dashboard/StatCard';
 import { getDashboardStats, getUserGrowthData, getMessageActivityData } from '@/services/analyticsService';
@@ -84,12 +80,6 @@ const Dashboard: React.FC = () => {
       </Center>
     );
   }
-
-  const platformData = [
-    { name: 'Android', value: 65 },
-    { name: 'iOS', value: 30 },
-    { name: 'Web', value: 5 },
-  ];
 
   return (
     <Box>
@@ -207,35 +197,6 @@ const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
       </SimpleGrid>
-
-      {/* Platform Distribution */}
-      <Card>
-        <CardHeader>
-          <Heading size="md">Platform Distribution</Heading>
-        </CardHeader>
-        <CardBody>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={platformData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {platformData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardBody>
-      </Card>
     </Box>
   );
 };

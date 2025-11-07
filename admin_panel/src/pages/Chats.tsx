@@ -46,7 +46,7 @@ import {
 } from 'react-icons/fi';
 import { getChatRooms, deleteChatRoom, getChatMessages } from '@/services/chatService';
 import { ChatRoom, Message } from '@/types';
-import { formatDate, formatRelativeTime, truncateText } from '@/utils/helpers';
+import { formatRelativeTime, truncateText } from '@/utils/helpers';
 
 const Chats: React.FC = () => {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
@@ -103,7 +103,8 @@ const Chats: React.FC = () => {
   };
 
   const handleDeleteRoom = async (room: ChatRoom) => {
-    if (!window.confirm(`Delete chat room with ${room.participants.length} participants?`)) {
+    const memberCount = room.membersIds?.length || 0;
+    if (!window.confirm(`Delete chat room with ${memberCount} members?`)) {
       return;
     }
 
@@ -130,12 +131,12 @@ const Chats: React.FC = () => {
 
   const getRoomDisplayName = (room: ChatRoom): string => {
     if (room.name) return room.name;
-    if (room.type === 'group') return 'Group Chat';
+    if (room.isGroupChat) return 'Group Chat';
 
-    const participants = room.participantDetails || [];
-    if (participants.length === 0) return 'Unknown';
+    const members = room.members || [];
+    if (members.length === 0) return 'Unknown';
 
-    return participants.map((p) => p?.full_name || 'Unknown').join(', ');
+    return members.map((m) => m?.full_name || 'Unknown').join(', ');
   };
 
   const filteredRooms = chatRooms.filter((room) => {
@@ -201,11 +202,11 @@ const Chats: React.FC = () => {
                   <Td>
                     <HStack spacing="3">
                       <AvatarGroup size="sm" max={3}>
-                        {room.participantDetails?.map((participant) => (
+                        {room.members?.map((member) => (
                           <Avatar
-                            key={participant?.uid}
-                            name={participant?.full_name}
-                            src={participant?.image_url}
+                            key={member?.uid}
+                            name={member?.full_name}
+                            src={member?.image_url}
                           />
                         ))}
                       </AvatarGroup>
@@ -214,24 +215,24 @@ const Chats: React.FC = () => {
                           {getRoomDisplayName(room)}
                         </Text>
                         <Text fontSize="sm" color="gray.500">
-                          {room.participants.length} participants
+                          {room.membersIds?.length || 0} members
                         </Text>
                       </Box>
                     </HStack>
                   </Td>
                   <Td>
-                    <Badge colorScheme={room.type === 'group' ? 'purple' : 'blue'}>
-                      {room.type}
+                    <Badge colorScheme={room.isGroupChat ? 'purple' : 'blue'}>
+                      {room.isGroupChat ? 'Group' : 'Private'}
                     </Badge>
                   </Td>
                   <Td>
-                    {room.lastMessage ? (
+                    {room.lastMsg ? (
                       <Box>
                         <Text fontSize="sm" noOfLines={1}>
-                          {truncateText(room.lastMessage.text || 'Media', 30)}
+                          {truncateText(room.lastMsg || 'No message', 30)}
                         </Text>
                         <Text fontSize="xs" color="gray.500">
-                          {formatRelativeTime(room.lastMessageTime)}
+                          {room.lastSender || 'Unknown'}
                         </Text>
                       </Box>
                     ) : (
@@ -240,10 +241,12 @@ const Chats: React.FC = () => {
                       </Text>
                     )}
                   </Td>
-                  <Td>{formatDate(room.createdAt)}</Td>
                   <Td>
-                    <Badge colorScheme={room.isActive ? 'green' : 'gray'}>
-                      {room.isActive ? 'Active' : 'Inactive'}
+                    <Text fontSize="sm" color="gray.500">-</Text>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme={room.isArchived ? 'gray' : 'green'}>
+                      {room.isArchived ? 'Archived' : 'Active'}
                     </Badge>
                   </Td>
                   <Td>

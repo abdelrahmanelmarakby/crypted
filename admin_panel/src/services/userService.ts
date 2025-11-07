@@ -5,7 +5,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
   limit,
   startAfter,
   Timestamp,

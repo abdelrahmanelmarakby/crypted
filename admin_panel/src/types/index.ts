@@ -99,6 +99,7 @@ export interface User {
   displayName?: string;
   isOnline?: boolean;
   lastSeen?: Date;
+  createdAt?: Timestamp | Date;
   status?: 'active' | 'suspended' | 'banned' | 'deleted';
 }
 
