@@ -4,6 +4,7 @@ import 'package:crypted_app/app/core/services/chat_service.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/services/firebase_utils.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -182,12 +183,38 @@ class HomeController extends GetxController {
 
       final currentUser = myUser.value!;
       final members = [currentUser, otherUser];
+      final memberIds = [currentUser.uid!, otherUser.uid!];
 
       print('🎯 Creating private chat:');
       print('👤 Current User: ${currentUser.fullName} (${currentUser.uid})');
       print('👥 Other User: ${otherUser.fullName} (${otherUser.uid})');
 
-      // Step 1: Start chat session using ChatSessionManager
+      // Step 1: Check for existing chat room to prevent duplicates
+      print('🔍 Checking for existing chat room...');
+      final existingChatRoom = await ChatService.instance.findExistingChatRoom(memberIds);
+
+      if (existingChatRoom != null) {
+        print('✅ Found existing chat room: ${existingChatRoom.id}');
+
+        // Navigate to existing chat
+        await _navigateToChat(
+          roomId: existingChatRoom.id!,
+          members: members,
+          isGroupChat: false,
+        );
+
+        BotToast.showText(
+          text: 'Opening existing chat with ${otherUser.fullName}',
+          contentColor: ColorsManager.primary,
+        );
+
+        isCreatingChat.value = false;
+        return;
+      }
+
+      print('📝 No existing chat found, creating new one...');
+
+      // Step 2: Start chat session using ChatSessionManager
       final sessionStarted = ChatSessionManager.instance.startChatSession(
         sender: currentUser,
         receiver: otherUser,
@@ -197,10 +224,10 @@ class HomeController extends GetxController {
         throw Exception('Failed to start chat session');
       }
 
-      // Step 2: Initialize ChatService with members
+      // Step 3: Initialize ChatService with members
       ChatService.instance.initializeChatDataSource(members);
 
-      // Step 3: Create chat room using ChatService
+      // Step 4: Create chat room using ChatService
       final chatRoom = await ChatService.instance.createChatRoom(
         members: members,
         isGroupChat: false,
@@ -213,7 +240,7 @@ class HomeController extends GetxController {
 
       print('✅ Chat room created: ${chatRoom.id}');
 
-      // Step 3: Navigate to chat screen
+      // Step 5: Navigate to chat screen
       await _navigateToChat(
         roomId: chatRoom.id!,
         members: members,
@@ -245,10 +272,36 @@ class HomeController extends GetxController {
     try {
       final currentUser = myUser.value!;
       final allMembers = [currentUser, ...selectedUsersList];
+      final allMemberIds = allMembers.map((user) => user.uid!).toList();
 
       print('🎯 Creating group chat:');
       print('👤 Current User: ${currentUser.fullName} (${currentUser.uid})');
       print('👥 Group Members: ${selectedUsersList.length}');
+
+      // Step 1: Check for existing group chat with same members to prevent duplicates
+      print('🔍 Checking for existing group chat with same members...');
+      final existingChatRoom = await ChatService.instance.findExistingChatRoom(allMemberIds);
+
+      if (existingChatRoom != null && existingChatRoom.isGroupChat == true) {
+        print('✅ Found existing group chat: ${existingChatRoom.id}');
+
+        // Navigate to existing group chat
+        await _navigateToChat(
+          roomId: existingChatRoom.id!,
+          members: allMembers,
+          isGroupChat: true,
+        );
+
+        BotToast.showText(
+          text: 'Opening existing group chat',
+          contentColor: ColorsManager.primary,
+        );
+
+        isCreatingChat.value = false;
+        return;
+      }
+
+      print('📝 No existing group chat found, creating new one...');
 
       // Step 1: Upload group photo to Firebase Storage if provided
       String? uploadedPhotoUrl;
@@ -478,45 +531,27 @@ class HomeController extends GetxController {
     }
   }
 
-  /// Show dialog to choose between gallery and camera
+  /// Show bottom sheet to choose between gallery and camera
   Future<ImageSource?> _showImageSourceDialog() async {
-    return await Get.dialog<ImageSource>(
-      AlertDialog(
-        title: Text(
-          'Select Group Photo',
-          style: StylesManager.bold(fontSize: FontSize.large, color: Colors.black),
+    return await CustomBottomSheets.showSelection<ImageSource>(
+      title: 'Select Group Photo',
+      subtitle: 'Choose where to pick the photo from',
+      options: [
+        SelectionOption<ImageSource>(
+          title: 'Gallery',
+          subtitle: 'Choose from your photo library',
+          icon: Icons.photo_library,
+          iconColor: ColorsManager.primary,
+          value: ImageSource.gallery,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: ColorsManager.primary.withOpacity(0.1),
-                child: Icon(Icons.photo_library, color: ColorsManager.primary),
-              ),
-              title: Text('Gallery', style: StylesManager.medium(fontSize: FontSize.medium)),
-              onTap: () => Get.back(result: ImageSource.gallery),
-            ),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: ColorsManager.primary.withOpacity(0.1),
-                child: Icon(Icons.camera_alt, color: ColorsManager.primary),
-              ),
-              title: Text('Camera', style: StylesManager.medium(fontSize: FontSize.medium)),
-              onTap: () => Get.back(result: ImageSource.camera),
-            ),
-          ],
+        SelectionOption<ImageSource>(
+          title: 'Camera',
+          subtitle: 'Take a new photo',
+          icon: Icons.camera_alt,
+          iconColor: ColorsManager.primary,
+          value: ImageSource.camera,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'Cancel',
-              style: StylesManager.medium(fontSize: FontSize.medium, color: ColorsManager.grey),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
