@@ -847,10 +847,10 @@ class ChatController extends GetxController {
       _logger.info('Message edited successfully: ${message.id}');
       _showToast('Message edited');
     } catch (e) {
-      _logger.error('Failed to edit message', error: e);
+      _logger.logError('Failed to edit message', error: e);
       _errorHandler.handleError(
         e,
-        fallbackMessage: 'Failed to edit message',
+        // fallbackMessage: 'Failed to edit message',
         showToUser: true,
       );
     } finally {
@@ -898,10 +898,10 @@ class ChatController extends GetxController {
 
       _logger.info('Toggled reaction $emoji on message ${message.id}');
     } catch (e) {
-      _logger.error('Failed to toggle reaction', error: e);
+      _logger.logError('Failed to toggle reaction', error: e);
       _errorHandler.handleError(
         e,
-        fallbackMessage: 'Failed to add reaction',
+        // fallbackMessage: 'Failed to add reaction',
         showToUser: true,
       );
     }
@@ -921,10 +921,10 @@ class ChatController extends GetxController {
 
       _logger.info('Removed all reactions from message ${message.id}');
     } catch (e) {
-      _logger.error('Failed to remove reactions', error: e);
+      _logger.logError('Failed to remove reactions', error: e);
       _errorHandler.handleError(
         e,
-        fallbackMessage: 'Failed to remove reactions',
+        // fallbackMessage: 'Failed to remove reactions',
         showToUser: true,
       );
     }

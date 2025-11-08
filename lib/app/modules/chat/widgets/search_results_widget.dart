@@ -33,7 +33,7 @@ class SearchResultsWidget extends StatelessWidget {
               size: 64,
               color: ColorsManager.grey.withOpacity(0.5),
             ),
-            SizedBox(height: Paddings.medium),
+            SizedBox(height: Paddings.normal),
             Text(
               'No messages found',
               style: StylesManager.medium(
@@ -56,7 +56,7 @@ class SearchResultsWidget extends StatelessWidget {
               size: 64,
               color: ColorsManager.grey.withOpacity(0.5),
             ),
-            SizedBox(height: Paddings.medium),
+            SizedBox(height: Paddings.normal),
             Text(
               'Search for messages',
               style: StylesManager.medium(
@@ -70,10 +70,10 @@ class SearchResultsWidget extends StatelessWidget {
     }
 
     return ListView.separated(
-      padding: EdgeInsets.all(Paddings.medium),
+      padding: EdgeInsets.all(Paddings.normal),
       itemCount: results.length,
       separatorBuilder: (context, index) => Divider(
-        height: Paddings.medium,
+        height: Paddings.normal,
         color: ColorsManager.grey.withOpacity(0.2),
       ),
       itemBuilder: (context, index) {
@@ -169,7 +169,7 @@ class _SearchResultTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.all(Paddings.medium),
+        padding: EdgeInsets.all(Paddings.normal),
         decoration: BoxDecoration(
           color: Get.isDarkMode
               ? Colors.grey[800]?.withOpacity(0.3)

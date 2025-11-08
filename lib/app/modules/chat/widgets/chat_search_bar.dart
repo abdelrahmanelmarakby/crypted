@@ -58,7 +58,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: Paddings.medium,
+        horizontal: Paddings.normal,
         vertical: Paddings.small,
       ),
       decoration: BoxDecoration(

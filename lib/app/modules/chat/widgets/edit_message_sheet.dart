@@ -186,7 +186,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
                     color: Get.isDarkMode ? Colors.white : ColorsManager.black,
                   ),
                   decoration: InputDecoration(
-                    contentPadding: EdgeInsets.all(Paddings.medium),
+                    contentPadding: EdgeInsets.all(Paddings.normal),
                     border: InputBorder.none,
                     hintText: 'Edit your message...',
                     hintStyle: StylesManager.regular(
@@ -238,7 +238,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
                     child: OutlinedButton(
                       onPressed: () => Get.back(),
                       style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: Paddings.medium),
+                        padding: EdgeInsets.symmetric(vertical: Paddings.normal),
                         side: BorderSide(color: ColorsManager.grey.withOpacity(0.3)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -253,13 +253,13 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
                       ),
                     ),
                   ),
-                  SizedBox(width: Paddings.medium),
+                  SizedBox(width: Paddings.normal),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _handleSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorsManager.primary,
-                        padding: EdgeInsets.symmetric(vertical: Paddings.medium),
+                        padding: EdgeInsets.symmetric(vertical: Paddings.normal),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
