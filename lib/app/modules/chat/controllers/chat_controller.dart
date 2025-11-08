@@ -10,6 +10,8 @@ import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/typing_service.dart';
 import 'package:crypted_app/app/core/services/read_receipt_service.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
+import 'package:crypted_app/app/core/services/logger_service.dart';
+import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
@@ -28,6 +30,7 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -41,15 +44,18 @@ class ChatController extends GetxController {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
-  // Messages list
-  final RxList<Message> messages = <Message>[].obs;
+  // Sub-controllers (NEW!)
+  late final MessageController messageControllerService;
+
+  // Messages list (delegated to MessageController)
+  RxList<Message> get messages => messageControllerService.messages;
 
   // Room and user state
   late final String roomId;
   final RxBool isLoading = true.obs;
   final RxBool isRecording = false.obs;
   List<SocialMediaUser> members = [];
-  
+
   // Group chat specific properties
   final RxBool isGroupChat = false.obs;
   final RxString chatName = ''.obs;
@@ -58,16 +64,21 @@ class ChatController extends GetxController {
   final RxString groupImageUrl = ''.obs;
 
   String? blockingUserId;
-  
-  // Reply functionality
-  final Rx<Message?> replyToMessage = Rx<Message?>(null);
-  final RxString replyToText = ''.obs;
+
+  // Reply functionality (delegated to MessageController)
+  Rx<Message?> get replyToMessage => messageControllerService.replyToMessage;
+  RxString get replyToText => messageControllerService.replyToText;
+
   late final ChatDataSources chatDataSource;
-  
+
   // Real-time services
   final typingService = TypingService();
   final readReceiptService = ReadReceiptService();
   final presenceService = PresenceService();
+
+  // Services
+  final _logger = LoggerService.instance;
+  final _errorHandler = ErrorHandlerService.instance;
   
   // Typing indicators
   final RxList<String> typingUsers = <String>[].obs;
@@ -254,9 +265,10 @@ class ChatController extends GetxController {
   }
 
   void _initializeChatDataSource() {
-    print("🔧 Initializing ChatDataSource...");
-    print("👤 Current User UID: ${currentUser?.uid}");
-    print("👥 All Member UIDs: ${members.map((e) => e.uid).toList()}");
+    _logger.debug('Initializing ChatDataSource', context: 'ChatController', data: {
+      'currentUserId': currentUser?.uid,
+      'memberCount': members.length,
+    });
 
     chatDataSource = ChatDataSources(
       chatConfiguration: ChatConfiguration(
@@ -264,7 +276,14 @@ class ChatController extends GetxController {
       ),
     );
 
-    print("✅ ChatDataSource initialized successfully");
+    // Initialize MessageController (NEW!)
+    messageControllerService = MessageController(
+      chatDataSource: chatDataSource,
+      roomId: roomId,
+      members: members,
+    );
+
+    _logger.info('ChatDataSource and MessageController initialized', context: 'ChatController');
   }
 
   void _updateChatInfo() {
@@ -349,20 +368,18 @@ class ChatController extends GetxController {
     onChangeRec(!isRecording.value);
   }
 
-  /// Reply functionality methods
-  Message? get replyingTo => replyToMessage.value;
-  bool get isReplying => replyToMessage.value != null;
+  /// Reply functionality methods (delegated to MessageController)
+  Message? get replyingTo => messageControllerService.replyingTo;
+  bool get isReplying => messageControllerService.isReplying;
 
   /// Set message to reply to
   void setReplyTo(Message message) {
-    replyToMessage.value = message;
-    replyToText.value = _getMessagePreview(message);
+    messageControllerService.setReplyTo(message);
   }
 
   /// Clear reply
   void clearReply() {
-    replyToMessage.value = null;
-    replyToText.value = '';
+    messageControllerService.clearReply();
   }
 
   /// Send message with reply context
@@ -421,38 +438,13 @@ class ChatController extends GetxController {
     }
   }
 
-  /// Send a quick text message
+  /// Send a quick text message (NOW USES MessageController!)
   Future<void> sendQuickTextMessage(String text, String roomId) async {
-    if (text.trim().isEmpty) {
-      print("⚠️ Empty text message, skipping");
-      return;
-    }
+    // Delegate to MessageController
+    await messageControllerService.sendTextMessage(text);
 
-    if (currentUser?.uid == null) {
-      print("❌ Current user not available");
-      _showErrorToast('Unable to send message: User not logged in');
-      return;
-    }
-
-    print("📝 Preparing to send text message: '$text'");
-    print("👤 Current user: ${currentUser!.uid} - ${currentUser!.fullName}");
-    
-    if (isGroupChat.value) {
-      print("👥 Group members: ${members.map((user) => "${user.uid} - ${user.fullName}").join(", ")}");
-    } else {
-      print("👥 Receiver: ${receiver?.uid} - ${receiver?.fullName}");
-    }
-
-    final textMessage = TextMessage(
-      id: '',
-      roomId: roomId,
-      senderId: currentUser!.uid??"",
-      timestamp: DateTime.now(),
-      text: text.trim(),
-    );
-
-    print("📤 Sending message with senderId: ${textMessage.senderId}");
-    await sendMessage(textMessage);
+    // Clear input after sending
+    _clearMessageInput();
   }
 
   Future<void> sendCurrentLocation() async {
@@ -1409,6 +1401,9 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    // Dispose MessageController (NEW!)
+    messageControllerService.onClose();
+
     messageController.dispose();
 
     // Stop typing indicator
@@ -1422,10 +1417,11 @@ class ChatController extends GetxController {
 
     // End chat session when screen is closed if using session manager
     if (ChatSessionManager.instance.hasActiveSession) {
-      print("🔚 Chat screen closed, ending session");
+      _logger.info('Chat screen closed, ending session', context: 'ChatController');
       ChatSessionManager.instance.endChatSession();
     }
 
+    _logger.info('ChatController disposed', context: 'ChatController');
     super.onClose();
   }
 }

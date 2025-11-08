@@ -5,7 +5,10 @@ import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/fcm_service.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/core/services/firebase_optimization_service.dart';
+import 'package:crypted_app/app/core/services/logger_service.dart';
+import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:flutter/foundation.dart';
 import 'package:crypted_app/core/locale/my_locale.dart';
 import 'package:crypted_app/core/locale/my_locale_controller.dart';
 import 'package:crypted_app/core/services/bindings.dart';
@@ -32,25 +35,38 @@ Future<void> main() async {
   await initializeDateFormatting('ar', 'null');
   await initializeDateFormatting('en', 'null');
 
+  // Initialize Logger Service (must be first for logging other initializations)
+  LoggerService.instance.initialize(
+    minLevel: kDebugMode ? LogLevel.debug : LogLevel.info,
+    console: true,
+    remote: !kDebugMode, // Enable remote logging in production
+  );
+
+  LoggerService.instance.info('App starting...', context: 'main');
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('Firebase initialized successfully');
-    
+    LoggerService.instance.info('Firebase initialized successfully', context: 'main');
+
     // Initialize Firebase Optimization Service
     FirebaseOptimizationService.initializeFirebase();
-    
+
     // Initialize FCM Service
     await FCMService().initialize();
-    
+
     // Initialize Presence Service
     await PresenceService().initialize();
-    
-    print('✅ All services initialized successfully');
-  } catch (e) {
-    print(
-        'Error initializing Firebase: $e ----------------------------------------------------------------------------');
+
+    LoggerService.instance.info('All services initialized successfully', context: 'main');
+  } catch (e, stackTrace) {
+    ErrorHandlerService.instance.handleError(
+      e,
+      stackTrace: stackTrace,
+      context: 'main.initializeFirebase',
+      showToUser: false, // Don't show to user during startup
+    );
   }
   await CacheHelper.init();
 

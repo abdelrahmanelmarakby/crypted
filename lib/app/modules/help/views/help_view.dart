@@ -2,8 +2,10 @@
 
 import 'package:crypted_app/app/data/models/help_message_model.dart';
 import 'package:crypted_app/app/modules/help/controllers/help_controller.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class HelpView extends GetView<HelpController> {
   const HelpView({super.key});
@@ -56,11 +58,11 @@ class HelpView extends GetView<HelpController> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Color(0xFF2563EB),
+                          color: ColorsManager.primary,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.help_outline_rounded,
+                          Iconsax.message_question,
                           color: Colors.white,
                           size: 24,
                         ),
@@ -154,7 +156,7 @@ class HelpView extends GetView<HelpController> {
                                   prefixIcon: Container(
                                     margin: EdgeInsets.only(left: 16, right: 12),
                                     child: Icon(
-                                      Icons.person_outline_rounded,
+                                      Iconsax.user,
                                       color: Color(0xFF6B7280),
                                       size: 20,
                                     ),
@@ -283,7 +285,7 @@ class HelpView extends GetView<HelpController> {
                                   prefixIcon: Container(
                                     margin: EdgeInsets.only(left: 16, right: 12, top: 16),
                                     child: Icon(
-                                      Icons.message_outlined,
+                                      Iconsax.message,
                                       color: Color(0xFF6B7280),
                                       size: 20,
                                     ),
@@ -480,7 +482,7 @@ class HelpView extends GetView<HelpController> {
                                       children: [
                                         Row(
                                           children: [
-                                            Icon(Icons.attach_file_rounded, color: Color(0xFF2563EB), size: 20),
+                                            Icon(Iconsax.document_cloud, color: ColorsManager.primary, size: 20),
                                             SizedBox(width: 8),
                                             Text(
                                               'Selected Files',
@@ -517,12 +519,12 @@ class HelpView extends GetView<HelpController> {
                                                   width: 32,
                                                   height: 32,
                                                   decoration: BoxDecoration(
-                                                    color: Color(0xFF2563EB).withOpacity(0.1),
+                                                    color: ColorsManager.primary.withOpacity(0.1),
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Icon(
-                                                    Icons.insert_drive_file_rounded,
-                                                    color: Color(0xFF2563EB),
+                                                    Iconsax.image,
+                                                    color: ColorsManager.primary,
                                                     size: 16,
                                                   ),
                                                 ),
@@ -566,18 +568,18 @@ class HelpView extends GetView<HelpController> {
                                     ),
                                     child: ElevatedButton.icon(
                                       onPressed: controller.pickFiles,
-                                      icon: Icon(Icons.attach_file_rounded, size: 18, color: Color(0xFF2563EB)),
+                                      icon: Icon(Iconsax.document_cloud, size: 18, color: ColorsManager.primary),
                                       label: Text(
                                         'Select Files',
                                         style: TextStyle(
-                                          color: Color(0xFF2563EB),
+                                          color: ColorsManager.primary,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.transparent,
-                                        foregroundColor: Color(0xFF2563EB),
+                                        foregroundColor: ColorsManager.primary,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
@@ -597,7 +599,7 @@ class HelpView extends GetView<HelpController> {
                                     ),
                                     child: ElevatedButton.icon(
                                       onPressed: controller.pickImages,
-                                      icon: Icon(Icons.image_rounded, size: 18, color: Color(0xFF059669)),
+                                      icon: Icon(Iconsax.image, size: 18, color: Color(0xFF059669)),
                                       label: Text(
                                         'Select Images',
                                         style: TextStyle(
@@ -629,13 +631,13 @@ class HelpView extends GetView<HelpController> {
                           width: double.infinity,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: controller.isLoading.value ? Color(0xFF9CA3AF) : Color(0xFF2563EB),
+                            color: controller.isLoading.value ? Color(0xFF9CA3AF) : ColorsManager.primary,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: controller.isLoading.value
                                 ? []
                                 : [
                                     BoxShadow(
-                                      color: Color(0xFF2563EB).withOpacity(0.3),
+                                      color: ColorsManager.primary.withOpacity(0.3),
                                       blurRadius: 12,
                                       offset: Offset(0, 4),
                                     ),
@@ -679,7 +681,7 @@ class HelpView extends GetView<HelpController> {
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.send_rounded, size: 20),
+                                      Icon(Iconsax.send_1, size: 20),
                                       SizedBox(width: 12),
                                       Text(
                                         'Submit Request',
@@ -778,7 +780,7 @@ class HelpView extends GetView<HelpController> {
                                     ),
                                   ),
                                   SizedBox(height: 20),
-                                  ...controller.userHelpMessages.take(5).map((message) => Container(
+                                  ...controller.userHelpMessages.map((message) => Container(
                                         margin: EdgeInsets.only(bottom: 16),
                                         padding: EdgeInsets.all(20),
                                         decoration: BoxDecoration(
@@ -831,7 +833,7 @@ class HelpView extends GetView<HelpController> {
                                                   ),
                                                 ),
                                                 Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                                   decoration: BoxDecoration(
                                                     color: _getStatusColor(message.status),
                                                     borderRadius: BorderRadius.circular(20),
@@ -881,7 +883,7 @@ class HelpView extends GetView<HelpController> {
                                                 ),
                                                 child: Row(
                                                   children: [
-                                                    Icon(Icons.attach_file_rounded, size: 16, color: Color(0xFF2563EB)),
+                                                    Icon(Iconsax.document_cloud, size: 16, color: ColorsManager.primary),
                                                     SizedBox(width: 12),
                                                     Expanded(
                                                       child: Text(
@@ -918,10 +920,10 @@ class HelpView extends GetView<HelpController> {
                                                       width: 32,
                                                       height: 32,
                                                       decoration: BoxDecoration(
-                                                        color: Color(0xFF2563EB),
+                                                        color: ColorsManager.primary,
                                                         shape: BoxShape.circle,
                                                       ),
-                                                      child: Icon(Icons.reply_rounded, size: 16, color: Colors.white),
+                                                      child: Icon(Iconsax.directbox_receive, size: 16, color: Colors.white),
                                                     ),
                                                     SizedBox(width: 12),
                                                     Expanded(
@@ -932,7 +934,7 @@ class HelpView extends GetView<HelpController> {
                                                             'App Team Response',
                                                             style: TextStyle(
                                                               fontSize: 14,
-                                                              color: Color(0xFF1E40AF),
+                                                              color: ColorsManager.primary,
                                                               fontWeight: FontWeight.w600,
                                                             ),
                                                           ),
@@ -1009,7 +1011,7 @@ class HelpView extends GetView<HelpController> {
   Color _getRequestTypeColor(RequestType type) {
     switch (type) {
       case RequestType.support:
-        return Color(0xFF2563EB);
+        return ColorsManager.primary;
       case RequestType.inquiry:
         return Color(0xFF059669);
       case RequestType.bugReport:
@@ -1032,7 +1034,7 @@ class HelpView extends GetView<HelpController> {
       case 'high':
         return Color(0xFFEA580C);
       case 'medium':
-        return Color(0xFF2563EB);
+        return ColorsManager.primary;
       case 'low':
         return Color(0xFF059669);
       default:
@@ -1045,7 +1047,7 @@ class HelpView extends GetView<HelpController> {
       case 'pending':
         return Color(0xFFEA580C);
       case 'in_progress':
-        return Color(0xFF2563EB);
+        return ColorsManager.primary;
       case 'resolved':
         return Color(0xFF059669);
       case 'closed':

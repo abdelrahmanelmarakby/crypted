@@ -507,32 +507,251 @@ const Backups: React.FC = () => {
 
                   {/* Contacts Tab */}
                   <TabPanel>
-                    <Text color="gray.500">{selectedBackup.contacts_count || 0} contacts backed up</Text>
-                    {selectedBackup.contacts_updated_at && (
-                      <Text fontSize="sm" color="gray.500" mt="2">
-                        Last updated: {formatDate(selectedBackup.contacts_updated_at)}
-                      </Text>
-                    )}
+                    <VStack align="stretch" spacing="4">
+                      <HStack justify="space-between">
+                        <Text fontWeight="bold">
+                          {selectedBackup.contacts_count || 0} contacts backed up
+                        </Text>
+                        {selectedBackup.contacts_updated_at && (
+                          <Text fontSize="sm" color="gray.500">
+                            Last updated: {formatDate(selectedBackup.contacts_updated_at)}
+                          </Text>
+                        )}
+                      </HStack>
+
+                      {selectedBackup.contacts && selectedBackup.contacts.length > 0 ? (
+                        <Box maxH="400px" overflowY="auto" borderWidth="1px" borderRadius="md">
+                          <Table size="sm" variant="simple">
+                            <Thead position="sticky" top="0" bg="white" zIndex="1">
+                              <Tr>
+                                <Th>Name</Th>
+                                <Th>Phone Numbers</Th>
+                                <Th>Emails</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {selectedBackup.contacts.map((contact: any, index: number) => (
+                                <Tr key={index}>
+                                  <Td>
+                                    <VStack align="start" spacing="0">
+                                      <Text fontWeight="medium">{contact.displayName || 'Unknown'}</Text>
+                                      {(contact.firstName || contact.lastName) && (
+                                        <Text fontSize="xs" color="gray.500">
+                                          {contact.firstName} {contact.lastName}
+                                        </Text>
+                                      )}
+                                    </VStack>
+                                  </Td>
+                                  <Td>
+                                    {contact.phones && contact.phones.length > 0 ? (
+                                      <VStack align="start" spacing="1">
+                                        {contact.phones.map((phone: any, pIdx: number) => (
+                                          <HStack key={pIdx} spacing="2">
+                                            <Badge size="sm" colorScheme="blue" fontSize="xs">
+                                              {phone.label || 'mobile'}
+                                            </Badge>
+                                            <Text fontSize="sm">{phone.number}</Text>
+                                          </HStack>
+                                        ))}
+                                      </VStack>
+                                    ) : (
+                                      <Text fontSize="sm" color="gray.400">No phone</Text>
+                                    )}
+                                  </Td>
+                                  <Td>
+                                    {contact.emails && contact.emails.length > 0 ? (
+                                      <VStack align="start" spacing="1">
+                                        {contact.emails.map((email: any, eIdx: number) => (
+                                          <HStack key={eIdx} spacing="2">
+                                            <Badge size="sm" colorScheme="green" fontSize="xs">
+                                              {email.label || 'email'}
+                                            </Badge>
+                                            <Text fontSize="sm">{email.address}</Text>
+                                          </HStack>
+                                        ))}
+                                      </VStack>
+                                    ) : (
+                                      <Text fontSize="sm" color="gray.400">No email</Text>
+                                    )}
+                                  </Td>
+                                </Tr>
+                              ))}
+                            </Tbody>
+                          </Table>
+                        </Box>
+                      ) : (
+                        <Center p="8" borderWidth="1px" borderRadius="md" borderStyle="dashed">
+                          <Text color="gray.500">No contacts available</Text>
+                        </Center>
+                      )}
+                    </VStack>
                   </TabPanel>
 
                   {/* Images Tab */}
                   <TabPanel>
-                    <Text color="gray.500">{selectedBackup.images_count || 0} images backed up</Text>
-                    {selectedBackup.images_updated_at && (
-                      <Text fontSize="sm" color="gray.500" mt="2">
-                        Last updated: {formatDate(selectedBackup.images_updated_at)}
-                      </Text>
-                    )}
+                    <VStack align="stretch" spacing="4">
+                      <HStack justify="space-between">
+                        <Text fontWeight="bold">
+                          {selectedBackup.images_count || 0} images backed up
+                        </Text>
+                        {selectedBackup.images_updated_at && (
+                          <Text fontSize="sm" color="gray.500">
+                            Last updated: {formatDate(selectedBackup.images_updated_at)}
+                          </Text>
+                        )}
+                      </HStack>
+
+                      {selectedBackup.images && selectedBackup.images.length > 0 ? (
+                        <SimpleGrid columns={3} spacing="4" maxH="500px" overflowY="auto" p="2">
+                          {selectedBackup.images.map((image: any, index: number) => (
+                            <Box
+                              key={index}
+                              position="relative"
+                              borderRadius="md"
+                              overflow="hidden"
+                              cursor="pointer"
+                              onClick={() => window.open(image.url, '_blank')}
+                              _hover={{ transform: 'scale(1.05)', transition: 'all 0.2s' }}
+                              bg="gray.100"
+                              aspectRatio="1"
+                            >
+                              {image.url ? (
+                                <>
+                                  <img
+                                    src={image.url}
+                                    alt={`Image ${index + 1}`}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                    }}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  <Box
+                                    position="absolute"
+                                    bottom="0"
+                                    left="0"
+                                    right="0"
+                                    bg="blackAlpha.700"
+                                    p="2"
+                                  >
+                                    <Text fontSize="xs" color="white" noOfLines={1}>
+                                      {image.width} × {image.height}
+                                    </Text>
+                                    {image.createDate && (
+                                      <Text fontSize="xs" color="whiteAlpha.800">
+                                        {new Date(image.createDate).toLocaleDateString()}
+                                      </Text>
+                                    )}
+                                  </Box>
+                                </>
+                              ) : (
+                                <Center h="100%">
+                                  <Text fontSize="sm" color="gray.500">No preview</Text>
+                                </Center>
+                              )}
+                            </Box>
+                          ))}
+                        </SimpleGrid>
+                      ) : (
+                        <Center p="8" borderWidth="1px" borderRadius="md" borderStyle="dashed">
+                          <Text color="gray.500">No images available</Text>
+                        </Center>
+                      )}
+                    </VStack>
                   </TabPanel>
 
                   {/* Files Tab */}
                   <TabPanel>
-                    <Text color="gray.500">{selectedBackup.files_count || 0} files backed up</Text>
-                    {selectedBackup.files_updated_at && (
-                      <Text fontSize="sm" color="gray.500" mt="2">
-                        Last updated: {formatDate(selectedBackup.files_updated_at)}
-                      </Text>
-                    )}
+                    <VStack align="stretch" spacing="4">
+                      <HStack justify="space-between">
+                        <Text fontWeight="bold">
+                          {selectedBackup.files_count || 0} files backed up
+                        </Text>
+                        {selectedBackup.files_updated_at && (
+                          <Text fontSize="sm" color="gray.500">
+                            Last updated: {formatDate(selectedBackup.files_updated_at)}
+                          </Text>
+                        )}
+                      </HStack>
+
+                      {selectedBackup.files && selectedBackup.files.length > 0 ? (
+                        <Box maxH="400px" overflowY="auto" borderWidth="1px" borderRadius="md">
+                          <Table size="sm" variant="simple">
+                            <Thead position="sticky" top="0" bg="white" zIndex="1">
+                              <Tr>
+                                <Th>File</Th>
+                                <Th>Type</Th>
+                                <Th>Size</Th>
+                                <Th>Duration</Th>
+                                <Th>Date</Th>
+                                <Th>Actions</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {selectedBackup.files.map((file: any, index: number) => (
+                                <Tr key={index}>
+                                  <Td>
+                                    <Text fontSize="sm" fontWeight="medium">
+                                      File {index + 1}
+                                    </Text>
+                                    <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                                      {file.mimeType || 'Unknown type'}
+                                    </Text>
+                                  </Td>
+                                  <Td>
+                                    <Badge colorScheme={
+                                      file.type?.includes('video') ? 'purple' :
+                                      file.type?.includes('audio') ? 'orange' : 'gray'
+                                    }>
+                                      {file.type?.replace('AssetType.', '') || 'Unknown'}
+                                    </Badge>
+                                  </Td>
+                                  <Td>
+                                    <Text fontSize="sm">
+                                      {file.size
+                                        ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                                        : 'N/A'}
+                                    </Text>
+                                  </Td>
+                                  <Td>
+                                    <Text fontSize="sm">
+                                      {file.duration
+                                        ? `${Math.floor(file.duration / 60)}:${String(file.duration % 60).padStart(2, '0')}`
+                                        : 'N/A'}
+                                    </Text>
+                                  </Td>
+                                  <Td>
+                                    <Text fontSize="sm">
+                                      {file.createDate
+                                        ? new Date(file.createDate).toLocaleDateString()
+                                        : 'N/A'}
+                                    </Text>
+                                  </Td>
+                                  <Td>
+                                    {file.url && (
+                                      <Button
+                                        size="xs"
+                                        colorScheme="brand"
+                                        onClick={() => window.open(file.url, '_blank')}
+                                      >
+                                        View
+                                      </Button>
+                                    )}
+                                  </Td>
+                                </Tr>
+                              ))}
+                            </Tbody>
+                          </Table>
+                        </Box>
+                      ) : (
+                        <Center p="8" borderWidth="1px" borderRadius="md" borderStyle="dashed">
+                          <Text color="gray.500">No files available</Text>
+                        </Center>
+                      )}
+                    </VStack>
                   </TabPanel>
                 </TabPanels>
               </Tabs>

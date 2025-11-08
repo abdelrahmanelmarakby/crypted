@@ -35,10 +35,10 @@ class SettingsView extends GetView<SettingsController> {
                   ),
                 ),
               ),
-              // Auto-backup switch with bottom sheet configuration
-              SliverToBoxAdapter(
-                child: const SimpleBackupSwitchWidget(),
-              ),
+              // // Auto-backup switch with bottom sheet configuration
+              // SliverToBoxAdapter(
+              //   child: const SimpleBackupSwitchWidget(),
+              // ),
               // Settings Section
               SliverToBoxAdapter(
                 child: const SettingsSectionWidget(),

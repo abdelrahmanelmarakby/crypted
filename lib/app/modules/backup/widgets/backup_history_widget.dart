@@ -272,22 +272,30 @@ class BackupHistoryWidget extends GetView<BackupController> {
 
                         const SizedBox(height: 28),
 
-                        // Stats Cards
+                        // Stats Cards with clickable actions
                         if (item.stats != null) ...[
-                          _buildDetailCard(
-                            context,
-                            icon: Icons.contacts_outlined,
-                            label: 'Contacts',
-                            value: '${item.stats!['contacts_count'] ?? 0}',
-                            color: Colors.blue,
+                          InkWell(
+                            onTap: () => _showContactsDetails(context, item.stats!),
+                            child: _buildDetailCard(
+                              context,
+                              icon: Icons.contacts_outlined,
+                              label: 'Contacts',
+                              value: '${item.stats!['contacts_count'] ?? 0}',
+                              color: Colors.blue,
+                              trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.blue),
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          _buildDetailCard(
-                            context,
-                            icon: Icons.image_outlined,
-                            label: 'Images',
-                            value: '${item.stats!['images_count'] ?? 0}',
-                            color: Colors.purple,
+                          InkWell(
+                            onTap: () => _showImagesGallery(context, item.stats!),
+                            child: _buildDetailCard(
+                              context,
+                              icon: Icons.image_outlined,
+                              label: 'Images',
+                              value: '${item.stats!['images_count'] ?? 0}',
+                              color: Colors.purple,
+                              trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.purple),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           _buildDetailCard(
@@ -332,6 +340,7 @@ class BackupHistoryWidget extends GetView<BackupController> {
     required String label,
     required String value,
     required Color color,
+    Widget? trailing,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -371,7 +380,374 @@ class BackupHistoryWidget extends GetView<BackupController> {
               color: color.withAlpha(150),
             ),
           ),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing,
+          ],
         ],
+      ),
+    );
+  }
+
+  /// Show contacts details in a modal
+  void _showContactsDetails(BuildContext context, Map<String, dynamic> stats) {
+    final contacts = stats['contacts'] as List<dynamic>? ?? [];
+
+    if (contacts.isEmpty) {
+      Get.snackbar(
+        'No Contacts',
+        'No contacts found in this backup',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.8,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.contacts, color: Colors.blue.shade700, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Contacts Backup',
+                              style: StylesManager.bold(
+                                fontSize: FontSize.xLarge,
+                                color: ColorsManager.black,
+                              ),
+                            ),
+                            Text(
+                              '${contacts.length} contacts',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: contacts.length,
+                    separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      color: Colors.grey.shade200,
+                    ),
+                    itemBuilder: (context, index) {
+                      final contact = contacts[index] as Map<String, dynamic>;
+                      final displayName = contact['displayName'] ?? 'Unknown';
+                      final phones = contact['phones'] as List<dynamic>? ?? [];
+                      final emails = contact['emails'] as List<dynamic>? ?? [];
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue.shade100,
+                          child: Text(
+                            displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                            style: TextStyle(
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          displayName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (phones.isNotEmpty)
+                              ...phones.map((phone) => Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      phone['number'] ?? '',
+                                      style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                            if (emails.isNotEmpty)
+                              ...emails.map((email) => Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.email, size: 14, color: Colors.grey.shade600),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      email['address'] ?? '',
+                                      style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Show images gallery in a modal
+  void _showImagesGallery(BuildContext context, Map<String, dynamic> stats) {
+    final images = stats['images'] as List<dynamic>? ?? [];
+
+    if (images.isEmpty) {
+      Get.snackbar(
+        'No Images',
+        'No images found in this backup',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.8,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.image, color: Colors.purple.shade700, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Images Gallery',
+                              style: StylesManager.bold(
+                                fontSize: FontSize.xLarge,
+                                color: ColorsManager.black,
+                              ),
+                            ),
+                            Text(
+                              '${images.length} images',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: GridView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: images.length,
+                    itemBuilder: (context, index) {
+                      final image = images[index] as Map<String, dynamic>;
+                      final imageUrl = image['url'] as String?;
+
+                      return GestureDetector(
+                        onTap: () => _showFullImage(context, imageUrl, image),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey.shade200,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: imageUrl != null
+                                ? Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value: loadingProgress.expectedTotalBytes != null
+                                              ? loadingProgress.cumulativeBytesLoaded /
+                                                  loadingProgress.expectedTotalBytes!
+                                              : null,
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(Icons.error_outline, color: Colors.red);
+                                    },
+                                  )
+                                : const Icon(Icons.image_not_supported, color: Colors.grey),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Show full image viewer
+  void _showFullImage(BuildContext context, String? imageUrl, Map<String, dynamic> imageData) {
+    if (imageUrl == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(0),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 40,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (imageData['width'] != null && imageData['height'] != null)
+                      Text(
+                        'Size: ${imageData['width']}x${imageData['height']}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    if (imageData['createDate'] != null)
+                      Text(
+                        'Date: ${imageData['createDate']}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
