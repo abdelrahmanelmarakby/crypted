@@ -29,6 +29,7 @@ import 'package:crypted_app/app/data/models/messages/contact_message_model.dart'
 import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/edit_message_sheet.dart';
@@ -746,12 +747,40 @@ class ChatController extends GetxController {
     }
   }
 
-  /// Pin/Unpin a message
+  /// Pin/Unpin a message (only one message can be pinned at a time)
   Future<void> togglePinMessage(Message message) async {
     try {
       _showLoading();
 
       final isCurrentlyPinned = message.isPinned;
+
+      // If pinning a message, first unpin any existing pinned messages
+      if (!isCurrentlyPinned) {
+        final currentlyPinnedMessages = messages.where((msg) => msg.isPinned).toList();
+
+        if (currentlyPinnedMessages.isNotEmpty) {
+          // Only allow one pinned message at a time
+          // Unpin all currently pinned messages
+          for (final pinnedMessage in currentlyPinnedMessages) {
+            await chatDataSource.updateMessage(
+              roomId: roomId,
+              messageId: pinnedMessage.id,
+              updates: {'isPinned': false},
+            );
+
+            // Update local messages list
+            final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
+            if (pinnedIndex != -1) {
+              messages[pinnedIndex] = pinnedMessage.copyWith(
+                id: pinnedMessage.id,
+                isPinned: false,
+              ) as Message;
+            }
+          }
+        }
+      }
+
+      // Now pin/unpin the target message
       final updatedMessage = message.copyWith(
         id: message.id,
         isPinned: !isCurrentlyPinned,
@@ -1531,6 +1560,81 @@ class ChatController extends GetxController {
       print('❌ Error removing group photo: $e');
       _showErrorToast('Failed to remove group photo. Please try again.');
     }
+  }
+
+  // ============================================================
+  // Upload Tracking Methods
+  // ============================================================
+
+  /// Track active uploads for cancellation
+  final Map<String, StreamSubscription?> _activeUploads = {};
+
+  /// Start tracking an upload and show progress
+  void startUpload({
+    required String uploadId,
+    required String filePath,
+    required String fileName,
+    required int fileSize,
+    required String uploadType,
+    String? thumbnailPath,
+  }) {
+    final uploadingMessage = UploadingMessage(
+      id: uploadId,
+      roomId: roomId,
+      senderId: currentUser?.uid ?? '',
+      timestamp: DateTime.now(),
+      filePath: filePath,
+      fileName: fileName,
+      fileSize: fileSize,
+      uploadType: uploadType,
+      progress: 0.0,
+      thumbnailPath: thumbnailPath,
+    );
+
+    // Add to messages list
+    messages.insert(0, uploadingMessage);
+    update();
+
+    print('📤 Started upload tracking: $uploadId ($fileName)');
+  }
+
+  /// Update upload progress
+  void updateUploadProgress(String uploadId, double progress) {
+    final index = messages.indexWhere((msg) => msg.id == uploadId);
+    if (index != -1 && messages[index] is UploadingMessage) {
+      final uploadingMessage = messages[index] as UploadingMessage;
+      messages[index] = uploadingMessage.copyWith(progress: progress);
+      update();
+    }
+  }
+
+  /// Complete upload by replacing uploading message with actual message
+  void completeUpload(String uploadId, Message actualMessage) {
+    final index = messages.indexWhere((msg) => msg.id == uploadId);
+    if (index != -1) {
+      messages[index] = actualMessage;
+      update();
+    }
+
+    // Remove from active uploads
+    _activeUploads.remove(uploadId);
+
+    print('✅ Upload completed: $uploadId');
+  }
+
+  /// Cancel an ongoing upload
+  void cancelUpload(String uploadId) {
+    // Cancel the upload subscription if exists
+    final subscription = _activeUploads[uploadId];
+    subscription?.cancel();
+    _activeUploads.remove(uploadId);
+
+    // Remove from messages list
+    messages.removeWhere((msg) => msg.id == uploadId);
+    update();
+
+    print('🚫 Upload cancelled: $uploadId');
+    _showToast('Upload cancelled');
   }
 
   @override
