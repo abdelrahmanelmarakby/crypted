@@ -552,7 +552,7 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  /// Navigate to media/links/documents
+  /// Navigate to media/links/documents with tabbed bottom sheet
   void viewMediaLinksDocuments() {
     if (roomId == null) {
       Get.snackbar(
@@ -565,41 +565,189 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Navigate to media screen
-    Get.dialog(
-      AlertDialog(
-        title: const Text("Media & Documents"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text("View all media, links, and documents shared in this group."),
-            SizedBox(height: 16),
-            Text("Categories:"),
-            Text("• Photos & Videos"),
-            Text("• Links"),
-            Text("• Documents & Files"),
-            Text("• Audio Messages"),
-          ],
+    // Show tabbed bottom sheet for media/links/documents
+    Get.bottomSheet(
+      DefaultTabController(
+        length: 4,
+        child: Container(
+          height: Get.height * 0.8,
+          decoration: BoxDecoration(
+            color: ColorsManager.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: ColorsManager.lightGrey.withOpacity(0.5),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.perm_media, color: ColorsManager.primary, size: 24),
+                    SizedBox(width: 8),
+                    Text(
+                      "Media & Documents",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Tab Bar
+              TabBar(
+                labelColor: ColorsManager.primary,
+                unselectedLabelColor: ColorsManager.grey,
+                indicatorColor: ColorsManager.primary,
+                tabs: [
+                  Tab(icon: Icon(Icons.photo), text: "Photos"),
+                  Tab(icon: Icon(Icons.videocam), text: "Videos"),
+                  Tab(icon: Icon(Icons.insert_drive_file), text: "Files"),
+                  Tab(icon: Icon(Icons.audiotrack), text: "Audio"),
+                ],
+              ),
+
+              // Tab Views
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildMediaTab('image'),
+                    _buildMediaTab('video'),
+                    _buildMediaTab('file'),
+                    _buildMediaTab('audio'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Close"),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              Get.snackbar(
-                "Feature In Progress",
-                "Media gallery will be shown here",
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            child: const Text("View Gallery"),
-          ),
-        ],
       ),
+      isScrollControlled: true,
     );
+  }
+
+  /// Build media tab content
+  Widget _buildMediaTab(String mediaType) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .collection('chat')
+          .where('type', isEqualTo: mediaType)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        final items = snapshot.data?.docs ?? [];
+
+        if (items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_getMediaIcon(mediaType), size: 64, color: ColorsManager.lightGrey),
+                SizedBox(height: 16),
+                Text("No ${mediaType}s shared", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
+              ],
+            ),
+          );
+        }
+
+        return GridView.builder(
+          padding: EdgeInsets.all(8),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: mediaType == 'image' || mediaType == 'video' ? 3 : 1,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: mediaType == 'image' || mediaType == 'video' ? 1.0 : 3.0,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final data = items[index].data() as Map<String, dynamic>;
+            return _buildMediaItem(mediaType, data);
+          },
+        );
+      },
+    );
+  }
+
+  /// Build individual media item
+  Widget _buildMediaItem(String mediaType, Map<String, dynamic> data) {
+    switch (mediaType) {
+      case 'image':
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            data['imageUrl'] ?? '',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                Container(color: ColorsManager.lightGrey, child: Icon(Icons.broken_image)),
+          ),
+        );
+      case 'video':
+        return Container(
+          decoration: BoxDecoration(
+            color: ColorsManager.black.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(child: Icon(Icons.play_circle_outline, color: ColorsManager.white, size: 40)),
+        );
+      case 'file':
+        return Card(
+          child: ListTile(
+            leading: Icon(Icons.insert_drive_file, color: ColorsManager.primary),
+            title: Text(data['fileName'] ?? 'Unknown File', maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(data['fileSize'] ?? ''),
+          ),
+        );
+      case 'audio':
+        return Card(
+          child: ListTile(
+            leading: Icon(Icons.audiotrack, color: Colors.orange),
+            title: Text('Voice Message'),
+            subtitle: Text(data['duration'] ?? '0:00'),
+          ),
+        );
+      default:
+        return SizedBox();
+    }
+  }
+
+  /// Get icon for media type
+  IconData _getMediaIcon(String mediaType) {
+    switch (mediaType) {
+      case 'image':
+        return Icons.photo;
+      case 'video':
+        return Icons.videocam;
+      case 'file':
+        return Icons.insert_drive_file;
+      case 'audio':
+        return Icons.audiotrack;
+      default:
+        return Icons.perm_media;
+    }
   }
 
   /// Check if current user is an admin (first member or creator)
