@@ -31,6 +31,7 @@ import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
+import 'package:crypted_app/app/modules/chat/widgets/edit_message_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -811,6 +812,130 @@ class ChatController extends GetxController {
     }
   }
 
+  // =================== MESSAGE EDITING ===================
+
+  /// Edit a text message
+  Future<void> editMessage(TextMessage message, String newText) async {
+    try {
+      final currentUserId = UserService.currentUser.value?.uid;
+      if (currentUserId == null) {
+        _showErrorToast('User not logged in');
+        return;
+      }
+
+      if (message.senderId != currentUserId) {
+        _showErrorToast('You can only edit your own messages');
+        return;
+      }
+
+      // Check edit time limit (15 minutes)
+      final difference = DateTime.now().difference(message.timestamp);
+      if (difference.inMinutes > 15) {
+        _showErrorToast('Messages can only be edited within 15 minutes');
+        return;
+      }
+
+      _showLoading();
+
+      await chatDataSource.editMessage(
+        roomId: roomId,
+        messageId: message.id,
+        newText: newText,
+        senderId: currentUserId,
+      );
+
+      _logger.info('Message edited successfully: ${message.id}');
+      _showToast('Message edited');
+    } catch (e) {
+      _logger.error('Failed to edit message', error: e);
+      _errorHandler.handleError(
+        e,
+        fallbackMessage: 'Failed to edit message',
+        showToUser: true,
+      );
+    } finally {
+      _hideLoading();
+    }
+  }
+
+  /// Show edit message sheet
+  void showEditMessageSheet(TextMessage message) {
+    final currentUserId = UserService.currentUser.value?.uid;
+
+    if (message.senderId != currentUserId) {
+      _showErrorToast('You can only edit your own messages');
+      return;
+    }
+
+    // Check edit time limit (15 minutes)
+    final difference = DateTime.now().difference(message.timestamp);
+    if (difference.inMinutes > 15) {
+      _showErrorToast('Messages can only be edited within 15 minutes');
+      return;
+    }
+
+    EditMessageSheet.show(
+      context: Get.context!,
+      message: message,
+      onSave: (newText) => editMessage(message, newText),
+    );
+  }
+
+  // =================== REACTION METHODS ===================
+
+  /// Toggle a reaction on a message
+  Future<void> toggleReaction(Message message, String emoji) async {
+    try {
+      final currentUserId = UserService.currentUser.value?.uid;
+      if (currentUserId == null) return;
+
+      await chatDataSource.toggleReaction(
+        roomId: roomId,
+        messageId: message.id,
+        emoji: emoji,
+        userId: currentUserId,
+      );
+
+      _logger.info('Toggled reaction $emoji on message ${message.id}');
+    } catch (e) {
+      _logger.error('Failed to toggle reaction', error: e);
+      _errorHandler.handleError(
+        e,
+        fallbackMessage: 'Failed to add reaction',
+        showToUser: true,
+      );
+    }
+  }
+
+  /// Remove all reactions from the current user on a message
+  Future<void> removeAllMyReactions(Message message) async {
+    try {
+      final currentUserId = UserService.currentUser.value?.uid;
+      if (currentUserId == null) return;
+
+      await chatDataSource.removeUserReactions(
+        roomId: roomId,
+        messageId: message.id,
+        userId: currentUserId,
+      );
+
+      _logger.info('Removed all reactions from message ${message.id}');
+    } catch (e) {
+      _logger.error('Failed to remove reactions', error: e);
+      _errorHandler.handleError(
+        e,
+        fallbackMessage: 'Failed to remove reactions',
+        showToUser: true,
+      );
+    }
+  }
+
+  /// Show reaction picker for a message
+  void showReactionPicker(BuildContext context, Message message) {
+    // This will be implemented in the UI layer
+    // The method is here as a placeholder for UI integration
+  }
+
   /// Forward a message with complete contact selection
   Future<void> forwardMessage(Message message) async {
     try {
@@ -1242,6 +1367,12 @@ class ChatController extends GetxController {
       return;
     }
 
+    final isTextMessage = message is TextMessage;
+    final canEditMsg = isTextMessage &&
+        message.senderId == currentUser?.uid &&
+        !message.isDeleted &&
+        DateTime.now().difference(message.timestamp).inMinutes <= 15;
+
     MessageActionsBottomSheet.show(
       Get.context!,
       message: message,
@@ -1253,6 +1384,8 @@ class ChatController extends GetxController {
       onReport: () => reportMessage(message),
       onDelete: () => deleteMessage(message),
       onRestore: message.isDeleted ? () => restoreMessage(message) : null,
+      onReaction: (emoji) => toggleReaction(message, emoji),
+      onEdit: canEditMsg ? () => showEditMessageSheet(message as TextMessage) : null,
       isPinned: message.isPinned,
       isFavorite: message.isFavorite,
       canPin: true,
@@ -1261,8 +1394,9 @@ class ChatController extends GetxController {
       canRestore: message.isDeleted && message.senderId == currentUser?.uid, // Only allow restore for own deleted messages
       canReply: true,
       canForward: true,
-      canCopy: message is TextMessage,
+      canCopy: isTextMessage,
       canReport: true,
+      canEdit: canEditMsg,
     );
   }
 

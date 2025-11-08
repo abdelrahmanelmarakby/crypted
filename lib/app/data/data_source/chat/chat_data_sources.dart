@@ -429,6 +429,164 @@ class ChatDataSources {
     }
   }
 
+  // =================== MESSAGE EDITING ===================
+
+  /// Edit a text message
+  Future<void> editMessage({
+    required String roomId,
+    required String messageId,
+    required String newText,
+    required String senderId,
+  }) async {
+    try {
+      final messageRef = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .doc(messageId);
+
+      final snapshot = await messageRef.get();
+
+      if (!snapshot.exists) {
+        throw Exception('Message not found');
+      }
+
+      final data = snapshot.data()!;
+
+      // Security check: Only allow editing own messages
+      if (data['senderId'] != senderId) {
+        throw Exception('You can only edit your own messages');
+      }
+
+      // Check if message is text type
+      if (data['type'] != 'text') {
+        throw Exception('Only text messages can be edited');
+      }
+
+      // Check edit time limit (15 minutes)
+      final timestamp = DateTime.parse(data['timestamp']);
+      final now = DateTime.now();
+      final difference = now.difference(timestamp);
+
+      if (difference.inMinutes > 15) {
+        throw Exception('Messages can only be edited within 15 minutes');
+      }
+
+      final originalText = data['originalText'] ?? data['text'];
+
+      await messageRef.update({
+        'text': newText,
+        'isEdited': true,
+        'editedAt': DateTime.now().toIso8601String(),
+        'originalText': originalText,
+      });
+
+      if (kDebugMode) {
+        print('✅ Message edited successfully: $messageId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error editing message: $error');
+      }
+      rethrow;
+    }
+  }
+
+  // =================== REACTION OPERATIONS ===================
+
+  /// Add or remove a reaction to/from a message
+  Future<void> toggleReaction({
+    required String roomId,
+    required String messageId,
+    required String emoji,
+    required String userId,
+  }) async {
+    try {
+      final messageRef = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .doc(messageId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(messageRef);
+
+        if (!snapshot.exists) {
+          throw Exception('Message not found');
+        }
+
+        final data = snapshot.data()!;
+        List<dynamic> reactions = List.from(data['reactions'] ?? []);
+
+        // Check if user already reacted with this emoji
+        final existingReactionIndex = reactions.indexWhere(
+          (r) => r['emoji'] == emoji && r['userId'] == userId,
+        );
+
+        if (existingReactionIndex != -1) {
+          // Remove reaction
+          reactions.removeAt(existingReactionIndex);
+          if (kDebugMode) {
+            print('🔄 Removed reaction $emoji from message $messageId');
+          }
+        } else {
+          // Add reaction
+          reactions.add({
+            'emoji': emoji,
+            'userId': userId,
+          });
+          if (kDebugMode) {
+            print('✅ Added reaction $emoji to message $messageId');
+          }
+        }
+
+        transaction.update(messageRef, {'reactions': reactions});
+      });
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error toggling reaction: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Remove all reactions of a specific user from a message
+  Future<void> removeUserReactions({
+    required String roomId,
+    required String messageId,
+    required String userId,
+  }) async {
+    try {
+      final messageRef = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .doc(messageId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(messageRef);
+
+        if (!snapshot.exists) {
+          throw Exception('Message not found');
+        }
+
+        final data = snapshot.data()!;
+        List<dynamic> reactions = List.from(data['reactions'] ?? []);
+
+        // Remove all reactions from this user
+        reactions.removeWhere((r) => r['userId'] == userId);
+
+        transaction.update(messageRef, {'reactions': reactions});
+      });
+
+      if (kDebugMode) {
+        print('✅ Removed all reactions from user $userId on message $messageId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error removing user reactions: $error');
+      }
+      rethrow;
+    }
+  }
+
   /// Vote on a poll message
   Future<void> votePoll({
     required String roomId,

@@ -21,6 +21,8 @@ import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/locatio
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/poll_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/text_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/video_message.dart';
+import 'package:crypted_app/app/modules/chat/widgets/message_reactions_display.dart';
+import 'package:crypted_app/app/modules/chat/widgets/reaction_picker.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -154,6 +156,20 @@ class MessageBuilder extends GetView<ChatController> {
                             ),
                           ),
                         buildMessageContent(context, messageModel),
+
+                        // Message reactions display
+                        if (messageModel.reactions.isNotEmpty)
+                          MessageReactionsDisplay(
+                            reactions: messageModel.reactions,
+                            currentUserId: UserService.currentUser.value?.uid ?? '',
+                            onReactionTap: (emoji) {
+                              controller.toggleReaction(messageModel, emoji);
+                            },
+                            onShowDetails: () {
+                              // Show details handled by long press on reaction
+                            },
+                          ),
+
                         const SizedBox(height: Sizes.size4),
                         Row(
                           mainAxisSize: MainAxisSize.min,
