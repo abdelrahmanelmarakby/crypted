@@ -17,10 +17,15 @@ class FirebaseOptimizationService {
 
   // Batch timer for deferred operations
   Timer? _batchTimer;
+  Timer? _cleanupTimer;
 
   // Rate limiting
   final Map<String, DateTime> _rateLimitMap = {};
   final Duration _rateLimitDuration = const Duration(seconds: 1);
+
+  // ENHANCED: Metrics tracking
+  final FirebaseMetrics _metrics = FirebaseMetrics();
+  DateTime? _initializeTime;
 
   /// Initialize Firebase with optimal settings for 1M+ users
   static void initializeFirebase() {
@@ -38,9 +43,39 @@ class FirebaseOptimizationService {
       const Duration(minutes: 5),
     );
 
+    // ENHANCED: Start auto-cleanup timer
+    _instance._initializeTime = DateTime.now();
+    _instance._startAutoCleanup();
+
     if (kDebugMode) {
       print('✅ Firebase initialized with production settings');
+      print('   ✅ Auto-cleanup enabled (every 1 hour)');
+      print('   ✅ Metrics tracking enabled');
     }
+  }
+
+  /// Start automatic cache cleanup
+  void _startAutoCleanup() {
+    _cleanupTimer = Timer.periodic(
+      const Duration(hours: 1),
+      (_) {
+        cleanupCache();
+        _cleanupRateLimits();
+        if (kDebugMode) {
+          print('🧹 Auto-cleanup completed');
+          print('   Cache stats: ${getCacheStats()}');
+          print('   Metrics: ${getMetrics()}');
+        }
+      },
+    );
+  }
+
+  /// Clean up stale rate limit entries
+  void _cleanupRateLimits() {
+    final now = DateTime.now();
+    _rateLimitMap.removeWhere((key, value) {
+      return now.difference(value) > _rateLimitDuration;
+    });
   }
 
   /// Get document with caching
@@ -49,12 +84,14 @@ class FirebaseOptimizationService {
     required String docId,
     bool forceRefresh = false,
   }) async {
+    final startTime = DateTime.now();
     final cacheKey = '$collection/$docId';
 
     // Check cache first
     if (!forceRefresh && _cache.containsKey(cacheKey)) {
       final cached = _cache[cacheKey]!;
       if (!cached.isExpired) {
+        _metrics.cacheHits++;
         if (kDebugMode) {
           print('📦 Cache hit: $cacheKey');
         }
@@ -62,11 +99,18 @@ class FirebaseOptimizationService {
       }
     }
 
+    // Cache miss
+    _metrics.cacheMisses++;
+
     // Fetch from Firestore
     final doc = await FirebaseFirestore.instance
         .collection(collection)
         .doc(docId)
         .get();
+
+    // Track query time
+    final queryTime = DateTime.now().difference(startTime);
+    _metrics.addQueryTime(queryTime);
 
     // Cache the result
     _cache[cacheKey] = CachedData(
@@ -260,10 +304,12 @@ class FirebaseOptimizationService {
   }
 
   /// Rate limit check
+  /// ENHANCED: Now tracks blocked requests in metrics
   bool checkRateLimit(String key) {
     if (_rateLimitMap.containsKey(key)) {
       final lastCall = _rateLimitMap[key]!;
       if (DateTime.now().difference(lastCall) < _rateLimitDuration) {
+        _metrics.rateLimitBlocks++;
         if (kDebugMode) {
           print('⚠️ Rate limit exceeded for: $key');
         }
@@ -273,6 +319,13 @@ class FirebaseOptimizationService {
 
     _rateLimitMap[key] = DateTime.now();
     return true;
+  }
+
+  /// Enforce rate limit (throws exception if blocked)
+  void enforceRateLimit(String key) {
+    if (!checkRateLimit(key)) {
+      throw Exception('Rate limit exceeded for: $key');
+    }
   }
 
   /// Clear cache
@@ -338,11 +391,40 @@ class FirebaseOptimizationService {
     throw Exception('Transaction failed');
   }
 
+  /// Get metrics
+  Map<String, dynamic> getMetrics() {
+    return {
+      'cacheHits': _metrics.cacheHits,
+      'cacheMisses': _metrics.cacheMisses,
+      'hitRate': _metrics.hitRate,
+      'rateLimitBlocks': _metrics.rateLimitBlocks,
+      'avgQueryTime': _metrics.avgQueryTime?.inMilliseconds,
+      'totalQueries': _metrics.totalQueries,
+      'uptime': _initializeTime != null
+          ? DateTime.now().difference(_initializeTime!).inSeconds
+          : 0,
+    };
+  }
+
+  /// Reset metrics
+  void resetMetrics() {
+    _metrics.reset();
+    if (kDebugMode) {
+      print('🔄 Metrics reset');
+    }
+  }
+
   /// Dispose resources
   void dispose() {
     _batchTimer?.cancel();
+    _cleanupTimer?.cancel();
     _cache.clear();
     _rateLimitMap.clear();
+
+    if (kDebugMode) {
+      print('🧹 FirebaseOptimizationService disposed');
+      print('   Final metrics: ${getMetrics()}');
+    }
   }
 }
 
@@ -425,4 +507,63 @@ enum BatchOperationType {
   set,
   update,
   delete,
+}
+
+/// Firebase metrics tracking
+class FirebaseMetrics {
+  int cacheHits = 0;
+  int cacheMisses = 0;
+  int rateLimitBlocks = 0;
+  int totalQueries = 0;
+  final List<Duration> _queryTimes = [];
+  static const int _maxQueryTimeSamples = 100;
+
+  /// Calculate hit rate
+  double get hitRate {
+    final total = cacheHits + cacheMisses;
+    if (total == 0) return 0.0;
+    return cacheHits / total;
+  }
+
+  /// Get average query time
+  Duration? get avgQueryTime {
+    if (_queryTimes.isEmpty) return null;
+    final totalMs = _queryTimes.fold<int>(
+      0,
+      (sum, duration) => sum + duration.inMilliseconds,
+    );
+    return Duration(milliseconds: totalMs ~/ _queryTimes.length);
+  }
+
+  /// Add query time sample
+  void addQueryTime(Duration duration) {
+    totalQueries++;
+    _queryTimes.add(duration);
+
+    // Keep only last N samples to prevent memory growth
+    if (_queryTimes.length > _maxQueryTimeSamples) {
+      _queryTimes.removeAt(0);
+    }
+  }
+
+  /// Reset all metrics
+  void reset() {
+    cacheHits = 0;
+    cacheMisses = 0;
+    rateLimitBlocks = 0;
+    totalQueries = 0;
+    _queryTimes.clear();
+  }
+
+  /// Get performance summary
+  Map<String, dynamic> toJson() {
+    return {
+      'cacheHits': cacheHits,
+      'cacheMisses': cacheMisses,
+      'hitRate': (hitRate * 100).toStringAsFixed(2) + '%',
+      'rateLimitBlocks': rateLimitBlocks,
+      'totalQueries': totalQueries,
+      'avgQueryTimeMs': avgQueryTime?.inMilliseconds ?? 0,
+    };
+  }
 }

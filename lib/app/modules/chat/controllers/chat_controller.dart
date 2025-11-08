@@ -1535,13 +1535,18 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    _logger.info('ChatController disposing - cleaning up resources', context: 'ChatController', data: {
+      'roomId': roomId,
+      'streamSubscriptions': _streamSubscriptions.length,
+    });
+
     // Dispose MessageController (NEW!)
     messageControllerService.onClose();
 
     messageController.dispose();
 
-    // Stop typing indicator
-    typingService.stopTyping(roomId);
+    // Stop all real-time indicators
+    _cleanupRealtimeServices();
 
     // Cancel all stream subscriptions to prevent memory leaks
     for (final subscription in _streamSubscriptions) {
@@ -1555,7 +1560,45 @@ class ChatController extends GetxController {
       ChatSessionManager.instance.endChatSession();
     }
 
-    _logger.info('ChatController disposed', context: 'ChatController');
+    _logger.info('ChatController disposed successfully', context: 'ChatController');
     super.onClose();
+  }
+
+  /// Clean up all real-time services to prevent memory leaks
+  void _cleanupRealtimeServices() {
+    try {
+      // Stop typing indicator
+      typingService.stopTyping(roomId);
+      _logger.debug('Typing service cleaned up', context: 'ChatController');
+    } catch (e) {
+      _logger.warning('Error cleaning up typing service', context: 'ChatController', data: {'error': e.toString()});
+    }
+
+    // Note: RecordingService and ActivityStatusService will be added when integrated
+    // Uncomment these lines after adding the services to the controller:
+
+    // try {
+    //   // Stop recording indicator if active
+    //   recordingService.cleanupRecording(roomId);
+    //   _logger.debug('Recording service cleaned up', context: 'ChatController');
+    // } catch (e) {
+    //   _logger.warning('Error cleaning up recording service', context: 'ChatController', data: {'error': e.toString()});
+    // }
+
+    // try {
+    //   // Mark as away from chat
+    //   activityService.setAway(roomId);
+    //   _logger.debug('Activity service cleaned up', context: 'ChatController');
+    // } catch (e) {
+    //   _logger.warning('Error cleaning up activity service', context: 'ChatController', data: {'error': e.toString()});
+    // }
+
+    try {
+      // Stop read receipt tracking
+      readReceiptService.stopTracking(roomId);
+      _logger.debug('Read receipt service cleaned up', context: 'ChatController');
+    } catch (e) {
+      _logger.warning('Error cleaning up read receipt service', context: 'ChatController', data: {'error': e.toString()});
+    }
   }
 }
