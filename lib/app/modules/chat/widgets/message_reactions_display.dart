@@ -197,7 +197,7 @@ class _ReactionUserTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // Fetch user data from UserService
     return FutureBuilder<SocialMediaUser?>(
-      future: UserService().getUser(userId),
+      future: UserService().getProfile(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListTile(
@@ -244,16 +244,16 @@ class _ReactionUserTile extends StatelessWidget {
         // Display actual user data
         return ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: user.photoUrl != null && user.photoUrl!.isNotEmpty
+          leading: user.imageUrl != null && user.imageUrl!.isNotEmpty
               ? CircleAvatar(
-                  backgroundImage: CachedNetworkImageProvider(user.photoUrl!),
+                  backgroundImage: CachedNetworkImageProvider(user.imageUrl!),
                   backgroundColor: ColorsManager.primary.withOpacity(0.2),
                 )
               : CircleAvatar(
                   backgroundColor: ColorsManager.primary.withOpacity(0.2),
                   child: Text(
-                    user.name?.isNotEmpty == true
-                        ? user.name![0].toUpperCase()
+                    user.fullName?.isNotEmpty == true
+                        ? user.fullName![0].toUpperCase()
                         : '?',
                     style: TextStyle(
                       color: ColorsManager.primary,
@@ -262,7 +262,7 @@ class _ReactionUserTile extends StatelessWidget {
                   ),
                 ),
           title: Text(
-            user.name ?? 'Unknown',
+            user.fullName ?? 'Unknown',
             style: TextStyle(
               fontSize: FontSize.medium,
               fontWeight: FontWeight.w500,

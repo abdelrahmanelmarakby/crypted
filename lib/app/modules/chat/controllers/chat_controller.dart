@@ -1699,7 +1699,7 @@ class ChatController extends GetxController {
 
     try {
       // Stop read receipt tracking
-      readReceiptService.stopTracking(roomId);
+      // readReceiptService.stopTracking(roomId);
       _logger.debug('Read receipt service cleaned up', context: 'ChatController');
     } catch (e) {
       _logger.warning('Error cleaning up read receipt service', context: 'ChatController', data: {'error': e.toString()});
