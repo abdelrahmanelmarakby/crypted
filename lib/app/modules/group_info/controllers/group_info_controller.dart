@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
+import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroupInfoController extends GetxController {
   var isLockContactInfoEnabled = false.obs;
@@ -124,15 +127,19 @@ class GroupInfoController extends GetxController {
         groupDescription.value = description;
       }
 
-      // In a real implementation, this would call an API to update the group
-      // For now, we'll simulate a successful update
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Update in Firestore if roomId exists
+      if (roomId != null) {
+        final updateData = <String, dynamic>{};
+        if (name != null && name.isNotEmpty) updateData['name'] = name;
+        if (description != null) updateData['description'] = description;
 
-      Get.snackbar(
-        "Success",
-        "Group information updated successfully",
-        snackPosition: SnackPosition.BOTTOM,
-      );
+        if (updateData.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('chat_rooms')
+              .doc(roomId)
+              .update(updateData);
+        }
+      }
     } catch (e) {
       print("❌ Error updating group info: $e");
       Get.snackbar(
@@ -198,14 +205,6 @@ class GroupInfoController extends GetxController {
       // Remove member from local list
       members.value = members.value!.where((member) => member.uid != userId).toList();
       memberCount.value = members.value!.length;
-
-      Get.snackbar(
-        "Success",
-        "Member removed from group",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
     } catch (e) {
       print("❌ Error removing member: $e");
       Get.snackbar(
@@ -245,43 +244,39 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Show confirmation dialog
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text("Exit Group"),
-        content: Text("Are you sure you want to leave ${groupName.value ?? 'this group'}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text("Exit", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    // Show confirmation bottom sheet
+    final confirmed = await CustomBottomSheets.showConfirmation(
+      title: 'Exit Group',
+      message: 'Are you sure you want to leave ${groupName.value ?? 'this group'}?',
+      subtitle: 'You will no longer receive messages from this group',
+      confirmText: 'Exit Group',
+      cancelText: 'Cancel',
+      icon: Icons.exit_to_app,
+      isDanger: true,
     );
 
     if (confirmed != true) return;
 
     try {
       isLoading.value = true;
+
+      // Show loading
+      CustomBottomSheets.showLoading(message: 'Leaving group...');
+
       await _chatDataSources.exitGroup(roomId!, currentUserUid);
 
-      Get.snackbar(
-        "Success",
-        "You have left the group",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
+      // Close loading
+      CustomBottomSheets.closeLoading();
 
       // Go back to chat list
       Get.back();
       Get.back();
     } catch (e) {
       print("❌ Error exiting group: $e");
+
+      // Close loading
+      CustomBottomSheets.closeLoading();
+
       Get.snackbar(
         "Error",
         "Failed to exit group: ${e.toString()}",
@@ -319,38 +314,50 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Show reason selection dialog
-    final reason = await Get.dialog<String>(
-      AlertDialog(
-        title: const Text("Report Group"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text("Inappropriate content"),
-              onTap: () => Get.back(result: "Inappropriate content"),
-            ),
-            ListTile(
-              title: const Text("Spam"),
-              onTap: () => Get.back(result: "Spam"),
-            ),
-            ListTile(
-              title: const Text("Harassment"),
-              onTap: () => Get.back(result: "Harassment"),
-            ),
-            ListTile(
-              title: const Text("Other"),
-              onTap: () => Get.back(result: "Other"),
-            ),
-          ],
+    // Show reason selection bottom sheet
+    final reason = await CustomBottomSheets.showSelection<String>(
+      title: 'Report Group',
+      subtitle: 'Select a reason for reporting this group',
+      options: [
+        SelectionOption<String>(
+          title: 'Inappropriate Content',
+          subtitle: 'Offensive or inappropriate material',
+          icon: Icons.warning,
+          iconColor: Colors.orange,
+          value: 'Inappropriate content',
         ),
-      ),
+        SelectionOption<String>(
+          title: 'Spam',
+          subtitle: 'Unwanted or repetitive content',
+          icon: Icons.report,
+          iconColor: Colors.red,
+          value: 'Spam',
+        ),
+        SelectionOption<String>(
+          title: 'Harassment',
+          subtitle: 'Bullying or harassment',
+          icon: Icons.block,
+          iconColor: Colors.red,
+          value: 'Harassment',
+        ),
+        SelectionOption<String>(
+          title: 'Other',
+          subtitle: 'Other reason',
+          icon: Icons.more_horiz,
+          iconColor: ColorsManager.grey,
+          value: 'Other',
+        ),
+      ],
     );
 
     if (reason == null) return;
 
     try {
       isLoading.value = true;
+
+      // Show loading
+      CustomBottomSheets.showLoading(message: 'Reporting group...');
+
       await _chatDataSources.reportContent(
         contentId: roomId!,
         contentType: 'group',
@@ -358,15 +365,14 @@ class GroupInfoController extends GetxController {
         reason: reason,
       );
 
-      Get.snackbar(
-        "Success",
-        "Group reported successfully",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
+      // Close loading
+      CustomBottomSheets.closeLoading();
     } catch (e) {
       print("❌ Error reporting group: $e");
+
+      // Close loading
+      CustomBottomSheets.closeLoading();
+
       Get.snackbar(
         "Error",
         "Failed to report group: ${e.toString()}",
@@ -397,15 +403,6 @@ class GroupInfoController extends GetxController {
       final oldStatus = isFavorite.value;
       await _chatDataSources.toggleFavoriteChat(roomId!);
       isFavorite.value = !oldStatus;
-
-      Get.snackbar(
-        "Success",
-        !oldStatus ? "Added to favorites" : "Removed from favorites",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
     } catch (e) {
       print("❌ Error toggling favorite: $e");
       Get.snackbar(
@@ -420,7 +417,7 @@ class GroupInfoController extends GetxController {
     }
   }
 
-  /// Navigate to starred messages
+  /// Navigate to starred messages (same implementation as contact_info)
   void viewStarredMessages() {
     if (roomId == null) {
       Get.snackbar(
@@ -433,29 +430,125 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Navigate to starred messages screen
-    Get.dialog(
-      AlertDialog(
-        title: const Text("Starred Messages"),
-        content: const Text("This feature will show all messages starred in this group."),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Close"),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              Get.snackbar(
-                "Feature In Progress",
-                "Starred messages list will be shown here",
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            child: const Text("View"),
-          ),
-        ],
+    // Navigate to starred messages screen with bottom sheet
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.8,
+        decoration: BoxDecoration(
+          color: ColorsManager.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: ColorsManager.lightGrey.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.star, color: Colors.amber, size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    "Starred Messages",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
+              ),
+            ),
+            // Messages list
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('chat_rooms')
+                    .doc(roomId)
+                    .collection('chat')
+                    .where('isFavorite', isEqualTo: true)
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  final messages = snapshot.data?.docs ?? [];
+
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.star_border, size: 64, color: ColorsManager.lightGrey),
+                          SizedBox(height: 16),
+                          Text("No starred messages", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
+                          SizedBox(height: 8),
+                          Text("Tap and hold on a message to star it", style: TextStyle(fontSize: 14, color: ColorsManager.lightGrey)),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    separatorBuilder: (context, index) => Divider(),
+                    itemBuilder: (context, index) {
+                      final message = messages[index].data() as Map<String, dynamic>;
+                      final messageType = message['type'] ?? 'text';
+                      final messageContent = message['text'] ?? message['content'] ?? '';
+
+                      return Card(
+                        elevation: 1,
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.amber.shade100,
+                            child: Icon(Icons.star, color: Colors.amber, size: 20),
+                          ),
+                          title: Text(
+                            messageType == 'text' ? messageContent : '[$messageType]',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.close, size: 20),
+                            onPressed: () async {
+                              await FirebaseFirestore.instance
+                                  .collection('chat_rooms')
+                                  .doc(roomId)
+                                  .collection('chat')
+                                  .doc(messages[index].id)
+                                  .update({'isFavorite': false});
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
+      isScrollControlled: true,
     );
   }
 

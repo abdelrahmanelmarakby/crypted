@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, must_be_immutable, use_build_context_synchronously, library_private_types_in_public_api, deprecated_member_use
 
+import 'dart:io';
+
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
@@ -258,13 +260,38 @@ class AttachmentWidget extends GetView<ChatController> {
                           final path = result.files.single.path;
                           if (path == null) return;
 
-                          // استخدم uploadImage بدلاً من uploadFile
+                          // Get file info
+                          final file = File(path);
+                          final fileName = path.split(Platform.pathSeparator).last;
+                          final fileSize = await file.length();
+                          final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
+
+                          // Start upload tracking
+                          controller.startUpload(
+                            uploadId: uploadId,
+                            filePath: path,
+                            fileName: fileName,
+                            fileSize: fileSize,
+                            uploadType: 'image',
+                            thumbnailPath: path, // Use original image as thumbnail
+                          );
+
+                          // Upload with progress tracking
                           final photoMessage = await FirebaseUtils.uploadImage(
                             path,
                             controller.roomId,
+                            onProgress: (progress) {
+                              controller.updateUploadProgress(uploadId, progress);
+                            },
                           );
+
                           if (photoMessage != null) {
+                            // Complete upload (replace uploading message with actual message)
                             await controller.sendMessage(photoMessage);
+                            controller.completeUpload(uploadId, photoMessage);
+                          } else {
+                            // Upload failed, remove uploading message
+                            controller.cancelUpload(uploadId);
                           }
                         },
                       ),
@@ -279,13 +306,36 @@ class AttachmentWidget extends GetView<ChatController> {
                           final XFile? photo = await picker.pickImage(
                               source: ImageSource.camera);
                           if (photo != null) {
-                            final photoMessage =
-                                await FirebaseUtils.uploadImage(
+                            // Get file info
+                            final file = File(photo.path);
+                            final fileName = photo.path.split(Platform.pathSeparator).last;
+                            final fileSize = await file.length();
+                            final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
+
+                            // Start upload tracking
+                            controller.startUpload(
+                              uploadId: uploadId,
+                              filePath: photo.path,
+                              fileName: fileName,
+                              fileSize: fileSize,
+                              uploadType: 'image',
+                              thumbnailPath: photo.path,
+                            );
+
+                            // Upload with progress tracking
+                            final photoMessage = await FirebaseUtils.uploadImage(
                               photo.path,
                               controller.roomId,
+                              onProgress: (progress) {
+                                controller.updateUploadProgress(uploadId, progress);
+                              },
                             );
+
                             if (photoMessage != null) {
                               await controller.sendMessage(photoMessage);
+                              controller.completeUpload(uploadId, photoMessage);
+                            } else {
+                              controller.cancelUpload(uploadId);
                             }
                           }
                         },
@@ -410,13 +460,35 @@ class AttachmentWidget extends GetView<ChatController> {
                           final path = result.files.single.path;
                           if (path == null) return;
 
-                          // استخدم uploadFile وأرسل الرسالة الناتجة
+                          // Get file info
+                          final file = File(path);
+                          final fileName = path.split(Platform.pathSeparator).last;
+                          final fileSize = await file.length();
+                          final uploadId = FirebaseUtils.generateUniqueId('file', controller.roomId);
+
+                          // Start upload tracking
+                          controller.startUpload(
+                            uploadId: uploadId,
+                            filePath: path,
+                            fileName: fileName,
+                            fileSize: fileSize,
+                            uploadType: 'file',
+                          );
+
+                          // Upload with progress tracking
                           final fileMessage = await FirebaseUtils.uploadFile(
                             path,
                             controller.roomId,
+                            onProgress: (progress) {
+                              controller.updateUploadProgress(uploadId, progress);
+                            },
                           );
+
                           if (fileMessage != null) {
                             await controller.sendMessage(fileMessage);
+                            controller.completeUpload(uploadId, fileMessage);
+                          } else {
+                            controller.cancelUpload(uploadId);
                           }
                         },
                       ),

@@ -12,8 +12,9 @@ class FirebaseUtils {
   static Future<AudioMessage?> uploadAudio(
     String path,
     String roomId,
-    String duration,
-  ) async {
+    String duration, {
+    Function(double progress)? onProgress,
+  }) async {
     try {
       log("🎤 Starting audio upload...");
       log("  Path: $path");
@@ -34,7 +35,7 @@ class FirebaseUtils {
       final id = generateUniqueId("audio", roomId);
 
       log("  Uploading to Firebase Storage...");
-      final url = await _uploadFile(file, "audios", id);
+      final url = await _uploadFile(file, "audios", id, onProgress: onProgress);
 
       if (url == null) {
         log("❌ Failed to get download URL");
@@ -62,12 +63,13 @@ class FirebaseUtils {
   // 🖼️ رفع صورة + يرجّع PhotoMessage
   static Future<PhotoMessage?> uploadImage(
     String path,
-    String roomId,
-  ) async {
+    String roomId, {
+    Function(double progress)? onProgress,
+  }) async {
     try {
       final now = DateTime.now();
       final id = generateUniqueId("image", roomId);
-      final url = await _uploadFile(File(path), "images", id);
+      final url = await _uploadFile(File(path), "images", id, onProgress: onProgress);
 
       return url == null
           ? null
@@ -87,12 +89,13 @@ class FirebaseUtils {
   // 🎥 رفع فيديو + يرجّع VideoMessage
   static Future<VideoMessage?> uploadVideo(
     String path,
-    String roomId,
-  ) async {
+    String roomId, {
+    Function(double progress)? onProgress,
+  }) async {
     try {
       final now = DateTime.now();
       final id = generateUniqueId("video", roomId);
-      final url = await _uploadFile(File(path), "videos", id);
+      final url = await _uploadFile(File(path), "videos", id, onProgress: onProgress);
 
       return url == null
           ? null
@@ -112,12 +115,13 @@ class FirebaseUtils {
   // 📄 رفع ملف عام + يرجّع FileMessage
   static Future<FileMessage?> uploadFile(
     String path,
-    String roomId,
-  ) async {
+    String roomId, {
+    Function(double progress)? onProgress,
+  }) async {
     try {
       final now = DateTime.now();
       final id = generateUniqueId("file", roomId);
-      final url = await _uploadFile(File(path), "files", id);
+      final url = await _uploadFile(File(path), "files", id, onProgress: onProgress);
       final fileName = path.split(Platform.pathSeparator).last;
 
       return url == null
@@ -138,14 +142,29 @@ class FirebaseUtils {
 
   // 🧱 دالة مساعدة موحدة لرفع أي ملف
   static Future<String?> _uploadFile(
-      File file, String folder, String id) async {
+    File file,
+    String folder,
+    String id, {
+    Function(double progress)? onProgress,
+  }) async {
     try {
       final String today = _getTodayString();
       final ref =
           FirebaseStorage.instance.ref().child(folder).child(today).child(id);
 
-      final uploadTask = await ref.putFile(file);
-      return await uploadTask.ref.getDownloadURL();
+      final uploadTask = ref.putFile(file);
+
+      // Listen to upload progress if callback provided
+      if (onProgress != null) {
+        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          final progress =
+              snapshot.bytesTransferred / snapshot.totalBytes;
+          onProgress(progress);
+        });
+      }
+
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
     } catch (e) {
       log("❌ Error uploading to Firebase Storage: $e");
       return null;
