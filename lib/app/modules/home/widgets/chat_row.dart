@@ -108,15 +108,6 @@ class _ChatRowState extends State<ChatRow> {
       CustomBottomSheets.closeLoading();
 
       if (mounted) {
-        Get.snackbar(
-          'User Blocked',
-          '${otherUser.fullName} has been blocked successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: ColorsManager.primary,
-          colorText: ColorsManager.white,
-          duration: const Duration(seconds: 3),
-          icon: Icon(Icons.check_circle, color: ColorsManager.white),
-        );
         setState(() {});
       }
     } catch (e) {
@@ -241,24 +232,10 @@ class _ChatRowState extends State<ChatRow> {
       // Close loading bottom sheet
       CustomBottomSheets.closeLoading();
 
-      if (success) {
-        if (mounted) {
-          Get.snackbar(
-            'Chat Deleted',
-            widget.chatRoom?.isGroupChat == true
-                ? 'Group chat deleted successfully'
-                : 'Chat deleted successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: ColorsManager.primary,
-            colorText: ColorsManager.white,
-            duration: const Duration(seconds: 3),
-            icon: Icon(Icons.check_circle, color: ColorsManager.white),
-          );
-          // The chat list will be automatically updated via the stream
-        }
-      } else {
+      if (!success) {
         throw Exception('Delete operation failed');
       }
+      // The chat list will be automatically updated via the stream
     } catch (e) {
       print('❌ Error deleting chat: $e');
 

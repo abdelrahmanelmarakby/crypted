@@ -4,6 +4,7 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:photo_view/photo_view.dart';
@@ -156,42 +157,21 @@ class ContactInfoController extends GetxController {
         // Unblock user
         await _chatDataSources.unblockUser(roomId!, userId);
         isBlocked.value = false;
-        Get.snackbar(
-          "Success",
-          "User unblocked successfully",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.9),
-          colorText: Colors.white,
-        );
       } else {
-        // Block user - show confirmation dialog
-        final confirmed = await Get.dialog<bool>(
-          AlertDialog(
-            title: const Text("Block User"),
-            content: Text("Are you sure you want to block ${user.value!.fullName}?"),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text("Cancel"),
-              ),
-              TextButton(
-                onPressed: () => Get.back(result: true),
-                child: const Text("Block", style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
+        // Block user - show confirmation bottom sheet
+        final confirmed = await CustomBottomSheets.showConfirmation(
+          title: 'Block User',
+          message: 'Are you sure you want to block ${user.value!.fullName}?',
+          subtitle: 'You won\'t receive messages from this user',
+          confirmText: 'Block',
+          cancelText: 'Cancel',
+          icon: Icons.block,
+          isDanger: true,
         );
 
         if (confirmed == true) {
           await _chatDataSources.blockUser(roomId!, userId);
           isBlocked.value = true;
-          Get.snackbar(
-            "Success",
-            "User blocked successfully",
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange.withOpacity(0.9),
-            colorText: Colors.white,
-          );
         }
       }
     } catch (e) {
@@ -221,24 +201,15 @@ class ContactInfoController extends GetxController {
       return;
     }
 
-    // Show confirmation dialog
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text("Clear Chat"),
-        content: const Text(
-          "Are you sure you want to clear all messages in this chat? This action cannot be undone.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text("Clear", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    // Show confirmation bottom sheet
+    final confirmed = await CustomBottomSheets.showConfirmation(
+      title: 'Clear Chat',
+      message: 'Are you sure you want to clear all messages in this chat?',
+      subtitle: '⚠️ This action cannot be undone',
+      confirmText: 'Clear',
+      cancelText: 'Cancel',
+      icon: Icons.delete_sweep,
+      isDanger: true,
     );
 
     if (confirmed != true) return;
@@ -246,14 +217,6 @@ class ContactInfoController extends GetxController {
     try {
       isLoading.value = true;
       await _chatDataSources.clearChat(roomId!);
-
-      Get.snackbar(
-        "Success",
-        "Chat cleared successfully",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
 
       // Go back to chat list
       Get.back();
@@ -289,15 +252,6 @@ class ContactInfoController extends GetxController {
       final oldStatus = isFavorite.value;
       await _chatDataSources.toggleFavoriteChat(roomId!);
       isFavorite.value = !oldStatus;
-
-      Get.snackbar(
-        "Success",
-        !oldStatus ? "Added to favorites" : "Removed from favorites",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
     } catch (e) {
       print("❌ Error toggling favorite: $e");
       Get.snackbar(
@@ -813,35 +767,26 @@ class ContactInfoController extends GetxController {
       return;
     }
 
-    // Show export options dialog
-    final exportFormat = await Get.dialog<String>(
-      AlertDialog(
-        title: const Text("Export Chat"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text("Choose export format:"),
-            SizedBox(height: 16),
-            Text("• Text file - Simple text format"),
-            Text("• JSON - Structured data format"),
-          ],
+    // Show export options bottom sheet
+    final exportFormat = await CustomBottomSheets.showSelection<String>(
+      title: 'Export Chat',
+      subtitle: 'Choose export format',
+      options: [
+        SelectionOption<String>(
+          title: 'Text File',
+          subtitle: 'Simple text format for easy reading',
+          icon: Icons.text_snippet,
+          iconColor: ColorsManager.primary,
+          value: 'txt',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: 'txt'),
-            child: const Text("Text"),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: 'json'),
-            child: const Text("JSON"),
-          ),
-        ],
-      ),
+        SelectionOption<String>(
+          title: 'JSON File',
+          subtitle: 'Structured data format for backup',
+          icon: Icons.code,
+          iconColor: ColorsManager.primary,
+          value: 'json',
+        ),
+      ],
     );
 
     if (exportFormat == null) return;
@@ -1122,14 +1067,6 @@ class ContactInfoController extends GetxController {
         // Also update the current user in UserService
         UserService.updateCurrentUser(user.value);
       }
-
-      Get.snackbar(
-        "Success",
-        "Bio updated successfully",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.8),
-        colorText: Colors.white,
-      );
     } catch (e) {
       print("❌ Error updating bio: $e");
       Get.snackbar(
@@ -1280,14 +1217,6 @@ class ContactInfoController extends GetxController {
               print('Download progress: $progress%');
             }
           },
-        );
-
-        Get.snackbar(
-          Constants.kSuccess.tr,
-          'File downloaded successfully to Downloads folder',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
         );
       } else if (status.isPermanentlyDenied) {
         Get.snackbar(

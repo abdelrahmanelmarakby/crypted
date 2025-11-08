@@ -746,12 +746,40 @@ class ChatController extends GetxController {
     }
   }
 
-  /// Pin/Unpin a message
+  /// Pin/Unpin a message (only one message can be pinned at a time)
   Future<void> togglePinMessage(Message message) async {
     try {
       _showLoading();
 
       final isCurrentlyPinned = message.isPinned;
+
+      // If pinning a message, first unpin any existing pinned messages
+      if (!isCurrentlyPinned) {
+        final currentlyPinnedMessages = messages.where((msg) => msg.isPinned).toList();
+
+        if (currentlyPinnedMessages.isNotEmpty) {
+          // Only allow one pinned message at a time
+          // Unpin all currently pinned messages
+          for (final pinnedMessage in currentlyPinnedMessages) {
+            await chatDataSource.updateMessage(
+              roomId: roomId,
+              messageId: pinnedMessage.id,
+              updates: {'isPinned': false},
+            );
+
+            // Update local messages list
+            final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
+            if (pinnedIndex != -1) {
+              messages[pinnedIndex] = pinnedMessage.copyWith(
+                id: pinnedMessage.id,
+                isPinned: false,
+              ) as Message;
+            }
+          }
+        }
+      }
+
+      // Now pin/unpin the target message
       final updatedMessage = message.copyWith(
         id: message.id,
         isPinned: !isCurrentlyPinned,

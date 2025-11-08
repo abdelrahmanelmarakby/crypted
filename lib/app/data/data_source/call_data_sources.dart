@@ -200,6 +200,14 @@ class CallDataSources {
   /// Update call status and duration
   Future<bool> updateCallStatus(String callId, CallStatus status, {num? duration}) async {
     try {
+      // First, check if the call document exists
+      final docSnapshot = await callsCollection.doc(callId).get();
+
+      if (!docSnapshot.exists) {
+        log('⚠️ Call document not found: $callId - Cannot update status');
+        return false;
+      }
+
       final updateData = <String, dynamic>{
         'callStatus': status.name,
         'time': DateTime.now().millisecondsSinceEpoch,
