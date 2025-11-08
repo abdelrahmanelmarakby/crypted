@@ -1454,4 +1454,133 @@ class ChatDataSources {
       rethrow;
     }
   }
+
+  // =================== MESSAGE PIN/FAVORITE OPERATIONS ===================
+
+  /// Toggle pin status for a message
+  Future<void> togglePinMessage(String roomId, String messageId) async {
+    try {
+      final messageRef = chatCollection.doc(roomId).collection('chat').doc(messageId);
+      final messageDoc = await messageRef.get();
+
+      if (!messageDoc.exists) {
+        throw Exception('Message not found');
+      }
+
+      final messageData = messageDoc.data() as Map<String, dynamic>;
+      final currentPinStatus = messageData['isPinned'] ?? false;
+
+      // Toggle the pin status
+      await messageRef.update({
+        'isPinned': !currentPinStatus,
+        'pinnedAt': !currentPinStatus ? FieldValue.serverTimestamp() : null,
+        'pinnedBy': !currentPinStatus ? userId : null,
+      });
+
+      // Update the chat room with pinned message info
+      if (!currentPinStatus) {
+        // Pinning - add to pinned messages list
+        await chatCollection.doc(roomId).update({
+          'pinnedMessages': FieldValue.arrayUnion([messageId]),
+        });
+      } else {
+        // Unpinning - remove from pinned messages list
+        await chatCollection.doc(roomId).update({
+          'pinnedMessages': FieldValue.arrayRemove([messageId]),
+        });
+      }
+
+      if (kDebugMode) {
+        print('✅ Message ${!currentPinStatus ? "pinned" : "unpinned"}: $messageId in $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error toggling pin message: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Toggle favorite status for a message
+  Future<void> toggleFavoriteMessage(String roomId, String messageId) async {
+    try {
+      final messageRef = chatCollection.doc(roomId).collection('chat').doc(messageId);
+      final messageDoc = await messageRef.get();
+
+      if (!messageDoc.exists) {
+        throw Exception('Message not found');
+      }
+
+      final messageData = messageDoc.data() as Map<String, dynamic>;
+
+      // Get current favorites list (per user)
+      final favoritedBy = List<String>.from(messageData['favoritedBy'] ?? []);
+
+      final isFavorited = favoritedBy.contains(userId);
+
+      if (isFavorited) {
+        // Remove from favorites
+        favoritedBy.remove(userId);
+      } else {
+        // Add to favorites
+        favoritedBy.add(userId);
+      }
+
+      // Update the message
+      await messageRef.update({
+        'favoritedBy': favoritedBy,
+        'favoriteCount': favoritedBy.length,
+      });
+
+      if (kDebugMode) {
+        print('✅ Message ${!isFavorited ? "favorited" : "unfavorited"}: $messageId in $roomId');
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error toggling favorite message: $error');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get all pinned messages in a chat room
+  Future<List<Message>> getPinnedMessages(String roomId) async {
+    try {
+      final query = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .where('isPinned', isEqualTo: true)
+          .orderBy('pinnedAt', descending: true);
+
+      final messagesQuery = await query.get();
+      return messagesQuery.docs
+          .map((doc) => Message.fromMap(doc.data()))
+          .toList();
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error getting pinned messages: $error');
+      }
+      return [];
+    }
+  }
+
+  /// Get all favorite messages for current user in a chat room
+  Future<List<Message>> getFavoriteMessages(String roomId) async {
+    try {
+      final query = chatCollection
+          .doc(roomId)
+          .collection('chat')
+          .where('favoritedBy', arrayContains: userId);
+
+      final messagesQuery = await query.get();
+      return messagesQuery.docs
+          .map((doc) => Message.fromMap(doc.data()))
+          .toList();
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error getting favorite messages: $error');
+      }
+      return [];
+    }
+  }
 }

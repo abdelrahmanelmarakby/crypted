@@ -21,16 +21,21 @@ class TypingService {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;
 
-      // Debounce typing events
+      // FIXED: Cancel both timers to prevent race condition
+      // If user stops and starts typing quickly, old timers are properly cancelled
+      _typingTimers[chatId]?.cancel();
       _debounceTimers[chatId]?.cancel();
+
+      // Debounce typing events
       _debounceTimers[chatId] = Timer(_debounceDuration, () async {
         await _setTypingStatus(chatId, userId, true);
-      });
 
-      // Auto-stop after 5 seconds
-      _typingTimers[chatId]?.cancel();
-      _typingTimers[chatId] = Timer(_autoStopDuration, () {
-        stopTyping(chatId);
+        // Start auto-stop timer AFTER debounce completes
+        // This prevents the race condition where auto-stop fires before debounce
+        _typingTimers[chatId]?.cancel();
+        _typingTimers[chatId] = Timer(_autoStopDuration, () {
+          stopTyping(chatId);
+        });
       });
     } catch (e) {
       if (kDebugMode) {

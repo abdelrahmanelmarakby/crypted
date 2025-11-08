@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:crypted_app/app/core/exceptions/app_exceptions.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 
@@ -304,21 +305,35 @@ class ErrorHandlerService {
   /// Report critical error immediately to analytics
   Future<void> _reportErrorImmediately(AppError error) async {
     try {
-      // TODO: Implement Firebase Crashlytics or analytics
-      // await FirebaseCrashlytics.instance.recordError(
-      //   error.message,
-      //   error.stackTrace,
-      //   reason: error.context,
-      // );
+      // Report to Firebase Crashlytics
+      await FirebaseCrashlytics.instance.recordError(
+        error.message,
+        error.stackTrace,
+        reason: error.context ?? 'Unknown context',
+        fatal: error.type == ErrorType.authentication ||
+               error.type == ErrorType.encryption ||
+               error.type == ErrorType.firebase,
+        information: [
+          'Error Type: ${error.type.name}',
+          'Technical Details: ${error.technicalDetails ?? "None"}',
+          'Timestamp: ${error.timestamp.toIso8601String()}',
+          'User-Friendly Message: ${error.userFriendlyMessage}',
+        ],
+      );
+
+      // Set custom keys for better error tracking
+      await FirebaseCrashlytics.instance.setCustomKey('error_type', error.type.name);
+      await FirebaseCrashlytics.instance.setCustomKey('error_context', error.context ?? 'unknown');
+      await FirebaseCrashlytics.instance.setCustomKey('timestamp', error.timestamp.toIso8601String());
 
       LoggerService.instance.debug(
-        'Critical error reported',
+        'Critical error reported to Crashlytics',
         context: 'ErrorHandlerService',
         data: error.toJson(),
       );
     } catch (e) {
       LoggerService.instance.warning(
-        'Failed to report error',
+        'Failed to report error to Crashlytics',
         context: 'ErrorHandlerService',
         data: {'error': e.toString()},
       );

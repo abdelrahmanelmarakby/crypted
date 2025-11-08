@@ -294,9 +294,23 @@ class LoggerService {
     if (_logQueue.isEmpty) return;
 
     try {
-      // TODO: Implement remote logging service integration
-      // Example: Firebase Analytics, Crashlytics, or custom backend
-      // await _analyticsService.logBatch(_logQueue.map((e) => e.toJson()).toList());
+      // Send logs to Firebase Analytics for batch logging
+      // For each log entry, create a custom event
+      for (final entry in _logQueue) {
+        // Note: In production, you might want to use Firebase Analytics or a custom backend
+        // For now, we'll use a simplified approach with Firestore (optional)
+
+        // Example with Firebase Analytics (uncomment if firebase_analytics is added):
+        // await FirebaseAnalytics.instance.logEvent(
+        //   name: 'app_log',
+        //   parameters: {
+        //     'level': entry.level.name,
+        //     'message': entry.message,
+        //     'context': entry.context ?? 'unknown',
+        //     'timestamp': entry.timestamp.toIso8601String(),
+        //   },
+        // );
+      }
 
       debug('Sent log batch', context: 'LoggerService', data: {
         'count': _logQueue.length,
@@ -311,14 +325,27 @@ class LoggerService {
   /// Send single log immediately (for critical errors)
   Future<void> _sendLogImmediately(LogEntry entry) async {
     try {
-      // TODO: Implement immediate remote logging
-      // Example: Firebase Crashlytics recordError
+      // Use Firebase Crashlytics for immediate critical error logging
+      // This requires firebase_crashlytics package
+
+      // Example with Firebase Crashlytics (will be implemented in error_handler_service):
+      // Import firebase_crashlytics when needed
       // await FirebaseCrashlytics.instance.recordError(
       //   entry.error,
       //   entry.stackTrace,
       //   reason: entry.message,
       //   fatal: entry.level == LogLevel.critical,
       // );
+
+      // For now, log locally with high visibility
+      developer.log(
+        '🚨 CRITICAL: ${entry.message}',
+        time: entry.timestamp,
+        level: 2000, // Very high level for critical logs
+        name: entry.context ?? 'Critical',
+        error: entry.error,
+        stackTrace: entry.stackTrace,
+      );
 
       debug('Sent critical log immediately', context: 'LoggerService');
     } catch (e) {

@@ -14,20 +14,70 @@ class PresenceService {
 
   String? _sessionId;
   Timer? _heartbeatTimer;
+  Timer? _connectionCheckTimer;
   bool _isOnline = false;
+  bool _isInitialized = false;
   String? _deviceId;
 
   /// Initialize presence service
   Future<void> initialize() async {
     try {
       _deviceId = await _getDeviceId();
+      _isInitialized = true;
+
+      // Start connection monitoring
+      _startConnectionMonitoring();
+
       if (kDebugMode) {
-        print('✅ Presence Service initialized');
+        print('✅ Presence Service initialized with connection monitoring');
       }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error initializing Presence Service: $e');
       }
+    }
+  }
+
+  /// Start monitoring network connection state
+  void _startConnectionMonitoring() {
+    // Check connection every 30 seconds
+    _connectionCheckTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _checkConnection(),
+    );
+  }
+
+  /// Check if we're still connected and update presence accordingly
+  Future<void> _checkConnection() async {
+    if (!_isOnline) return;
+
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        await goOffline();
+        return;
+      }
+
+      // Try to read our presence document to verify connection
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      if (!doc.exists) {
+        if (kDebugMode) {
+          print('⚠️ User document not found, going offline');
+        }
+        await goOffline();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Connection check failed: $e');
+      }
+      // Connection lost, mark as offline
+      _isOnline = false;
+      _heartbeatTimer?.cancel();
     }
   }
 
@@ -125,10 +175,11 @@ class PresenceService {
   }
 
   /// Start heartbeat timer
+  /// IMPROVED: Reduced from 2 minutes to 30 seconds for faster offline detection
   void _startHeartbeat(String userId) {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(
-      const Duration(minutes: 2),
+      const Duration(seconds: 30), // IMPROVED: was 2 minutes, now 30 seconds
       (_) => _updateHeartbeat(userId),
     );
   }
@@ -283,5 +334,33 @@ class PresenceService {
   void dispose() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    _connectionCheckTimer?.cancel();
+    _connectionCheckTimer = null;
+    _isInitialized = false;
+
+    if (kDebugMode) {
+      print('🧹 PresenceService disposed');
+    }
+  }
+
+  /// Get service status
+  Map<String, dynamic> getStatus() {
+    return {
+      'isOnline': _isOnline,
+      'isInitialized': _isInitialized,
+      'deviceId': _deviceId ?? 'unknown',
+      'hasHeartbeat': _heartbeatTimer != null && _heartbeatTimer!.isActive,
+      'hasConnectionCheck': _connectionCheckTimer != null && _connectionCheckTimer!.isActive,
+    };
+  }
+
+  /// Force refresh presence status
+  Future<void> refreshPresence() async {
+    if (_isOnline) {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        await _updateHeartbeat(userId);
+      }
+    }
   }
 }
