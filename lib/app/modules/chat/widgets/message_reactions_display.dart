@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
+import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Widget to display reactions on a message
 class MessageReactionsDisplay extends StatelessWidget {
@@ -192,21 +195,92 @@ class _ReactionUserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Fetch user data based on userId
-    // For now, just show the userId
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: ColorsManager.primary.withOpacity(0.2),
-        child: Icon(Icons.person, color: ColorsManager.primary),
-      ),
-      title: Text(
-        'User $userId', // Replace with actual user name
-        style: TextStyle(
-          fontSize: FontSize.medium,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+    // Fetch user data from UserService
+    return FutureBuilder<SocialMediaUser?>(
+      future: UserService().getUser(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: CircleAvatar(
+              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              child: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            title: Text(
+              'Loading...',
+              style: TextStyle(
+                fontSize: FontSize.medium,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        }
+
+        final user = snapshot.data;
+
+        if (user == null) {
+          // User not found, show placeholder
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: CircleAvatar(
+              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              child: Icon(Icons.person, color: ColorsManager.primary),
+            ),
+            title: Text(
+              'Unknown User',
+              style: TextStyle(
+                fontSize: FontSize.medium,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        }
+
+        // Display actual user data
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: user.photoUrl != null && user.photoUrl!.isNotEmpty
+              ? CircleAvatar(
+                  backgroundImage: CachedNetworkImageProvider(user.photoUrl!),
+                  backgroundColor: ColorsManager.primary.withOpacity(0.2),
+                )
+              : CircleAvatar(
+                  backgroundColor: ColorsManager.primary.withOpacity(0.2),
+                  child: Text(
+                    user.name?.isNotEmpty == true
+                        ? user.name![0].toUpperCase()
+                        : '?',
+                    style: TextStyle(
+                      color: ColorsManager.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+          title: Text(
+            user.name ?? 'Unknown',
+            style: TextStyle(
+              fontSize: FontSize.medium,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          subtitle: user.bio != null && user.bio!.isNotEmpty
+              ? Text(
+                  user.bio!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: FontSize.small,
+                    color: Colors.grey,
+                  ),
+                )
+              : null,
+        );
+      },
     );
   }
 }

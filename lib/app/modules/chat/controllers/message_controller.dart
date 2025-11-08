@@ -502,59 +502,50 @@ class MessageController extends GetxController {
   }
 
   /// Pin message
-  /// TODO: Implement togglePinMessage in ChatDataSources
   Future<bool> pinMessage(String messageId) async {
     _logger.debug('Pinning message', context: 'MessageController', data: {
       'messageId': messageId,
     });
 
-    _errorHandler.showWarning('ميزة غير متاحة حالياً / Feature not yet available');
-    return false;
-
-    // try {
-    //   await chatDataSource.togglePinMessage(roomId, messageId);
-    //   _logger.info('Message pinned successfully', context: 'MessageController');
-    //   _errorHandler.showSuccess('رسالة مثبتة / Message pinned');
-    //   return true;
-    // } catch (e, stackTrace) {
-    //   _errorHandler.handleError(
-    //     e,
-    //     stackTrace: stackTrace,
-    //     context: 'MessageController.pinMessage',
-    //     showToUser: true,
-    //   );
-    //   return false;
-    // }
+    try {
+      await chatDataSource.togglePinMessage(roomId, messageId);
+      _logger.info('Message pinned successfully', context: 'MessageController');
+      _errorHandler.showSuccess('رسالة مثبتة / Message pinned');
+      return true;
+    } catch (e, stackTrace) {
+      _errorHandler.handleError(
+        e,
+        stackTrace: stackTrace,
+        context: 'MessageController.pinMessage',
+        showToUser: true,
+      );
+      return false;
+    }
   }
 
   /// Favorite message
-  /// TODO: Implement toggleFavoriteMessage in ChatDataSources
   Future<bool> favoriteMessage(String messageId) async {
     _logger.debug('Favoriting message', context: 'MessageController', data: {
       'messageId': messageId,
     });
 
-    _errorHandler.showWarning('ميزة غير متاحة حالياً / Feature not yet available');
-    return false;
-
-    // try {
-    //   await chatDataSource.toggleFavoriteMessage(roomId, messageId);
-    //   _logger.info('Message favorited successfully', context: 'MessageController');
-    //   _errorHandler.showSuccess('رسالة مفضلة / Message favorited');
-    //   return true;
-    // } catch (e, stackTrace) {
-    //   _errorHandler.handleError(
-    //     e,
-    //     stackTrace: stackTrace,
-    //     context: 'MessageController.favoriteMessage',
-    //     showToUser: true,
-    //   );
-    //   return false;
-    // }
+    try {
+      await chatDataSource.toggleFavoriteMessage(roomId, messageId);
+      _logger.info('Message favorited successfully', context: 'MessageController');
+      _errorHandler.showSuccess('رسالة مفضلة / Message favorited');
+      return true;
+    } catch (e, stackTrace) {
+      _errorHandler.handleError(
+        e,
+        stackTrace: stackTrace,
+        context: 'MessageController.favoriteMessage',
+        showToUser: true,
+      );
+      return false;
+    }
   }
 
   /// Report message
-  /// TODO: Implement reportMessage in ChatDataSources (use reportContent instead)
   Future<bool> reportMessage(String messageId, String reason) async {
     if (reason.trim().isEmpty) {
       _errorHandler.handleValidationError('reason', 'Please provide a reason for reporting');
@@ -635,8 +626,7 @@ class MessageController extends GetxController {
 
   // ========== SEARCH ==========
 
-  /// Search messages
-  /// TODO: Implement searchMessages in ChatDataSources
+  /// Search messages in local message list
   Future<void> searchMessages(String query) async {
     if (query.trim().isEmpty) {
       searchResults.clear();
@@ -650,8 +640,7 @@ class MessageController extends GetxController {
     try {
       isSearching.value = true;
 
-      // TODO: Implement search in ChatDataSources
-      // For now, search locally in messages list
+      // Search locally in messages list
       final results = messages.where((message) {
         if (message is TextMessage) {
           return message.text.toLowerCase().contains(query.toLowerCase());
