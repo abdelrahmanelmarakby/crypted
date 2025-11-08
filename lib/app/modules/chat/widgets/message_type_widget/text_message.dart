@@ -1,6 +1,7 @@
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 
@@ -10,12 +11,27 @@ class TextMessageWidget extends StatelessWidget {
   final TextMessage message;
   @override
   Widget build(BuildContext context) {
-    return Text(
-      message.text ?? '',
-      style: StylesManager.medium(
-        fontSize: FontSize.small,
-        color: ColorsManager.black,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          message.text ?? '',
+          style: StylesManager.medium(
+            fontSize: FontSize.small,
+            color: ColorsManager.black,
+          ),
+        ),
+        if (message.isEdited) ...[
+          SizedBox(height: Paddings.extraSmall / 2),
+          Text(
+            'Edited',
+            style: StylesManager.regular(
+              fontSize: FontSize.xSmall,
+              color: ColorsManager.grey.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

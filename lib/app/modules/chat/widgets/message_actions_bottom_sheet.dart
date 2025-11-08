@@ -1,5 +1,6 @@
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/reaction_picker.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,8 @@ class MessageActionsBottomSheet extends StatelessWidget {
     required this.onReport,
     required this.onDelete,
     this.onRestore,
+    this.onReaction,
+    this.onEdit,
     this.isPinned = false,
     this.isFavorite = false,
     this.canPin = true,
@@ -28,6 +31,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
     this.canForward = true,
     this.canCopy = true,
     this.canReport = true,
+    this.canEdit = false,
   });
 
   final Message message;
@@ -39,6 +43,8 @@ class MessageActionsBottomSheet extends StatelessWidget {
   final VoidCallback? onRestore;
   final VoidCallback onReport;
   final VoidCallback onDelete;
+  final Function(String emoji)? onReaction;
+  final VoidCallback? onEdit;
   final bool isPinned;
   final bool isFavorite;
   final bool canPin;
@@ -49,6 +55,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
   final bool canForward;
   final bool canCopy;
   final bool canReport;
+  final bool canEdit;
 
   static void show(
     BuildContext context, {
@@ -61,6 +68,8 @@ class MessageActionsBottomSheet extends StatelessWidget {
     required VoidCallback onReport,
     required VoidCallback onDelete,
     VoidCallback? onRestore,
+    Function(String emoji)? onReaction,
+    VoidCallback? onEdit,
     bool isPinned = false,
     bool isFavorite = false,
     bool canPin = true,
@@ -71,6 +80,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
     bool canForward = true,
     bool canCopy = true,
     bool canReport = true,
+    bool canEdit = false,
   }) {
     HapticFeedback.mediumImpact();
 
@@ -88,6 +98,8 @@ class MessageActionsBottomSheet extends StatelessWidget {
         onReport: onReport,
         onDelete: onDelete,
         onRestore: onRestore,
+        onReaction: onReaction,
+        onEdit: onEdit,
         isPinned: isPinned,
         isFavorite: isFavorite,
         canPin: canPin,
@@ -98,6 +110,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
         canForward: canForward,
         canCopy: canCopy,
         canReport: canReport,
+        canEdit: canEdit,
       ),
     );
   }
@@ -158,6 +171,24 @@ class MessageActionsBottomSheet extends StatelessWidget {
             ),
           ),
 
+          // Quick reactions
+          if (onReaction != null)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              child: ReactionPicker(
+                onReactionSelected: (emoji) {
+                  Navigator.pop(context);
+                  onReaction!(emoji);
+                },
+                onMoreEmojis: () {
+                  Navigator.pop(context);
+                  EmojiPickerDialog.show(context, (emoji) {
+                    onReaction!(emoji);
+                  });
+                },
+              ),
+            ),
+
           // Action items
           Flexible(
             child: SingleChildScrollView(
@@ -173,6 +204,18 @@ class MessageActionsBottomSheet extends StatelessWidget {
                         Navigator.pop(context);
                         onReply();
                       },
+                    ),
+
+                  if (canEdit && onEdit != null)
+                    _buildActionItem(
+                      context: context,
+                      iconPath: 'assets/icons/fi_3648797.svg', // Using edit icon
+                      title: 'Edit',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onEdit!();
+                      },
+                      iconColor: ColorsManager.primary,
                     ),
 
                   if (canForward)
