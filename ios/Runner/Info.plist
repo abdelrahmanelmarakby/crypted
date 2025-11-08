@@ -32,25 +32,25 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>نحتاج إذن الكاميرا لإجراء مكالمات الفيديو</string>
+	<string>Camera access is needed to make video calls and capture photos to share with your contacts</string>
 	<key>NSContactsUsageDescription</key>
-	<string>نحتاج الوصول إلى جهات الاتصال لمساعدتك في العثور على الأصدقاء</string>
+	<string>Contacts access is needed to help you find and connect with friends, and to backup your contacts securely</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>نحتاج الوصول إلى الشبكة المحلية للمكالمات الصوتية والفيديو</string>
+	<string>Local network access is needed for voice and video calls</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة حتى في الخلفية</string>
+	<string>Location access is needed to share your location in chats, even when the app is in the background</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة</string>
+	<string>Location access is needed to share your location in chats</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>نحتاج إذن الموقع لإرسال موقعك في الدردشة</string>
+	<string>Location access is needed to share your location in chats</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>نحتاج إذن الميكروفون لإجراء المكالمات الصوتية والفيديو</string>
+	<string>Microphone access is needed to make voice and video calls</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>نحتاج إذن حفظ الصور ومقاطع الفيديو إلى معرض الصور</string>
+	<string>Photo library access is needed to save photos and videos shared in chats</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>نحتاج الوصول إلى معرض الصور لإرسال الصور ومقاطع الفيديو</string>
+	<string>Photo library access is needed to share photos and videos with your contacts, and to backup your media</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>نستخدم البيانات لتحسين تجربتك في التطبيق</string>
+	<string>We use analytics data to improve your app experience and provide personalized features</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

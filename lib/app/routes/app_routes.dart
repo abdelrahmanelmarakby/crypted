@@ -20,6 +20,8 @@ abstract class Routes {
   static const HELP = _Paths.HELP;
   static const INVITE_FRIEND = _Paths.INVITE_FRIEND;
   static const CHAT = _Paths.CHAT;
+  static const BACKUP = _Paths.BACKUP;
+  static const BACKUP_SETTINGS = _Paths.BACKUP_SETTINGS;
   static const CONTACT_INFO = _Paths.CONTACT_INFO;
   static const CALLFRIEND = _Paths.CALLFRIEND;
   static const GROUP_INFO = _Paths.GROUP_INFO;
@@ -47,6 +49,8 @@ abstract class _Paths {
   static const HELP = '/help';
   static const INVITE_FRIEND = '/invite-friend';
   static const CHAT = '/chat';
+  static const BACKUP = '/backup';
+  static const BACKUP_SETTINGS = '/backup/settings';
   static const CONTACT_INFO = '/contact-info';
   static const CALLFRIEND = '/callfriend';
   static const GROUP_INFO = '/group-info';

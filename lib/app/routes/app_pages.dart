@@ -41,6 +41,9 @@ import '../modules/splash/bindings/splash_binding.dart';
 import '../modules/splash/views/splash_view.dart';
 import '../modules/stories/bindings/stories_binding.dart';
 import '../modules/stories/views/stories_view.dart';
+import '../modules/backup/bindings/backup_binding.dart';
+import '../modules/backup/views/backup_view.dart';
+import '../modules/backup/views/backup_settings_view.dart';
 
 //import 'package:crypted_app/app/modules/templates/stories2/bindings/stories2_binding.dart';
 
@@ -161,6 +164,16 @@ class AppPages {
       name: _Paths.CALL,
       page: () => const CallScreen(),
       binding: CallsBinding(),
+    ),
+    GetPage(
+      name: _Paths.BACKUP,
+      page: () => const BackupView(),
+      binding: BackupBinding(),
+    ),
+    GetPage(
+      name: _Paths.BACKUP_SETTINGS,
+      page: () => const BackupSettingsView(),
+      binding: BackupBinding(),
     ),
   ];
 }

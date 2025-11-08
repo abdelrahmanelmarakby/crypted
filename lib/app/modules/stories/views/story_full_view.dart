@@ -2,6 +2,7 @@ import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/modules/stories/controllers/stories_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:video_player/video_player.dart';
 
 class StoryFullView extends StatefulWidget {
   final StoryModel story;
@@ -23,6 +24,7 @@ class _StoryFullViewState extends State<StoryFullView>
     with TickerProviderStateMixin {
   late AnimationController _progressController;
   bool _isPaused = false;
+  VideoPlayerController? _videoController;
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _StoryFullViewState extends State<StoryFullView>
   @override
   void dispose() {
     _progressController.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -223,39 +226,58 @@ class _StoryFullViewState extends State<StoryFullView>
       );
     }
 
-    return SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.videocam,
-              size: 64,
-              color: Colors.white,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Video Story',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    return FutureBuilder(
+      future: _initializeVideoPlayer(widget.story.storyFileUrl!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (_videoController != null && _videoController!.value.isInitialized) {
+            return SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController!.value.size.width,
+                  height: _videoController!.value.size.height,
+                  child: VideoPlayer(_videoController!),
+                ),
+              ),
+            );
+          } else {
+            return Container(
+              color: Colors.black,
+              child: const Center(
+                child: Text(
+                  'Error loading video',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            );
+          }
+        } else {
+          return Container(
+            color: Colors.black,
+            child: const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Video playback not implemented yet',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+      },
     );
+  }
+
+  Future<void> _initializeVideoPlayer(String videoUrl) async {
+    try {
+      // Dispose previous controller if exists
+      await _videoController?.dispose();
+
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      await _videoController!.initialize();
+      await _videoController!.setLooping(false);
+      await _videoController!.play();
+    } catch (e) {
+      print('Error initializing video player: $e');
+    }
   }
 
   Widget _buildTextStory() {

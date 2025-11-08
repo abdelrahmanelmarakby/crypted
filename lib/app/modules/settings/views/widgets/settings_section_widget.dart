@@ -9,6 +9,7 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 /// Settings section with clean list
 class SettingsSectionWidget extends StatelessWidget {
@@ -34,18 +35,23 @@ class SettingsSectionWidget extends StatelessWidget {
           SettingsGroupWidget([
             SettingTileWidget(
               title: Constants.kProfile.tr,
-              icon: Icons.person_outline,
+              icon: Iconsax.user_edit_copy,
               onTap: () => Get.toNamed(Routes.PROFILE),
             ),
             SettingTileWidget(
               title: Constants.kPrivacy.tr,
-              icon: Icons.lock_outline,
+              icon: Iconsax.eye_copy,
               onTap: () => Get.toNamed(Routes.PRIVACY),
             ),
             SettingTileWidget(
               title: Constants.kNotifications.tr,
-              icon: Icons.notifications_outlined,
+              icon: Iconsax.notification_circle,
               onTap: () => Get.toNamed(Routes.NOTIFICATIONS),
+            ),  
+            SettingTileWidget(
+              title: 'Backup & Restore',
+              icon: Iconsax.cloud_add_copy,
+              onTap: () => Get.toNamed(Routes.BACKUP),
             ),
           ]),
           SizedBox(height: Sizes.size24),
@@ -60,17 +66,17 @@ class SettingsSectionWidget extends StatelessWidget {
           SettingsGroupWidget([
             SettingTileWidget(
               title: Constants.kHelp.tr,
-              icon: Icons.help_outline,
+              icon: Iconsax.quote_down,
               onTap: () => Get.toNamed(Routes.HELP),
             ),
             SettingTileWidget(
               title: 'About',
-              icon: Icons.info_outline,
+              icon: Iconsax.info_circle,
               onTap: () => Get.to(() => const AboutView()),
             ),
             SettingTileWidget(
               title: Constants.kInviteFriend.tr,
-              icon: Icons.person_add_outlined,
+              icon: Iconsax.user_cirlce_add,
               onTap: () => Get.toNamed(Routes.INVITE_FRIEND),
             ),
           ]),

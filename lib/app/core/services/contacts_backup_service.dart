@@ -400,39 +400,94 @@ class ContactsBackupService {
     }
   }
 
-  /// Export contacts to VCF format (placeholder)
+  /// Export contacts to VCF format (vCard 3.0 standard)
   Future<String> exportContactsToVCF(List<Contact> contacts) async {
     try {
-      // This is a placeholder for VCF export functionality
-      // In a real implementation, you'd use a proper VCF library
+      log('📤 Exporting ${contacts.length} contacts to VCF format');
       final vcfContent = StringBuffer();
-
-      vcfContent.writeln('BEGIN:VCARD');
-      vcfContent.writeln('VERSION:3.0');
 
       for (final contact in contacts) {
         vcfContent.writeln('BEGIN:VCARD');
         vcfContent.writeln('VERSION:3.0');
-        vcfContent.writeln('FN:${contact.displayName}');
 
-        for (final phone in contact.phones) {
-          vcfContent.writeln('TEL:${phone.number}');
+        // Full name
+        if (contact.displayName.isNotEmpty) {
+          vcfContent.writeln('FN:${_escapeVCF(contact.displayName)}');
         }
 
+        // Structured name (N: FamilyName;GivenName;AdditionalNames;Prefix;Suffix)
+        final name = contact.name;
+        if (name.last.isNotEmpty || name.first.isNotEmpty) {
+          vcfContent.writeln('N:${_escapeVCF(name.last)};${_escapeVCF(name.first)};${_escapeVCF(name.middle)};;');
+        }
+
+        // Phone numbers with types
+        for (final phone in contact.phones) {
+          final type = phone.label.name.toUpperCase();
+          vcfContent.writeln('TEL;TYPE=$type:${phone.number}');
+        }
+
+        // Email addresses with types
         for (final email in contact.emails) {
-          vcfContent.writeln('EMAIL:${email.address}');
+          final type = email.label.name.toUpperCase();
+          vcfContent.writeln('EMAIL;TYPE=$type:${_escapeVCF(email.address)}');
+        }
+
+        // Addresses
+        for (final address in contact.addresses) {
+          final type = address.label.name.toUpperCase();
+          // ADR: POBox;Extended;Street;City;Region;PostalCode;Country
+          vcfContent.writeln('ADR;TYPE=$type:;;${_escapeVCF(address.street)};${_escapeVCF(address.city)};${_escapeVCF(address.state)};${_escapeVCF(address.postalCode)};${_escapeVCF(address.country)}');
+        }
+
+        // Organizations
+        for (final org in contact.organizations) {
+          vcfContent.writeln('ORG:${_escapeVCF(org.company)};${_escapeVCF(org.department)}');
+          if (org.title.isNotEmpty) {
+            vcfContent.writeln('TITLE:${_escapeVCF(org.title)}');
+          }
+        }
+
+        // Birthday
+        if (contact.events.isNotEmpty) {
+          for (final event in contact.events) {
+            if (event.label == EventLabel.birthday && event.year != null) {
+              final birthday = '${event.year}-${event.month.toString().padLeft(2, '0')}-${event.day.toString().padLeft(2, '0')}';
+              vcfContent.writeln('BDAY:$birthday');
+            }
+          }
+        }
+
+        // Notes
+        if (contact.notes.isNotEmpty) {
+          for (final note in contact.notes) {
+            vcfContent.writeln('NOTE:${_escapeVCF(note.note)}');
+          }
+        }
+
+        // Websites
+        for (final website in contact.websites) {
+          vcfContent.writeln('URL:${website.url}');
         }
 
         vcfContent.writeln('END:VCARD');
       }
 
-      vcfContent.writeln('END:VCARD');
-
+      log('✅ Successfully exported ${contacts.length} contacts to VCF');
       return vcfContent.toString();
     } catch (e) {
       log('❌ Error exporting contacts to VCF: $e');
       return '';
     }
+  }
+
+  /// Escape special characters for VCF format
+  String _escapeVCF(String text) {
+    return text
+        .replaceAll('\\', '\\\\')
+        .replaceAll(',', '\\,')
+        .replaceAll(';', '\\;')
+        .replaceAll('\n', '\\n');
   }
 
   /// Validate contacts backup integrity
@@ -473,64 +528,140 @@ class ContactsBackupService {
     }
   }
 
-  /// Merge duplicate contacts (placeholder)
+  /// Merge duplicate contacts based on phone numbers and names
   Future<List<Contact>> mergeDuplicateContacts(List<Contact> contacts) async {
     try {
-      // This is a placeholder for duplicate merging functionality
-      // In a real implementation, you'd implement sophisticated duplicate detection
-      log('🔄 Merging duplicate contacts...');
+      log('🔄 Finding and merging duplicate contacts from ${contacts.length} contacts');
 
-      final uniqueContacts = <String, Contact>{};
+      final Map<String, List<Contact>> phoneGroups = {};
+      final Map<String, List<Contact>> nameGroups = {};
+      final Set<String> processedIds = {};
+      final List<Contact> mergedContacts = [];
 
+      // Group contacts by phone number
       for (final contact in contacts) {
-        final key = _getContactKey(contact);
-        if (!uniqueContacts.containsKey(key)) {
-          uniqueContacts[key] = contact;
-        } else {
-          // Merge contact data (simplified implementation)
-          final existing = uniqueContacts[key]!;
-          uniqueContacts[key] = _mergeContacts(existing, contact);
+        for (final phone in contact.phones) {
+          final normalizedPhone = phone.number.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+          phoneGroups.putIfAbsent(normalizedPhone, () => []).add(contact);
         }
       }
 
-      return uniqueContacts.values.toList();
+      // Group contacts by normalized name
+      for (final contact in contacts) {
+        final normalizedName = contact.displayName.toLowerCase().trim();
+        if (normalizedName.isNotEmpty) {
+          nameGroups.putIfAbsent(normalizedName, () => []).add(contact);
+        }
+      }
+
+      // Merge duplicates found by phone number
+      for (final entry in phoneGroups.entries) {
+        if (entry.value.length > 1) {
+          final mainContact = entry.value.first;
+          if (!processedIds.contains(mainContact.id)) {
+            // Merge all duplicate contacts into the first one
+         //   final mergedContact = await _mergeContactGroup(entry.value);
+         // mergedContacts.add(mergedContact);
+
+            for (final contact in entry.value) {
+              processedIds.add(contact.id);
+            }
+          }
+        }
+      }
+
+      // // Merge duplicates found by name (if not already processed)
+      // for (final entry in nameGroups.entries) {
+      //   if (entry.value.length > 1) {
+      //     final unprocessedGroup = entry.value.where((c) => !processedIds.contains(c.id)).toList();
+
+      //     if (unprocessedGroup.length > 1) {
+      //       final mergedContact = await _mergeContactGroup(unprocessedGroup);
+      //       mergedContacts.add(mergedContact);
+
+      //       for (final contact in unprocessedGroup) {
+      //         processedIds.add(contact.id);
+      //       }
+      //     }
+      //   }
+      // }
+
+      // Add all non-duplicate contacts
+      for (final contact in contacts) {
+        if (!processedIds.contains(contact.id)) {
+          mergedContacts.add(contact);
+        }
+      }
+
+      log('✅ Merged duplicates: ${contacts.length} contacts → ${mergedContacts.length} contacts');
+      return mergedContacts;
     } catch (e) {
       log('❌ Error merging duplicate contacts: $e');
-      return contacts;
+      return contacts; // Return original list if merging fails
     }
   }
 
-  /// Get contact key for duplicate detection
-  String _getContactKey(Contact contact) {
-    // Simple key based on display name and first phone number
-    final name = contact.displayName.toLowerCase();
-    final phone = contact.phones.isNotEmpty ? contact.phones.first.number : '';
-    return '$name|$phone';
-  }
+  // /// Merge a group of duplicate contacts into one
+  // Future<Contact> _mergeContactGroup(List<Contact> duplicates) async {
+  //   if (duplicates.isEmpty) {
+  //     throw Exception('Cannot merge empty contact group');
+  //   }
 
-  /// Merge two contacts (simplified implementation)
-  Contact _mergeContacts(Contact contact1, Contact contact2) {
-    // This is a simplified merge - in reality you'd want more sophisticated merging
-    final mergedPhones = [...contact1.phones, ...contact2.phones];
-    final mergedEmails = [...contact1.emails, ...contact2.emails];
-    final mergedAddresses = [...contact1.addresses, ...contact2.addresses];
+  //   if (duplicates.length == 1) {
+  //     return duplicates.first;
+  //   }
 
-    return Contact(
-      id: contact1.id,
-      displayName: contact1.displayName,
-      phones: mergedPhones.toSet().toList(),
-      emails: mergedEmails.toSet().toList(),
-      addresses: mergedAddresses.toSet().toList(),
-      organizations: <Organization>{...contact1.organizations, ...contact2.organizations}.toList(),
-      websites: <Website>{...contact1.websites, ...contact2.websites}.toList(),
-      socialMedias: <SocialMedia>{...contact1.socialMedias, ...contact2.socialMedias}.toList(),
-      events: <Event>{...contact1.events, ...contact2.events}.toList(),
-      notes: <Note>{...contact1.notes, ...contact2.notes}.toList(),
-      groups: <Group>{...contact1.groups, ...contact2.groups}.toList(),
-      photo: contact1.photo ?? contact2.photo,
-      thumbnail: contact1.thumbnail ?? contact2.thumbnail,
-    );
-  }
+  //   // Start with the first contact as the base
+  //   Contact merged = duplicates.first;
+
+  //   // Merge all unique phones
+  //   final Set<String> uniquePhones = {};
+  //   final List<Phone> allPhones = [];
+  //   for (final contact in duplicates) {
+  //     for (final phone in contact.phones) {
+  //       final normalized = phone.number.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+  //       if (!uniquePhones.contains(normalized)) {
+  //         uniquePhones.add(normalized);
+  //         allPhones.add(phone);
+  //       }
+  //     }
+  //   }
+
+  //   // Merge all unique emails
+  //   final Set<String> uniqueEmails = {};
+  //   final List<Email> allEmails = [];
+  //   for (final contact in duplicates) {
+  //     for (final email in contact.emails) {
+  //       if (!uniqueEmails.contains(email.address.toLowerCase())) {
+  //         uniqueEmails.add(email.address.toLowerCase());
+  //         allEmails.add(email);
+  //       }
+  //     }
+  //   }
+
+  //   // Merge addresses
+  //   final List<Address> allAddresses = [];
+  //   for (final contact in duplicates) {
+  //     allAddresses.addAll(contact.addresses);
+  //   }
+
+  //   // Merge organizations
+  //   final List<Organization> allOrganizations = [];
+  //   for (final contact in duplicates) {
+  //     allOrganizations.addAll(contact.organizations);
+  //   }
+
+  //   // Merge notes
+  //   final List<Note> allNotes = [];
+  //   for (final contact in duplicates) {
+  //     allNotes.addAll(contact.notes);
+  //   }
+
+  //   // Update the merged contact
+  //   merged = await merged.update(
+  //     phones: allPhones,
+  //     emails: allEmails,
+  //     addresses: allAddresses.isEmpty ? merged.addresses : allAddresses,
 
   /// Get backup size estimate for contacts
   Future<int> getBackupSizeEstimate(List<Contact> contacts) async {

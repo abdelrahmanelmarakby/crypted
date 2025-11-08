@@ -1,150 +1,123 @@
+import 'dart:async';
 import 'dart:developer';
 import 'package:workmanager/workmanager.dart';
-import 'package:get_storage/get_storage.dart';
-import 'enhanced_reliable_backup_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:crypted_app/app/core/services/reliable_backup_service.dart';
 
-/// Backup schedule options
-enum BackupSchedule {
-  disabled,
-  daily,
-  weekly,
-  monthly,
-}
-
-/// Backup scheduler using WorkManager for background tasks
-class BackupScheduler {
-  static const _taskName = 'auto-backup-task';
-  static const _keySchedule = 'backup_schedule';
-
-  static final BackupScheduler instance = BackupScheduler._();
-  BackupScheduler._();
-
-  final GetStorage _storage = GetStorage();
-
-  /// Initialize WorkManager
-  static Future<void> initialize() async {
-    await Workmanager().initialize(
-      _callbackDispatcher,
-      isInDebugMode: false,
-    );
-    log('✅ BackupScheduler initialized');
-  }
-
-  /// Get current schedule
-  BackupSchedule getSchedule() {
-    final scheduleString = _storage.read(_keySchedule);
-    if (scheduleString == null) return BackupSchedule.disabled;
-
-    return BackupSchedule.values.firstWhere(
-      (e) => e.name == scheduleString,
-      orElse: () => BackupSchedule.disabled,
-    );
-  }
-
-  /// Set backup schedule
-  Future<void> setSchedule(BackupSchedule schedule) async {
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
     try {
-      // Cancel existing tasks
-      await Workmanager().cancelByUniqueName(_taskName);
+      log('Background task started: $task');
+      await Firebase.initializeApp();
 
-      if (schedule == BackupSchedule.disabled) {
-        _storage.write(_keySchedule, schedule.name);
-        log('📅 Backup schedule disabled');
-        return;
-      }
-
-      // Register new task based on schedule
-      Duration frequency;
-      switch (schedule) {
-        case BackupSchedule.daily:
-          frequency = Duration(days: 1);
+      switch (task) {
+        case 'autoBackupTask':
+          await _performAutoBackup();
           break;
-        case BackupSchedule.weekly:
-          frequency = Duration(days: 7);
-          break;
-        case BackupSchedule.monthly:
-          frequency = Duration(days: 30);
+        case 'dailyBackupUpdate':
+          await _performDailyBackupUpdate();
           break;
         default:
-          return;
+          log('Unknown task: $task');
       }
+
+      return Future.value(true);
+    } catch (e) {
+      log('Background task failed: $e');
+      return Future.value(false);
+    }
+  });
+}
+
+Future<void> _performAutoBackup() async {
+  try {
+    log('Starting automatic backup');
+    final backupService = ReliableBackupService.instance;
+    final success = await backupService.runFullBackup();
+    if (success) {
+      log('Automatic backup completed successfully');
+    }
+  } catch (e) {
+    log('Error performing auto backup: $e');
+  }
+}
+
+Future<void> _performDailyBackupUpdate() async {
+  try {
+    log('Starting daily backup update');
+    final backupService = ReliableBackupService.instance;
+    final success = await backupService.runFullBackup();
+    if (success) {
+      log('Daily backup update completed successfully');
+    }
+  } catch (e) {
+    log('Error performing daily backup update: $e');
+  }
+}
+
+class BackupScheduler {
+  static final BackupScheduler _instance = BackupScheduler._internal();
+  factory BackupScheduler() => _instance;
+  BackupScheduler._internal();
+
+  static BackupScheduler get instance => _instance;
+
+  Future<void> initialize() async {
+    try {
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+      log('Backup scheduler initialized');
+    } catch (e) {
+      log('Error initializing backup scheduler: $e');
+    }
+  }
+
+  Future<void> scheduleDailyBackupUpdate() async {
+    try {
+      await Workmanager().cancelByUniqueName('dailyBackupUpdate');
+
+      final now = DateTime.now();
+      var nextRun = DateTime(now.year, now.month, now.day, 2, 0);
+
+      if (now.hour >= 2) {
+        nextRun = nextRun.add(const Duration(days: 1));
+      }
+
+      final initialDelay = nextRun.difference(now);
 
       await Workmanager().registerPeriodicTask(
-        _taskName,
-        _taskName,
-        frequency: frequency,
+        'dailyBackupUpdate',
+        'dailyBackupUpdate',
+        frequency: const Duration(days: 1),
+        initialDelay: initialDelay,
         constraints: Constraints(
           networkType: NetworkType.connected,
+          requiresBatteryNotLow: true,
+          requiresCharging: false,
         ),
-        backoffPolicy: BackoffPolicy.exponential,
-        backoffPolicyDelay: Duration(minutes: 30),
       );
 
-      _storage.write(_keySchedule, schedule.name);
-      log('📅 Backup schedule set to: ${schedule.name}');
-
+      log('Scheduled daily backup update at 2 AM');
     } catch (e) {
-      log('❌ Failed to set backup schedule: $e');
+      log('Error scheduling daily backup update: $e');
     }
   }
 
-  /// Schedule one-time backup
-  Future<void> scheduleOneTimeBackup({
-    Duration delay = Duration.zero,
-  }) async {
+  Future<void> cancelDailyBackupUpdate() async {
     try {
-      await Workmanager().registerOneOffTask(
-        'one-time-backup-${DateTime.now().millisecondsSinceEpoch}',
-        'one-time-backup',
-        initialDelay: delay,
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-        ),
-      );
-
-      log('📅 One-time backup scheduled with delay: ${delay.inMinutes} minutes');
+      await Workmanager().cancelByUniqueName('dailyBackupUpdate');
+      log('Cancelled daily backup update');
     } catch (e) {
-      log('❌ Failed to schedule one-time backup: $e');
+      log('Error cancelling daily backup update: $e');
     }
   }
 
-  /// Cancel all scheduled backups
-  Future<void> cancelAll() async {
+  Future<void> cancelAllBackupTasks() async {
     try {
       await Workmanager().cancelAll();
-      _storage.write(_keySchedule, BackupSchedule.disabled.name);
-      log('🗑️ All backup schedules cancelled');
+      log('Cancelled all backup tasks');
     } catch (e) {
-      log('❌ Failed to cancel schedules: $e');
+      log('Error cancelling backup tasks: $e');
     }
-  }
-
-  /// Background task callback dispatcher
-  static void _callbackDispatcher() {
-    Workmanager().executeTask((task, inputData) async {
-      try {
-        log('🔄 Background backup task started: $task');
-
-        // Initialize GetStorage for background context
-        await GetStorage.init();
-
-        // Initialize the backup service
-        final backupService = EnhancedReliableBackupService.instance;
-        await backupService.initialize();
-
-        // Run the backup
-        final success = await backupService.runFullBackup();
-
-        log(success
-            ? '✅ Background backup completed successfully'
-            : '❌ Background backup failed');
-
-        return success;
-
-      } catch (e) {
-        log('❌ Background backup error: $e');
-        return false;
-      }
-    });
   }
 }

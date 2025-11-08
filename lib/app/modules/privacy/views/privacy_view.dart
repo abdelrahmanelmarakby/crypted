@@ -431,8 +431,14 @@ class PrivacyView extends GetView<PrivacyController> {
                           ),
                           trailing: IconButton(
                             icon: Icon(Icons.close, color: Colors.red),
-                            onPressed: () {
-                              // TODO: Implement unblock functionality
+                            onPressed: () async {
+                              await controller.unblockUser(user.uid!);
+                              Get.back(); // Close the bottom sheet
+                              Get.snackbar(
+                                'Success',
+                                'User unblocked successfully',
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
                             },
                           ),
                         );
@@ -633,8 +639,14 @@ class PrivacyView extends GetView<PrivacyController> {
                           ),
                           trailing: IconButton(
                             icon: Icon(Icons.stop_circle, color: Colors.orange),
-                            onPressed: () {
-                              // TODO: Implement stop sharing functionality
+                            onPressed: () async {
+                              await controller.stopSharingLocation(chatId);
+                              Get.back(); // Close the bottom sheet
+                              Get.snackbar(
+                                'Success',
+                                'Location sharing stopped',
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
                             },
                           ),
                         );

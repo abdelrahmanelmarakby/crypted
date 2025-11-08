@@ -331,4 +331,85 @@ class PrivacyController extends GetxController {
       return [];
     }
   }
+
+  /// Unblock a user
+  Future<void> unblockUser(String userId) async {
+    try {
+      final currentUserId = UserService.currentUserValue?.uid;
+      if (currentUserId == null) {
+        developer.log(
+          'Cannot unblock user: current user not found',
+          name: 'PrivacyController',
+          level: 1000,
+        );
+        return;
+      }
+
+      developer.log(
+        'Unblocking user: $userId',
+        name: 'PrivacyController',
+      );
+
+      final success = await UserService().unblockUserGlobally(currentUserId, userId);
+
+      if (success) {
+        developer.log(
+          'User unblocked successfully',
+          name: 'PrivacyController',
+        );
+
+        // Refresh the current user to update the blocked list
+        await UserService().getProfile(currentUserId);
+      } else {
+        developer.log(
+          'Failed to unblock user',
+          name: 'PrivacyController',
+          level: 900,
+        );
+      }
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error unblocking user',
+        name: 'PrivacyController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
+    }
+  }
+
+  /// Stop sharing live location with a specific chat
+  Future<void> stopSharingLocation(String chatId) async {
+    try {
+      final currentUserId = UserService.currentUserValue?.uid;
+      if (currentUserId == null) {
+        developer.log(
+          'Cannot stop sharing location: current user not found',
+          name: 'PrivacyController',
+          level: 1000,
+        );
+        return;
+      }
+
+      developer.log(
+        'Stopping location sharing for chat: $chatId',
+        name: 'PrivacyController',
+      );
+
+      await _privacyDataSource.stopSharingLiveLocation(chatId);
+
+      developer.log(
+        'Location sharing stopped successfully',
+        name: 'PrivacyController',
+      );
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error stopping location sharing',
+        name: 'PrivacyController',
+        error: e,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
+    }
+  }
 }
