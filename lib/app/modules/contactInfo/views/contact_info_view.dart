@@ -9,9 +9,8 @@ import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
-/// 🎨 Enhanced Contact Info View
-/// Modern, beautiful UI with rich engagement features
-/// Better than WhatsApp, Telegram combined! 🚀
+/// 🎨 Clean Minimalist Contact Info View
+/// Simple, beautiful, and functional
 class ContactInfoView extends GetView<ContactInfoController> {
   const ContactInfoView({super.key});
 
@@ -74,54 +73,39 @@ class ContactInfoView extends GetView<ContactInfoController> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Obx(() => Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                ColorsManager.primary.withOpacity(0.1),
-                ColorsManager.white,
-              ],
-            ),
-          ),
+          color: ColorsManager.white,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: 60), // Space for app bar
+              SizedBox(height: 60),
 
               // Avatar with online status
               Stack(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(4),
+                    width: 120,
+                    height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          ColorsManager.primary,
-                          ColorsManager.primary.withOpacity(0.6),
-                        ],
-                      ),
+                      color: ColorsManager.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: ColorsManager.white,
-                      ),
-                      padding: EdgeInsets.all(4),
-                      child: _buildAvatar(),
-                    ),
+                    child: _buildAvatar(),
                   ),
 
                   // Online status indicator
                   Positioned(
-                    right: 8,
-                    bottom: 8,
+                    right: 4,
+                    bottom: 4,
                     child: Container(
-                      width: 24,
-                      height: 24,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
@@ -173,20 +157,20 @@ class ContactInfoView extends GetView<ContactInfoController> {
             child: AppCachedNetworkImage(
               imageUrl: controller.userImage!,
               fit: BoxFit.cover,
-              width: 112,
-              height: 112,
+              width: 120,
+              height: 120,
             ),
           )
         : CircleAvatar(
-            radius: 56,
-            backgroundColor: ColorsManager.primary.withOpacity(0.1),
+            radius: 60,
+            backgroundColor: ColorsManager.navbarColor,
             child: Text(
               controller.userName.isNotEmpty
                   ? controller.userName.substring(0, 1).toUpperCase()
                   : '?',
               style: StylesManager.bold(
                 fontSize: 48,
-                color: ColorsManager.primary,
+                color: ColorsManager.black,
               ),
             ),
           );
@@ -253,25 +237,25 @@ class ContactInfoView extends GetView<ContactInfoController> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: ColorsManager.navbarColor,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 26),
+            child: Icon(icon, color: ColorsManager.black, size: 24),
           ),
-          SizedBox(height: Sizes.size4),
+          SizedBox(height: 6),
           Text(
             label,
             style: StylesManager.medium(
               fontSize: FontSize.xSmall,
-              color: ColorsManager.grey,
+              color: ColorsManager.black,
             ),
           ),
         ],
@@ -306,7 +290,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
                 icon: Iconsax.message_text_copy,
                 label: 'Messages',
                 value: '1.2K',
-                color: Colors.blue,
+                color: ColorsManager.black,
               ),
             ),
             Container(
@@ -319,7 +303,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
                 icon: Iconsax.gallery_copy,
                 label: 'Media',
                 value: '342',
-                color: Colors.purple,
+                color: ColorsManager.black,
               ),
             ),
             Container(
@@ -332,7 +316,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
                 icon: Iconsax.document_copy,
                 label: 'Files',
                 value: '28',
-                color: Colors.orange,
+                color: ColorsManager.black,
               ),
             ),
           ],
@@ -512,15 +496,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
         padding: EdgeInsets.all(Paddings.large),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: ColorsManager.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: ColorsManager.primary, size: 22),
-            ),
+            Icon(icon, color: ColorsManager.black, size: 20),
             SizedBox(width: Sizes.size10),
             Expanded(
               child: Column(
@@ -602,15 +578,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
       padding: EdgeInsets.all(Paddings.large),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: ColorsManager.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: ColorsManager.primary, size: 22),
-          ),
+          Icon(icon, color: ColorsManager.black, size: 20),
           SizedBox(width: Sizes.size10),
           Expanded(
             child: Column(
@@ -634,7 +602,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: ColorsManager.primary,
+            activeColor: ColorsManager.black,
           ),
         ],
       ),
@@ -747,15 +715,7 @@ class ContactInfoView extends GetView<ContactInfoController> {
         padding: EdgeInsets.all(Paddings.large),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
+            Icon(icon, color: isDanger ? Colors.red : ColorsManager.black, size: 20),
             SizedBox(width: Sizes.size10),
             Expanded(
               child: Text(

@@ -9,9 +9,8 @@ import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
-/// 🎨 Enhanced Group Info View
-/// Modern, beautiful UI optimized for group chats
-/// Better management & engagement features! 🚀
+/// 🎨 Clean Minimalist Group Info View
+/// Simple, beautiful, and functional
 class GroupInfoView extends GetView<GroupInfoController> {
   const GroupInfoView({super.key});
 
@@ -102,16 +101,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                ColorsManager.primary.withOpacity(0.1),
-                ColorsManager.white,
-              ],
-            ),
-          ),
+          color: ColorsManager.white,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -121,37 +111,31 @@ class GroupInfoView extends GetView<GroupInfoController> {
               Stack(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(4),
+                    width: 120,
+                    height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          ColorsManager.primary,
-                          ColorsManager.primary.withOpacity(0.6),
-                        ],
-                      ),
+                      color: ColorsManager.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: ColorsManager.white,
-                      ),
-                      padding: EdgeInsets.all(4),
-                      child: _buildGroupAvatar(),
-                    ),
+                    child: _buildGroupAvatar(),
                   ),
 
                   // Group indicator badge
                   Positioned(
-                    right: 8,
-                    bottom: 8,
+                    right: 4,
+                    bottom: 4,
                     child: Container(
-                      width: 28,
-                      height: 28,
+                      width: 24,
+                      height: 24,
                       decoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: ColorsManager.black,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: ColorsManager.white,
@@ -161,7 +145,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                       child: Icon(
                         Icons.group,
                         color: Colors.white,
-                        size: 14,
+                        size: 12,
                       ),
                     ),
                   ),
@@ -216,17 +200,17 @@ class GroupInfoView extends GetView<GroupInfoController> {
             child: AppCachedNetworkImage(
               imageUrl: controller.displayImage!,
               fit: BoxFit.cover,
-              width: 112,
-              height: 112,
+              width: 120,
+              height: 120,
             ),
           )
         : CircleAvatar(
-            radius: 56,
-            backgroundColor: ColorsManager.primary.withOpacity(0.1),
+            radius: 60,
+            backgroundColor: ColorsManager.navbarColor,
             child: Icon(
               Icons.group,
               size: 48,
-              color: ColorsManager.primary,
+              color: ColorsManager.black,
             ),
           );
   }
@@ -293,25 +277,25 @@ class GroupInfoView extends GetView<GroupInfoController> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: ColorsManager.navbarColor,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 26),
+            child: Icon(icon, color: ColorsManager.black, size: 24),
           ),
-          SizedBox(height: Sizes.size4),
+          SizedBox(height: 6),
           Text(
             label,
             style: StylesManager.medium(
               fontSize: FontSize.xSmall,
-              color: ColorsManager.grey,
+              color: ColorsManager.black,
             ),
           ),
         ],
@@ -346,7 +330,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                 icon: Icons.people,
                 label: 'Members',
                 value: '${controller.memberCount.value ?? 0}',
-                color: Colors.blue,
+                color: ColorsManager.black,
               ),
             ),
             Container(
@@ -359,7 +343,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                 icon: Iconsax.gallery_copy,
                 label: 'Media',
                 value: '0', // Placeholder
-                color: Colors.purple,
+                color: ColorsManager.black,
               ),
             ),
             Container(
@@ -372,7 +356,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                 icon: Iconsax.calendar_copy,
                 label: 'Created',
                 value: 'Today', // Placeholder
-                color: Colors.green,
+                color: ColorsManager.black,
               ),
             ),
           ],
@@ -436,7 +420,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
               children: [
                 Icon(
                   Iconsax.document_text_copy,
-                  color: ColorsManager.primary,
+                  color: ColorsManager.black,
                   size: 20,
                 ),
                 SizedBox(width: Sizes.size4),
@@ -491,7 +475,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                     children: [
                       Icon(
                         Icons.people,
-                        color: ColorsManager.primary,
+                        color: ColorsManager.black,
                         size: 20,
                       ),
                       SizedBox(width: Sizes.size4),
@@ -560,33 +544,21 @@ class GroupInfoView extends GetView<GroupInfoController> {
       child: Row(
         children: [
           // Avatar
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isAdmin
-                    ? Colors.amber.withOpacity(0.3)
-                    : ColorsManager.primary.withOpacity(0.2),
-                width: 2,
-              ),
-            ),
-            child: CircleAvatar(
-              backgroundColor: ColorsManager.primary.withOpacity(0.1),
-              backgroundImage: member.imageUrl != null && member.imageUrl!.isNotEmpty
-                  ? NetworkImage(member.imageUrl!)
-                  : null,
-              child: member.imageUrl == null || member.imageUrl!.isEmpty
-                  ? Text(
-                      member.fullName?.substring(0, 1).toUpperCase() ?? '?',
-                      style: StylesManager.bold(
-                        fontSize: FontSize.medium,
-                        color: ColorsManager.primary,
-                      ),
-                    )
-                  : null,
-            ),
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: ColorsManager.navbarColor,
+            backgroundImage: member.imageUrl != null && member.imageUrl!.isNotEmpty
+                ? NetworkImage(member.imageUrl!)
+                : null,
+            child: member.imageUrl == null || member.imageUrl!.isEmpty
+                ? Text(
+                    member.fullName?.substring(0, 1).toUpperCase() ?? '?',
+                    style: StylesManager.bold(
+                      fontSize: FontSize.medium,
+                      color: ColorsManager.black,
+                    ),
+                  )
+                : null,
           ),
 
           SizedBox(width: Sizes.size10),
@@ -635,28 +607,20 @@ class GroupInfoView extends GetView<GroupInfoController> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                color: ColorsManager.navbarColor,
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.star, color: Colors.amber, size: 14),
-                  SizedBox(width: 4),
-                  Text(
-                    'Admin',
-                    style: StylesManager.medium(
-                      fontSize: FontSize.xSmall,
-                      color: Colors.amber.shade700,
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Admin',
+                style: StylesManager.medium(
+                  fontSize: FontSize.xSmall,
+                  color: ColorsManager.black,
+                ),
               ),
             )
           else if (controller.isCurrentUserAdmin && !isCurrentUser)
             IconButton(
-              icon: Icon(Icons.more_vert, color: ColorsManager.grey, size: 20),
+              icon: Icon(Icons.more_vert, color: ColorsManager.black, size: 20),
               onPressed: () => _showMemberOptions(member),
             ),
         ],
@@ -694,7 +658,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                   children: [
                     Icon(
                       Iconsax.gallery_copy,
-                      color: ColorsManager.primary,
+                      color: ColorsManager.black,
                       size: 20,
                     ),
                     SizedBox(width: Sizes.size4),
@@ -801,15 +765,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
       padding: EdgeInsets.all(Paddings.large),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: ColorsManager.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: ColorsManager.primary, size: 22),
-          ),
+          Icon(icon, color: ColorsManager.black, size: 20),
           SizedBox(width: Sizes.size10),
           Expanded(
             child: Column(
@@ -833,7 +789,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: ColorsManager.primary,
+            activeColor: ColorsManager.black,
           ),
         ],
       ),
@@ -948,15 +904,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
         padding: EdgeInsets.all(Paddings.large),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
+            Icon(icon, color: isDanger ? Colors.red : ColorsManager.black, size: 20),
             SizedBox(width: Sizes.size10),
             Expanded(
               child: Text(
