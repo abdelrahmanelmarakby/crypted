@@ -94,34 +94,70 @@ class GroupInfoView extends GetView<GroupInfoController> {
             icon: Icon(Icons.edit, color: ColorsManager.primary),
             onPressed: () => _showEditGroupDialog(),
           ),
-        IconButton(
-          icon: Icon(Icons.more_vert, color: ColorsManager.black),
-          onPressed: () => _showMoreOptions(),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          color: ColorsManager.white,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(height: 60),
+        ],
+      ),
+      body: controller.isLoading.value
+          ? _buildLoadingView()
+          : RefreshIndicator(
+              onRefresh: controller.refreshGroupData,
+              child: SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: Paddings.large),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(height: Sizes.size10),
+                    ProfileHeader(),
+                    SizedBox(height: Sizes.size10),
+                    StatusSection(),
+                    SizedBox(height: Sizes.size10),
+                    _buildContactDetailsSection(),
+                    SizedBox(height: Sizes.size10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        controller.displayMemberCount,
+                        style: StylesManager.regular(fontSize: FontSize.small),
+                      ),
+                    ),
+                    SizedBox(height: Sizes.size4),
 
-              // Group Avatar
-              Stack(
-                children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorsManager.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: Offset(0, 4),
+                    // Loading indicator for members
+                    if (controller.isLoading.value)
+                      SizedBox(
+                        height: 100,
+                        child: Center(
+                          child: CircularProgressIndicator.adaptive(),
                         ),
+                      )
+                    else
+                      CustomContainer(
+                        children: [
+                          // Dynamic member list
+                          ...controller.members.value?.map((member) => Column(
+                            children: [
+                              _buildMemberItem(member),
+                              if (member != controller.members.value!.last) buildDivider(),
+                            ],
+                          )).toList() ?? [Container()],
+                        ],
+                      ),
+
+                    // SizedBox(height: Sizes.size10),
+                    // _buildExtrasSection(),
+                    SizedBox(height: Sizes.size10),
+                    CustomContainer(
+                      children: [
+                        GestureDetector(
+                          onTap: controller.exitGroup,
+                          child: _buildredChoise(Constants.kExitgroup.tr),
+                        ),
+                        buildDivider(),
+                        GestureDetector(
+                          onTap: controller.reportGroup,
+                          child: _buildredChoise(Constants.kReportgroup.tr),
+                        ),
+                        SizedBox(height: Sizes.size10),
                       ],
                     ),
                     child: _buildGroupAvatar(),
@@ -269,59 +305,25 @@ class GroupInfoView extends GetView<GroupInfoController> {
     );
   }
 
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: ColorsManager.navbarColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: ColorsManager.black, size: 24),
+  Widget _buildContactDetailsSection() {
+    return CustomContainer(
+      children: [
+        GestureDetector(
+          onTap: controller.viewMediaLinksDocuments,
+          child: CustomInfoItem(
+            image: 'assets/icons/fi_833281.svg',
+            title: Constants.kmediaLinksdocuments.tr,
+            type: '9',
           ),
-          SizedBox(height: 6),
-          Text(
-            label,
-            style: StylesManager.medium(
-              fontSize: FontSize.xSmall,
-              color: ColorsManager.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Group Stats
-  Widget _buildGroupStats() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: Paddings.large,
-          vertical: Paddings.xSmall,
         ),
-        padding: EdgeInsets.all(Paddings.large),
-        decoration: BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: Offset(0, 2),
-            ),
-          ],
+        buildDivider(),
+        GestureDetector(
+          onTap: controller.viewStarredMessages,
+          child: CustomInfoItem(
+            image: 'assets/icons/star.svg',
+            title: Constants.kstarredmessages.tr,
+            type: '9',
+          ),
         ),
         child: Row(
           children: [

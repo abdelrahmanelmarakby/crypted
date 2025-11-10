@@ -285,40 +285,16 @@ class ContactInfoView extends GetView<ContactInfoController> {
         ),
         child: Row(
           children: [
-            Expanded(
-              child: _buildStatItem(
-                icon: Iconsax.message_text_copy,
-                label: 'Messages',
-                value: '1.2K',
-                color: ColorsManager.black,
-              ),
-            ),
-            Container(
-              width: 1,
-              height: 40,
-              color: Colors.grey.shade200,
-            ),
-            Expanded(
-              child: _buildStatItem(
-                icon: Iconsax.gallery_copy,
-                label: 'Media',
-                value: '342',
-                color: ColorsManager.black,
-              ),
-            ),
-            Container(
-              width: 1,
-              height: 40,
-              color: Colors.grey.shade200,
-            ),
-            Expanded(
-              child: _buildStatItem(
-                icon: Iconsax.document_copy,
-                label: 'Files',
-                value: '28',
-                color: ColorsManager.black,
-              ),
-            ),
+            SizedBox(height: Sizes.size10),
+            ProfileHeaderContact(),
+            SizedBox(height: Sizes.size10),
+            StatusSection(),
+            SizedBox(height: Sizes.size10),
+            _buildContactDetailsSection(),
+            SizedBox(height: Sizes.size10),
+            CustomNotificationThemeSection(),
+            SizedBox(height: Sizes.size10),
+            _buildExtrasSection(),
           ],
         ),
       ),

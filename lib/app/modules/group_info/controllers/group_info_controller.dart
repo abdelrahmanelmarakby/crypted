@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
-import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
-import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
+import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:dio/dio.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:crypted_app/core/locale/constant.dart';
 
 class GroupInfoController extends GetxController {
-  var isLockContactInfoEnabled = false.obs;
-
   // Group data - reactive for real-time updates
   final Rx<String?> groupName = Rx<String?>(null);
   final Rx<String?> groupDescription = Rx<String?>(null);
@@ -89,10 +92,6 @@ class GroupInfoController extends GetxController {
     }
   }
 
-  void toggleShowNotification(bool value) {
-    isLockContactInfoEnabled.value = value;
-  }
-
   /// Refresh group data from server
   Future<void> refreshGroupData() async {
     if (isRefreshing.value) return;
@@ -115,38 +114,58 @@ class GroupInfoController extends GetxController {
   }
 
   /// Update group information
-  Future<void> updateGroupInfo({String? name, String? description}) async {
+  Future<void> updateGroupInfo({String? name, String? description, String? imageUrl}) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot update group: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     try {
       isLoading.value = true;
 
-      // Update local state immediately for better UX
-      if (name != null && name.isNotEmpty) {
-        groupName.value = name;
-      }
-      if (description != null) {
-        groupDescription.value = description;
-      }
+      // Update in Firebase
+      final success = await _chatDataSources.updateChatRoomInfo(
+        roomId: roomId!,
+        groupName: name,
+        groupDescription: description,
+        groupImageUrl: imageUrl,
+      );
 
-      // Update in Firestore if roomId exists
-      if (roomId != null) {
-        final updateData = <String, dynamic>{};
-        if (name != null && name.isNotEmpty) updateData['name'] = name;
-        if (description != null) updateData['description'] = description;
-
-        if (updateData.isNotEmpty) {
-          await FirebaseFirestore.instance
-              .collection('chat_rooms')
-              .doc(roomId)
-              .update(updateData);
+      if (success) {
+        // Update local state after successful Firebase update
+        if (name != null && name.isNotEmpty) {
+          groupName.value = name;
         }
+        if (description != null) {
+          groupDescription.value = description;
+        }
+        if (imageUrl != null) {
+          groupImageUrl.value = imageUrl;
+        }
+
+        Get.snackbar(
+          "Success",
+          "Group information updated successfully",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+      } else {
+        throw Exception("Failed to update group information in Firebase");
       }
     } catch (e) {
       print("❌ Error updating group info: $e");
       Get.snackbar(
         "Error",
-        "Failed to update group information",
+        "Failed to update group information: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -210,6 +229,81 @@ class GroupInfoController extends GetxController {
       Get.snackbar(
         "Error",
         "Failed to remove member: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Add a member to the group
+  Future<void> addMember(SocialMediaUser newMember) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot add member: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      // Check if current user is admin
+      if (!isCurrentUserAdmin) {
+        Get.snackbar(
+          "Error",
+          "Only admins can add members",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Check if member already exists
+      if (members.value?.any((member) => member.uid == newMember.uid) == true) {
+        Get.snackbar(
+          "Info",
+          "${newMember.fullName} is already a member of this group",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      isLoading.value = true;
+
+      // Add member using data source
+      final success = await _chatDataSources.addMemberToChat(
+        roomId: roomId!,
+        newMember: newMember,
+      );
+
+      if (success) {
+        // Add member to local list
+        members.value = [...members.value ?? [], newMember];
+        memberCount.value = members.value!.length;
+
+        Get.snackbar(
+          "Success",
+          "${newMember.fullName} added to group",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+      } else {
+        throw Exception("Failed to add member to group");
+      }
+    } catch (e) {
+      print("❌ Error adding member: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to add member: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
@@ -434,9 +528,12 @@ class GroupInfoController extends GetxController {
     Get.bottomSheet(
       Container(
         height: Get.height * 0.8,
-        decoration: BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
         ),
         child: Column(
           children: [
@@ -446,25 +543,25 @@ class GroupInfoController extends GetxController {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: ColorsManager.lightGrey.withOpacity(0.5),
+                    color: Colors.grey.shade200,
                     width: 1,
                   ),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.star, color: Colors.amber, size: 24),
-                  SizedBox(width: 8),
-                  Text(
+                  const Icon(Icons.star, color: Colors.amber, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
                     "Starred Messages",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Spacer(),
+                  const Spacer(),
                   IconButton(
-                    icon: Icon(Icons.close),
+                    icon: const Icon(Icons.close),
                     onPressed: () => Get.back(),
                   ),
                 ],
@@ -474,7 +571,7 @@ class GroupInfoController extends GetxController {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('chat_rooms')
+                    .collection('chats')
                     .doc(roomId)
                     .collection('chat')
                     .where('isFavorite', isEqualTo: true)
@@ -482,11 +579,15 @@ class GroupInfoController extends GetxController {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return Center(
+                      child: Text('Error: ${snapshot.error}'),
+                    );
                   }
 
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
                   }
 
                   final messages = snapshot.data?.docs ?? [];
@@ -496,48 +597,124 @@ class GroupInfoController extends GetxController {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.star_border, size: 64, color: ColorsManager.lightGrey),
-                          SizedBox(height: 16),
-                          Text("No starred messages", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
-                          SizedBox(height: 8),
-                          Text("Tap and hold on a message to star it", style: TextStyle(fontSize: 14, color: ColorsManager.lightGrey)),
+                          Icon(
+                            Icons.star_border,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "No starred messages",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Tap and hold on a message to star it",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
                         ],
                       ),
                     );
                   }
 
                   return ListView.separated(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     itemCount: messages.length,
-                    separatorBuilder: (context, index) => Divider(),
+                    separatorBuilder: (context, index) => const Divider(),
                     itemBuilder: (context, index) {
                       final message = messages[index].data() as Map<String, dynamic>;
                       final messageType = message['type'] ?? 'text';
                       final messageContent = message['text'] ?? message['content'] ?? '';
+                      final timestamp = message['timestamp'];
+                      final senderId = message['senderId'] ?? '';
+                      final currentUserId = UserService.currentUserValue?.uid;
+                      final isMe = senderId == currentUserId;
+
+                      // Get sender name from members list
+                      String senderName = 'Unknown';
+                      if (isMe) {
+                        senderName = 'You';
+                      } else {
+                        final sender = members.value?.firstWhere(
+                          (member) => member.uid == senderId,
+                          orElse: () => SocialMediaUser(uid: senderId, fullName: 'Unknown'),
+                        );
+                        senderName = sender?.fullName ?? 'Unknown';
+                      }
+
+                      DateTime? dateTime;
+                      if (timestamp is String) {
+                        dateTime = DateTime.tryParse(timestamp);
+                      }
 
                       return Card(
                         elevation: 1,
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.amber.shade100,
-                            child: Icon(Icons.star, color: Colors.amber, size: 20),
+                            child: const Icon(Icons.star, color: Colors.amber, size: 20),
                           ),
                           title: Text(
-                            messageType == 'text' ? messageContent : '[$messageType]',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            senderName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                messageType == 'text' ? messageContent : '[$messageType]',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              if (dateTime != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatTimestamp(dateTime),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           trailing: IconButton(
-                            icon: Icon(Icons.close, size: 20),
+                            icon: const Icon(Icons.close, size: 20),
                             onPressed: () async {
+                              // Unstar message
                               await FirebaseFirestore.instance
-                                  .collection('chat_rooms')
+                                  .collection('chats')
                                   .doc(roomId)
                                   .collection('chat')
                                   .doc(messages[index].id)
                                   .update({'isFavorite': false});
                             },
                           ),
+                          onTap: () {
+                            // Navigate to message in chat and scroll to it
+                            Get.back(); // Close starred messages sheet
+                            Get.back(); // Close group info page
+
+                            // Navigate to chat with the message ID to scroll to
+                            Get.toNamed(
+                              Routes.CHAT,
+                              arguments: {
+                                'roomId': roomId,
+                                'scrollToMessageId': messages[index].id,
+                              },
+                            );
+                          },
                         ),
                       );
                     },
@@ -552,7 +729,22 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  /// Navigate to media/links/documents with tabbed bottom sheet
+  String _formatTimestamp(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays == 0) {
+      return '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+  }
+
+  /// Navigate to media/links/documents
   void viewMediaLinksDocuments() {
     if (roomId == null) {
       Get.snackbar(
@@ -565,16 +757,19 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Show tabbed bottom sheet for media/links/documents
+    // Navigate to media screen with tabs
     Get.bottomSheet(
-      DefaultTabController(
-        length: 4,
-        child: Container(
-          height: Get.height * 0.8,
-          decoration: BoxDecoration(
-            color: ColorsManager.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      Container(
+        height: Get.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
+        ),
+        child: DefaultTabController(
+          length: 4,
           child: Column(
             children: [
               // Header
@@ -583,57 +778,338 @@ class GroupInfoController extends GetxController {
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: ColorsManager.lightGrey.withOpacity(0.5),
+                      color: Colors.grey.shade200,
                       width: 1,
                     ),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.perm_media, color: ColorsManager.primary, size: 24),
-                    SizedBox(width: 8),
-                    Text(
+                    const Icon(Icons.photo_library, size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
                       "Media & Documents",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     IconButton(
-                      icon: Icon(Icons.close),
+                      icon: const Icon(Icons.close),
                       onPressed: () => Get.back(),
                     ),
                   ],
                 ),
               ),
-
-              // Tab Bar
+              // Tabs
               TabBar(
-                labelColor: ColorsManager.primary,
-                unselectedLabelColor: ColorsManager.grey,
-                indicatorColor: ColorsManager.primary,
-                tabs: [
-                  Tab(icon: Icon(Icons.photo), text: "Photos"),
-                  Tab(icon: Icon(Icons.videocam), text: "Videos"),
-                  Tab(icon: Icon(Icons.insert_drive_file), text: "Files"),
-                  Tab(icon: Icon(Icons.audiotrack), text: "Audio"),
+                labelColor: Colors.black,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Colors.blue,
+                tabs: const [
+                  Tab(text: "Photos"),
+                  Tab(text: "Videos"),
+                  Tab(text: "Files"),
+                  Tab(text: "Audio"),
                 ],
               ),
-
-              // Tab Views
+              // Tab views
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildMediaTab('image'),
-                    _buildMediaTab('video'),
-                    _buildMediaTab('file'),
-                    _buildMediaTab('audio'),
+                    _buildMediaGrid('photo'),
+                    _buildMediaGrid('video'),
+                    _buildMediaGrid('file'),
+                    _buildMediaGrid('audio'),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildMediaGrid(String mediaType) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('chats')
+          .doc(roomId)
+          .collection('chat')
+          .where('type', isEqualTo: mediaType)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}'),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        final items = snapshot.data?.docs ?? [];
+
+        if (items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _getIconForType(mediaType),
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "No ${mediaType}s shared yet",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (mediaType == 'photo' || mediaType == 'video') {
+          return GridView.builder(
+            padding: const EdgeInsets.all(8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final data = items[index].data() as Map<String, dynamic>;
+              final url = data['url'] ?? data['fileUrl'] ?? '';
+              final thumbnail = data['thumbnailUrl'] ?? url;
+
+              return GestureDetector(
+                onTap: () {
+                  // Open full screen viewer for images and videos
+                  _openFullScreenViewer(items, index, mediaType);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: url.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            thumbnail,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                _getIconForType(mediaType),
+                                color: Colors.grey.shade400,
+                              );
+                            },
+                          ),
+                        )
+                      : Icon(
+                          _getIconForType(mediaType),
+                          color: Colors.grey.shade400,
+                        ),
+                ),
+              );
+            },
+          );
+        } else {
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final data = items[index].data() as Map<String, dynamic>;
+              final fileName = data['fileName'] ?? data['name'] ?? 'Unknown file';
+              final fileSize = data['fileSize'] ?? '';
+              final timestamp = data['timestamp'];
+
+              DateTime? dateTime;
+              if (timestamp is String) {
+                dateTime = DateTime.tryParse(timestamp);
+              }
+
+              return Card(
+                elevation: 1,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue.shade100,
+                    child: Icon(_getIconForType(mediaType), color: Colors.blue),
+                  ),
+                  title: Text(
+                    fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (fileSize.isNotEmpty)
+                        Text(
+                          fileSize,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      if (dateTime != null)
+                        Text(
+                          _formatTimestamp(dateTime),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.download, size: 20),
+                    onPressed: () async {
+                      // Download file
+                      final data = items[index].data() as Map<String, dynamic>;
+                      final url = data['url'] ?? data['fileUrl'] ?? '';
+                      final fileName = data['fileName'] ?? 'file_${DateTime.now().millisecondsSinceEpoch}';
+
+                      if (url.isNotEmpty) {
+                        await _downloadFile(url, fileName);
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        }
+      },
+    );
+  }
+
+  IconData _getIconForType(String type) {
+    switch (type) {
+      case 'photo':
+        return Icons.image;
+      case 'video':
+        return Icons.videocam;
+      case 'file':
+        return Icons.insert_drive_file;
+      case 'audio':
+        return Icons.audiotrack;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  /// Open full screen viewer for media (images/videos)
+  void _openFullScreenViewer(
+    List<QueryDocumentSnapshot> items,
+    int initialIndex,
+    String mediaType,
+  ) {
+    final mediaItems = items.map((item) {
+      final data = item.data() as Map<String, dynamic>;
+      return {
+        'url': data['url'] ?? data['fileUrl'] ?? '',
+        'type': mediaType,
+        'timestamp': data['timestamp'],
+      };
+    }).toList();
+
+    Get.to(
+      () => Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // Photo Gallery Viewer
+            PhotoViewGallery.builder(
+              scrollPhysics: const BouncingScrollPhysics(),
+              builder: (BuildContext context, int index) {
+                final mediaUrl = mediaItems[index]['url'] as String;
+
+                if (mediaType == 'photo') {
+                  return PhotoViewGalleryPageOptions(
+                    imageProvider: NetworkImage(mediaUrl),
+                    initialScale: PhotoViewComputedScale.contained,
+                    minScale: PhotoViewComputedScale.contained * 0.8,
+                    maxScale: PhotoViewComputedScale.covered * 2.0,
+                    heroAttributes: PhotoViewHeroAttributes(tag: mediaUrl),
+                  );
+                } else {
+                  // For videos, show a thumbnail with play button
+                  return PhotoViewGalleryPageOptions.customChild(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.play_circle_outline,
+                            size: 80,
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Video playback coming soon',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    initialScale: PhotoViewComputedScale.contained,
+                    minScale: PhotoViewComputedScale.contained * 0.8,
+                    maxScale: PhotoViewComputedScale.covered * 2.0,
+                  );
+                }
+              },
+              itemCount: mediaItems.length,
+              loadingBuilder: (context, event) => Center(
+                child: CircularProgressIndicator(
+                  value: event == null
+                      ? 0
+                      : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
+                  valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                ),
+              ),
+              backgroundDecoration: const BoxDecoration(
+                color: Colors.black,
+              ),
+              pageController: PageController(initialPage: initialIndex),
+            ),
+
+            // Close button
+            Positioned(
+              top: 40,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Get.back(),
+              ),
+            ),
+
+            // Download button
+            Positioned(
+              bottom: 40,
+              right: 16,
+              child: FloatingActionButton(
+                onPressed: () async {
+                  final currentIndex = initialIndex;
+                  final url = mediaItems[currentIndex]['url'] as String;
+                  await _downloadFile(url, 'media_${DateTime.now().millisecondsSinceEpoch}');
+                },
+                backgroundColor: ColorsManager.primary,
+                child: const Icon(Icons.download, color: Colors.white),
+              ),
+            ),
+          ],
         ),
       ),
       isScrollControlled: true,
@@ -692,61 +1168,74 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  /// Build individual media item
-  Widget _buildMediaItem(String mediaType, Map<String, dynamic> data) {
-    switch (mediaType) {
-      case 'image':
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            data['imageUrl'] ?? '',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) =>
-                Container(color: ColorsManager.lightGrey, child: Icon(Icons.broken_image)),
-          ),
-        );
-      case 'video':
-        return Container(
-          decoration: BoxDecoration(
-            color: ColorsManager.black.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(child: Icon(Icons.play_circle_outline, color: ColorsManager.white, size: 40)),
-        );
-      case 'file':
-        return Card(
-          child: ListTile(
-            leading: Icon(Icons.insert_drive_file, color: ColorsManager.primary),
-            title: Text(data['fileName'] ?? 'Unknown File', maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(data['fileSize'] ?? ''),
-          ),
-        );
-      case 'audio':
-        return Card(
-          child: ListTile(
-            leading: Icon(Icons.audiotrack, color: Colors.orange),
-            title: Text('Voice Message'),
-            subtitle: Text(data['duration'] ?? '0:00'),
-          ),
-        );
-      default:
-        return SizedBox();
-    }
-  }
+  /// Download file from URL to device
+  Future<void> _downloadFile(String url, String fileName) async {
+    try {
+      // Request storage permission
+      final status = await Permission.storage.request();
 
-  /// Get icon for media type
-  IconData _getMediaIcon(String mediaType) {
-    switch (mediaType) {
-      case 'image':
-        return Icons.photo;
-      case 'video':
-        return Icons.videocam;
-      case 'file':
-        return Icons.insert_drive_file;
-      case 'audio':
-        return Icons.audiotrack;
-      default:
-        return Icons.perm_media;
+      if (status.isGranted || status.isLimited) {
+        Get.snackbar(
+          Constants.kBackup.tr,
+          'Downloading $fileName...',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.primary,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+
+        // Use Dio to download the file
+        final dio = Dio();
+        final appDir = '/storage/emulated/0/Download'; // Android Downloads folder
+
+        // Create the download path
+        final savePath = '$appDir/$fileName';
+
+        // Download file
+        await dio.download(
+          url,
+          savePath,
+          onReceiveProgress: (received, total) {
+            if (total != -1) {
+              final progress = (received / total * 100).toStringAsFixed(0);
+              print('Download progress: $progress%');
+            }
+          },
+        );
+
+        Get.snackbar(
+          Constants.kSuccess.tr,
+          'File downloaded successfully to Downloads folder',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else if (status.isPermanentlyDenied) {
+        Get.snackbar(
+          Constants.kError.tr,
+          'Storage permission is required. Please enable it in settings.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        await openAppSettings();
+      } else {
+        Get.snackbar(
+          Constants.kError.tr,
+          'Storage permission denied',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        Constants.kError.tr,
+        'Failed to download file: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
