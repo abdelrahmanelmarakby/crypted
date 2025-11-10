@@ -33,6 +33,14 @@ class StoryModel {
   String? fontFamily;
   String? textPosition; // top, center, bottom
 
+  // Location fields for heat map
+  double? latitude;
+  double? longitude;
+  String? placeName; // e.g., "Central Park"
+  String? city; // e.g., "New York"
+  String? country; // e.g., "United States"
+  bool? isLocationPublic; // Privacy control
+
   StoryModel({
     this.id,
     this.uid,
@@ -50,6 +58,12 @@ class StoryModel {
     this.fontSize,
     this.fontFamily,
     this.textPosition,
+    this.latitude,
+    this.longitude,
+    this.placeName,
+    this.city,
+    this.country,
+    this.isLocationPublic,
   });
 
   StoryModel copyWith({
@@ -69,6 +83,12 @@ class StoryModel {
     double? fontSize,
     String? fontFamily,
     String? textPosition,
+    double? latitude,
+    double? longitude,
+    String? placeName,
+    String? city,
+    String? country,
+    bool? isLocationPublic,
   }) {
     return StoryModel(
       id: id ?? this.id,
@@ -87,6 +107,12 @@ class StoryModel {
       fontSize: fontSize ?? this.fontSize,
       fontFamily: fontFamily ?? this.fontFamily,
       textPosition: textPosition ?? this.textPosition,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      placeName: placeName ?? this.placeName,
+      city: city ?? this.city,
+      country: country ?? this.country,
+      isLocationPublic: isLocationPublic ?? this.isLocationPublic,
     );
   }
 
@@ -141,6 +167,24 @@ class StoryModel {
     if (textPosition != null) {
       result.addAll({'textPosition': textPosition});
     }
+    if (latitude != null) {
+      result.addAll({'latitude': latitude});
+    }
+    if (longitude != null) {
+      result.addAll({'longitude': longitude});
+    }
+    if (placeName != null) {
+      result.addAll({'placeName': placeName});
+    }
+    if (city != null) {
+      result.addAll({'city': city});
+    }
+    if (country != null) {
+      result.addAll({'country': country});
+    }
+    if (isLocationPublic != null) {
+      result.addAll({'isLocationPublic': isLocationPublic});
+    }
 
     return result;
   }
@@ -188,6 +232,12 @@ class StoryModel {
       fontSize: (map['fontSize'] ?? map['font_size'] ?? 24.0).toDouble(),
       fontFamily: map['fontFamily'] ?? map['font_family'],
       textPosition: map['textPosition'] ?? map['text_position'] ?? 'center',
+      latitude: map['latitude']?.toDouble(),
+      longitude: map['longitude']?.toDouble(),
+      placeName: map['placeName'] ?? map['place_name'],
+      city: map['city'],
+      country: map['country'],
+      isLocationPublic: map['isLocationPublic'] ?? map['is_location_public'] ?? true,
     );
   }
 
@@ -238,6 +288,12 @@ class StoryModel {
       fontSize: (data['fontSize'] ?? data['font_size'] ?? 24.0).toDouble(),
       fontFamily: data['fontFamily'] ?? data['font_family'],
       textPosition: data['textPosition'] ?? data['text_position'] ?? 'center',
+      latitude: data['latitude']?.toDouble(),
+      longitude: data['longitude']?.toDouble(),
+      placeName: data['placeName'] ?? data['place_name'],
+      city: data['city'],
+      country: data['country'],
+      isLocationPublic: data['isLocationPublic'] ?? data['is_location_public'] ?? true,
     );
   }
 
@@ -339,4 +395,76 @@ class StoryModel {
     if (now.isAfter(expiresAt!)) return Duration.zero;
     return expiresAt!.difference(now);
   }
+
+  // Location-related methods
+
+  // Check if story has location data
+  bool get hasLocation {
+    return latitude != null && longitude != null;
+  }
+
+  // Get formatted location string
+  String get locationString {
+    if (!hasLocation) return 'Unknown Location';
+
+    if (placeName != null && placeName!.isNotEmpty) {
+      return placeName!;
+    }
+
+    if (city != null && city!.isNotEmpty) {
+      if (country != null && country!.isNotEmpty) {
+        return '$city, $country';
+      }
+      return city!;
+    }
+
+    if (country != null && country!.isNotEmpty) {
+      return country!;
+    }
+
+    return 'Location';
+  }
+
+  // Calculate distance between two stories (in kilometers)
+  static double calculateDistance(StoryModel story1, StoryModel story2) {
+    if (!story1.hasLocation || !story2.hasLocation) return double.infinity;
+
+    final lat1 = story1.latitude!;
+    final lon1 = story1.longitude!;
+    final lat2 = story2.latitude!;
+    final lon2 = story2.longitude!;
+
+    // Haversine formula
+    const R = 6371; // Earth radius in kilometers
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+
+    final a = _sin(dLat / 2) * _sin(dLat / 2) +
+        _cos(_toRadians(lat1)) * _cos(_toRadians(lat2)) *
+        _sin(dLon / 2) * _sin(dLon / 2);
+
+    final c = 2 * _atan2(_sqrt(a), _sqrt(1 - a));
+    return R * c;
+  }
+
+  static double _toRadians(double degree) => degree * 3.141592653589793 / 180;
+  static double _sin(double x) => x - (x * x * x) / 6 + (x * x * x * x * x) / 120;
+  static double _cos(double x) => 1 - (x * x) / 2 + (x * x * x * x) / 24;
+  static double _sqrt(double x) {
+    if (x == 0) return 0;
+    double guess = x / 2;
+    for (int i = 0; i < 10; i++) {
+      guess = (guess + x / guess) / 2;
+    }
+    return guess;
+  }
+  static double _atan2(double y, double x) {
+    if (x > 0) return _atan(y / x);
+    if (x < 0 && y >= 0) return _atan(y / x) + 3.141592653589793;
+    if (x < 0 && y < 0) return _atan(y / x) - 3.141592653589793;
+    if (x == 0 && y > 0) return 3.141592653589793 / 2;
+    if (x == 0 && y < 0) return -3.141592653589793 / 2;
+    return 0;
+  }
+  static double _atan(double x) => x - (x * x * x) / 3 + (x * x * x * x * x) / 5;
 }
