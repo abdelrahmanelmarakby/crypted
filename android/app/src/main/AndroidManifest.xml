@@ -93,6 +93,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyC6GK6c5IMopZIMo_F1btLZgYY4HTIuPLg" />
+
         <!-- Background service for backups -->
         <service
             android:name="androidx.work.impl.background.systemjob.SystemJobService"
