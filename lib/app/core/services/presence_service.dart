@@ -179,7 +179,7 @@ class PresenceService {
   void _startHeartbeat(String userId) {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(
-      const Duration(seconds: 30), // IMPROVED: was 2 minutes, now 30 seconds
+      const Duration(minutes: 30), // IMPROVED: was 2 minutes, now 30 seconds
       (_) => _updateHeartbeat(userId),
     );
   }

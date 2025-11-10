@@ -339,25 +339,8 @@ class _ChatRowState extends State<ChatRow> {
 
     return CupertinoContextMenu(
       enableHapticFeedback: true,
-      previewBuilder: (context, animation, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: ColorsManager.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: child,
-          ),
-        );
-      },
+
+      
       actions: [
         CupertinoContextMenuAction(
           onPressed: () {
@@ -570,8 +553,8 @@ class _ChatRowState extends State<ChatRow> {
             ),
           ),
         ),
-      ),
-    );
+      ));
+    
   }
 
   /// Get the appropriate display name for the chat

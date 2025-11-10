@@ -32,7 +32,7 @@ class UploadingMessage extends Message {
   @override
   Map<String, dynamic> toMap() {
     return {
-      ...super.toMap(),
+      ...super.baseMap(),
       'type': 'uploading',
       'filePath': filePath,
       'fileName': fileName,

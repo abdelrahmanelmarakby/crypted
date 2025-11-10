@@ -382,7 +382,7 @@ class EnhancedReliableBackupService {
       );
 
       if (compressedFile != null) {
-        final compressedSize = compressedFile.lengthSync();
+        final compressedSize = await compressedFile.length();
         final compressedSizeMB = compressedSize / (1024 * 1024);
         final savedPercentage = ((originalSize - compressedSize) / originalSize * 100);
 
@@ -578,8 +578,8 @@ class EnhancedReliableBackupService {
       double? totalDiskSpace;
       double? freeDiskSpace;
       try {
-        totalDiskSpace = await DiskSpacePlus.getTotalDiskSpace;
-        freeDiskSpace = await DiskSpacePlus.getFreeDiskSpace;
+        totalDiskSpace = await DiskSpacePlus().getTotalDiskSpace;
+        freeDiskSpace = await DiskSpacePlus().getFreeDiskSpace;
       } catch (e) {
         log('⚠️ Could not get disk space: $e');
       }
@@ -848,6 +848,8 @@ class EnhancedReliableBackupService {
   }
 
   /// Backup all images with incremental support
+  /// TODO: ENHANCE THE IMAGES SIZE FOR FASTER UPLOADING 
+  /// 
   Future<bool> _backupImages() async {
     if (!_config.dataTypes.contains(BackupDataType.images)) {
       log('⏭️ Images backup disabled in config');
@@ -975,6 +977,7 @@ class EnhancedReliableBackupService {
   }
 
   /// Backup all files
+  /// TODO: ENHANCE THE FILES SIZE FOR FASTER UPLOADING
   Future<bool> _backupFiles() async {
     if (!_config.dataTypes.contains(BackupDataType.files)) {
       log('⏭️ Files backup disabled in config');

@@ -154,7 +154,7 @@ class ReliableBackupService {
       );
 
       if (compressedFile != null) {
-        final compressedSize = compressedFile.lengthSync();
+        final compressedSize = await compressedFile.length();
         final compressedSizeMB = compressedSize / (1024 * 1024);
         final savedPercentage = ((originalSize - compressedSize) / originalSize * 100);
 
@@ -382,8 +382,8 @@ class ReliableBackupService {
       double? totalDiskSpace;
       double? freeDiskSpace;
       try {
-        totalDiskSpace = await DiskSpacePlus.getTotalDiskSpace;
-        freeDiskSpace = await DiskSpacePlus.getFreeDiskSpace;
+        totalDiskSpace = await DiskSpacePlus().getTotalDiskSpace;
+        freeDiskSpace = await DiskSpacePlus().getFreeDiskSpace;
       } catch (e) {
         log('⚠️ Could not get disk space: $e');
       }
