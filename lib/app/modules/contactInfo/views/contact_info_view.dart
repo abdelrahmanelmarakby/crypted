@@ -59,11 +59,6 @@ class ContactInfoView extends GetView<ContactInfoController> {
             SizedBox(height: Sizes.size10),
             CustomNotificationThemeSection(),
             SizedBox(height: Sizes.size10),
-            CustomPrivacySection(
-              onChanged: controller.toggleShowNotification,
-              switchValue: controller.isLockContactInfoEnabled,
-            ),
-            SizedBox(height: Sizes.size10),
             _buildExtrasSection(),
           ],
         ),

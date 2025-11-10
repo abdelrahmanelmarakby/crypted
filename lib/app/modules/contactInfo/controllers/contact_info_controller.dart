@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
@@ -12,10 +13,10 @@ import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ContactInfoController extends GetxController {
-  var isLockContactInfoEnabled = false.obs;
-
   // Contact data - can be either user or group
   final Rx<SocialMediaUser?> user = Rx<SocialMediaUser?>(null);
 
@@ -113,10 +114,6 @@ class ContactInfoController extends GetxController {
     } catch (e) {
       print("❌ Error loading chat status: $e");
     }
-  }
-
-  void toggleShowNotification(bool value) {
-    isLockContactInfoEnabled.value = value;
   }
 
   /// Refresh contact data
@@ -884,49 +881,31 @@ class ContactInfoController extends GetxController {
         exportContent = await _exportAsJSON(messages);
       }
 
-      // Save to device storage (using share functionality)
-      // For now, we'll just copy to clipboard and show a message
-      // In production, you would use packages like path_provider and share_plus
+      // Save to device storage and share
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'chat_export_${displayName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.$exportFormat';
+      final filePath = '${directory.path}/$fileName';
+
+      // Write file to storage
+      final file = File(filePath);
+      await file.writeAsString(exportContent);
 
       Get.back(); // Close loading snackbar
 
-      Get.dialog(
-        AlertDialog(
-          title: const Text("Export Ready"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Exported ${messages.length} messages"),
-              const SizedBox(height: 16),
-              const Text("Export content has been generated."),
-              const SizedBox(height: 8),
-              Text(
-                "Format: ${exportFormat.toUpperCase()}",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text("Close"),
-            ),
-            TextButton(
-              onPressed: () {
-                // Copy to clipboard (simplified implementation)
-                // In production, use Clipboard.setData()
-                Get.back();
-                Get.snackbar(
-                  "Note",
-                  "In production version, this would save/share the file",
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-              },
-              child: const Text("Share"),
-            ),
-          ],
-        ),
+      // Share the file
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        subject: 'Chat Export - $displayName',
+        text: 'Exported ${messages.length} messages from $displayName',
+      );
+
+      Get.snackbar(
+        "Success",
+        "Chat exported successfully!\nExported ${messages.length} messages",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
       );
     } catch (e) {
       print("❌ Error exporting chat: $e");

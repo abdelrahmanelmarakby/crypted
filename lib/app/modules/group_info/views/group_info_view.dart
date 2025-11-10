@@ -74,15 +74,8 @@ class GroupInfoView extends GetView<GroupInfoController> {
                     ProfileHeader(),
                     SizedBox(height: Sizes.size10),
                     StatusSection(),
-                    // SizedBox(height: Sizes.size10),
-                    // _buildContactDetailsSection(),
-                    // SizedBox(height: Sizes.size10),
-                    // CustomNotificationThemeSection(),
-                    // SizedBox(height: Sizes.size10),
-                    // CustomPrivacySection(
-                    //   onChanged: controller.toggleShowNotification,
-                    //   switchValue: controller.isLockContactInfoEnabled,
-                    // ),
+                    SizedBox(height: Sizes.size10),
+                    _buildContactDetailsSection(),
                     SizedBox(height: Sizes.size10),
                     Align(
                       alignment: Alignment.centerLeft,
@@ -119,9 +112,15 @@ class GroupInfoView extends GetView<GroupInfoController> {
                     SizedBox(height: Sizes.size10),
                     CustomContainer(
                       children: [
-                        _buildredChoise(Constants.kExitgroup.tr),
+                        GestureDetector(
+                          onTap: controller.exitGroup,
+                          child: _buildredChoise(Constants.kExitgroup.tr),
+                        ),
                         buildDivider(),
-                        _buildredChoise(Constants.kReportgroup.tr),
+                        GestureDetector(
+                          onTap: controller.reportGroup,
+                          child: _buildredChoise(Constants.kReportgroup.tr),
+                        ),
                         SizedBox(height: Sizes.size10),
                       ],
                     ),
@@ -167,16 +166,22 @@ class GroupInfoView extends GetView<GroupInfoController> {
   Widget _buildContactDetailsSection() {
     return CustomContainer(
       children: [
-        CustomInfoItem(
-          image: 'assets/icons/fi_833281.svg',
-          title: Constants.kmediaLinksdocuments.tr,
-          type: '9',
+        GestureDetector(
+          onTap: controller.viewMediaLinksDocuments,
+          child: CustomInfoItem(
+            image: 'assets/icons/fi_833281.svg',
+            title: Constants.kmediaLinksdocuments.tr,
+            type: '9',
+          ),
         ),
         buildDivider(),
-        CustomInfoItem(
-          image: 'assets/icons/star.svg',
-          title: Constants.kstarredmessages.tr,
-          type: '9',
+        GestureDetector(
+          onTap: controller.viewStarredMessages,
+          child: CustomInfoItem(
+            image: 'assets/icons/star.svg',
+            title: Constants.kstarredmessages.tr,
+            type: '9',
+          ),
         ),
       ],
     );
