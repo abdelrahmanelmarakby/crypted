@@ -27,11 +27,16 @@ import 'package:crypted_app/core/constant.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/core/locale/constant.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
   await initializeDateFormatting('ar', 'null');
   await initializeDateFormatting('en', 'null');
 
