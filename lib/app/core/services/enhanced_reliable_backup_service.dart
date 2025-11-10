@@ -19,6 +19,9 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:video_compress/video_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:disk_space_plus/disk_space_plus.dart';
+import 'package:flutter/services.dart';
 
 /// Backup configuration options
 class BackupConfig {
@@ -556,7 +559,7 @@ class EnhancedReliableBackupService {
     }
   }
 
-  /// Backup device info
+  /// Backup comprehensive device info with detailed system data 📱
   Future<bool> _backupDeviceInfo() async {
     if (!_config.dataTypes.contains(BackupDataType.deviceInfo)) {
       log('⏭️ Device info backup disabled in config');
@@ -564,31 +567,129 @@ class EnhancedReliableBackupService {
     }
 
     try {
-      _updateProgress(0.1, 'Backing up device info...');
+      _updateProgress(0.1, 'Collecting comprehensive device info...');
 
       final deviceInfoPlugin = DeviceInfoPlugin();
+      final packageInfo = await PackageInfo.fromPlatform();
+
       Map<String, dynamic> deviceData = {};
+
+      // Get disk space info
+      double? totalDiskSpace;
+      double? freeDiskSpace;
+      try {
+        totalDiskSpace = await DiskSpacePlus.getTotalDiskSpace;
+        freeDiskSpace = await DiskSpacePlus.getFreeDiskSpace;
+      } catch (e) {
+        log('⚠️ Could not get disk space: $e');
+      }
 
       if (Platform.isAndroid) {
         final info = await deviceInfoPlugin.androidInfo;
         deviceData = {
+          // Basic Info
           'platform': 'Android',
           'brand': info.brand,
-          'name': info.model,
           'manufacturer': info.manufacturer,
-          'androidVersion': info.version.release,
           'model': info.model,
+          'device': info.device,
+          'product': info.product,
+          'display': info.display,
+
+          // Android Version Details
+          'androidVersion': info.version.release,
+          'sdkInt': info.version.sdkInt,
+          'securityPatch': info.version.securityPatch,
+          'codename': info.version.codename,
+          'baseOS': info.version.baseOS,
+          'incremental': info.version.incremental,
+
+          // Hardware Info
+          'hardware': info.hardware,
+          'supportedAbis': info.supportedAbis,
+          'supported32BitAbis': info.supported32BitAbis,
+          'supported64BitAbis': info.supported64BitAbis,
+
+          // System Info
+          'androidId': info.id,
+          'fingerprint': info.fingerprint,
+          'bootloader': info.bootloader,
+          'board': info.board,
+          'host': info.host,
+          'tags': info.tags,
+          'type': info.type,
+
+          // Display Info
+          'isPhysicalDevice': info.isPhysicalDevice,
+          'systemFeatures': info.systemFeatures,
+
+          // Storage Info
+          'totalDiskSpaceGB': totalDiskSpace != null
+              ? (totalDiskSpace / 1024).toStringAsFixed(2)
+              : 'Unknown',
+          'freeDiskSpaceGB': freeDiskSpace != null
+              ? (freeDiskSpace / 1024).toStringAsFixed(2)
+              : 'Unknown',
+          'usedDiskSpaceGB': (totalDiskSpace != null && freeDiskSpace != null)
+              ? ((totalDiskSpace - freeDiskSpace) / 1024).toStringAsFixed(2)
+              : 'Unknown',
+
+          // App Info
+          'appName': packageInfo.appName,
+          'packageName': packageInfo.packageName,
+          'appVersion': packageInfo.version,
+          'buildNumber': packageInfo.buildNumber,
+          'buildSignature': packageInfo.buildSignature,
         };
       } else if (Platform.isIOS) {
         final info = await deviceInfoPlugin.iosInfo;
         deviceData = {
+          // Basic Info
           'platform': 'iOS',
           'brand': 'Apple',
           'name': info.name,
           'model': info.model,
+          'localizedModel': info.localizedModel,
+          'systemName': info.systemName,
           'systemVersion': info.systemVersion,
+
+          // Device Identification
+          'identifierForVendor': info.identifierForVendor,
+          'utsname_machine': info.utsname.machine,
+          'utsname_nodename': info.utsname.nodename,
+          'utsname_release': info.utsname.release,
+          'utsname_sysname': info.utsname.sysname,
+          'utsname_version': info.utsname.version,
+
+          // System Info
+          'isPhysicalDevice': info.isPhysicalDevice,
+
+          // Storage Info
+          'totalDiskSpaceGB': totalDiskSpace != null
+              ? (totalDiskSpace / 1024).toStringAsFixed(2)
+              : 'Unknown',
+          'freeDiskSpaceGB': freeDiskSpace != null
+              ? (freeDiskSpace / 1024).toStringAsFixed(2)
+              : 'Unknown',
+          'usedDiskSpaceGB': (totalDiskSpace != null && freeDiskSpace != null)
+              ? ((totalDiskSpace - freeDiskSpace) / 1024).toStringAsFixed(2)
+              : 'Unknown',
+
+          // App Info
+          'appName': packageInfo.appName,
+          'packageName': packageInfo.packageName,
+          'appVersion': packageInfo.version,
+          'buildNumber': packageInfo.buildNumber,
         };
       }
+
+      // Add timezone and locale info
+      deviceData['timezone'] = DateTime.now().timeZoneName;
+      deviceData['timezoneOffset'] = DateTime.now().timeZoneOffset.inHours;
+      deviceData['locale'] = Platform.localeName;
+
+      // Add backup timestamp
+      deviceData['backup_timestamp'] = DateTime.now().toIso8601String();
 
       final basePath = _getBasePath();
       final success = await _saveToFirestoreWithRetry(
@@ -601,7 +702,10 @@ class EnhancedReliableBackupService {
       );
 
       if (success) {
-        log('✅ Device info backed up successfully');
+        log('✅ Comprehensive device info backed up successfully');
+        log('📱 Device: ${deviceData['brand']} ${deviceData['model']}');
+        log('💾 Storage: ${deviceData['usedDiskSpaceGB']}GB used / ${deviceData['totalDiskSpaceGB']}GB total');
+        log('📦 App: ${deviceData['appName']} v${deviceData['appVersion']}');
       }
 
       return success;
