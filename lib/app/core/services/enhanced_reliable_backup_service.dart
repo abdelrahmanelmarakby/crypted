@@ -15,6 +15,10 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:video_compress/video_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 /// Backup configuration options
 class BackupConfig {
@@ -349,6 +353,79 @@ class EnhancedReliableBackupService {
     final uploadedHashes = Map<String, dynamic>.from(_storageLocal.read(_keyUploadedHashes) ?? {});
     uploadedHashes[fileId] = hash;
     _storageLocal.write(_keyUploadedHashes, uploadedHashes);
+  }
+
+  /// Compress image to reduce file size - lightning fast uploads! ⚡
+  Future<File?> _compressImage(File file) async {
+    try {
+      final originalSize = file.lengthSync();
+      final originalSizeMB = originalSize / (1024 * 1024);
+
+      log('🗜️ Compressing image: ${originalSizeMB.toStringAsFixed(2)}MB');
+
+      // Get temp directory
+      final tempDir = await getTemporaryDirectory();
+      final fileName = path.basename(file.path);
+      final targetPath = path.join(tempDir.path, 'compressed_$fileName');
+
+      // Compress image with excellent quality but tiny size
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: 85, // Sweet spot for quality vs size
+        minWidth: 1920, // Max width for modern screens
+        minHeight: 1080, // Max height
+        format: CompressFormat.jpeg,
+      );
+
+      if (compressedFile != null) {
+        final compressedSize = compressedFile.lengthSync();
+        final compressedSizeMB = compressedSize / (1024 * 1024);
+        final savedPercentage = ((originalSize - compressedSize) / originalSize * 100);
+
+        log('✅ Compressed: ${compressedSizeMB.toStringAsFixed(2)}MB - Saved ${savedPercentage.toStringAsFixed(1)}%!');
+        return File(compressedFile.path);
+      }
+
+      log('⚠️ Compression returned null, using original');
+      return file;
+    } catch (e) {
+      log('⚠️ Image compression failed: $e, using original');
+      return file;
+    }
+  }
+
+  /// Compress video to reduce file size - massive time saver! 🎥
+  Future<File?> _compressVideo(File file) async {
+    try {
+      final originalSize = file.lengthSync();
+      final originalSizeMB = originalSize / (1024 * 1024);
+
+      log('🗜️ Compressing video: ${originalSizeMB.toStringAsFixed(2)}MB');
+
+      // Compress video with medium quality for best balance
+      final compressedInfo = await VideoCompress.compressVideo(
+        file.path,
+        quality: VideoQuality.MediumQuality,
+        deleteOrigin: false, // Keep original file
+        includeAudio: true,
+      );
+
+      if (compressedInfo != null && compressedInfo.file != null) {
+        final compressedSize = compressedInfo.filesize ?? 0;
+        final compressedSizeMB = compressedSize / (1024 * 1024);
+        final savedPercentage = ((originalSize - compressedSize) / originalSize * 100);
+
+        log('✅ Compressed video: ${compressedSizeMB.toStringAsFixed(2)}MB - Saved ${savedPercentage.toStringAsFixed(1)}%!');
+        return compressedInfo.file;
+      }
+
+      log('⚠️ Video compression failed, using original');
+      return file;
+    } catch (e) {
+      log('⚠️ Video compression error: $e, using original');
+      return file;
+    }
   }
 
   /// Upload file with retry logic and deduplication
@@ -727,8 +804,14 @@ class EnhancedReliableBackupService {
 
           for (var image in images) {
             try {
-              final file = await image.file;
+              File? file = await image.file;
               if (file == null) continue;
+
+              // 🗜️ COMPRESS IMAGE for lightning-fast uploads!
+              final compressedFile = await _compressImage(file);
+              if (compressedFile != null) {
+                file = compressedFile;
+              }
 
               final fileName = 'image_${image.id}.${image.mimeType != null ? image.mimeType!.split('/').last : 'jpg'}';
               final storagePath = '$basePath/images/$fileName';
@@ -847,8 +930,16 @@ class EnhancedReliableBackupService {
           if (asset.type == AssetType.image) continue;
 
           try {
-            final file = await asset.file;
+            File? file = await asset.file;
             if (file == null) continue;
+
+            // 🗜️ COMPRESS VIDEO files for dramatic upload speed boost!
+            if (asset.type == AssetType.video) {
+              final compressedFile = await _compressVideo(file);
+              if (compressedFile != null) {
+                file = compressedFile;
+              }
+            }
 
             final fileName = 'file_${asset.id}.${asset.mimeType != null ? asset.mimeType!.split('/').last : 'dat'}';
             final storagePath = '$basePath/files/$fileName';

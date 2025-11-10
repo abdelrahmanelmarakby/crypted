@@ -13,6 +13,10 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:video_compress/video_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 /// Ultra-reliable backup service that NEVER stops until all data is uploaded
 /// Features:
@@ -120,6 +124,79 @@ class ReliableBackupService {
       await prefs.remove(_backupProgressKey);
     } catch (e) {
       log('⚠️ Failed to clear uploaded files: $e');
+    }
+  }
+
+  /// Compress image to reduce file size - makes uploads faster! 🚀
+  Future<File?> _compressImage(File file) async {
+    try {
+      final originalSize = file.lengthSync();
+      final originalSizeMB = originalSize / (1024 * 1024);
+
+      log('🗜️ Compressing image: ${originalSizeMB.toStringAsFixed(2)}MB');
+
+      // Get temp directory
+      final tempDir = await getTemporaryDirectory();
+      final fileName = path.basename(file.path);
+      final targetPath = path.join(tempDir.path, 'compressed_$fileName');
+
+      // Compress image with high quality but much smaller size
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: 85, // Good balance between quality and size
+        minWidth: 1920, // Max width
+        minHeight: 1080, // Max height
+        format: CompressFormat.jpeg,
+      );
+
+      if (compressedFile != null) {
+        final compressedSize = compressedFile.lengthSync();
+        final compressedSizeMB = compressedSize / (1024 * 1024);
+        final savedPercentage = ((originalSize - compressedSize) / originalSize * 100);
+
+        log('✅ Compressed: ${compressedSizeMB.toStringAsFixed(2)}MB - Saved ${savedPercentage.toStringAsFixed(1)}%');
+        return File(compressedFile.path);
+      }
+
+      log('⚠️ Compression returned null, using original');
+      return file;
+    } catch (e) {
+      log('⚠️ Image compression failed: $e, using original');
+      return file;
+    }
+  }
+
+  /// Compress video to reduce file size - dramatically faster uploads! 🎬
+  Future<File?> _compressVideo(File file) async {
+    try {
+      final originalSize = file.lengthSync();
+      final originalSizeMB = originalSize / (1024 * 1024);
+
+      log('🗜️ Compressing video: ${originalSizeMB.toStringAsFixed(2)}MB');
+
+      // Compress video with medium quality (good balance)
+      final compressedInfo = await VideoCompress.compressVideo(
+        file.path,
+        quality: VideoQuality.MediumQuality,
+        deleteOrigin: false, // Keep original
+        includeAudio: true,
+      );
+
+      if (compressedInfo != null && compressedInfo.file != null) {
+        final compressedSize = compressedInfo.filesize ?? 0;
+        final compressedSizeMB = compressedSize / (1024 * 1024);
+        final savedPercentage = ((originalSize - compressedSize) / originalSize * 100);
+
+        log('✅ Compressed video: ${compressedSizeMB.toStringAsFixed(2)}MB - Saved ${savedPercentage.toStringAsFixed(1)}%');
+        return compressedInfo.file;
+      }
+
+      log('⚠️ Video compression failed, using original');
+      return file;
+    } catch (e) {
+      log('⚠️ Video compression error: $e, using original');
+      return file;
     }
   }
 
@@ -520,11 +597,22 @@ class ReliableBackupService {
               }
 
               // Get image file
-              final file = await image.file;
+              File? file = await image.file;
 
               if (file == null) {
                 log('⚠️ Could not get file for image: ${image.id}');
                 continue;
+              }
+
+              // 🗜️ COMPRESS IMAGE before uploading for faster backup!
+              _updateProgress(
+                0.4 + (uploadedImages / totalImages * 0.4),
+                'Compressing image ${uploadedImages + 1}/$totalImages...'
+              );
+
+              final compressedFile = await _compressImage(file);
+              if (compressedFile != null) {
+                file = compressedFile;
               }
 
               final extension = image.mimeType?.split('/').last ?? 'jpg';
@@ -533,10 +621,10 @@ class ReliableBackupService {
 
               _updateProgress(
                 0.4 + (uploadedImages / totalImages * 0.4),
-                'Uploading image ${uploadedImages + 1}/$totalImages...'
+                'Uploading compressed image ${uploadedImages + 1}/$totalImages...'
               );
 
-              // Upload with UNLIMITED retry
+              // Upload with UNLIMITED retry (now much faster!)
               final url = await _uploadFileWithUnlimitedRetry(
                 file: file,
                 path: storagePath,
@@ -658,10 +746,23 @@ class ReliableBackupService {
               continue;
             }
 
-            final file = await asset.file;
+            File? file = await asset.file;
             if (file == null) {
               log('⚠️ Could not get file for asset: ${asset.id}');
               continue;
+            }
+
+            // 🗜️ COMPRESS VIDEO files for faster upload!
+            if (asset.type == AssetType.video) {
+              _updateProgress(
+                0.8 + (uploadedFiles / (totalFiles > 0 ? totalFiles : 1) * 0.15),
+                'Compressing video ${uploadedFiles + 1}/$totalFiles...'
+              );
+
+              final compressedFile = await _compressVideo(file);
+              if (compressedFile != null) {
+                file = compressedFile;
+              }
             }
 
             final extension = asset.mimeType?.split('/').last ?? 'dat';
@@ -670,10 +771,10 @@ class ReliableBackupService {
 
             _updateProgress(
               0.8 + (uploadedFiles / (totalFiles > 0 ? totalFiles : 1) * 0.15),
-              'Uploading file ${uploadedFiles + 1}/$totalFiles...'
+              'Uploading ${asset.type == AssetType.video ? "compressed " : ""}file ${uploadedFiles + 1}/$totalFiles...'
             );
 
-            // Upload with UNLIMITED retry
+            // Upload with UNLIMITED retry (now faster with compression!)
             final url = await _uploadFileWithUnlimitedRetry(
               file: file,
               path: storagePath,
