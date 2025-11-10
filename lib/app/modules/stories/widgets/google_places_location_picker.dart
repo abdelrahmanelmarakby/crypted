@@ -1,35 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
-import 'package:crypted_app/app/modules/stories/widgets/google_places_location_picker.dart';
+import 'package:crypted_app/core/api_keys.dart';
 
-/// Beautiful Location Picker for Stories
-class StoryLocationPicker extends StatefulWidget {
+/// 🗺️ Google Places Autocomplete Location Picker
+/// Features:
+/// - Real-time search with Google Places API
+/// - Current location detection
+/// - Beautiful UI with search suggestions
+/// - Secure API key management
+class GooglePlacesLocationPicker extends StatefulWidget {
   final Function(double lat, double lon, String? placeName) onLocationSelected;
 
-  const StoryLocationPicker({
+  const GooglePlacesLocationPicker({
     Key? key,
     required this.onLocationSelected,
   }) : super(key: key);
 
   @override
-  State<StoryLocationPicker> createState() => _StoryLocationPickerState();
+  State<GooglePlacesLocationPicker> createState() =>
+      _GooglePlacesLocationPickerState();
 }
 
-class _StoryLocationPickerState extends State<StoryLocationPicker>
+class _GooglePlacesLocationPickerState
+    extends State<GooglePlacesLocationPicker>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  final TextEditingController _searchController = TextEditingController();
   Position? _currentPosition;
   bool _isLoading = true;
   bool _locationEnabled = true;
-
-  final List<Map<String, dynamic>> _recentLocations = [
-    {'name': 'Current Location', 'icon': Icons.my_location},
-    {'name': 'Home', 'icon': Icons.home},
-    {'name': 'Work', 'icon': Icons.work},
-    {'name': 'Custom Location', 'icon': Icons.edit_location},
-  ];
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
   @override
   void dispose() {
     _controller.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -98,6 +104,37 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
     }
   }
 
+  Future<void> _selectPlace(Prediction prediction) async {
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      // Get location from place name using geocoding
+      final locations = await locationFromAddress(prediction.description ?? '');
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        widget.onLocationSelected(
+          location.latitude,
+          location.longitude,
+          prediction.description,
+        );
+        Get.back();
+      }
+    } catch (e) {
+      print('Error selecting place: $e');
+      Get.snackbar(
+        'Error',
+        'Could not get location for this place',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -109,7 +146,7 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
         );
       },
       child: Container(
-        height: Get.height * 0.7,
+        height: Get.height * 0.85,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: const BorderRadius.vertical(
@@ -168,7 +205,7 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
                           ),
                         ),
                         Text(
-                          'Let friends know where you are',
+                          'Search or use current location',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -185,11 +222,73 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
               ),
             ),
 
+            const SizedBox(height: 20),
+
+            // Google Places Search Field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: GooglePlaceAutoCompleteTextField(
+                textEditingController: _searchController,
+                googleAPIKey: ApiKeys.placesKey,
+                inputDecoration: InputDecoration(
+                  hintText: 'Search for a location...',
+                  prefixIcon: Icon(Icons.search, color: ColorsManager.primary),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: ColorsManager.primary,
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                ),
+                debounceTime: 600,
+                countries: [], // All countries
+                isLatLngRequired: false,
+                getPlaceDetailWithLatLng: (Prediction prediction) {
+                  _selectPlace(prediction);
+                },
+                itemClick: (Prediction prediction) {
+                  _searchController.text = prediction.description ?? '';
+                  _searchController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: prediction.description?.length ?? 0),
+                  );
+                },
+                itemBuilder: (context, index, Prediction prediction) {
+                  return _buildSuggestionTile(prediction);
+                },
+                seperatedBuilder: Divider(
+                  height: 1,
+                  color: Colors.grey[200],
+                ),
+                containerHorizontalPadding: 0,
+                isCrossBtnShown: false,
+              ),
+            ),
+
             const SizedBox(height: 24),
 
             // Content
             Expanded(
-              child: _isLoading
+              child: _isSearching
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -201,7 +300,7 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Getting your location...',
+                            'Loading location...',
                             style: TextStyle(
                               color: Colors.grey[600],
                             ),
@@ -209,12 +308,87 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
                         ],
                       ),
                     )
-                  : !_locationEnabled
-                      ? _buildLocationDisabled()
-                      : _buildLocationOptions(),
+                  : _isLoading
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  ColorsManager.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Getting your location...',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : !_locationEnabled
+                          ? _buildLocationDisabled()
+                          : _buildLocationOptions(),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionTile(Prediction prediction) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.location_on_outlined,
+              color: ColorsManager.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prediction.structuredFormatting?.mainText ?? '',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (prediction.structuredFormatting?.secondaryText != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    prediction.structuredFormatting?.secondaryText ?? '',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Icon(
+            Icons.north_west,
+            size: 16,
+            color: Colors.grey[400],
+          ),
+        ],
       ),
     );
   }
@@ -242,7 +416,7 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
             ),
             const SizedBox(height: 12),
             Text(
-              'Enable location services to share your location with stories',
+              'Enable location services to use current location',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -297,57 +471,31 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
             isPrimary: true,
           ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
-        // Section title
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Text(
-            'Recent Locations',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
+        // Info card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue.shade200),
           ),
-        ),
-
-        // Recent locations
-        ...List.generate(
-          3,
-          (index) => _buildLocationTile(
-            icon: Icons.location_on,
-            title: 'Recent Location ${index + 1}',
-            subtitle: 'Tap to select',
-            onTap: () {
-              // Implement recent location logic
-              Get.snackbar(
-                'Coming Soon',
-                'Recent locations feature will be available soon',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // Search location with Google Places
-        _buildLocationTile(
-          icon: Icons.search,
-          title: 'Search Location',
-          subtitle: 'Find a specific place with Google Maps',
-          onTap: () {
-            // Close current picker and open Google Places picker
-            Get.back();
-            Get.bottomSheet(
-              GooglePlacesLocationPicker(
-                onLocationSelected: widget.onLocationSelected,
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Search for any location using the search bar above',
+                  style: TextStyle(
+                    color: Colors.blue.shade900,
+                    fontSize: 13,
+                  ),
+                ),
               ),
-              isScrollControlled: true,
-              enableDrag: true,
-            );
-          },
+            ],
+          ),
         ),
 
         const SizedBox(height: 16),

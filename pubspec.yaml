@@ -31,6 +31,8 @@ dependencies:
 
   geolocator: ^13.0.3
   geocoding: ^3.0.0
+  google_maps_flutter: ^2.5.0
+  google_places_flutter: ^2.0.9
   crypto: ^3.0.3
   flutter_native_contact_picker: ^0.0.10
   story: ^1.1.0
