@@ -11,14 +11,14 @@ This project uses Google Maps and Places APIs for location features. Follow thes
 
 ## Security Implementation
 
-The API keys are **NOT committed to version control** for security reasons. They are stored in a gitignored file.
+The API keys are **NOT committed to version control** for security reasons. They are stored in a `.env` file which is git-ignored.
 
 ### File Structure
 
 ```
-lib/core/
-├── api_keys.dart           # ❌ Git-ignored (contains actual keys)
-└── api_keys.template.dart  # ✅ Committed (template file)
+.
+├── .env              # ❌ Git-ignored (contains actual keys)
+└── .env.template     # ✅ Committed (template file)
 ```
 
 ## Setup Instructions
@@ -61,26 +61,25 @@ Enable only the APIs you need:
 
 ### 3. Configure the API Key in Your Project
 
-The API key file `lib/core/api_keys.dart` should already exist with your key. If not:
+The `.env` file should already exist with your key. If not:
 
 1. Copy the template file:
    ```bash
-   cp lib/core/api_keys.template.dart lib/core/api_keys.dart
+   cp .env.template .env
    ```
 
-2. Edit `lib/core/api_keys.dart` and replace the placeholder:
-   ```dart
-   class ApiKeys {
-     static const String googleMapsApiKey = 'YOUR_ACTUAL_API_KEY_HERE';
-     // ...
-   }
+2. Edit `.env` and replace the placeholder:
+   ```env
+   GOOGLE_MAPS_API_KEY=YOUR_ACTUAL_API_KEY_HERE
    ```
 
 3. **VERIFY** the file is git-ignored:
    ```bash
    git status
-   # api_keys.dart should NOT appear in the list
+   # .env should NOT appear in the list
    ```
+
+4. Run `flutter pub get` to ensure `flutter_dotenv` package is installed
 
 ### 4. Platform-Specific Setup
 
@@ -117,6 +116,10 @@ override func application(
 
 ```dart
 import 'package:crypted_app/app/modules/stories/widgets/google_places_location_picker.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Ensure .env is loaded in main.dart:
+// await dotenv.load(fileName: ".env");
 
 // Show location picker
 Get.bottomSheet(
@@ -157,7 +160,8 @@ Location messages automatically display Google Maps static images and are tappab
 ## Troubleshooting
 
 ### Maps not loading?
-- Verify API key is correctly set in both `api_keys.dart` and platform manifests
+- Verify API key is correctly set in `.env` file and platform manifests (AndroidManifest.xml, AppDelegate.swift)
+- Ensure `.env` file is loaded in `main.dart`: `await dotenv.load(fileName: ".env");`
 - Check API restrictions match your app's package name/bundle ID
 - Ensure all required APIs are enabled in Google Cloud Console
 - Check logcat (Android) or Xcode console (iOS) for error messages
@@ -184,14 +188,15 @@ Google Maps APIs have a free tier:
 ## Security Best Practices
 
 ✅ **DO:**
-- Keep `api_keys.dart` git-ignored
+- Keep `.env` file git-ignored
+- Use `.env` for environment variables (industry standard)
 - Restrict API keys to specific apps/domains
 - Enable only necessary APIs
 - Monitor usage regularly
 - Rotate keys if compromised
 
 ❌ **DON'T:**
-- Commit API keys to version control
+- Commit `.env` file or API keys to version control
 - Share keys publicly
 - Use unrestricted API keys
 - Hardcode keys in multiple places

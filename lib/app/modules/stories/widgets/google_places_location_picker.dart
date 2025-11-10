@@ -5,7 +5,7 @@ import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
-import 'package:crypted_app/core/api_keys.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// 🗺️ Google Places Autocomplete Location Picker
 /// Features:
@@ -229,7 +229,7 @@ class _GooglePlacesLocationPickerState
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: GooglePlaceAutoCompleteTextField(
                 textEditingController: _searchController,
-                googleAPIKey: ApiKeys.placesKey,
+                googleAPIKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
                 inputDecoration: InputDecoration(
                   hintText: 'Search for a location...',
                   prefixIcon: Icon(Icons.search, color: ColorsManager.primary),

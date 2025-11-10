@@ -44,6 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# API Keys (SECURITY: Never commit these!)
+# Environment variables and API Keys (SECURITY: Never commit these!)
+.env
+.env.local
+.env.*.local
 lib/core/api_keys.dart
 **/api_keys.dart
