@@ -4,6 +4,7 @@ import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
+import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -82,68 +83,37 @@ class _ChatRowState extends State<ChatRow> {
       return;
     }
 
-    // Show confirmation dialog for blocking
-    final confirmResult = await Get.dialog<bool>(
-      AlertDialog(
-        title: Text(
-          'Block User',
-          style: TextStyle(
-            fontSize: FontSize.medium,
-            fontWeight: FontWeights.bold,
-            color: ColorsManager.red,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to block ${otherUser.fullName}? You won\'t receive messages from this user anymore.',
-          style: TextStyle(
-            fontSize: FontSize.small,
-            color: ColorsManager.black,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: ColorsManager.grey,
-                fontSize: FontSize.small,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: Text(
-              'Block',
-              style: TextStyle(
-                color: ColorsManager.red,
-                fontSize: FontSize.small,
-                fontWeight: FontWeights.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    // Show confirmation bottom sheet for blocking
+    final confirmResult = await CustomBottomSheets.showConfirmation(
+      title: 'Block User',
+      message: 'Are you sure you want to block ${otherUser.fullName}? You won\'t receive messages from this user anymore.',
+      subtitle: 'This action can be reversed later',
+      confirmText: 'Block',
+      cancelText: 'Cancel',
+      icon: Icons.block,
+      isDanger: true,
     );
 
     if (confirmResult != true) return;
 
     setState(() => _isLoading = true);
+
+    // Show loading bottom sheet
+    CustomBottomSheets.showLoading(message: 'Blocking user...');
+
     try {
       await chatDataSource.blockUser(widget.chatRoom?.id ?? '', otherUser.uid ?? '');
 
+      // Close loading
+      CustomBottomSheets.closeLoading();
+
       if (mounted) {
-        Get.snackbar(
-          'User Blocked',
-          '${otherUser.fullName} has been blocked. You won\'t receive messages from this user.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: ColorsManager.primary,
-          colorText: ColorsManager.white,
-          duration: const Duration(seconds: 3),
-        );
         setState(() {});
       }
     } catch (e) {
+      // Close loading
+      CustomBottomSheets.closeLoading();
+
       if (mounted) {
         Get.snackbar(
           'Error',
@@ -152,6 +122,7 @@ class _ChatRowState extends State<ChatRow> {
           backgroundColor: ColorsManager.red,
           colorText: ColorsManager.white,
           duration: const Duration(seconds: 3),
+          icon: Icon(Icons.error, color: ColorsManager.white),
         );
       }
     } finally {
@@ -230,148 +201,56 @@ class _ChatRowState extends State<ChatRow> {
   Future<void> _deleteChat() async {
     if (_isLoading) return;
 
-    // Enhanced confirmation dialog for delete
-    final confirmResult = await Get.dialog<bool>(
-      AlertDialog(
-        title: Text(
-          'Delete Chat',
-          style: TextStyle(
-            fontSize: FontSize.medium,
-            fontWeight: FontWeights.bold,
-            color: ColorsManager.red,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This action cannot be undone.',
-              style: TextStyle(
-                fontSize: FontSize.small,
-                fontWeight: FontWeights.bold,
-                color: ColorsManager.red,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Are you sure you want to delete this chat? All messages will be permanently removed.',
-              style: TextStyle(
-                fontSize: FontSize.small,
-                color: ColorsManager.black,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: ColorsManager.grey,
-                fontSize: FontSize.small,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: Text(
-              'Delete Forever',
-              style: TextStyle(
-                color: ColorsManager.red,
-                fontSize: FontSize.small,
-                fontWeight: FontWeights.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    // Enhanced confirmation bottom sheet for delete
+    final confirmResult = await CustomBottomSheets.showConfirmation(
+      title: 'Delete Chat',
+      message: 'Are you sure you want to delete this chat? All messages will be permanently removed.',
+      subtitle: '⚠️ This action cannot be undone',
+      confirmText: 'Delete Forever',
+      cancelText: 'Cancel',
+      icon: Icons.delete_forever,
+      isDanger: true,
     );
 
     if (confirmResult != true) return;
 
     setState(() => _isLoading = true);
+
+    // Show loading bottom sheet
+    CustomBottomSheets.showLoading(
+      message: widget.chatRoom?.isGroupChat == true
+          ? 'Deleting group chat...'
+          : 'Deleting chat...',
+    );
+
     try {
       print("🔄 Attempting to delete chat room: ${widget.chatRoom?.id}");
-
-      // Show loading indicator
-      Get.dialog(
-        Center(
-          child: Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Deleting chat...',
-                  style: TextStyle(
-                    fontSize: FontSize.small,
-                    color: ColorsManager.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        barrierDismissible: false,
-      );
 
       // Delete the chat room and all its messages
       final success = await chatDataSource.deleteRoom(widget.chatRoom?.id ?? '');
 
-      // Close loading dialog
-      Get.back();
+      // Close loading bottom sheet
+      CustomBottomSheets.closeLoading();
 
-      if (success) {
-        if (mounted) {
-          Get.snackbar(
-            'Chat Deleted',
-            widget.chatRoom?.isGroupChat == true
-                ? 'Group chat deleted successfully'
-                : 'Chat deleted successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: ColorsManager.primary,
-            colorText: ColorsManager.white,
-            duration: const Duration(seconds: 3),
-          );
-          // The chat list will be automatically updated via the stream
-          // No need to manually refresh
-        }
-      } else {
+      if (!success) {
         throw Exception('Delete operation failed');
       }
+      // The chat list will be automatically updated via the stream
     } catch (e) {
-      print('Error deleting chat: $e');
+      print('❌ Error deleting chat: $e');
 
-      // Close loading dialog if it's still open
-      if (Get.isDialogOpen == true) {
-        Get.back();
-      }
+      // Close loading bottom sheet if still open
+      CustomBottomSheets.closeLoading();
 
       if (mounted) {
         Get.snackbar(
           'Delete Failed',
-          'Failed to delete chat: ${e.toString()}',
+          'Failed to delete chat. Please try again.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.red,
           colorText: ColorsManager.white,
           duration: const Duration(seconds: 4),
+          icon: Icon(Icons.error, color: ColorsManager.white),
         );
       }
     } finally {
@@ -379,60 +258,161 @@ class _ChatRowState extends State<ChatRow> {
     }
   }
 
+  /// Show chat actions bottom sheet
+  void _showChatActions() {
+    final isGroupChat = widget.chatRoom?.isGroupChat == true;
+    final isPinned = widget.chatRoom?.isPinned == true;
+    final isMuted = widget.chatRoom?.isMuted == true;
+    final isFavorite = widget.chatRoom?.isFavorite == true;
+    final isArchived = widget.chatRoom?.isArchived == true;
+
+    List<BottomSheetAction> actions = [];
+
+    // Pin/Unpin action
+    actions.add(BottomSheetAction(
+      title: isPinned ? 'Unpin Chat' : 'Pin Chat',
+      icon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+      iconColor: ColorsManager.primary,
+      onTap: _togglePin,
+    ));
+
+    // Mute action (for group chats)
+    if (isGroupChat) {
+      actions.add(BottomSheetAction(
+        title: isMuted ? 'Unmute Chat' : 'Mute Chat',
+        icon: isMuted ? Icons.notifications_active : Icons.notifications_off,
+        iconColor: ColorsManager.primary,
+        onTap: _toggleMute,
+      ));
+    }
+
+    // Favorite action
+    actions.add(BottomSheetAction(
+      title: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+      icon: isFavorite ? Icons.favorite : Icons.favorite_border,
+      iconColor: ColorsManager.red,
+      onTap: _toggleFavorite,
+    ));
+
+    // Archive action
+    actions.add(BottomSheetAction(
+      title: isArchived ? 'Unarchive Chat' : 'Archive Chat',
+      icon: isArchived ? Icons.unarchive : Icons.archive,
+      iconColor: ColorsManager.grey,
+      onTap: _toggleArchive,
+    ));
+
+    // Block action (only for private chats)
+    if (!isGroupChat) {
+      actions.add(BottomSheetAction(
+        title: 'Block User',
+        icon: Icons.block,
+        iconColor: ColorsManager.red,
+        onTap: _blockUser,
+        isDestructive: true,
+      ));
+    }
+
+    // Delete action
+    actions.add(BottomSheetAction(
+      title: 'Delete Chat',
+      icon: Icons.delete_forever,
+      iconColor: ColorsManager.red,
+      onTap: _deleteChat,
+      isDestructive: true,
+    ));
+
+    CustomBottomSheets.showActionSheet(
+      title: isGroupChat ? 'Group Chat Actions' : 'Chat Actions',
+      subtitle: _getChatDisplayName(),
+      actions: actions,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      child: CupertinoContextMenu(
-        actions: <Widget>[
-          
-          if (widget.chatRoom?.isGroupChat == true)
-            CupertinoContextMenuAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _toggleMute();
-              },
-              child: Text('Mute'),
-            ),
+    final isGroupChat = widget.chatRoom?.isGroupChat == true;
+    final isPinned = widget.chatRoom?.isPinned == true;
+    final isMuted = widget.chatRoom?.isMuted == true;
+    final isFavorite = widget.chatRoom?.isFavorite == true;
+    final isArchived = widget.chatRoom?.isArchived == true;
+
+    return CupertinoContextMenu(
+      enableHapticFeedback: true,
+      previewBuilder: (context, animation, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: ColorsManager.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: child,
+          ),
+        );
+      },
+      actions: [
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _togglePin();
+          },
+          trailingIcon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+          child: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
+        ),
+        if (isGroupChat)
           CupertinoContextMenuAction(
             onPressed: () {
               Navigator.pop(context);
-              _togglePin();
+              _toggleMute();
             },
-            child: Text('Pin'),
+            trailingIcon: isMuted ? Icons.notifications_active : Icons.notifications_off,
+            child: Text(isMuted ? 'Unmute Chat' : 'Mute Chat'),
           ),
-          if (widget.chatRoom?.isGroupChat != true)
-            CupertinoContextMenuAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _blockUser();
-              },
-              child: Text('Block'),
-            ),
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _toggleFavorite();
+          },
+          trailingIcon: isFavorite ? Icons.favorite : Icons.favorite_border,
+          child: Text(isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
+        ),
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _toggleArchive();
+          },
+          trailingIcon: isArchived ? Icons.unarchive : Icons.archive,
+          child: Text(isArchived ? 'Unarchive Chat' : 'Archive Chat'),
+        ),
+        if (!isGroupChat)
           CupertinoContextMenuAction(
             onPressed: () {
               Navigator.pop(context);
-              _toggleFavorite();
+              _blockUser();
             },
-            child: Text('Favorite'),
+            trailingIcon: Icons.block,
+            isDestructiveAction: true,
+            child: const Text('Block User'),
           ),
-          CupertinoContextMenuAction(
-            onPressed: () {
-              Navigator.pop(context);
-              _toggleArchive();
-            },
-            child: Text('Archive'),
-          ),
-          CupertinoContextMenuAction(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteChat();
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: ColorsManager.red),
-            ),
-          ),
-        ],
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _deleteChat();
+          },
+          trailingIcon: Icons.delete_forever,
+          isDestructiveAction: true,
+          child: const Text('Delete Chat'),
+        ),
+      ],
+      child: Material(
         child: Container(
           padding: const EdgeInsets.symmetric(
               horizontal: Paddings.xSmall, vertical: Paddings.normal),
@@ -444,7 +424,7 @@ class _ChatRowState extends State<ChatRow> {
             ),
           ),
           child: Material(
-            child: GestureDetector(
+            child: InkWell(
               onTap: () {
                 Map<String, dynamic> arg = {
                   'members': widget.chatRoom?.members,
@@ -459,23 +439,10 @@ class _ChatRowState extends State<ChatRow> {
                   SizedBox(
                     width: 48,
                     height: 48,
-                    child: GestureDetector(
-                      onTap: () {
-                        Get.toNamed(
-                          Routes.CHAT,
-                          arguments: {
-                            "user": _getChatDisplayUser(),
-                            "roomId": widget.chatRoom?.id,
-                            "members": widget.chatRoom?.members,
-                            "isGroupChat": widget.chatRoom?.isGroupChat,
-                          },
-                        );
-                      },
-                      child: ClipOval(
-                        child: widget.chatRoom?.isGroupChat == true
-                            ? _buildGroupAvatar()
-                            : _buildPrivateAvatar(),
-                      ),
+                    child: ClipOval(
+                      child: widget.chatRoom?.isGroupChat == true
+                          ? _buildGroupAvatar()
+                          : _buildPrivateAvatar(),
                     ),
                   ),
                   SizedBox(width: 12),

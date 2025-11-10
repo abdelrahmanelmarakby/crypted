@@ -224,14 +224,6 @@ class GroupInfoController extends GetxController {
       // Remove member from local list
       members.value = members.value!.where((member) => member.uid != userId).toList();
       memberCount.value = members.value!.length;
-
-      Get.snackbar(
-        "Success",
-        "Member removed from group",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
     } catch (e) {
       print("❌ Error removing member: $e");
       Get.snackbar(
@@ -346,43 +338,39 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Show confirmation dialog
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text("Exit Group"),
-        content: Text("Are you sure you want to leave ${groupName.value ?? 'this group'}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text("Exit", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    // Show confirmation bottom sheet
+    final confirmed = await CustomBottomSheets.showConfirmation(
+      title: 'Exit Group',
+      message: 'Are you sure you want to leave ${groupName.value ?? 'this group'}?',
+      subtitle: 'You will no longer receive messages from this group',
+      confirmText: 'Exit Group',
+      cancelText: 'Cancel',
+      icon: Icons.exit_to_app,
+      isDanger: true,
     );
 
     if (confirmed != true) return;
 
     try {
       isLoading.value = true;
+
+      // Show loading
+      CustomBottomSheets.showLoading(message: 'Leaving group...');
+
       await _chatDataSources.exitGroup(roomId!, currentUserUid);
 
-      Get.snackbar(
-        "Success",
-        "You have left the group",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
+      // Close loading
+      CustomBottomSheets.closeLoading();
 
       // Go back to chat list
       Get.back();
       Get.back();
     } catch (e) {
       print("❌ Error exiting group: $e");
+
+      // Close loading
+      CustomBottomSheets.closeLoading();
+
       Get.snackbar(
         "Error",
         "Failed to exit group: ${e.toString()}",
@@ -420,38 +408,50 @@ class GroupInfoController extends GetxController {
       return;
     }
 
-    // Show reason selection dialog
-    final reason = await Get.dialog<String>(
-      AlertDialog(
-        title: const Text("Report Group"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text("Inappropriate content"),
-              onTap: () => Get.back(result: "Inappropriate content"),
-            ),
-            ListTile(
-              title: const Text("Spam"),
-              onTap: () => Get.back(result: "Spam"),
-            ),
-            ListTile(
-              title: const Text("Harassment"),
-              onTap: () => Get.back(result: "Harassment"),
-            ),
-            ListTile(
-              title: const Text("Other"),
-              onTap: () => Get.back(result: "Other"),
-            ),
-          ],
+    // Show reason selection bottom sheet
+    final reason = await CustomBottomSheets.showSelection<String>(
+      title: 'Report Group',
+      subtitle: 'Select a reason for reporting this group',
+      options: [
+        SelectionOption<String>(
+          title: 'Inappropriate Content',
+          subtitle: 'Offensive or inappropriate material',
+          icon: Icons.warning,
+          iconColor: Colors.orange,
+          value: 'Inappropriate content',
         ),
-      ),
+        SelectionOption<String>(
+          title: 'Spam',
+          subtitle: 'Unwanted or repetitive content',
+          icon: Icons.report,
+          iconColor: Colors.red,
+          value: 'Spam',
+        ),
+        SelectionOption<String>(
+          title: 'Harassment',
+          subtitle: 'Bullying or harassment',
+          icon: Icons.block,
+          iconColor: Colors.red,
+          value: 'Harassment',
+        ),
+        SelectionOption<String>(
+          title: 'Other',
+          subtitle: 'Other reason',
+          icon: Icons.more_horiz,
+          iconColor: ColorsManager.grey,
+          value: 'Other',
+        ),
+      ],
     );
 
     if (reason == null) return;
 
     try {
       isLoading.value = true;
+
+      // Show loading
+      CustomBottomSheets.showLoading(message: 'Reporting group...');
+
       await _chatDataSources.reportContent(
         contentId: roomId!,
         contentType: 'group',
@@ -459,15 +459,14 @@ class GroupInfoController extends GetxController {
         reason: reason,
       );
 
-      Get.snackbar(
-        "Success",
-        "Group reported successfully",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-      );
+      // Close loading
+      CustomBottomSheets.closeLoading();
     } catch (e) {
       print("❌ Error reporting group: $e");
+
+      // Close loading
+      CustomBottomSheets.closeLoading();
+
       Get.snackbar(
         "Error",
         "Failed to report group: ${e.toString()}",
@@ -498,15 +497,6 @@ class GroupInfoController extends GetxController {
       final oldStatus = isFavorite.value;
       await _chatDataSources.toggleFavoriteChat(roomId!);
       isFavorite.value = !oldStatus;
-
-      Get.snackbar(
-        "Success",
-        !oldStatus ? "Added to favorites" : "Removed from favorites",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
     } catch (e) {
       print("❌ Error toggling favorite: $e");
       Get.snackbar(
@@ -521,7 +511,7 @@ class GroupInfoController extends GetxController {
     }
   }
 
-  /// Navigate to starred messages
+  /// Navigate to starred messages (same implementation as contact_info)
   void viewStarredMessages() {
     if (roomId == null) {
       Get.snackbar(
@@ -1122,6 +1112,59 @@ class GroupInfoController extends GetxController {
           ],
         ),
       ),
+      isScrollControlled: true,
+    );
+  }
+
+  /// Build media tab content
+  Widget _buildMediaTab(String mediaType) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .collection('chat')
+          .where('type', isEqualTo: mediaType)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        final items = snapshot.data?.docs ?? [];
+
+        if (items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_getMediaIcon(mediaType), size: 64, color: ColorsManager.lightGrey),
+                SizedBox(height: 16),
+                Text("No ${mediaType}s shared", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
+              ],
+            ),
+          );
+        }
+
+        return GridView.builder(
+          padding: EdgeInsets.all(8),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: mediaType == 'image' || mediaType == 'video' ? 3 : 1,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: mediaType == 'image' || mediaType == 'video' ? 1.0 : 3.0,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final data = items[index].data() as Map<String, dynamic>;
+            return _buildMediaItem(mediaType, data);
+          },
+        );
+      },
     );
   }
 

@@ -34,10 +34,10 @@ class MessageReactionsDisplay extends StatelessWidget {
     }
 
     return Padding(
-      padding: EdgeInsets.only(top: Paddings.extraSmall),
+      padding: EdgeInsets.only(top: Paddings.xSmall),
       child: Wrap(
-        spacing: Paddings.extraSmall,
-        runSpacing: Paddings.extraSmall,
+        spacing: Paddings.xSmall,
+        runSpacing: Paddings.xSmall,
         children: groupedReactions.entries.map((entry) {
           final emoji = entry.key;
           final reactionList = entry.value;
@@ -93,7 +93,7 @@ class _ReactionChip extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: Paddings.small,
-          vertical: Paddings.extraSmall / 2,
+          vertical: Paddings.xSmall / 2,
         ),
         decoration: BoxDecoration(
           color: isUserReacted
@@ -115,7 +115,7 @@ class _ReactionChip extends StatelessWidget {
               style: const TextStyle(fontSize: 16),
             ),
             if (count > 1) ...[
-              SizedBox(width: Paddings.extraSmall / 2),
+              SizedBox(width: Paddings.xSmall / 2),
               Text(
                 count.toString(),
                 style: TextStyle(
@@ -158,7 +158,7 @@ class ReactionDetailsSheet extends StatelessWidget {
                 emoji,
                 style: const TextStyle(fontSize: 32),
               ),
-              SizedBox(width: Paddings.medium),
+              SizedBox(width: Paddings.normal),
               Text(
                 '${reactions.length} ${reactions.length == 1 ? 'Reaction' : 'Reactions'}',
                 style: TextStyle(
@@ -175,7 +175,7 @@ class ReactionDetailsSheet extends StatelessWidget {
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: reactions.length,
-              separatorBuilder: (context, index) => Divider(height: Paddings.medium),
+              separatorBuilder: (context, index) => Divider(height: Paddings.normal),
               itemBuilder: (context, index) {
                 final reaction = reactions[index];
                 return _ReactionUserTile(userId: reaction.userId);
@@ -197,7 +197,7 @@ class _ReactionUserTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // Fetch user data from UserService
     return FutureBuilder<SocialMediaUser?>(
-      future: UserService().getUser(userId),
+      future: UserService().getProfile(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListTile(
@@ -244,16 +244,16 @@ class _ReactionUserTile extends StatelessWidget {
         // Display actual user data
         return ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: user.photoUrl != null && user.photoUrl!.isNotEmpty
+          leading: user.imageUrl != null && user.imageUrl!.isNotEmpty
               ? CircleAvatar(
-                  backgroundImage: CachedNetworkImageProvider(user.photoUrl!),
+                  backgroundImage: CachedNetworkImageProvider(user.imageUrl!),
                   backgroundColor: ColorsManager.primary.withOpacity(0.2),
                 )
               : CircleAvatar(
                   backgroundColor: ColorsManager.primary.withOpacity(0.2),
                   child: Text(
-                    user.name?.isNotEmpty == true
-                        ? user.name![0].toUpperCase()
+                    user.fullName?.isNotEmpty == true
+                        ? user.fullName![0].toUpperCase()
                         : '?',
                     style: TextStyle(
                       color: ColorsManager.primary,
@@ -262,7 +262,7 @@ class _ReactionUserTile extends StatelessWidget {
                   ),
                 ),
           title: Text(
-            user.name ?? 'Unknown',
+            user.fullName ?? 'Unknown',
             style: TextStyle(
               fontSize: FontSize.medium,
               fontWeight: FontWeight.w500,
@@ -320,7 +320,7 @@ class AllReactionsDialog extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: Paddings.medium),
+            SizedBox(height: Paddings.normal),
 
             Flexible(
               child: ListView.separated(

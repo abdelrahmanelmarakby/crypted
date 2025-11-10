@@ -24,7 +24,7 @@ class MentionDetector {
     String result = text;
 
     for (final member in members) {
-      final username = member.fullName ?? member.username ?? member.uid;
+      final username = member.fullName ?? member.email ?? member.uid;
       final pattern = '@$username';
 
       if (result.contains(pattern)) {
@@ -49,7 +49,7 @@ class MentionDetector {
       final member = members.firstWhereOrNull((m) => m.uid == userId);
 
       if (member != null) {
-        final displayName = member.fullName ?? member.username ?? userId;
+        final displayName = member.fullName ?? member.email ?? userId;
         result = result.replaceFirst(match.group(0)!, '@$displayName');
       }
     }
@@ -75,7 +75,7 @@ class MentionDetector {
 
     return members.where((member) {
       final name = (member.fullName ?? '').toLowerCase();
-      final username = (member.username ?? '').toLowerCase();
+      final username = (member.email ?? '').toLowerCase();
 
       return name.contains(lowerQuery) || username.contains(lowerQuery);
     }).toList();

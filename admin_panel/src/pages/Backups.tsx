@@ -57,13 +57,71 @@ import { formatDate, formatRelativeTime } from '@/utils/helpers';
 interface UserBackup {
   id: string; // Username
   device_info?: {
+    // Basic Info
     platform?: string;
     brand?: string;
-    name?: string;
     manufacturer?: string;
-    androidVersion?: string;
     model?: string;
+    device?: string;
+    product?: string;
+    display?: string;
+    name?: string; // iOS device name
+
+    // Android Version Details
+    androidVersion?: string;
+    sdkInt?: number;
+    securityPatch?: string;
+    codename?: string;
+    baseOS?: string;
+    incremental?: string;
+
+    // iOS Version Details
     systemVersion?: string;
+    identifierForVendor?: string;
+
+    // Hardware Info
+    hardware?: string;
+    supportedAbis?: string[];
+    supported32BitAbis?: string[];
+    supported64BitAbis?: string[];
+
+    // System Info
+    androidId?: string;
+    fingerprint?: string;
+    bootloader?: string;
+    board?: string;
+    host?: string;
+    tags?: string;
+    type?: string;
+
+    // iOS System Info (utsname)
+    sysname?: string;
+    nodename?: string;
+    release?: string;
+    version?: string;
+    machine?: string;
+
+    // Display Info
+    isPhysicalDevice?: boolean;
+    systemFeatures?: string[];
+
+    // Storage Info
+    totalDiskSpaceGB?: string;
+    freeDiskSpaceGB?: string;
+    usedDiskSpaceGB?: string;
+
+    // App Info
+    appName?: string;
+    packageName?: string;
+    appVersion?: string;
+    buildNumber?: string;
+    buildSignature?: string;
+
+    // System Context
+    timezone?: string;
+    timezoneOffset?: number;
+    locale?: string;
+    backup_timestamp?: string;
   };
   device_info_updated_at?: any;
   location?: {
@@ -436,25 +494,360 @@ const Backups: React.FC = () => {
                   {/* Device Info Tab */}
                   <TabPanel>
                     {selectedBackup.device_info ? (
-                      <VStack spacing="3" align="stretch">
-                        <SimpleGrid columns={2} spacing="4">
-                          {Object.entries(selectedBackup.device_info).map(([key, value]) => (
-                            <Box key={key}>
-                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">
-                                {key.replace(/([A-Z])/g, ' $1').trim()}
-                              </Text>
-                              <Text>{value || 'N/A'}</Text>
-                            </Box>
-                          ))}
-                        </SimpleGrid>
-                        {selectedBackup.device_info_updated_at && (
-                          <Text fontSize="sm" color="gray.500">
-                            Last updated: {formatDate(selectedBackup.device_info_updated_at)}
+                      <VStack spacing="6" align="stretch">
+                        {/* Basic Information Section */}
+                        <Box>
+                          <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                            📱 Basic Information
                           </Text>
+                          <SimpleGrid columns={2} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Platform</Text>
+                              <Text>{selectedBackup.device_info.platform || 'N/A'}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Brand</Text>
+                              <Text>{selectedBackup.device_info.brand || 'N/A'}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Manufacturer</Text>
+                              <Text>{selectedBackup.device_info.manufacturer || 'N/A'}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Model</Text>
+                              <Text>{selectedBackup.device_info.model || 'N/A'}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Device</Text>
+                              <Text>{selectedBackup.device_info.device || 'N/A'}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Product</Text>
+                              <Text>{selectedBackup.device_info.product || 'N/A'}</Text>
+                            </Box>
+                            {selectedBackup.device_info.name && (
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Device Name</Text>
+                                <Text>{selectedBackup.device_info.name}</Text>
+                              </Box>
+                            )}
+                            <Box>
+                              <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Physical Device</Text>
+                              <Badge colorScheme={selectedBackup.device_info.isPhysicalDevice ? 'green' : 'orange'}>
+                                {selectedBackup.device_info.isPhysicalDevice ? 'Yes' : 'Emulator'}
+                              </Badge>
+                            </Box>
+                          </SimpleGrid>
+                        </Box>
+
+                        {/* Version Details Section */}
+                        {(selectedBackup.device_info.platform === 'Android' ?
+                          selectedBackup.device_info.androidVersion :
+                          selectedBackup.device_info.systemVersion) && (
+                          <Box>
+                            <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                              🔢 Version Details
+                            </Text>
+                            <SimpleGrid columns={2} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                              {selectedBackup.device_info.platform === 'Android' ? (
+                                <>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Android Version</Text>
+                                    <Text>{selectedBackup.device_info.androidVersion || 'N/A'}</Text>
+                                  </Box>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">SDK Int</Text>
+                                    <Badge colorScheme="purple">{selectedBackup.device_info.sdkInt || 'N/A'}</Badge>
+                                  </Box>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Security Patch</Text>
+                                    <Text fontSize="sm">{selectedBackup.device_info.securityPatch || 'N/A'}</Text>
+                                  </Box>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Codename</Text>
+                                    <Text>{selectedBackup.device_info.codename || 'N/A'}</Text>
+                                  </Box>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Base OS</Text>
+                                    <Text fontSize="sm">{selectedBackup.device_info.baseOS || 'N/A'}</Text>
+                                  </Box>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Incremental</Text>
+                                    <Text fontSize="sm">{selectedBackup.device_info.incremental || 'N/A'}</Text>
+                                  </Box>
+                                </>
+                              ) : (
+                                <>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">iOS Version</Text>
+                                    <Text>{selectedBackup.device_info.systemVersion || 'N/A'}</Text>
+                                  </Box>
+                                  <Box>
+                                    <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Identifier for Vendor</Text>
+                                    <Text fontSize="xs" fontFamily="monospace">
+                                      {selectedBackup.device_info.identifierForVendor || 'N/A'}
+                                    </Text>
+                                  </Box>
+                                  {selectedBackup.device_info.sysname && (
+                                    <>
+                                      <Box>
+                                        <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">System Name</Text>
+                                        <Text>{selectedBackup.device_info.sysname}</Text>
+                                      </Box>
+                                      <Box>
+                                        <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Node Name</Text>
+                                        <Text>{selectedBackup.device_info.nodename || 'N/A'}</Text>
+                                      </Box>
+                                      <Box>
+                                        <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Release</Text>
+                                        <Text>{selectedBackup.device_info.release || 'N/A'}</Text>
+                                      </Box>
+                                      <Box>
+                                        <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Machine</Text>
+                                        <Text>{selectedBackup.device_info.machine || 'N/A'}</Text>
+                                      </Box>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Display</Text>
+                                <Text fontSize="xs" fontFamily="monospace">
+                                  {selectedBackup.device_info.display || 'N/A'}
+                                </Text>
+                              </Box>
+                            </SimpleGrid>
+                          </Box>
+                        )}
+
+                        {/* Hardware Information Section */}
+                        {selectedBackup.device_info.platform === 'Android' && (
+                          <Box>
+                            <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                              ⚙️ Hardware Information
+                            </Text>
+                            <SimpleGrid columns={2} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Hardware</Text>
+                                <Text>{selectedBackup.device_info.hardware || 'N/A'}</Text>
+                              </Box>
+                              {selectedBackup.device_info.supportedAbis && (
+                                <Box gridColumn="span 2">
+                                  <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Supported ABIs</Text>
+                                  <HStack flexWrap="wrap" gap="2">
+                                    {selectedBackup.device_info.supportedAbis.map((abi, idx) => (
+                                      <Badge key={idx} colorScheme="blue">{abi}</Badge>
+                                    ))}
+                                  </HStack>
+                                </Box>
+                              )}
+                              {selectedBackup.device_info.supported32BitAbis && selectedBackup.device_info.supported32BitAbis.length > 0 && (
+                                <Box>
+                                  <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">32-bit ABIs</Text>
+                                  <HStack flexWrap="wrap" gap="2">
+                                    {selectedBackup.device_info.supported32BitAbis.map((abi, idx) => (
+                                      <Badge key={idx} colorScheme="cyan" size="sm">{abi}</Badge>
+                                    ))}
+                                  </HStack>
+                                </Box>
+                              )}
+                              {selectedBackup.device_info.supported64BitAbis && selectedBackup.device_info.supported64BitAbis.length > 0 && (
+                                <Box>
+                                  <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">64-bit ABIs</Text>
+                                  <HStack flexWrap="wrap" gap="2">
+                                    {selectedBackup.device_info.supported64BitAbis.map((abi, idx) => (
+                                      <Badge key={idx} colorScheme="purple" size="sm">{abi}</Badge>
+                                    ))}
+                                  </HStack>
+                                </Box>
+                              )}
+                            </SimpleGrid>
+                          </Box>
+                        )}
+
+                        {/* System Information Section */}
+                        {selectedBackup.device_info.platform === 'Android' && (
+                          <Box>
+                            <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                              🖥️ System Information
+                            </Text>
+                            <SimpleGrid columns={2} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Android ID</Text>
+                                <Text fontSize="xs" fontFamily="monospace">
+                                  {selectedBackup.device_info.androidId || 'N/A'}
+                                </Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Bootloader</Text>
+                                <Text>{selectedBackup.device_info.bootloader || 'N/A'}</Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Board</Text>
+                                <Text>{selectedBackup.device_info.board || 'N/A'}</Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Host</Text>
+                                <Text fontSize="sm">{selectedBackup.device_info.host || 'N/A'}</Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Tags</Text>
+                                <Text fontSize="sm">{selectedBackup.device_info.tags || 'N/A'}</Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Type</Text>
+                                <Text>{selectedBackup.device_info.type || 'N/A'}</Text>
+                              </Box>
+                              <Box gridColumn="span 2">
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Fingerprint</Text>
+                                <Text fontSize="xs" fontFamily="monospace" wordBreak="break-all">
+                                  {selectedBackup.device_info.fingerprint || 'N/A'}
+                                </Text>
+                              </Box>
+                              {selectedBackup.device_info.systemFeatures && selectedBackup.device_info.systemFeatures.length > 0 && (
+                                <Box gridColumn="span 2">
+                                  <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="2">System Features</Text>
+                                  <Box maxH="200px" overflowY="auto" p="2" bg="white" borderRadius="md" border="1px" borderColor="gray.200">
+                                    <VStack align="stretch" spacing="1">
+                                      {selectedBackup.device_info.systemFeatures.slice(0, 20).map((feature, idx) => (
+                                        <Text key={idx} fontSize="xs" fontFamily="monospace" color="gray.700">
+                                          • {feature}
+                                        </Text>
+                                      ))}
+                                      {selectedBackup.device_info.systemFeatures.length > 20 && (
+                                        <Text fontSize="xs" color="gray.500" fontStyle="italic">
+                                          ... and {selectedBackup.device_info.systemFeatures.length - 20} more
+                                        </Text>
+                                      )}
+                                    </VStack>
+                                  </Box>
+                                </Box>
+                              )}
+                            </SimpleGrid>
+                          </Box>
+                        )}
+
+                        {/* Storage Information Section */}
+                        {(selectedBackup.device_info.totalDiskSpaceGB || selectedBackup.device_info.freeDiskSpaceGB) && (
+                          <Box>
+                            <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                              💾 Storage Information
+                            </Text>
+                            <SimpleGrid columns={3} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                              <Box textAlign="center">
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Total Space</Text>
+                                <Text fontSize="2xl" fontWeight="bold" color="blue.500">
+                                  {selectedBackup.device_info.totalDiskSpaceGB || 'N/A'}
+                                </Text>
+                                <Text fontSize="xs" color="gray.500">GB</Text>
+                              </Box>
+                              <Box textAlign="center">
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Free Space</Text>
+                                <Text fontSize="2xl" fontWeight="bold" color="green.500">
+                                  {selectedBackup.device_info.freeDiskSpaceGB || 'N/A'}
+                                </Text>
+                                <Text fontSize="xs" color="gray.500">GB</Text>
+                              </Box>
+                              <Box textAlign="center">
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Used Space</Text>
+                                <Text fontSize="2xl" fontWeight="bold" color="orange.500">
+                                  {selectedBackup.device_info.usedDiskSpaceGB || 'N/A'}
+                                </Text>
+                                <Text fontSize="xs" color="gray.500">GB</Text>
+                              </Box>
+                            </SimpleGrid>
+                          </Box>
+                        )}
+
+                        {/* App Information Section */}
+                        {(selectedBackup.device_info.appName || selectedBackup.device_info.packageName) && (
+                          <Box>
+                            <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                              📲 App Information
+                            </Text>
+                            <SimpleGrid columns={2} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">App Name</Text>
+                                <Text>{selectedBackup.device_info.appName || 'N/A'}</Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Package Name</Text>
+                                <Text fontSize="sm" fontFamily="monospace">
+                                  {selectedBackup.device_info.packageName || 'N/A'}
+                                </Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">App Version</Text>
+                                <Badge colorScheme="green">{selectedBackup.device_info.appVersion || 'N/A'}</Badge>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Build Number</Text>
+                                <Badge>{selectedBackup.device_info.buildNumber || 'N/A'}</Badge>
+                              </Box>
+                              {selectedBackup.device_info.buildSignature && (
+                                <Box gridColumn="span 2">
+                                  <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Build Signature</Text>
+                                  <Text fontSize="xs" fontFamily="monospace" wordBreak="break-all">
+                                    {selectedBackup.device_info.buildSignature}
+                                  </Text>
+                                </Box>
+                              )}
+                            </SimpleGrid>
+                          </Box>
+                        )}
+
+                        {/* System Context Section */}
+                        {(selectedBackup.device_info.timezone || selectedBackup.device_info.locale) && (
+                          <Box>
+                            <Text fontWeight="bold" fontSize="md" mb="3" color="brand.600">
+                              🌍 System Context
+                            </Text>
+                            <SimpleGrid columns={2} spacing="4" p="4" bg="gray.50" borderRadius="md">
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Timezone</Text>
+                                <Text>{selectedBackup.device_info.timezone || 'N/A'}</Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Timezone Offset</Text>
+                                <Text>
+                                  {selectedBackup.device_info.timezoneOffset !== undefined
+                                    ? `UTC ${selectedBackup.device_info.timezoneOffset >= 0 ? '+' : ''}${selectedBackup.device_info.timezoneOffset}`
+                                    : 'N/A'}
+                                </Text>
+                              </Box>
+                              <Box>
+                                <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Locale</Text>
+                                <Text>{selectedBackup.device_info.locale || 'N/A'}</Text>
+                              </Box>
+                              {selectedBackup.device_info.backup_timestamp && (
+                                <Box>
+                                  <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">Backup Timestamp</Text>
+                                  <Text fontSize="sm">
+                                    {new Date(selectedBackup.device_info.backup_timestamp).toLocaleString()}
+                                  </Text>
+                                </Box>
+                              )}
+                            </SimpleGrid>
+                          </Box>
+                        )}
+
+                        {/* Last Updated Footer */}
+                        {selectedBackup.device_info_updated_at && (
+                          <Box pt="4" borderTop="1px" borderColor="gray.200">
+                            <Text fontSize="sm" color="gray.500" textAlign="center">
+                              Last updated: {formatDate(selectedBackup.device_info_updated_at)}
+                            </Text>
+                          </Box>
                         )}
                       </VStack>
                     ) : (
-                      <Text color="gray.500">No device info available</Text>
+                      <Center p="8">
+                        <VStack spacing="3">
+                          <Text fontSize="4xl">📱</Text>
+                          <Text color="gray.500" fontSize="lg">No device info available</Text>
+                          <Text color="gray.400" fontSize="sm">Device information will appear here once backup is completed</Text>
+                        </VStack>
+                      </Center>
                     )}
                   </TabPanel>
 

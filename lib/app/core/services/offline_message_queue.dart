@@ -4,6 +4,7 @@ import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 /// Service to queue messages when offline and send when back online
 class OfflineMessageQueue {
@@ -21,7 +22,7 @@ class OfflineMessageQueue {
   /// Initialize the queue from storage
   Future<void> initialize() async {
     try {
-      final stored = await CacheHelper.get(key: _queueKey);
+      final stored = await GetStorage().read(_queueKey);
       if (stored != null && stored is String) {
         final List<dynamic> jsonList = jsonDecode(stored);
         _queue.value = jsonList
@@ -123,7 +124,7 @@ class OfflineMessageQueue {
   Future<void> _saveQueue() async {
     try {
       final jsonList = _queue.map((qm) => qm.toJson()).toList();
-      await CacheHelper.put(key: _queueKey, value: jsonEncode(jsonList));
+      await GetStorage().write(_queueKey, jsonEncode(jsonList));
     } catch (e) {
       if (kDebugMode) {
         dev.log('❌ Error saving queue: $e');
