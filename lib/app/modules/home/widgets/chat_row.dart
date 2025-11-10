@@ -331,8 +331,89 @@ class _ChatRowState extends State<ChatRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      child: Container(
+    final isGroupChat = widget.chatRoom?.isGroupChat == true;
+    final isPinned = widget.chatRoom?.isPinned == true;
+    final isMuted = widget.chatRoom?.isMuted == true;
+    final isFavorite = widget.chatRoom?.isFavorite == true;
+    final isArchived = widget.chatRoom?.isArchived == true;
+
+    return CupertinoContextMenu(
+      enableHapticFeedback: true,
+      previewBuilder: (context, animation, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: ColorsManager.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: child,
+          ),
+        );
+      },
+      actions: [
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _togglePin();
+          },
+          trailingIcon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+          child: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
+        ),
+        if (isGroupChat)
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _toggleMute();
+            },
+            trailingIcon: isMuted ? Icons.notifications_active : Icons.notifications_off,
+            child: Text(isMuted ? 'Unmute Chat' : 'Mute Chat'),
+          ),
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _toggleFavorite();
+          },
+          trailingIcon: isFavorite ? Icons.favorite : Icons.favorite_border,
+          child: Text(isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
+        ),
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _toggleArchive();
+          },
+          trailingIcon: isArchived ? Icons.unarchive : Icons.archive,
+          child: Text(isArchived ? 'Unarchive Chat' : 'Archive Chat'),
+        ),
+        if (!isGroupChat)
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _blockUser();
+            },
+            trailingIcon: Icons.block,
+            isDestructiveAction: true,
+            child: const Text('Block User'),
+          ),
+        CupertinoContextMenuAction(
+          onPressed: () {
+            Navigator.pop(context);
+            _deleteChat();
+          },
+          trailingIcon: Icons.delete_forever,
+          isDestructiveAction: true,
+          child: const Text('Delete Chat'),
+        ),
+      ],
+      child: Material(
+        child: Container(
           padding: const EdgeInsets.symmetric(
               horizontal: Paddings.xSmall, vertical: Paddings.normal),
           decoration: BoxDecoration(
@@ -353,7 +434,6 @@ class _ChatRowState extends State<ChatRow> {
                 };
                 Get.toNamed(Routes.CHAT, arguments: arg);
               },
-              onLongPress: _showChatActions,
               child: Row(
                 children: [
                   SizedBox(

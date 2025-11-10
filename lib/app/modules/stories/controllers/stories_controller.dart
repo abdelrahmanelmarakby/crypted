@@ -24,6 +24,11 @@ class StoriesController extends GetxController {
   RxString textPosition = 'center'.obs;
   RxBool isUploading = false.obs;
 
+  // Location variables
+  Rx<double?> selectedLatitude = Rx<double?>(null);
+  Rx<double?> selectedLongitude = Rx<double?>(null);
+  Rx<String?> selectedPlaceName = Rx<String?>(null);
+
   // متغيرات للـ stories
   RxList<StoryModel> allStories = <StoryModel>[].obs;
   RxList<StoryModel> userStories = <StoryModel>[].obs;
@@ -266,6 +271,10 @@ class StoriesController extends GetxController {
         final story = StoryModel(
           storyType: StoryType.image,
           duration: 5, // 5 ثواني للصور
+          latitude: selectedLatitude.value,
+          longitude: selectedLongitude.value,
+          placeName: selectedPlaceName.value,
+          isLocationPublic: selectedLatitude.value != null,
         );
         success =
             await _storyDataSources.uploadStory(story, selectedImage.value!);
@@ -275,6 +284,10 @@ class StoriesController extends GetxController {
         final story = StoryModel(
           storyType: StoryType.video,
           duration: 15, // 15 ثانية للفيديو
+          latitude: selectedLatitude.value,
+          longitude: selectedLongitude.value,
+          placeName: selectedPlaceName.value,
+          isLocationPublic: selectedLatitude.value != null,
         );
         success =
             await _storyDataSources.uploadStory(story, selectedVideo.value!);
@@ -289,6 +302,10 @@ class StoriesController extends GetxController {
           fontSize: fontSize.value,
           textPosition: textPosition.value,
           duration: 5,
+          latitude: selectedLatitude.value,
+          longitude: selectedLongitude.value,
+          placeName: selectedPlaceName.value,
+          isLocationPublic: selectedLatitude.value != null,
         );
         success = await _storyDataSources.uploadTextStory(story);
       }
@@ -322,6 +339,24 @@ class StoriesController extends GetxController {
     textColor.value = '#FFFFFF';
     fontSize.value = 24.0;
     textPosition.value = 'center';
+    clearLocation();
+    update();
+  }
+
+  // Set location for story
+  void setLocation(double lat, double lon, String? placeName) {
+    selectedLatitude.value = lat;
+    selectedLongitude.value = lon;
+    selectedPlaceName.value = placeName;
+    print('📍 Location set: $lat, $lon - $placeName');
+    update();
+  }
+
+  // Clear location
+  void clearLocation() {
+    selectedLatitude.value = null;
+    selectedLongitude.value = null;
+    selectedPlaceName.value = null;
     update();
   }
 

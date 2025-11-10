@@ -1,6 +1,5 @@
-import 'package:crypted_app/app/modules/stories/widgets/list_view_horizontal.dart';
-import 'package:crypted_app/app/modules/stories/widgets/list_view_vertical_stories.dart';
-import 'package:crypted_app/app/modules/stories/widgets/story_viewer.dart';
+import 'package:crypted_app/app/modules/stories/widgets/story_heat_map_view.dart';
+import 'package:crypted_app/app/modules/stories/widgets/story_location_picker.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -8,7 +7,6 @@ import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 import '../controllers/stories_controller.dart';
 
@@ -23,228 +21,33 @@ class StoriesView extends GetView<StoriesController> {
       appBar: AppBar(
         centerTitle: false,
         backgroundColor: ColorsManager.navbarColor,
-        title: Text(
-          Constants.kStories.tr,
-          style: StylesManager.regular(fontSize: FontSize.xLarge),
+        title: Row(
+          children: [
+            Icon(Icons.map, color: ColorsManager.primary, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              Constants.kStories.tr,
+              style: StylesManager.semiBold(fontSize: FontSize.xLarge),
+            ),
+          ],
         ),
         actions: [
           IconButton(
             onPressed: () {
               _showAddStoryDialog(context);
             },
-            icon: Icon(Icons.add, color: ColorsManager.primary),
+            icon: Icon(Icons.add_circle, color: ColorsManager.primary, size: 28),
+            tooltip: 'Create Story',
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          GetBuilder<StoriesController>(
-            builder: (controller) => Padding(
-              padding: const EdgeInsets.all(Paddings.large),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with Add Story button and horizontal stories
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        // Add Story Button with animation
-                        GestureDetector(
-                          onTap: () {
-                            _showAddStoryDialog(context);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  ColorsManager.primary,
-                                  ColorsManager.primary.withOpacity(0.8),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: ColorsManager.primary.withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: Sizes.size8),
-                        // Horizontal Stories List
-                        SizedBox(
-                            height: Sizes.size100, child: ListViewHorizontal()),
-                        SizedBox(width: Sizes.size8),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: Sizes.size20),
-
-                  // Current User Stories Section
-                  GetBuilder<StoriesController>(
-                    builder: (controller) {
-                      final currentUser = UserService.currentUser.value;
-                      final userStories = controller.userStories;
-
-                      return GestureDetector(
-                        onTap: () {
-                          // فتح الستوريز الخاصة بالمستخدم الحالي
-                          if (currentUser?.uid != null &&
-                              userStories.isNotEmpty) {
-                            print(
-                                '👤 Opening current user stories: ${currentUser!.uid}');
-                            controller.openUserStories(currentUser.uid!);
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: userStories.isNotEmpty
-                                ? ColorsManager.primary.withOpacity(0.1)
-                                : ColorsManager.navbarColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: userStories.isNotEmpty
-                                  ? ColorsManager.primary.withOpacity(0.5)
-                                  : Colors.grey.withOpacity(0.2),
-                              width: 2,
-                            ),
-                            boxShadow: userStories.isNotEmpty
-                                ? [
-                                    BoxShadow(
-                                      color:
-                                          ColorsManager.primary.withOpacity(0.1),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Row(
-                            children: [
-                              // Profile image with gradient border if has stories
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: userStories.isNotEmpty
-                                      ? LinearGradient(
-                                          colors: [
-                                            ColorsManager.primary,
-                                            ColorsManager.primary
-                                                .withOpacity(0.7),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
-                                      : null,
-                                  color: userStories.isNotEmpty
-                                      ? null
-                                      : Colors.grey.withOpacity(0.3),
-                                  border: userStories.isNotEmpty
-                                      ? null
-                                      : Border.all(
-                                          color: Colors.grey.withOpacity(0.3),
-                                          width: 2,
-                                        ),
-                                ),
-                                padding: const EdgeInsets.all(2),
-                                child: CircleAvatar(
-                                  radius: 25,
-                                  backgroundColor: ColorsManager.white,
-                                  child: CircleAvatar(
-                                    backgroundImage: currentUser?.imageUrl !=
-                                                null &&
-                                            currentUser!.imageUrl!.isNotEmpty
-                                        ? NetworkImage(currentUser.imageUrl!)
-                                        : const AssetImage(
-                                                'assets/images/Profile Image111.png')
-                                            as ImageProvider,
-                                    radius: 23,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      currentUser?.fullName ?? 'Your Stories',
-                                      style: StylesManager.semiBold(
-                                        fontSize: FontSize.large,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${userStories.length} story${userStories.length != 1 ? 'ies' : ''}',
-                                      style: StylesManager.medium(
-                                        fontSize: FontSize.small,
-                                        color: userStories.isNotEmpty
-                                            ? ColorsManager.primary
-                                            : ColorsManager.grey,
-                                      ),
-                                    ),
-                                    if (userStories.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Tap to view your stories',
-                                        style: StylesManager.medium(
-                                          fontSize: FontSize.xSmall,
-                                          color: ColorsManager.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              // Add story button
-                              IconButton(
-                                onPressed: () {
-                                  _showAddStoryDialog(context);
-                                },
-                                icon: Icon(
-                                  Icons.add_circle,
-                                  color: ColorsManager.primary,
-                                  size: 30,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  SizedBox(height: Sizes.size20),
-                  Text(
-                    Constants.krecentStories.tr,
-                    style: StylesManager.medium(
-                      fontSize: FontSize.xSmall,
-                      color: ColorsManager.grey,
-                    ),
-                  ),
-                  SizedBox(height: Sizes.size20),
-                  Expanded(child: ListViewVerticalStories()),
-                ],
-              ),
-            ),
-          ),
-          // Story Viewer
-          StoryViewer(),
-        ],
+      body: GetBuilder<StoriesController>(
+        builder: (controller) {
+          return StoryHeatMapView(
+            stories: controller.allStories,
+            onCreateStory: () => _showAddStoryDialog(context),
+          );
+        },
       ),
     );
   }
@@ -265,26 +68,63 @@ class _AddStoryDialog extends StatelessWidget {
     final controller = Get.find<StoriesController>();
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(Paddings.large),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  Constants.kStories.tr,
-                  style: StylesManager.semiBold(fontSize: FontSize.xLarge),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: ColorsManager.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Create Story',
+                      style: StylesManager.bold(fontSize: FontSize.xLarge),
+                    ),
+                  ],
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close),
+                  icon: Icon(Icons.close, size: 28),
                 ),
               ],
             ),
@@ -344,6 +184,113 @@ class _AddStoryDialog extends StatelessWidget {
                 border: OutlineInputBorder(),
               ),
             ),
+
+            SizedBox(height: Sizes.size20),
+
+            // Location Section
+            Obx(() => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: controller.selectedLatitude.value != null
+                    ? ColorsManager.primary.withOpacity(0.1)
+                    : Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: controller.selectedLatitude.value != null
+                      ? ColorsManager.primary.withOpacity(0.5)
+                      : Colors.grey.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: ColorsManager.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.location_on,
+                          color: ColorsManager.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          controller.selectedLatitude.value != null
+                              ? controller.selectedPlaceName.value ?? 'Location Added'
+                              : 'Add Location',
+                          style: StylesManager.semiBold(
+                            fontSize: FontSize.medium,
+                            color: controller.selectedLatitude.value != null
+                                ? ColorsManager.primary
+                                : Colors.grey[700]!,
+                          ),
+                        ),
+                      ),
+                      if (controller.selectedLatitude.value != null)
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.grey[600], size: 20),
+                          onPressed: () {
+                            controller.clearLocation();
+                          },
+                        ),
+                    ],
+                  ),
+                  if (controller.selectedLatitude.value == null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Share where you are with your story',
+                      style: StylesManager.regular(
+                        fontSize: FontSize.small,
+                        color: Colors.grey[600]!,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Get.bottomSheet(
+                          StoryLocationPicker(
+                            onLocationSelected: (lat, lon, placeName) {
+                              controller.setLocation(lat, lon, placeName);
+                            },
+                          ),
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                        );
+                      },
+                      icon: Icon(
+                        controller.selectedLatitude.value != null
+                            ? Icons.edit_location
+                            : Icons.add_location_alt,
+                        size: 20,
+                      ),
+                      label: Text(
+                        controller.selectedLatitude.value != null
+                            ? 'Change Location'
+                            : 'Pick Location',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorsManager.primary,
+                        side: BorderSide(color: ColorsManager.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
 
             SizedBox(height: Sizes.size20),
 
