@@ -1259,4 +1259,222 @@ class GroupInfoController extends GetxController {
 
   // Check if group has description
   bool get hasDescription => groupDescription.value != null && groupDescription.value!.isNotEmpty;
+
+  /// Get icon for media type
+  IconData _getMediaIcon(String mediaType) {
+    switch (mediaType.toLowerCase()) {
+      case 'image':
+        return Icons.photo;
+      case 'video':
+        return Icons.videocam;
+      case 'file':
+        return Icons.insert_drive_file;
+      case 'audio':
+        return Icons.audiotrack;
+      default:
+        return Icons.attachment;
+    }
+  }
+
+  /// Build media item widget based on type
+  Widget _buildMediaItem(String mediaType, Map<String, dynamic> data) {
+    final messageId = data['messageId'] ?? '';
+    final timestamp = data['timestamp'] as Timestamp?;
+    final dateStr = timestamp != null
+        ? "${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year}"
+        : '';
+
+    switch (mediaType.toLowerCase()) {
+      case 'image':
+        final imageUrl = data['imageUrl'] ?? data['url'] ?? '';
+        return GestureDetector(
+          onTap: () => viewFullPhoto(imageUrl, messageId),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: ColorsManager.lightGrey,
+                      child: Icon(Icons.broken_image, color: ColorsManager.grey),
+                    ),
+                  )
+                : Container(
+                    color: ColorsManager.lightGrey,
+                    child: Icon(Icons.image, color: ColorsManager.grey),
+                  ),
+          ),
+        );
+
+      case 'video':
+        final videoUrl = data['videoUrl'] ?? data['url'] ?? '';
+        final thumbnailUrl = data['thumbnailUrl'] ?? '';
+        return GestureDetector(
+          onTap: () {
+            if (videoUrl.isNotEmpty) {
+              Get.snackbar('Video', 'Opening video: $videoUrl');
+            }
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (thumbnailUrl.isNotEmpty)
+                  Image.network(
+                    thumbnailUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: ColorsManager.lightGrey,
+                      child: Icon(Icons.video_library, color: ColorsManager.grey, size: 48),
+                    ),
+                  )
+                else
+                  Container(
+                    color: ColorsManager.lightGrey,
+                    child: Icon(Icons.video_library, color: ColorsManager.grey, size: 48),
+                  ),
+                Center(
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case 'file':
+        final fileName = data['fileName'] ?? 'Unknown File';
+        final fileUrl = data['fileUrl'] ?? data['url'] ?? '';
+        final fileSize = data['fileSize'] ?? '';
+        return InkWell(
+          onTap: () {
+            if (fileUrl.isNotEmpty) {
+              _downloadFile(fileUrl, fileName);
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ColorsManager.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: ColorsManager.lightGrey),
+            ),
+            child: Row(
+              children: [
+                Icon(_getMediaIcon('file'), color: ColorsManager.primary, size: 32),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        fileName,
+                        style: StylesManager.medium(fontSize: FontSize.small),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (fileSize.isNotEmpty)
+                        Text(
+                          fileSize,
+                          style: StylesManager.regular(
+                            fontSize: FontSize.xSmall,
+                            color: ColorsManager.grey,
+                          ),
+                        ),
+                      if (dateStr.isNotEmpty)
+                        Text(
+                          dateStr,
+                          style: StylesManager.regular(
+                            fontSize: FontSize.xSmall,
+                            color: ColorsManager.grey,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.download, color: ColorsManager.primary),
+              ],
+            ),
+          ),
+        );
+
+      case 'audio':
+        final audioUrl = data['audioUrl'] ?? data['url'] ?? '';
+        final duration = data['duration'] ?? '';
+        return InkWell(
+          onTap: () {
+            if (audioUrl.isNotEmpty) {
+              Get.snackbar('Audio', 'Playing audio: $audioUrl');
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ColorsManager.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: ColorsManager.lightGrey),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.audiotrack, color: ColorsManager.primary, size: 32),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Voice Message',
+                        style: StylesManager.medium(fontSize: FontSize.small),
+                      ),
+                      if (duration.isNotEmpty)
+                        Text(
+                          duration,
+                          style: StylesManager.regular(
+                            fontSize: FontSize.xSmall,
+                            color: ColorsManager.grey,
+                          ),
+                        ),
+                      if (dateStr.isNotEmpty)
+                        Text(
+                          dateStr,
+                          style: StylesManager.regular(
+                            fontSize: FontSize.xSmall,
+                            color: ColorsManager.grey,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.play_circle, color: ColorsManager.primary, size: 32),
+              ],
+            ),
+          ),
+        );
+
+      default:
+        return Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: ColorsManager.lightGrey,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Text(
+              'Unknown media type: $mediaType',
+              style: StylesManager.regular(fontSize: FontSize.small),
+            ),
+          ),
+        );
+    }
+  }
 }
