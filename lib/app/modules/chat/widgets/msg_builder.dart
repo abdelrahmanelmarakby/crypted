@@ -10,6 +10,7 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/audio_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/call_message.dart';
@@ -21,6 +22,7 @@ import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/locatio
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/poll_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/text_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/video_message.dart';
+import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/uploading_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_reactions_display.dart';
 import 'package:crypted_app/app/modules/chat/widgets/reaction_picker.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
@@ -319,6 +321,13 @@ class MessageBuilder extends GetView<ChatController> {
           eventMessage: msg,
           isMe: msg.senderId == UserService.currentUser.value?.uid,
         );
+
+      case UploadingMessage():
+        return UploadingMessageWidget(
+          message: msg,
+          onCancel: () => controller.cancelUpload(msg.id),
+        );
+
       default:
         return const SizedBox();
     }

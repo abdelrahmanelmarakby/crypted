@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get_storage/get_storage.dart';
 
 /// Service for managing draft messages per chat
 class DraftService {
@@ -24,9 +25,9 @@ class DraftService {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
-      await CacheHelper.put(
-        key: key,
-        value: jsonEncode(draftData),
+      await GetStorage().write(
+        key,
+        jsonEncode(draftData),
       );
 
       if (kDebugMode) {
@@ -43,7 +44,7 @@ class DraftService {
   Future<String?> loadDraft(String roomId) async {
     try {
       final key = _getDraftKey(roomId);
-      final stored = await CacheHelper.get(key: key);
+      final stored = await GetStorage().read(key);
 
       if (stored != null && stored is String) {
         final Map<String, dynamic> draftData = jsonDecode(stored);
@@ -81,7 +82,7 @@ class DraftService {
   Future<void> clearDraft(String roomId) async {
     try {
       final key = _getDraftKey(roomId);
-      await CacheHelper.remove(key: key);
+      await GetStorage().remove(key);
 
       if (kDebugMode) {
         dev.log('🗑️ Cleared draft for room: $roomId');

@@ -338,7 +338,7 @@ class ChatBackupService {
       // Add metadata
       chatData['metadata'] = {
         'totalChatRooms': chatRooms.length,
-        'totalMessages': allMessages.values.fold(0, (sum, messages) => sum + messages.length),
+        'totalMessages': allMessages.values.fold(0, (total, messages) => total + messages.length),
         'totalParticipants': chatData['participants']?.length ?? 0,
         'messagesPerRoom': messagesPerRoom,
         'includeMediaFiles': includeMediaFiles,

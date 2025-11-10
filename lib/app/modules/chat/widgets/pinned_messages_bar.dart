@@ -85,7 +85,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
     return InkWell(
       onTap: () => widget.onMessageTap(message),
       child: Padding(
-        padding: EdgeInsets.all(Paddings.medium),
+        padding: EdgeInsets.all(Paddings.normal),
         child: Row(
           children: [
             Icon(
@@ -93,7 +93,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
               size: 20,
               color: ColorsManager.primary,
             ),
-            SizedBox(width: Paddings.medium),
+            SizedBox(width: Paddings.normal),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +106,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
                       color: ColorsManager.primary,
                     ),
                   ),
-                  SizedBox(height: Paddings.extraSmall / 2),
+                  SizedBox(height: Paddings.xSmall / 2),
                   Text(
                     _getMessagePreview(message),
                     style: StylesManager.regular(
@@ -145,7 +145,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
         return InkWell(
           onTap: () => widget.onMessageTap(message),
           child: Padding(
-            padding: EdgeInsets.all(Paddings.medium),
+            padding: EdgeInsets.all(Paddings.normal),
             child: Row(
               children: [
                 Icon(
@@ -153,7 +153,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
                   size: 20,
                   color: ColorsManager.primary,
                 ),
-                SizedBox(width: Paddings.medium),
+                SizedBox(width: Paddings.normal),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +166,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
                           color: ColorsManager.primary,
                         ),
                       ),
-                      SizedBox(height: Paddings.extraSmall / 2),
+                      SizedBox(height: Paddings.xSmall / 2),
                       Text(
                         _getMessagePreview(message),
                         style: StylesManager.regular(
@@ -201,7 +201,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
         children: List.generate(
           widget.pinnedMessages.length,
           (index) => Container(
-            margin: EdgeInsets.symmetric(horizontal: Paddings.extraSmall / 2),
+            margin: EdgeInsets.symmetric(horizontal: Paddings.xSmall / 2),
             width: 6,
             height: 6,
             decoration: BoxDecoration(

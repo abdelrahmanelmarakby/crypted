@@ -31,7 +31,7 @@ class ReactionPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: Paddings.medium,
+        horizontal: Paddings.xSmall,
         vertical: Paddings.small,
       ),
       decoration: BoxDecoration(
@@ -53,7 +53,7 @@ class ReactionPicker extends StatelessWidget {
                 onTap: () => onReactionSelected(emoji),
               )),
           if (onMoreEmojis != null) ...[
-            SizedBox(width: Paddings.extraSmall),
+            SizedBox(width: Paddings.xSmall),
             _MoreEmojisButton(onTap: onMoreEmojis!),
           ],
         ],
@@ -169,7 +169,7 @@ class EmojiPickerDialog extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: Paddings.medium),
+            SizedBox(height: Paddings.normal),
             Expanded(
               child: DefaultTabController(
                 length: emojiCategories.length,
@@ -188,7 +188,7 @@ class EmojiPickerDialog extends StatelessWidget {
                       child: TabBarView(
                         children: emojiCategories.values.map((emojis) {
                           return GridView.builder(
-                            padding: EdgeInsets.all(Paddings.medium),
+                            padding: EdgeInsets.all(Paddings.normal),
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 6,
                               crossAxisSpacing: 8,

@@ -2,10 +2,13 @@ import 'package:crypted_app/app/data/models/messages/location_message_model.dart
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
+import 'package:crypted_app/app/widgets/interactive_map_viewer.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -70,10 +73,23 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
     final lng = widget.message.longitude;
     const zoom = 15;
     const size = '400x200';
-    const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your API key or use alternative
+    final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
-    // Using OpenStreetMap static map as fallback (free, no API key needed)
-    return 'https://staticmap.openstreetmap.de/staticmap.php?center=$lat,$lng&zoom=$zoom&size=$size&markers=$lat,$lng,red';
+    // Using Google Maps Static API with secure API key
+    return 'https://maps.googleapis.com/maps/api/staticmap?center=$lat,$lng&zoom=$zoom&size=$size&markers=color:red%7C$lat,$lng&key=$apiKey';
+  }
+
+  // Open interactive map viewer
+  void _openInteractiveMap() {
+    Get.to(
+      () => InteractiveMapViewer(
+        latitude: widget.message.latitude,
+        longitude: widget.message.longitude,
+        locationName: 'Shared Location',
+        address: _address,
+      ),
+      transition: Transition.cupertino,
+    );
   }
 
   @override
@@ -104,13 +120,15 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Map Preview
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Stack(
-                children: [
-                  // Static Map Image
-                  CachedNetworkImage(
+            // Map Preview (Tappable to open interactive map)
+            GestureDetector(
+              onTap: _openInteractiveMap,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Stack(
+                  children: [
+                    // Static Map Image
+                    CachedNetworkImage(
                     imageUrl: _staticMapUrl,
                     height: 160,
                     width: double.infinity,
@@ -182,6 +200,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                   ),
                 ],
               ),
+            ),
             ),
 
             // Location Details

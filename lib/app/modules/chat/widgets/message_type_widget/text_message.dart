@@ -22,7 +22,7 @@ class TextMessageWidget extends StatelessWidget {
           ),
         ),
         if (message.isEdited) ...[
-          SizedBox(height: Paddings.extraSmall / 2),
+          SizedBox(height: Paddings.xSmall / 2),
           Text(
             'Edited',
             style: StylesManager.regular(

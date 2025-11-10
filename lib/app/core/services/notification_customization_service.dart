@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get_storage/get_storage.dart';
 
 /// Service for customizing notifications per chat
 class NotificationCustomizationService {
@@ -15,7 +16,7 @@ class NotificationCustomizationService {
   Future<NotificationSettings> getSettings(String roomId) async {
     try {
       final key = _getSettingsKey(roomId);
-      final stored = await CacheHelper.get(key: key);
+      final stored = await GetStorage().read( key);
 
       if (stored != null && stored is String) {
         final Map<String, dynamic> json = jsonDecode(stored);
@@ -38,10 +39,7 @@ class NotificationCustomizationService {
   ) async {
     try {
       final key = _getSettingsKey(roomId);
-      await CacheHelper.put(
-        key: key,
-        value: jsonEncode(settings.toMap()),
-      );
+      await GetStorage().write( key, jsonEncode(settings.toMap()));
 
       if (kDebugMode) {
         dev.log('💾 Saved notification settings for room: $roomId');

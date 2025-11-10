@@ -73,21 +73,48 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
   }
 
   Future<void> _loadAudio() async {
+    if (!mounted) return;
+
     setState(() {
       isLoading = true;
     });
+
     try {
+      print("🎵 Loading audio from URL: ${widget.message.audioUrl}");
+
+      if (widget.message.audioUrl.isEmpty) {
+        throw Exception('Audio URL is empty');
+      }
+
       await _audioPlayer.setUrl(widget.message.audioUrl);
+
       // If duration is not available from the file, fallback to message.duration
       if (_audioPlayer.duration == null && widget.message.duration != null) {
         duration = _parseDuration(widget.message.duration!);
       }
+
+      print("✅ Audio loaded successfully. Duration: ${_audioPlayer.duration ?? duration}");
     } catch (e) {
-      Get.snackbar("Error", "Failed to load audio");
+      print("❌ Failed to load audio: $e");
+      print("Audio URL: ${widget.message.audioUrl}");
+
+      if (mounted) {
+        Get.snackbar(
+          "Audio Error",
+          "Failed to load voice message. Please check your connection.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: ColorsManager.red,
+          colorText: ColorsManager.white,
+          duration: Duration(seconds: 2),
+        );
+      }
     }
-    setState(() {
-      isLoading = false;
-    });
+
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Duration _parseDuration(String durationStr) {
