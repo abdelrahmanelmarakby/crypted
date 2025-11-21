@@ -45,7 +45,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -101,7 +101,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                       end: Alignment.bottomCenter,
                       colors: [
                         ColorsManager.navbarColor,
-                        Colors.white.withOpacity(0.95),
+                        Colors.white.withValues(alpha: 0.95),
                       ],
                       stops: const [0.0, 0.3],
                     ),
@@ -146,7 +146,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, -2),
                                 ),
@@ -197,7 +197,7 @@ class PrivateChatScreen extends GetView<ChatController> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -250,7 +250,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -326,7 +326,7 @@ class PrivateChatScreen extends GetView<ChatController> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -410,21 +410,21 @@ class PrivateChatScreen extends GetView<ChatController> {
             height: 44,
             decoration: BoxDecoration(
               color: isVideoCall
-                ? ColorsManager.primary.withOpacity(0.1)
-                : ColorsManager.success.withOpacity(0.1),
+                ? ColorsManager.primary.withValues(alpha: 0.1)
+                : ColorsManager.success.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isVideoCall
-                  ? ColorsManager.primary.withOpacity(0.3)
-                  : ColorsManager.success.withOpacity(0.3),
+                  ? ColorsManager.primary.withValues(alpha: 0.3)
+                  : ColorsManager.success.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: Container(
               decoration: BoxDecoration(
                 color: isVideoCall
-                  ? ColorsManager.primary.withOpacity(0.15)
-                  : ColorsManager.success.withOpacity(0.15),
+                  ? ColorsManager.primary.withValues(alpha: 0.15)
+                  : ColorsManager.success.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.all(10),
@@ -484,7 +484,7 @@ class PrivateChatScreen extends GetView<ChatController> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -644,10 +644,10 @@ class PrivateChatScreen extends GetView<ChatController> {
       height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: ColorsManager.primary.withOpacity(0.1),
+        color: ColorsManager.primary.withValues(alpha: 0.1),
       ),
       child: CircleAvatar(
-        backgroundColor: ColorsManager.primary.withOpacity(0.2),
+        backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
         child: Icon(
           Icons.group,
           color: ColorsManager.primary,
@@ -708,7 +708,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: ColorsManager.primary.withOpacity(0.1),
+                    color: ColorsManager.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.group_add, color: ColorsManager.primary),
@@ -724,7 +724,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: ColorsManager.primary.withOpacity(0.1),
+                    color: ColorsManager.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.people, color: ColorsManager.primary),
@@ -740,7 +740,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: ColorsManager.primary.withOpacity(0.1),
+                    color: ColorsManager.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.settings, color: ColorsManager.primary),

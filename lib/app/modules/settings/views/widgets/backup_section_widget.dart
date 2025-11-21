@@ -36,7 +36,7 @@ class BackupSectionWidget extends StatelessWidget {
                   color: ColorsManager.primary,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: ColorsManager.primary.withOpacity(0.1),
+                  backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
                 ),
               ),
             ],
@@ -118,15 +118,15 @@ class QuickActionCardWidget extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -188,7 +188,7 @@ class BackupStatsCardWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: ColorsManager.black.withOpacity(0.05),
+            color: ColorsManager.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -199,7 +199,7 @@ class BackupStatsCardWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: ColorsManager.primary.withOpacity(0.1),
+              color: ColorsManager.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -320,7 +320,7 @@ class BackupOptionTileWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorsManager.black.withOpacity(0.05),
+              color: ColorsManager.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -331,7 +331,7 @@ class BackupOptionTileWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: ColorsManager.primary.withOpacity(0.1),
+                color: ColorsManager.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -394,7 +394,7 @@ class AutoBackupToggleWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: ColorsManager.black.withOpacity(0.05),
+            color: ColorsManager.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -405,7 +405,7 @@ class AutoBackupToggleWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: ColorsManager.accent.withOpacity(0.1),
+              color: ColorsManager.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

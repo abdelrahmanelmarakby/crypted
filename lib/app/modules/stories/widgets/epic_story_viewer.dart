@@ -15,11 +15,11 @@ class EpicStoryViewer extends StatefulWidget {
   final StoryCluster? cluster;
 
   const EpicStoryViewer({
-    Key? key,
+    super.key,
     required this.stories,
     this.initialIndex = 0,
     this.cluster,
-  }) : super(key: key);
+  });
 
   @override
   State<EpicStoryViewer> createState() => _EpicStoryViewerState();
@@ -249,7 +249,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.7),
+                          Colors.black.withValues(alpha: 0.7),
                           Colors.transparent,
                         ],
                       ),
@@ -335,7 +335,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
             child: Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
             ),
           ),
       ],
@@ -355,7 +355,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                   height: 3,
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: AnimatedBuilder(
@@ -377,7 +377,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white.withOpacity(0.5),
+                                color: Colors.white.withValues(alpha: 0.5),
                                 blurRadius: 4,
                               ),
                             ],
@@ -450,7 +450,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                     Text(
                       _formatTimeAgo(story.createdAt),
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 12,
                         shadows: const [
                           Shadow(
@@ -496,7 +496,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black26,
@@ -563,7 +563,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
               ),
               child: const Center(
                 child: Icon(
@@ -577,7 +577,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
               ),
               child: const Center(
                 child: Icon(

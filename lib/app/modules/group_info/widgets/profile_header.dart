@@ -33,7 +33,7 @@ class ProfileHeader extends GetView<GroupInfoController> {
                     ),
                   )
                 : CircleAvatar(
-                    backgroundColor: ColorsManager.primary.withOpacity(0.1),
+                    backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
                     child: Text(
                       controller.displayName.isNotEmpty ? controller.displayName.substring(0, 1).toUpperCase() : '?',
                       style: StylesManager.bold(

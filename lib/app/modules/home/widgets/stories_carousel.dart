@@ -70,7 +70,7 @@ class StoriesCarousel extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: ColorsManager.grey.withOpacity(0.3),
+                      color: ColorsManager.grey.withValues(alpha: 0.3),
                       width: 2,
                     ),
                   ),
@@ -145,7 +145,7 @@ class StoriesCarousel extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     ColorsManager.primary,
-                    ColorsManager.primary.withOpacity(0.6),
+                    ColorsManager.primary.withValues(alpha: 0.6),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -170,7 +170,7 @@ class StoriesCarousel extends StatelessWidget {
                       : Container(
                           width: 61,
                           height: 61,
-                          color: ColorsManager.primary.withOpacity(0.2),
+                          color: ColorsManager.primary.withValues(alpha: 0.2),
                           child: Icon(Icons.person, color: ColorsManager.primary),
                         ),
                 ),
@@ -300,7 +300,7 @@ class StoriesCarousel extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: ColorsManager.grey.withOpacity(0.3),
+                    color: ColorsManager.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -384,9 +384,9 @@ class StoriesCarousel extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
         ),
         child: Column(
           children: [

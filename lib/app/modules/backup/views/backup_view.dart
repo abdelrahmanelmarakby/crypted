@@ -102,7 +102,7 @@ class BackupView extends GetView<BackupController> {
           end: Alignment.bottomRight,
           colors: [
             ColorsManager.primary,
-            ColorsManager.primary.withOpacity(0.8),
+            ColorsManager.primary.withValues(alpha: 0.8),
           ],
         ),
       ),
@@ -120,7 +120,7 @@ class BackupView extends GetView<BackupController> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -146,7 +146,7 @@ class BackupView extends GetView<BackupController> {
                         Text(
                           hasBackup ? 'Last backup: $lastBackup' : 'Start your first backup',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 14,
                           ),
                         ),
@@ -173,7 +173,7 @@ class BackupView extends GetView<BackupController> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -187,7 +187,7 @@ class BackupView extends GetView<BackupController> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: ColorsManager.primary.withOpacity(0.1),
+                    color: ColorsManager.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -306,7 +306,7 @@ class BackupView extends GetView<BackupController> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -462,7 +462,7 @@ class BackupView extends GetView<BackupController> {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: ColorsManager.primary.withOpacity(0.1),
+              color: ColorsManager.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -534,7 +534,7 @@ class BackupView extends GetView<BackupController> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: ColorsManager.primary.withOpacity(0.1),
+                color: ColorsManager.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(Icons.restore, color: ColorsManager.primary),

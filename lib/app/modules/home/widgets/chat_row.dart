@@ -608,7 +608,7 @@ class _ChatRowState extends State<ChatRow> {
       height: Sizes.size48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: ColorsManager.primary.withOpacity(0.1),
+        color: ColorsManager.primary.withValues(alpha: 0.1),
       ),
       child: imageUrl.isNotEmpty
           ? AppCachedNetworkImage(
@@ -619,7 +619,7 @@ class _ChatRowState extends State<ChatRow> {
               isCircular: true,
             )
           : CircleAvatar(
-              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
               child: Icon(
                 Icons.group,
                 color: ColorsManager.primary,
@@ -639,7 +639,7 @@ class _ChatRowState extends State<ChatRow> {
       height: Sizes.size48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: ColorsManager.primary.withOpacity(0.1),
+        color: ColorsManager.primary.withValues(alpha: 0.1),
       ),
       child: imageUrl.isNotEmpty
           ? AppCachedNetworkImage(
@@ -650,7 +650,7 @@ class _ChatRowState extends State<ChatRow> {
               isCircular: true,
             )
           : CircleAvatar(
-              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
               child: Text(
                 (displayUser?.fullName?.isNotEmpty == true
                     ? displayUser!.fullName!.substring(0, 1).toUpperCase()

@@ -62,7 +62,7 @@ class UserProfileCardWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: ColorsManager.black.withOpacity(0.05),
+            color: ColorsManager.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -135,7 +135,7 @@ class UserProfileCardWidget extends StatelessWidget {
               color: ColorsManager.primary,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: ColorsManager.primary.withOpacity(0.1),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
               foregroundColor: ColorsManager.primary,
             ),
           ),

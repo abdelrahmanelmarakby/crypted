@@ -139,7 +139,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -161,7 +161,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: ColorsManager.primary.withOpacity(0.1),
+                        color: ColorsManager.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -196,7 +196,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
                           value: _autoBackupEnabled.value,
                           onChanged: isBackingUp ? null : _toggleAutoBackup,
                           activeColor: ColorsManager.primary,
-                          activeTrackColor: ColorsManager.primary.withOpacity(0.5),
+                          activeTrackColor: ColorsManager.primary.withValues(alpha: 0.5),
                           inactiveThumbColor: Colors.white,
                           inactiveTrackColor: Colors.grey.shade300,
                         )),
@@ -209,7 +209,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: ColorsManager.primary.withOpacity(0.05),
+                      color: ColorsManager.primary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(

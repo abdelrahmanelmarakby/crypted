@@ -85,7 +85,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
         Container(
           padding: const EdgeInsets.all(Paddings.normal),
           decoration: BoxDecoration(
-            color: ColorsManager.primary.withOpacity(0.1),
+            color: ColorsManager.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(Radiuss.normal),
           ),
           child: Icon(
@@ -400,12 +400,12 @@ class _EventBottomSheetState extends State<EventBottomSheet>
                 gradient: LinearGradient(
                   colors: [
                     ColorsManager.primary,
-                    ColorsManager.primary.withOpacity(0.8),
+                    ColorsManager.primary.withValues(alpha: 0.8),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: ColorsManager.primary.withOpacity(0.3),
+                    color: ColorsManager.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -441,7 +441,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
       Get.snackbar(
         "",
         Constants.kEventNameRequiredPlease.tr,
-        backgroundColor: Colors.orange.withOpacity(0.8),
+        backgroundColor: Colors.orange.withValues(alpha: 0.8),
         colorText: Colors.white,
         icon: const Icon(Icons.warning, color: Colors.white),
       );

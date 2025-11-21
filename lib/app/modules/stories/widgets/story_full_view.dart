@@ -222,7 +222,7 @@ class _StoryFullViewState extends State<StoryFullView>
               onLongPressCancel: () => _onLongPressEnd(),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: Padding(
@@ -248,7 +248,7 @@ class _StoryFullViewState extends State<StoryFullView>
               onLongPressCancel: () => _onLongPressEnd(),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: Padding(
@@ -273,7 +273,7 @@ class _StoryFullViewState extends State<StoryFullView>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -296,12 +296,12 @@ class _StoryFullViewState extends State<StoryFullView>
               right: 0,
               bottom: 0,
               child: Container(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 child: Center(
                   child: Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -474,8 +474,8 @@ class _StoryFullViewState extends State<StoryFullView>
       height: 3,
       decoration: BoxDecoration(
         color: isViewed
-            ? Colors.white.withOpacity(0.6)
-            : Colors.white.withOpacity(0.3),
+            ? Colors.white.withValues(alpha: 0.6)
+            : Colors.white.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(2),
       ),
       child: AnimatedBuilder(
@@ -503,7 +503,7 @@ class _StoryFullViewState extends State<StoryFullView>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -547,8 +547,8 @@ class _StoryFullViewState extends State<StoryFullView>
                           : Icons.visibility_off,
                       color: widget.story.isViewedBy(
                               UserService.currentUser.value?.uid ?? '')
-                          ? Colors.white.withOpacity(0.7)
-                          : Colors.white.withOpacity(0.5),
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : Colors.white.withValues(alpha: 0.5),
                       size: 12,
                     ),
                     const SizedBox(width: 4),
@@ -560,8 +560,8 @@ class _StoryFullViewState extends State<StoryFullView>
                       style: TextStyle(
                         color: widget.story.isViewedBy(
                                 UserService.currentUser.value?.uid ?? '')
-                            ? Colors.white.withOpacity(0.7)
-                            : Colors.white.withOpacity(0.5),
+                            ? Colors.white.withValues(alpha: 0.7)
+                            : Colors.white.withValues(alpha: 0.5),
                         fontSize: 10,
                       ),
                     ),

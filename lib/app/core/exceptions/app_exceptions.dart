@@ -1,6 +1,7 @@
 /// Custom application exceptions
 ///
 /// These exceptions provide better error categorization and user-friendly messages
+library;
 
 /// Base exception class
 class AppException implements Exception {
@@ -21,9 +22,9 @@ class AppException implements Exception {
 /// Network-related exceptions
 class NetworkException extends AppException {
   NetworkException([
-    String message = 'Network error. Please check your connection.',
+    super.message = 'Network error. Please check your connection.',
     String? details,
-  ]) : super(message, technicalDetails: details);
+  ]) : super(technicalDetails: details);
 }
 
 /// Permission-related exceptions
@@ -42,9 +43,9 @@ class PermissionException extends AppException {
 /// Storage-related exceptions
 class StorageException extends AppException {
   StorageException([
-    String message = 'Storage error. Please free up some space.',
+    super.message = 'Storage error. Please free up some space.',
     String? details,
-  ]) : super(message, technicalDetails: details);
+  ]) : super(technicalDetails: details);
 }
 
 /// Firebase-related exceptions
@@ -100,9 +101,9 @@ class MediaException extends AppException {
 /// Encryption exceptions
 class EncryptionException extends AppException {
   EncryptionException([
-    String message = 'Encryption/decryption failed',
+    super.message = 'Encryption/decryption failed',
     String? details,
-  ]) : super(message, technicalDetails: details);
+  ]) : super(technicalDetails: details);
 }
 
 /// Rate limit exceptions
@@ -147,7 +148,7 @@ class TimeoutException extends AppException {
 /// Cache exceptions
 class CacheException extends AppException {
   CacheException([
-    String message = 'Cache operation failed',
+    super.message = 'Cache operation failed',
     String? details,
-  ]) : super(message, technicalDetails: details);
+  ]) : super(technicalDetails: details);
 }

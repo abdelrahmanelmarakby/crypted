@@ -147,7 +147,7 @@ class AttachmentWidget extends GetView<ChatController> {
                                   "Success",
                                   "Audio message sent",
                                   snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: ColorsManager.success.withOpacity(0.9),
+                                  backgroundColor: ColorsManager.success.withValues(alpha: 0.9),
                                   colorText: Colors.white,
                                   duration: const Duration(seconds: 2),
                                   margin: const EdgeInsets.all(16),
@@ -164,7 +164,7 @@ class AttachmentWidget extends GetView<ChatController> {
                                 "Error",
                                 "Failed to send audio message: ${e.toString()}",
                                 snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: Colors.red.withOpacity(0.8),
+                                backgroundColor: Colors.red.withValues(alpha: 0.8),
                                 colorText: Colors.white,
                                 duration: const Duration(seconds: 3),
                                 margin: const EdgeInsets.all(16),
@@ -442,7 +442,7 @@ class AttachmentWidget extends GetView<ChatController> {
                             Get.snackbar(
                               "خطأ",
                               " ${e.toString()} فشل في اختيار جهة الاتصال",
-                              backgroundColor: Colors.red.withOpacity(0.8),
+                              backgroundColor: Colors.red.withValues(alpha: 0.8),
                               colorText: Colors.white,
                             );
                           }

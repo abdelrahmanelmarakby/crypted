@@ -16,12 +16,12 @@ class MessageReactionsDisplay extends StatelessWidget {
   final VoidCallback onShowDetails;
 
   const MessageReactionsDisplay({
-    Key? key,
+    super.key,
     required this.reactions,
     required this.currentUserId,
     required this.onReactionTap,
     required this.onShowDetails,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -97,12 +97,12 @@ class _ReactionChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isUserReacted
-              ? ColorsManager.primary.withOpacity(0.2)
+              ? ColorsManager.primary.withValues(alpha: 0.2)
               : (Get.isDarkMode ? Colors.grey[800] : Colors.grey[200]),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isUserReacted
-                ? ColorsManager.primary.withOpacity(0.5)
+                ? ColorsManager.primary.withValues(alpha: 0.5)
                 : Colors.transparent,
             width: 1.5,
           ),
@@ -138,10 +138,10 @@ class ReactionDetailsSheet extends StatelessWidget {
   final List<Reaction> reactions;
 
   const ReactionDetailsSheet({
-    Key? key,
+    super.key,
     required this.emoji,
     required this.reactions,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +203,7 @@ class _ReactionUserTile extends StatelessWidget {
           return ListTile(
             contentPadding: EdgeInsets.zero,
             leading: CircleAvatar(
-              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
               child: const SizedBox(
                 width: 20,
                 height: 20,
@@ -227,7 +227,7 @@ class _ReactionUserTile extends StatelessWidget {
           return ListTile(
             contentPadding: EdgeInsets.zero,
             leading: CircleAvatar(
-              backgroundColor: ColorsManager.primary.withOpacity(0.2),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
               child: Icon(Icons.person, color: ColorsManager.primary),
             ),
             title: Text(
@@ -247,10 +247,10 @@ class _ReactionUserTile extends StatelessWidget {
           leading: user.imageUrl != null && user.imageUrl!.isNotEmpty
               ? CircleAvatar(
                   backgroundImage: CachedNetworkImageProvider(user.imageUrl!),
-                  backgroundColor: ColorsManager.primary.withOpacity(0.2),
+                  backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
                 )
               : CircleAvatar(
-                  backgroundColor: ColorsManager.primary.withOpacity(0.2),
+                  backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
                   child: Text(
                     user.fullName?.isNotEmpty == true
                         ? user.fullName![0].toUpperCase()
@@ -290,9 +290,9 @@ class AllReactionsDialog extends StatelessWidget {
   final List<Reaction> reactions;
 
   const AllReactionsDialog({
-    Key? key,
+    super.key,
     required this.reactions,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +387,7 @@ class _ReactionGroup extends StatelessWidget {
           children: reactions.map((reaction) {
             return Chip(
               label: Text('User ${reaction.userId}'), // Replace with actual user name
-              backgroundColor: ColorsManager.primary.withOpacity(0.1),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
               labelStyle: TextStyle(
                 fontSize: FontSize.small,
                 color: ColorsManager.primary,

@@ -32,7 +32,7 @@ class UserSelectionWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
         color:
-            isSelected ? ColorsManager.primary.withOpacity(0.1) : Colors.white,
+            isSelected ? ColorsManager.primary.withValues(alpha: 0.1) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected ? ColorsManager.primary : ColorsManager.lightGrey,
@@ -40,7 +40,7 @@ class UserSelectionWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -168,7 +168,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
             height: 5,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
-              color: ColorsManager.lightGrey.withOpacity(0.6),
+              color: ColorsManager.lightGrey.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(2.5),
             ),
           ),
@@ -186,8 +186,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            ColorsManager.primary.withOpacity(0.15),
-                            ColorsManager.primary.withOpacity(0.05),
+                            ColorsManager.primary.withValues(alpha: 0.15),
+                            ColorsManager.primary.withValues(alpha: 0.05),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -195,7 +195,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: ColorsManager.primary.withOpacity(0.1),
+                            color: ColorsManager.primary.withValues(alpha: 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -234,7 +234,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                 style: StylesManager.regular(
                                   fontSize: FontSize.small,
                                   color: selectedCount > 0
-                                    ? ColorsManager.primary.withOpacity(0.8)
+                                    ? ColorsManager.primary.withValues(alpha: 0.8)
                                     : ColorsManager.grey,
                                 ),
                               ),
@@ -254,12 +254,12 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                     color: ColorsManager.offWhite,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: ColorsManager.lightGrey.withOpacity(0.3),
+                      color: ColorsManager.lightGrey.withValues(alpha: 0.3),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -277,13 +277,13 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       hintText: 'Search by name or email...',
                       hintStyle: StylesManager.regular(
                         fontSize: FontSize.medium,
-                        color: ColorsManager.grey.withOpacity(0.6),
+                        color: ColorsManager.grey.withValues(alpha: 0.6),
                       ),
                       prefixIcon: Padding(
                         padding: const EdgeInsets.only(left: 14, right: 10),
                         child: Icon(
                           Icons.search_rounded,
-                          color: ColorsManager.grey.withOpacity(0.7),
+                          color: ColorsManager.grey.withValues(alpha: 0.7),
                           size: 22,
                         ),
                       ),
@@ -298,7 +298,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                   icon: Container(
                                     padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
-                                      color: ColorsManager.grey.withOpacity(0.15),
+                                      color: ColorsManager.grey.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Icon(
@@ -337,15 +337,15 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    ColorsManager.primary.withOpacity(0.03),
-                    ColorsManager.primary.withOpacity(0.01),
+                    ColorsManager.primary.withValues(alpha: 0.03),
+                    ColorsManager.primary.withValues(alpha: 0.01),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: ColorsManager.primary.withOpacity(0.15),
+                  color: ColorsManager.primary.withValues(alpha: 0.15),
                   width: 1.5,
                 ),
               ),
@@ -379,7 +379,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
+                                          color: Colors.black.withValues(alpha: 0.1),
                                           blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
@@ -394,7 +394,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                             fit: BoxFit.cover,
                                           )
                                         : Container(
-                                            color: ColorsManager.primary.withOpacity(0.1),
+                                            color: ColorsManager.primary.withValues(alpha: 0.1),
                                             child: Center(
                                               child: Text(
                                                 (user.fullName?.isNotEmpty == true
@@ -435,7 +435,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               duration: const Duration(milliseconds: 300),
                               style: StylesManager.regular(
                                 fontSize: FontSize.small,
-                                color: ColorsManager.grey.withOpacity(0.8),
+                                color: ColorsManager.grey.withValues(alpha: 0.8),
                               ),
                               child: Text(
                                 isGroupChat
@@ -464,12 +464,12 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: ColorsManager.lightGrey.withOpacity(0.3),
+                              color: ColorsManager.lightGrey.withValues(alpha: 0.3),
                               width: 1,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: Colors.black.withValues(alpha: 0.02),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1),
                               ),
@@ -488,7 +488,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               hintText: 'Group name (required)',
                               hintStyle: StylesManager.regular(
                                 fontSize: FontSize.medium,
-                                color: ColorsManager.grey.withOpacity(0.5),
+                                color: ColorsManager.grey.withValues(alpha: 0.5),
                               ),
                               prefixIcon: Padding(
                                 padding: const EdgeInsets.only(left: 14, right: 10),
@@ -500,7 +500,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                       : Icons.group_outlined,
                                     color: controller.groupName.value.isNotEmpty
                                         ? ColorsManager.primary
-                                        : ColorsManager.grey.withOpacity(0.6),
+                                        : ColorsManager.grey.withValues(alpha: 0.6),
                                     size: 22,
                                     key: ValueKey<bool>(controller.groupName.value.isNotEmpty),
                                   ),
@@ -518,7 +518,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                           icon: Container(
                                             padding: const EdgeInsets.all(5),
                                             decoration: BoxDecoration(
-                                              color: ColorsManager.grey.withOpacity(0.15),
+                                              color: ColorsManager.grey.withValues(alpha: 0.15),
                                               borderRadius: BorderRadius.circular(20),
                                             ),
                                             child: Icon(
@@ -563,13 +563,13 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: controller.groupPhotoUrl.value.isNotEmpty
-                                    ? ColorsManager.primary.withOpacity(0.3)
-                                    : ColorsManager.lightGrey.withOpacity(0.3),
+                                    ? ColorsManager.primary.withValues(alpha: 0.3)
+                                    : ColorsManager.lightGrey.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
+                                  color: Colors.black.withValues(alpha: 0.02),
                                   blurRadius: 4,
                                   offset: const Offset(0, 1),
                                 ),
@@ -619,11 +619,11 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                         borderRadius: BorderRadius.circular(14),
                                         color: photoUrl.isNotEmpty
                                           ? Colors.transparent
-                                          : ColorsManager.primary.withOpacity(0.05),
+                                          : ColorsManager.primary.withValues(alpha: 0.05),
                                         border: Border.all(
                                           color: photoUrl.isNotEmpty
-                                              ? ColorsManager.primary.withOpacity(0.2)
-                                              : ColorsManager.lightGrey.withOpacity(0.3),
+                                              ? ColorsManager.primary.withValues(alpha: 0.2)
+                                              : ColorsManager.lightGrey.withValues(alpha: 0.3),
                                           width: 1.5,
                                         ),
                                       ),
@@ -644,7 +644,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                                   fit: BoxFit.cover,
                                                   errorBuilder: (context, error, stackTrace) {
                                                     return Container(
-                                                      color: ColorsManager.lightGrey.withOpacity(0.1),
+                                                      color: ColorsManager.lightGrey.withValues(alpha: 0.1),
                                                       child: Icon(
                                                         Icons.broken_image_rounded,
                                                         color: ColorsManager.grey,
@@ -656,7 +656,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                           : Center(
                                               child: Icon(
                                                 Icons.add_photo_alternate_outlined,
-                                                color: ColorsManager.primary.withOpacity(0.6),
+                                                color: ColorsManager.primary.withValues(alpha: 0.6),
                                                 size: 30,
                                               ),
                                             ),
@@ -685,7 +685,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                                 : 'Optional • Tap to add',
                                             style: StylesManager.regular(
                                               fontSize: FontSize.small,
-                                              color: ColorsManager.grey.withOpacity(0.7),
+                                              color: ColorsManager.grey.withValues(alpha: 0.7),
                                             ),
                                           ),
                                         ],
@@ -701,7 +701,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                         icon: Container(
                                           padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
-                                            color: Colors.red.withOpacity(0.1),
+                                            color: Colors.red.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(20),
                                           ),
                                           child: Icon(
@@ -714,7 +714,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                     else
                                       Icon(
                                         Icons.chevron_right_rounded,
-                                        color: ColorsManager.grey.withOpacity(0.4),
+                                        color: ColorsManager.grey.withValues(alpha: 0.4),
                                         size: 24,
                                       ),
                                   ],
@@ -737,7 +737,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Divider(
-              color: ColorsManager.lightGrey.withOpacity(0.3),
+              color: ColorsManager.lightGrey.withValues(alpha: 0.3),
               height: 1,
             ),
           ),
@@ -775,7 +775,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: ColorsManager.lightGrey.withOpacity(0.1),
+                            color: ColorsManager.lightGrey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
@@ -815,7 +815,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: ColorsManager.lightGrey.withOpacity(0.1),
+                            color: ColorsManager.lightGrey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
@@ -837,7 +837,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                           'جرب البحث بكلمات مختلفة',
                           style: StylesManager.regular(
                             fontSize: FontSize.small,
-                            color: ColorsManager.grey.withOpacity(0.8),
+                            color: ColorsManager.grey.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -860,12 +860,12 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? ColorsManager.primary.withOpacity(0.05)
+                            ? ColorsManager.primary.withValues(alpha: 0.05)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                         border: isSelected
                             ? Border.all(
-                                color: ColorsManager.primary.withOpacity(0.2),
+                                color: ColorsManager.primary.withValues(alpha: 0.2),
                                 width: 1,
                               )
                             : null,
@@ -992,8 +992,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withOpacity(0.0),
-                    Colors.white.withOpacity(0.8),
+                    Colors.white.withValues(alpha: 0.0),
+                    Colors.white.withValues(alpha: 0.8),
                     Colors.white,
                   ],
                 ),
@@ -1007,21 +1007,21 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                     ? LinearGradient(
                         colors: [
                           ColorsManager.primary,
-                          ColorsManager.primary.withOpacity(0.85),
+                          ColorsManager.primary.withValues(alpha: 0.85),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
                     : LinearGradient(
                         colors: [
-                          ColorsManager.grey.withOpacity(0.3),
-                          ColorsManager.grey.withOpacity(0.25),
+                          ColorsManager.grey.withValues(alpha: 0.3),
+                          ColorsManager.grey.withValues(alpha: 0.25),
                         ],
                       ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: hasValidGroupName ? [
                     BoxShadow(
-                      color: ColorsManager.primary.withOpacity(0.35),
+                      color: ColorsManager.primary.withValues(alpha: 0.35),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -1060,7 +1060,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                 : Icons.chat_bubble_rounded,
                               color: hasValidGroupName
                                 ? Colors.white
-                                : Colors.white.withOpacity(0.6),
+                                : Colors.white.withValues(alpha: 0.6),
                               size: 22,
                               key: ValueKey<bool>(hasValidGroupName),
                             ),
@@ -1083,7 +1083,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                 fontSize: FontSize.medium,
                                 color: hasValidGroupName
                                   ? Colors.white
-                                  : Colors.white.withOpacity(0.6),
+                                  : Colors.white.withValues(alpha: 0.6),
                               ),
                             ),
                           ),

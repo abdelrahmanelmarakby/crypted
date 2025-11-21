@@ -12,10 +12,10 @@ class EditMessageSheet extends StatefulWidget {
   final Function(String newText) onSave;
 
   const EditMessageSheet({
-    Key? key,
+    super.key,
     required this.message,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   static Future<void> show({
     required BuildContext context,
@@ -82,7 +82,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
       Get.snackbar(
         'Error',
         'Message cannot be empty',
-        backgroundColor: ColorsManager.error2.withOpacity(0.9),
+        backgroundColor: ColorsManager.error2.withValues(alpha: 0.9),
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
       );
@@ -98,7 +98,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
       Get.snackbar(
         'Error',
         'Message exceeds maximum length of $_maxCharacters characters',
-        backgroundColor: ColorsManager.error2.withOpacity(0.9),
+        backgroundColor: ColorsManager.error2.withValues(alpha: 0.9),
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
       );
@@ -131,7 +131,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: ColorsManager.grey.withOpacity(0.3),
+                color: ColorsManager.grey.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -169,10 +169,10 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
                 decoration: BoxDecoration(
                   color: Get.isDarkMode
                       ? Colors.grey[800]
-                      : ColorsManager.grey.withOpacity(0.1),
+                      : ColorsManager.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: ColorsManager.primary.withOpacity(0.3),
+                    color: ColorsManager.primary.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
@@ -239,7 +239,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
                       onPressed: () => Get.back(),
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: Paddings.normal),
-                        side: BorderSide(color: ColorsManager.grey.withOpacity(0.3)),
+                        side: BorderSide(color: ColorsManager.grey.withValues(alpha: 0.3)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

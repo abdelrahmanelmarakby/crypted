@@ -300,7 +300,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -315,7 +315,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: ColorsManager.primary.withOpacity(0.1),
+                  color: ColorsManager.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -355,9 +355,9 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _getStateColor(_currentState).withOpacity(0.1),
+              color: _getStateColor(_currentState).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _getStateColor(_currentState).withOpacity(0.3)),
+              border: Border.all(color: _getStateColor(_currentState).withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -626,10 +626,10 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: entry.value ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+            color: entry.value ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: entry.value ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+              color: entry.value ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -696,9 +696,9 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -744,7 +744,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: ColorsManager.primary.withOpacity(0.1),
+          color: ColorsManager.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: ColorsManager.primary, size: 24),
@@ -764,7 +764,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
         value: value,
         onChanged: onChanged,
         activeColor: ColorsManager.primary,
-        activeTrackColor: ColorsManager.primary.withOpacity(0.5),
+        activeTrackColor: ColorsManager.primary.withValues(alpha: 0.5),
         inactiveThumbColor: Colors.white,
         inactiveTrackColor: Colors.grey.shade300,
       ),
@@ -782,7 +782,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: value ? ColorsManager.primary.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+          color: value ? ColorsManager.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -806,7 +806,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
         value: value,
         onChanged: (bool newValue) => onChanged(newValue),
         activeColor: ColorsManager.primary,
-        activeTrackColor: ColorsManager.primary.withOpacity(0.5),
+        activeTrackColor: ColorsManager.primary.withValues(alpha: 0.5),
         inactiveThumbColor: Colors.white,
         inactiveTrackColor: Colors.grey.shade300,
       ),

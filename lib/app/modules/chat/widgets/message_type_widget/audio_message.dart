@@ -189,12 +189,12 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ColorsManager.primary.withOpacity(0.2),
+          color: ColorsManager.primary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -214,7 +214,7 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: ColorsManager.primary.withOpacity(0.3),
+                    color: ColorsManager.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -283,7 +283,7 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: ColorsManager.primary.withOpacity(0.1),
+                          color: ColorsManager.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -307,7 +307,7 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: ColorsManager.primary.withOpacity(0.1),
+              color: ColorsManager.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -359,7 +359,7 @@ class WaveformPainter extends CustomPainter {
       final paint = Paint()
         ..color = isActive
             ? ColorsManager.primary
-            : ColorsManager.grey.withOpacity(0.3)
+            : ColorsManager.grey.withValues(alpha: 0.3)
         ..strokeWidth = barWidth
         ..strokeCap = StrokeCap.round;
 

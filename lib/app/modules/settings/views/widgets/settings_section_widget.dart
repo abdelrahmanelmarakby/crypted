@@ -189,7 +189,7 @@ class SettingTileWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorsManager.black.withOpacity(0.05),
+              color: ColorsManager.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -200,7 +200,7 @@ class SettingTileWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: ColorsManager.primary.withOpacity(0.1),
+                color: ColorsManager.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -252,7 +252,7 @@ class LanguageTileWidget extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? ColorsManager.primary.withOpacity(0.1) : ColorsManager.white,
+          color: isSelected ? ColorsManager.primary.withValues(alpha: 0.1) : ColorsManager.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? ColorsManager.primary : ColorsManager.borderColor,
@@ -260,7 +260,7 @@ class LanguageTileWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorsManager.black.withOpacity(0.05),
+              color: ColorsManager.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -272,7 +272,7 @@ class LanguageTileWidget extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? ColorsManager.primary.withOpacity(0.2)
+                    ? ColorsManager.primary.withValues(alpha: 0.2)
                     : ColorsManager.borderColor,
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -319,7 +319,7 @@ class LogoutTileWidget extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: ColorsManager.error.withOpacity(0.1),
+          color: ColorsManager.error.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: ColorsManager.error,
@@ -327,7 +327,7 @@ class LogoutTileWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorsManager.error.withOpacity(0.1),
+              color: ColorsManager.error.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -338,7 +338,7 @@ class LogoutTileWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: ColorsManager.error.withOpacity(0.2),
+                color: ColorsManager.error.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -383,7 +383,7 @@ class DeleteAccountTileWidget extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: ColorsManager.error.withOpacity(0.1),
+          color: ColorsManager.error.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: ColorsManager.error,
@@ -391,7 +391,7 @@ class DeleteAccountTileWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorsManager.error.withOpacity(0.15),
+              color: ColorsManager.error.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -402,7 +402,7 @@ class DeleteAccountTileWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: ColorsManager.error.withOpacity(0.2),
+                color: ColorsManager.error.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(

@@ -66,7 +66,7 @@ class CustomBottomSheets {
                 height: 60,
                 decoration: BoxDecoration(
                   color: (iconColor ?? (isDanger ? ColorsManager.red : ColorsManager.primary))
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -240,7 +240,7 @@ class CustomBottomSheets {
               itemCount: actions.length,
               separatorBuilder: (context, index) => Divider(
                 height: 1,
-                color: ColorsManager.lightGrey.withOpacity(0.5),
+                color: ColorsManager.lightGrey.withValues(alpha: 0.5),
               ),
               itemBuilder: (context, index) {
                 final action = actions[index];
@@ -393,7 +393,7 @@ class CustomBottomSheets {
               itemCount: options.length,
               separatorBuilder: (context, index) => Divider(
                 height: 1,
-                color: ColorsManager.lightGrey.withOpacity(0.5),
+                color: ColorsManager.lightGrey.withValues(alpha: 0.5),
               ),
               itemBuilder: (context, index) {
                 final option = options[index];
@@ -412,7 +412,7 @@ class CustomBottomSheets {
                             height: 48,
                             decoration: BoxDecoration(
                               color: (option.iconColor ?? ColorsManager.primary)
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(

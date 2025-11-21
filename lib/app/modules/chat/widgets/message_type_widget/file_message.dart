@@ -165,12 +165,12 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _fileColor.withOpacity(0.3),
+          color: _fileColor.withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -191,7 +191,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: _fileColor.withOpacity(0.12),
+                    color: _fileColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -277,7 +277,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: _fileColor.withOpacity(0.12),
+                              color: _fileColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -302,8 +302,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: _isDownloading
-                        ? _fileColor.withOpacity(0.12)
-                        : _fileColor.withOpacity(0.15),
+                        ? _fileColor.withValues(alpha: 0.12)
+                        : _fileColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: _isDownloading

@@ -24,7 +24,6 @@ import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/text_me
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/video_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/uploading_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_reactions_display.dart';
-import 'package:crypted_app/app/modules/chat/widgets/reaction_picker.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -144,14 +143,14 @@ class MessageBuilder extends GetView<ChatController> {
                                 Icon(
                                   Icons.forward_rounded,
                                   size: Sizes.size14,
-                                  color: ColorsManager.grey.withOpacity(0.7),
+                                  color: ColorsManager.grey.withValues(alpha: 0.7),
                                 ),
                                 const SizedBox(width: Sizes.size4),
                                 Text(
                                   'Forwarded',
                                   style: StylesManager.regular(
                                     fontSize: FontSize.xSmall,
-                                    color: ColorsManager.grey.withOpacity(0.7),
+                                    color: ColorsManager.grey.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -217,10 +216,10 @@ class MessageBuilder extends GetView<ChatController> {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.grey.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -251,7 +250,7 @@ class MessageBuilder extends GetView<ChatController> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: ColorsManager.primary.withOpacity(0.1),
+                  color: ColorsManager.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

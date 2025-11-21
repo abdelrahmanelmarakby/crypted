@@ -17,9 +17,9 @@ class GooglePlacesLocationPicker extends StatefulWidget {
   final Function(double lat, double lon, String? placeName) onLocationSelected;
 
   const GooglePlacesLocationPicker({
-    Key? key,
+    super.key,
     required this.onLocationSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<GooglePlacesLocationPicker> createState() =>
@@ -154,7 +154,7 @@ class _GooglePlacesLocationPickerState
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 30,
               offset: const Offset(0, -5),
             ),
@@ -183,7 +183,7 @@ class _GooglePlacesLocationPickerState
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: ColorsManager.primary.withOpacity(0.1),
+                      color: ColorsManager.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -541,12 +541,12 @@ class _GooglePlacesLocationPickerState
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: isPrimary
-              ? ColorsManager.primary.withOpacity(0.1)
+              ? ColorsManager.primary.withValues(alpha: 0.1)
               : Colors.grey[100],
           borderRadius: BorderRadius.circular(16),
           border: isPrimary
               ? Border.all(
-                  color: ColorsManager.primary.withOpacity(0.3),
+                  color: ColorsManager.primary.withValues(alpha: 0.3),
                   width: 2,
                 )
               : null,
@@ -562,9 +562,9 @@ class _GooglePlacesLocationPickerState
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDanger
-                        ? Colors.red.withOpacity(0.1)
+                        ? Colors.red.withValues(alpha: 0.1)
                         : isPrimary
-                            ? ColorsManager.primary.withOpacity(0.2)
+                            ? ColorsManager.primary.withValues(alpha: 0.2)
                             : Colors.white,
                     shape: BoxShape.circle,
                   ),

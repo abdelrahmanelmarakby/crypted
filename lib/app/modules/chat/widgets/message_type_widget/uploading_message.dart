@@ -34,12 +34,12 @@ class UploadingMessageWidget extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ColorsManager.primary.withOpacity(0.2),
+          color: ColorsManager.primary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -56,7 +56,7 @@ class UploadingMessageWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _getTypeColor(message.uploadType).withOpacity(0.1),
+                  color: _getTypeColor(message.uploadType).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -144,7 +144,7 @@ class UploadingMessageWidget extends StatelessWidget {
                     Container(
                       height: 6,
                       decoration: BoxDecoration(
-                        color: ColorsManager.lightGrey.withOpacity(0.3),
+                        color: ColorsManager.lightGrey.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -157,13 +157,13 @@ class UploadingMessageWidget extends StatelessWidget {
                           gradient: LinearGradient(
                             colors: [
                               ColorsManager.primary,
-                              ColorsManager.primary.withOpacity(0.7),
+                              ColorsManager.primary.withValues(alpha: 0.7),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: ColorsManager.primary.withOpacity(0.3),
+                              color: ColorsManager.primary.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 1),
                             ),

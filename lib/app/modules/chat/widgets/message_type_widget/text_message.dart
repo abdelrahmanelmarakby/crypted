@@ -27,7 +27,7 @@ class TextMessageWidget extends StatelessWidget {
             'Edited',
             style: StylesManager.regular(
               fontSize: FontSize.xSmall,
-              color: ColorsManager.grey.withOpacity(0.7),
+              color: ColorsManager.grey.withValues(alpha: 0.7),
             ),
           ),
         ],

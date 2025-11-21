@@ -1,3 +1,6 @@
+import 'package:crypted_app/app/modules/group_info/widgets/group_media_controlls.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/group_media_item.dart';
+import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -5,12 +8,16 @@ import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypted_app/core/locale/constant.dart';
+import 'package:share_plus/share_plus.dart';
+
+enum MediaType { image, video, file, audio ,}
 
 class GroupInfoController extends GetxController {
   // Group data - reactive for real-time updates
@@ -120,7 +127,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot update group: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -153,7 +160,7 @@ class GroupInfoController extends GetxController {
           "Success",
           "Group information updated successfully",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.9),
+          backgroundColor: Colors.green.withValues(alpha: 0.9),
           colorText: Colors.white,
         );
       } else {
@@ -165,7 +172,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Failed to update group information: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -180,7 +187,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot remove member: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -195,7 +202,7 @@ class GroupInfoController extends GetxController {
           "Error",
           "You cannot remove yourself from the group",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           colorText: Colors.white,
         );
         return;
@@ -207,7 +214,7 @@ class GroupInfoController extends GetxController {
           "Error",
           "Only admins can remove members",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           colorText: Colors.white,
         );
         return;
@@ -230,7 +237,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Failed to remove member: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -245,7 +252,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot add member: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -258,7 +265,7 @@ class GroupInfoController extends GetxController {
           "Error",
           "Only admins can add members",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           colorText: Colors.white,
         );
         return;
@@ -270,7 +277,7 @@ class GroupInfoController extends GetxController {
           "Info",
           "${newMember.fullName} is already a member of this group",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange.withOpacity(0.9),
+          backgroundColor: Colors.orange.withValues(alpha: 0.9),
           colorText: Colors.white,
         );
         return;
@@ -293,7 +300,7 @@ class GroupInfoController extends GetxController {
           "Success",
           "${newMember.fullName} added to group",
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.9),
+          backgroundColor: Colors.green.withValues(alpha: 0.9),
           colorText: Colors.white,
         );
       } else {
@@ -305,7 +312,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Failed to add member: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -320,7 +327,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot exit group: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -332,7 +339,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot exit group: No user ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -375,7 +382,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Failed to exit group: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -390,7 +397,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot report group: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -402,7 +409,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot report group: No user ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -471,7 +478,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Failed to report group: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -486,7 +493,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot update favorite: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -503,7 +510,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Failed to update favorite status: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -518,7 +525,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot view starred messages: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -751,7 +758,7 @@ class GroupInfoController extends GetxController {
         "Error",
         "Cannot view media: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -818,10 +825,10 @@ class GroupInfoController extends GetxController {
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildMediaGrid('photo'),
-                    _buildMediaGrid('video'),
-                    _buildMediaGrid('file'),
-                    _buildMediaGrid('audio'),
+                    _buildMediaGrid(MediaType.image),
+                    _buildMediaGrid(MediaType.video),
+                    _buildMediaGrid(MediaType.file),
+                    _buildMediaGrid(MediaType.audio),
                   ],
                 ),
               ),
@@ -833,13 +840,13 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  Widget _buildMediaGrid(String mediaType) {
+  Widget _buildMediaGrid(MediaType mediaType) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('chats')
           .doc(roomId)
           .collection('chat')
-          .where('type', isEqualTo: mediaType)
+          .where('type', isEqualTo: mediaType.name)
           .orderBy('timestamp', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
@@ -869,7 +876,7 @@ class GroupInfoController extends GetxController {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  "No ${mediaType}s shared yet",
+                  "No ${mediaType.name}s shared yet",
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey.shade600,
@@ -880,7 +887,7 @@ class GroupInfoController extends GetxController {
           );
         }
 
-        if (mediaType == 'photo' || mediaType == 'video') {
+        if (mediaType.name == 'image' || mediaType.name == 'video') {
           return GridView.builder(
             padding: const EdgeInsets.all(8),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -995,18 +1002,18 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  IconData _getIconForType(String type) {
+  IconData _getIconForType(MediaType type) {
     switch (type) {
-      case 'photo':
-        return Icons.image;
-      case 'video':
-        return Icons.videocam;
-      case 'file':
-        return Icons.insert_drive_file;
-      case 'audio':
-        return Icons.audiotrack;
+      case MediaType.image:
+        return Iconsax.image_copy;
+      case MediaType.video:
+        return Iconsax.video_circle;
+      case MediaType.file:
+        return Iconsax.document_1;
+      case MediaType.audio:
+        return Iconsax.audio_square;
       default:
-        return Icons.insert_drive_file;
+        return Iconsax.document;
     }
   }
 
@@ -1014,13 +1021,13 @@ class GroupInfoController extends GetxController {
   void _openFullScreenViewer(
     List<QueryDocumentSnapshot> items,
     int initialIndex,
-    String mediaType,
+    MediaType mediaType,
   ) {
     final mediaItems = items.map((item) {
       final data = item.data() as Map<String, dynamic>;
       return {
         'url': data['url'] ?? data['fileUrl'] ?? '',
-        'type': mediaType,
+        'type': mediaType.name,
         'timestamp': data['timestamp'],
       };
     }).toList();
@@ -1036,7 +1043,7 @@ class GroupInfoController extends GetxController {
               builder: (BuildContext context, int index) {
                 final mediaUrl = mediaItems[index]['url'] as String;
 
-                if (mediaType == 'photo') {
+                if (mediaType.name == MediaType.image.name) {
                   return PhotoViewGalleryPageOptions(
                     imageProvider: NetworkImage(mediaUrl),
                     initialScale: PhotoViewComputedScale.contained,
@@ -1112,18 +1119,18 @@ class GroupInfoController extends GetxController {
           ],
         ),
       ),
-      isScrollControlled: true,
+      // isScrollControlled: true,
     );
   }
 
   /// Build media tab content
-  Widget _buildMediaTab(String mediaType) {
+  Widget _buildMediaTab(MediaType mediaType) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('chat_rooms')
           .doc(roomId)
           .collection('chat')
-          .where('type', isEqualTo: mediaType)
+          .where('type', isEqualTo: mediaType.name)
           .orderBy('timestamp', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
@@ -1142,9 +1149,9 @@ class GroupInfoController extends GetxController {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(_getMediaIcon(mediaType), size: 64, color: ColorsManager.lightGrey),
+                Icon(_getIconForType(mediaType), size: 64, color: ColorsManager.lightGrey),
                 SizedBox(height: 16),
-                Text("No ${mediaType}s shared", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
+                Text("No ${mediaType.name}s shared", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
               ],
             ),
           );
@@ -1153,15 +1160,30 @@ class GroupInfoController extends GetxController {
         return GridView.builder(
           padding: EdgeInsets.all(8),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: mediaType == 'image' || mediaType == 'video' ? 3 : 1,
+            crossAxisCount: mediaType.name == 'image' || mediaType.name == 'video' ? 3 : 1,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            childAspectRatio: mediaType == 'image' || mediaType == 'video' ? 1.0 : 3.0,
+            childAspectRatio: mediaType.name == 'image' || mediaType.name == 'video' ? 1.0 : 3.0,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
             final data = items[index].data() as Map<String, dynamic>;
-            return _buildMediaItem(mediaType, data);
+            return GroupMediaItem(
+              mediaType: mediaType,
+              mediaUrl: data['url'] ?? data['fileUrl'] ?? '',
+              heroTag: data['url'] ?? data['fileUrl'] ?? '',
+              title: data['caption'] ?? '',
+              thumbnailUrl: data['thumbnailUrl'] ?? '',
+              subtitle: data['caption'] ?? '',
+              timestampLabel: data['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(data['timestamp']).toString() : null,
+              fileSizeLabel: data['fileSize'] != null ? '${data['fileSize']} bytes' : null,
+              durationLabel: data['duration'] != null ? '${data['duration']} seconds' : null,
+              onPreview: () => MediaPreview.previewMedia(context, mediaType, data),
+              onOpenExternally: () => MediaPreview.openExternally(context, data['url']),
+              onDownload: () => _downloadFile(data['url'] ?? data['fileUrl'] ?? '', 'media_${DateTime.now().millisecondsSinceEpoch}'),
+              // onOpenExternally: () => _openExternally(data['url'] ?? data['fileUrl'] ?? ''),
+              onShare: ()async => await Share.share(data['url'] ?? data['fileUrl'] ?? ''),
+            );
           },
         );
       },

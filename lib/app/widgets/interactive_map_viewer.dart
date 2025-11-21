@@ -14,12 +14,12 @@ class InteractiveMapViewer extends StatefulWidget {
   final String? address;
 
   const InteractiveMapViewer({
-    Key? key,
+    super.key,
     required this.latitude,
     required this.longitude,
     this.locationName,
     this.address,
-  }) : super(key: key);
+  });
 
   @override
   State<InteractiveMapViewer> createState() => _InteractiveMapViewerState();
@@ -28,7 +28,7 @@ class InteractiveMapViewer extends StatefulWidget {
 class _InteractiveMapViewerState extends State<InteractiveMapViewer> {
   GoogleMapController? _mapController;
   late CameraPosition _initialPosition;
-  Set<Marker> _markers = {};
+  final Set<Marker> _markers = {};
 
   @override
   void initState() {
@@ -132,7 +132,7 @@ class _InteractiveMapViewerState extends State<InteractiveMapViewer> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.6),
+                    Colors.black.withValues(alpha: 0.6),
                     Colors.transparent,
                   ],
                 ),
@@ -150,7 +150,7 @@ class _InteractiveMapViewerState extends State<InteractiveMapViewer> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -176,7 +176,7 @@ class _InteractiveMapViewerState extends State<InteractiveMapViewer> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -267,7 +267,7 @@ class _InteractiveMapViewerState extends State<InteractiveMapViewer> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 20,
                     offset: const Offset(0, -5),
                   ),
@@ -354,7 +354,7 @@ class _InteractiveMapViewerState extends State<InteractiveMapViewer> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

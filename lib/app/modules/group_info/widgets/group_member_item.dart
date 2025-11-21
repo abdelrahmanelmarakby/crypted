@@ -30,12 +30,12 @@ class GroupMemberItem extends GetView<GroupInfoController> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: ColorsManager.primary.withOpacity(0.2),
+                color: ColorsManager.primary.withValues(alpha: 0.2),
                 width: 2,
               ),
             ),
             child: CircleAvatar(
-              backgroundColor: ColorsManager.primary.withOpacity(0.1),
+              backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
               backgroundImage: member.imageUrl != null && member.imageUrl!.isNotEmpty
                   ? NetworkImage(member.imageUrl!)
                   : null,
@@ -80,7 +80,7 @@ class GroupMemberItem extends GetView<GroupInfoController> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: ColorsManager.primary.withOpacity(0.1),
+                color: ColorsManager.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

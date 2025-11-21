@@ -14,11 +14,11 @@ class PinnedMessagesBar extends StatefulWidget {
   final VoidCallback onViewAll;
 
   const PinnedMessagesBar({
-    Key? key,
+    super.key,
     required this.pinnedMessages,
     required this.onMessageTap,
     required this.onViewAll,
-  }) : super(key: key);
+  });
 
   @override
   State<PinnedMessagesBar> createState() => _PinnedMessagesBarState();
@@ -57,10 +57,10 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
 
     return Container(
       decoration: BoxDecoration(
-        color: ColorsManager.primary.withOpacity(0.1),
+        color: ColorsManager.primary.withValues(alpha: 0.1),
         border: Border(
           bottom: BorderSide(
-            color: ColorsManager.primary.withOpacity(0.2),
+            color: ColorsManager.primary.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -208,7 +208,7 @@ class _PinnedMessagesBarState extends State<PinnedMessagesBar> {
               shape: BoxShape.circle,
               color: _currentPage == index
                   ? ColorsManager.primary
-                  : ColorsManager.primary.withOpacity(0.3),
+                  : ColorsManager.primary.withValues(alpha: 0.3),
             ),
           ),
         ),

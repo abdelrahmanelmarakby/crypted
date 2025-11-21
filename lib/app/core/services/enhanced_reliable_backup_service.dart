@@ -21,7 +21,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:disk_space_plus/disk_space_plus.dart';
-import 'package:flutter/services.dart';
 
 /// Backup configuration options
 class BackupConfig {

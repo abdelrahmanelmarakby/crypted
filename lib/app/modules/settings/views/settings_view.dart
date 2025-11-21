@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/modules/settings/controllers/settings_controller.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/header_section_widget.dart';
-import 'package:crypted_app/app/modules/settings/views/widgets/simple_backup_switch_widget.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/settings_section_widget.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/progress_widgets.dart';
 

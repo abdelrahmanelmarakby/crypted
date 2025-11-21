@@ -99,13 +99,13 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isClosed
-              ? ColorsManager.grey.withOpacity(0.3)
-              : ColorsManager.primary.withOpacity(0.2),
+              ? ColorsManager.grey.withValues(alpha: 0.3)
+              : ColorsManager.primary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -124,7 +124,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isClosed ? ColorsManager.grey : ColorsManager.primary).withOpacity(0.1),
+                    color: (isClosed ? ColorsManager.grey : ColorsManager.primary).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -147,7 +147,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: ColorsManager.success.withOpacity(0.15),
+                      color: ColorsManager.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -328,7 +328,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: ColorsManager.primary.withOpacity(0.1),
+                      color: ColorsManager.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -374,7 +374,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: ColorsManager.primary.withOpacity(0.05),
+                color: ColorsManager.primary.withValues(alpha: 0.05),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -433,7 +433,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: userVoted
-                          ? ColorsManager.primary.withOpacity(0.1)
+                          ? ColorsManager.primary.withValues(alpha: 0.1)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
@@ -497,7 +497,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                           child: LinearProgressIndicator(
                             value: totalVotes > 0 ? voteCount / totalVotes : 0,
                             backgroundColor:
-                                ColorsManager.navbarColor.withOpacity(0.3),
+                                ColorsManager.navbarColor.withValues(alpha: 0.3),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               userVoted
                                   ? ColorsManager.primary
@@ -670,7 +670,7 @@ class OptionTile extends StatelessWidget {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: isSelected ? color.withOpacity(0.08) : Colors.transparent,
+        color: isSelected ? color.withValues(alpha: 0.08) : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isSelected ? color : ColorsManager.navbarColor,
@@ -726,7 +726,7 @@ class OptionTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(

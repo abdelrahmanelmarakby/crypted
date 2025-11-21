@@ -258,7 +258,7 @@ class _BackupConfigurationBottomSheetState
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: ColorsManager.primary.withOpacity(0.1),
+                        color: ColorsManager.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -296,7 +296,7 @@ class _BackupConfigurationBottomSheetState
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: ColorsManager.primary.withOpacity(0.1),
+                        color: ColorsManager.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -464,10 +464,10 @@ class _BackupConfigurationBottomSheetState
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.orange.withOpacity(0.3),
+                          color: Colors.orange.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -602,18 +602,18 @@ class _BackupConfigurationBottomSheetState
       margin: EdgeInsets.only(bottom: Sizes.size12),
       decoration: BoxDecoration(
         border: Border.all(
-          color: value ? ColorsManager.primary.withOpacity(0.3) : ColorsManager.borderColor,
+          color: value ? ColorsManager.primary.withValues(alpha: 0.3) : ColorsManager.borderColor,
         ),
         borderRadius: BorderRadius.circular(12),
-        color: value ? ColorsManager.primary.withOpacity(0.05) : Colors.white,
+        color: value ? ColorsManager.primary.withValues(alpha: 0.05) : Colors.white,
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: value
-                ? ColorsManager.primary.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? ColorsManager.primary.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -645,7 +645,7 @@ class _BackupConfigurationBottomSheetState
           value: value,
           onChanged: (requiresPermission && !hasPermission) ? null : onChanged,
           activeColor: ColorsManager.primary,
-          activeTrackColor: ColorsManager.primary.withOpacity(0.5),
+          activeTrackColor: ColorsManager.primary.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -693,9 +693,9 @@ class _BackupConfigurationBottomSheetState
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

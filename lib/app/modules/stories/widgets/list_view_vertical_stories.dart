@@ -31,7 +31,7 @@ class ListViewVerticalStories extends StatelessWidget {
                 Icon(
                   Icons.photo_library,
                   size: 64,
-                  color: Colors.grey.withOpacity(0.5),
+                  color: Colors.grey.withValues(alpha: 0.5),
                 ),
                 SizedBox(height: 16),
                 Text(
@@ -46,7 +46,7 @@ class ListViewVerticalStories extends StatelessWidget {
                 Text(
                   'Others haven\'t shared any stories yet!',
                   style: TextStyle(
-                    color: Colors.grey.withOpacity(0.7),
+                    color: Colors.grey.withValues(alpha: 0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -80,13 +80,13 @@ class ListViewVerticalStories extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: hasUnviewedStories
-                      ? ColorsManager.primary.withOpacity(0.1)
+                      ? ColorsManager.primary.withValues(alpha: 0.1)
                       : ColorsManager.navbarColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: hasUnviewedStories
-                        ? ColorsManager.primary.withOpacity(0.5)
-                        : Colors.grey.withOpacity(0.2),
+                        ? ColorsManager.primary.withValues(alpha: 0.5)
+                        : Colors.grey.withValues(alpha: 0.2),
                     width: 1.5,
                   ),
                 ),
@@ -100,7 +100,7 @@ class ListViewVerticalStories extends StatelessWidget {
                             ? LinearGradient(
                                 colors: [
                                   ColorsManager.primary,
-                                  ColorsManager.primary.withOpacity(0.7),
+                                  ColorsManager.primary.withValues(alpha: 0.7),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -108,11 +108,11 @@ class ListViewVerticalStories extends StatelessWidget {
                             : null,
                         color: hasUnviewedStories
                             ? null
-                            : Colors.grey.withOpacity(0.3),
+                            : Colors.grey.withValues(alpha: 0.3),
                         border: hasUnviewedStories
                             ? null
                             : Border.all(
-                                color: Colors.grey.withOpacity(0.3),
+                                color: Colors.grey.withValues(alpha: 0.3),
                                 width: 2,
                               ),
                       ),

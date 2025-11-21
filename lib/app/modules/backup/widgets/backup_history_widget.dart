@@ -22,7 +22,7 @@ class BackupHistoryWidget extends GetView<BackupController> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -63,7 +63,7 @@ class BackupHistoryWidget extends GetView<BackupController> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -106,7 +106,7 @@ class BackupHistoryWidget extends GetView<BackupController> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: (item.success ? Colors.green : Colors.red).withOpacity(0.3),
+                    color: (item.success ? Colors.green : Colors.red).withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

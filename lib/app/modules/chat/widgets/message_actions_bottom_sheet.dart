@@ -133,7 +133,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: ColorsManager.grey.withOpacity(0.3),
+              color: ColorsManager.grey.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -157,7 +157,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: ColorsManager.grey.withOpacity(0.1),
+                      color: ColorsManager.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -330,7 +330,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
-        color: isDestructive ? ColorsManager.error2.withOpacity(0.1) : Colors.transparent,
+        color: isDestructive ? ColorsManager.error2.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -338,7 +338,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: (iconColor ?? ColorsManager.grey).withOpacity(0.1),
+            color: (iconColor ?? ColorsManager.grey).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: SvgPicture.asset(

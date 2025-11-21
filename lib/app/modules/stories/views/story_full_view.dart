@@ -119,7 +119,7 @@ class _StoryFullViewState extends State<StoryFullView>
             right: 20,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
               child: IconButton(
@@ -135,7 +135,7 @@ class _StoryFullViewState extends State<StoryFullView>
             left: 20,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
               child: IconButton(
@@ -326,7 +326,7 @@ class _StoryFullViewState extends State<StoryFullView>
     return Container(
       height: 3,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.3),
+        color: Colors.white.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(2),
       ),
       child: AnimatedBuilder(
@@ -351,7 +351,7 @@ class _StoryFullViewState extends State<StoryFullView>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

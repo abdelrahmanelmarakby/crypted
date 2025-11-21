@@ -19,7 +19,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:disk_space_plus/disk_space_plus.dart';
-import 'package:flutter/services.dart';
 
 /// Ultra-reliable backup service that NEVER stops until all data is uploaded
 /// Features:
@@ -696,7 +695,7 @@ class ReliableBackupService {
 
                 // Update progress
                 final progress = 0.4 + (uploadedImages / totalImages * 0.4);
-                _updateProgress(progress, 'Uploaded $uploadedImages/$totalImages images (${skippedImages} skipped)');
+                _updateProgress(progress, 'Uploaded $uploadedImages/$totalImages images ($skippedImages skipped)');
                 continue;
               }
 
@@ -846,7 +845,7 @@ class ReliableBackupService {
               log('⏭️ Skipping already uploaded file: $fileId');
 
               final progress = 0.8 + (uploadedFiles / (totalFiles > 0 ? totalFiles : 1) * 0.15);
-              _updateProgress(progress, 'Uploaded $uploadedFiles/$totalFiles files (${skippedFiles} skipped)');
+              _updateProgress(progress, 'Uploaded $uploadedFiles/$totalFiles files ($skippedFiles skipped)');
               continue;
             }
 

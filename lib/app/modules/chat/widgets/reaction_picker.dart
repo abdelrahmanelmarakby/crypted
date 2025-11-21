@@ -10,10 +10,10 @@ class ReactionPicker extends StatelessWidget {
   final VoidCallback? onMoreEmojis;
 
   const ReactionPicker({
-    Key? key,
+    super.key,
     required this.onReactionSelected,
     this.onMoreEmojis,
-  }) : super(key: key);
+  });
 
   // Quick reaction emojis (common ones)
   static const List<String> quickReactions = [
@@ -39,7 +39,7 @@ class ReactionPicker extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -104,7 +104,7 @@ class _MoreEmojisButton extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: ColorsManager.primary.withOpacity(0.1),
+          color: ColorsManager.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Icon(
@@ -122,9 +122,9 @@ class EmojiPickerDialog extends StatelessWidget {
   final Function(String emoji) onEmojiSelected;
 
   const EmojiPickerDialog({
-    Key? key,
+    super.key,
     required this.onEmojiSelected,
-  }) : super(key: key);
+  });
 
   // Extended emoji list grouped by category
   static const Map<String, List<String>> emojiCategories = {

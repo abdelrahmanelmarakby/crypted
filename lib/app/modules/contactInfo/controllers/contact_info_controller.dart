@@ -141,7 +141,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Cannot block user: No user or room data available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -177,7 +177,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Failed to update block status: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -192,7 +192,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Cannot clear chat: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -223,7 +223,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Failed to clear chat: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -238,7 +238,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Cannot update favorite: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -255,7 +255,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Failed to update favorite status: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -270,7 +270,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Cannot view starred messages: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -492,7 +492,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Cannot view media: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -758,7 +758,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Cannot export chat: No room ID available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -848,7 +848,7 @@ class ContactInfoController extends GetxController {
         "Success",
         "Chat exported successfully!\nExported ${messages.length} messages",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
       );
@@ -859,7 +859,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Failed to export chat: $e",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     } finally {
@@ -939,7 +939,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "No contact details available",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -1006,7 +1006,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Unable to update bio: User not logged in",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
       return;
@@ -1052,7 +1052,7 @@ class ContactInfoController extends GetxController {
         "Error",
         "Failed to update bio: $e",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
       );
     }

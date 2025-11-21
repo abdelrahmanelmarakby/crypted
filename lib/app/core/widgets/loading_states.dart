@@ -286,7 +286,7 @@ class LoadingStates {
               Icon(
                 icon,
                 size: 80,
-                color: ColorsManager.grey.withOpacity(0.5),
+                color: ColorsManager.grey.withValues(alpha: 0.5),
               ),
             const SizedBox(height: 24),
             Text(

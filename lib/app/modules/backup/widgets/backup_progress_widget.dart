@@ -19,13 +19,13 @@ class BackupProgressWidget extends GetView<BackupController> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              ColorsManager.primary.withOpacity(0.1),
-              ColorsManager.primary.withOpacity(0.05),
+              ColorsManager.primary.withValues(alpha: 0.1),
+              ColorsManager.primary.withValues(alpha: 0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: ColorsManager.primary.withOpacity(0.2),
+            color: ColorsManager.primary.withValues(alpha: 0.2),
             width: 2,
           ),
         ),
@@ -43,7 +43,7 @@ class BackupProgressWidget extends GetView<BackupController> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: ColorsManager.primary.withOpacity(0.3),
+                          color: ColorsManager.primary.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -107,7 +107,7 @@ class BackupProgressWidget extends GetView<BackupController> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -165,7 +165,7 @@ class BackupProgressWidget extends GetView<BackupController> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -242,9 +242,9 @@ class BackupProgressWidget extends GetView<BackupController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

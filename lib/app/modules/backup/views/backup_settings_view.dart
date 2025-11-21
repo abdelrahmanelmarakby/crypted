@@ -258,7 +258,7 @@ class BackupSettingsView extends GetView<BackupController> {
               border: Border.all(color: Colors.red.shade200, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -373,7 +373,7 @@ class BackupSettingsView extends GetView<BackupController> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -389,7 +389,7 @@ class BackupSettingsView extends GetView<BackupController> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
+                    color: iconColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: iconColor, size: 20),
@@ -427,7 +427,7 @@ class BackupSettingsView extends GetView<BackupController> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: (isDisabled ? Colors.grey : ColorsManager.primary).withOpacity(0.1),
+          color: (isDisabled ? Colors.grey : ColorsManager.primary).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -454,7 +454,7 @@ class BackupSettingsView extends GetView<BackupController> {
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeColor: ColorsManager.primary,
+        activeThumbColor: ColorsManager.primary,
       ),
     );
   }
@@ -472,7 +472,7 @@ class BackupSettingsView extends GetView<BackupController> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: ColorsManager.primary.withOpacity(0.1),
+          color: ColorsManager.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: ColorsManager.primary, size: 20),
@@ -509,7 +509,7 @@ class BackupSettingsView extends GetView<BackupController> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color, size: 20),
@@ -594,7 +594,7 @@ class BackupSettingsView extends GetView<BackupController> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: ColorsManager.primary.withOpacity(0.1),
+                      color: ColorsManager.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -637,7 +637,7 @@ class BackupSettingsView extends GetView<BackupController> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? ColorsManager.primary.withOpacity(0.1)
+                            ? ColorsManager.primary.withValues(alpha: 0.1)
                             : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -659,7 +659,7 @@ class BackupSettingsView extends GetView<BackupController> {
                       style: TextStyle(
                         fontSize: 13,
                         color: isSelected
-                            ? ColorsManager.primary.withOpacity(0.7)
+                            ? ColorsManager.primary.withValues(alpha: 0.7)
                             : Colors.grey.shade600,
                       ),
                     ),

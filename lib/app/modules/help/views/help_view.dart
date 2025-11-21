@@ -45,7 +45,7 @@ class HelpView extends GetView<HelpController> {
                     border: Border.all(color: Color(0xFFE5E5E5), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 24,
                         offset: Offset(0, 8),
                       ),
@@ -100,7 +100,7 @@ class HelpView extends GetView<HelpController> {
                     border: Border.all(color: Color(0xFFE5E5E5), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 24,
                         offset: Offset(0, 8),
                       ),
@@ -507,7 +507,7 @@ class HelpView extends GetView<HelpController> {
                                               border: Border.all(color: Color(0xFFE5E7EB)),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withOpacity(0.05),
+                                                  color: Colors.black.withValues(alpha: 0.05),
                                                   blurRadius: 4,
                                                   offset: Offset(0, 2),
                                                 ),
@@ -519,7 +519,7 @@ class HelpView extends GetView<HelpController> {
                                                   width: 32,
                                                   height: 32,
                                                   decoration: BoxDecoration(
-                                                    color: ColorsManager.primary.withOpacity(0.1),
+                                                    color: ColorsManager.primary.withValues(alpha: 0.1),
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Icon(
@@ -637,7 +637,7 @@ class HelpView extends GetView<HelpController> {
                                 ? []
                                 : [
                                     BoxShadow(
-                                      color: ColorsManager.primary.withOpacity(0.3),
+                                      color: ColorsManager.primary.withValues(alpha: 0.3),
                                       blurRadius: 12,
                                       offset: Offset(0, 4),
                                     ),
@@ -706,7 +706,7 @@ class HelpView extends GetView<HelpController> {
                                   border: Border.all(color: Color(0xFFD1FAE5), width: 1.5),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Color(0xFF10B981).withOpacity(0.1),
+                                      color: Color(0xFF10B981).withValues(alpha: 0.1),
                                       blurRadius: 12,
                                       offset: Offset(0, 4),
                                     ),
@@ -789,7 +789,7 @@ class HelpView extends GetView<HelpController> {
                                           border: Border.all(color: Color(0xFFE5E5E5), width: 1),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.08),
+                                              color: Colors.black.withValues(alpha: 0.08),
                                               blurRadius: 20,
                                               offset: Offset(0, 4),
                                             ),

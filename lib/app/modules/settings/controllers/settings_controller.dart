@@ -922,7 +922,7 @@ class SettingsController extends GetxController {
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Stack(
@@ -932,7 +932,7 @@ class SettingsController extends GetxController {
                               strokeWidth: 8,
                               value: backupProgress.value,
                               valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-                              backgroundColor: Colors.blue.withOpacity(0.2),
+                              backgroundColor: Colors.blue.withValues(alpha: 0.2),
                             ),
                             Column(
                               mainAxisSize: MainAxisSize.min,

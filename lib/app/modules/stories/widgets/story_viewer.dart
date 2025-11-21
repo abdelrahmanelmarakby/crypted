@@ -502,7 +502,7 @@ class _StoryViewerState extends State<StoryViewer>
         'Error',
         'Cannot send reply to this story',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.9),
+        backgroundColor: Colors.red.withValues(alpha: 0.9),
         colorText: Colors.white,
       );
       return;
@@ -533,7 +533,7 @@ class _StoryViewerState extends State<StoryViewer>
         'Error',
         'Failed to send reply. Please try again.',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.9),
+        backgroundColor: Colors.red.withValues(alpha: 0.9),
         colorText: Colors.white,
       );
     }
@@ -555,7 +555,7 @@ class _StoryViewerState extends State<StoryViewer>
         'Error',
         'Cannot send reaction to this story',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.9),
+        backgroundColor: Colors.red.withValues(alpha: 0.9),
         colorText: Colors.white,
       );
       return;
@@ -586,7 +586,7 @@ class _StoryViewerState extends State<StoryViewer>
         'You reacted with $emoji',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 1),
-        backgroundColor: ColorsManager.success.withOpacity(0.9),
+        backgroundColor: ColorsManager.success.withValues(alpha: 0.9),
         colorText: Colors.white,
         margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
       );
@@ -596,7 +596,7 @@ class _StoryViewerState extends State<StoryViewer>
         'Failed to send reaction',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 1),
-        backgroundColor: Colors.red.withOpacity(0.9),
+        backgroundColor: Colors.red.withValues(alpha: 0.9),
         colorText: Colors.white,
         margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
       );
@@ -677,7 +677,7 @@ class _StoryViewerState extends State<StoryViewer>
                 onLongPressCancel: () => _onLongPressEnd(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                   child: Padding(
@@ -703,7 +703,7 @@ class _StoryViewerState extends State<StoryViewer>
                 onLongPressCancel: () => _onLongPressEnd(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                   child: Padding(
@@ -726,7 +726,7 @@ class _StoryViewerState extends State<StoryViewer>
                 right: 0,
                 bottom: 0,
                 child: Container(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -739,7 +739,7 @@ class _StoryViewerState extends State<StoryViewer>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
+                          color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -978,8 +978,8 @@ class _StoryViewerState extends State<StoryViewer>
                 right: index < _currentUserStories.length - 1 ? 4 : 0),
             decoration: BoxDecoration(
               color: isViewed
-                  ? Colors.white.withOpacity(0.6)
-                  : Colors.white.withOpacity(0.3),
+                  ? Colors.white.withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
             child: isCurrentStory
@@ -1012,7 +1012,7 @@ class _StoryViewerState extends State<StoryViewer>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -1052,7 +1052,7 @@ class _StoryViewerState extends State<StoryViewer>
                     children: [
                       Icon(
                         Icons.visibility,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         size: 12,
                       ),
                       const SizedBox(width: 4),
@@ -1154,9 +1154,9 @@ class _StoryViewerState extends State<StoryViewer>
       right: 0,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withValues(alpha: 0.9),
           border: Border(
-            top: BorderSide(color: Colors.white.withOpacity(0.2), width: 1),
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 1),
           ),
         ),
         padding: EdgeInsets.only(
@@ -1174,14 +1174,14 @@ class _StoryViewerState extends State<StoryViewer>
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Reply to story...',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -1192,7 +1192,7 @@ class _StoryViewerState extends State<StoryViewer>
                     vertical: 12,
                   ),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
+                  fillColor: Colors.white.withValues(alpha: 0.1),
                 ),
                 maxLines: 3,
                 minLines: 1,
@@ -1237,9 +1237,9 @@ class _StoryViewerState extends State<StoryViewer>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1282,7 +1282,7 @@ class _StoryViewerState extends State<StoryViewer>
               borderRadius: BorderRadius.circular(40),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -1298,7 +1298,7 @@ class _StoryViewerState extends State<StoryViewer>
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: _selectedReaction == emoji
-                          ? ColorsManager.primary.withOpacity(0.2)
+                          ? ColorsManager.primary.withValues(alpha: 0.2)
                           : Colors.transparent,
                       shape: BoxShape.circle,
                     ),

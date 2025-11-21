@@ -102,7 +102,7 @@ class ProfileHeaderContact extends GetView<ContactInfoController> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: ColorsManager.primary.withOpacity(0.1),
+              color: ColorsManager.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -129,7 +129,7 @@ class ProfileHeaderContact extends GetView<ContactInfoController> {
             ),
           )
         : CircleAvatar(
-            backgroundColor: ColorsManager.primary.withOpacity(0.1),
+            backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
             child: Text(
               controller.userName.isNotEmpty ? controller.userName.substring(0, 1).toUpperCase() : '?',
               style: StylesManager.bold(
@@ -142,7 +142,7 @@ class ProfileHeaderContact extends GetView<ContactInfoController> {
 
   Widget _buildGroupAvatar() {
     return CircleAvatar(
-      backgroundColor: ColorsManager.primary.withOpacity(0.2),
+      backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
       child: Icon(
         Icons.group,
         color: ColorsManager.primary,

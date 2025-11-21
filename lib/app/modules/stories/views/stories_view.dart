@@ -74,7 +74,7 @@ class _AddStoryDialog extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -106,7 +106,7 @@ class _AddStoryDialog extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: ColorsManager.primary.withOpacity(0.1),
+                        color: ColorsManager.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -192,13 +192,13 @@ class _AddStoryDialog extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: controller.selectedLatitude.value != null
-                    ? ColorsManager.primary.withOpacity(0.1)
+                    ? ColorsManager.primary.withValues(alpha: 0.1)
                     : Colors.grey[100],
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: controller.selectedLatitude.value != null
-                      ? ColorsManager.primary.withOpacity(0.5)
-                      : Colors.grey.withOpacity(0.3),
+                      ? ColorsManager.primary.withValues(alpha: 0.5)
+                      : Colors.grey.withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),
@@ -210,7 +210,7 @@ class _AddStoryDialog extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: ColorsManager.primary.withOpacity(0.1),
+                          color: ColorsManager.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(

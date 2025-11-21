@@ -19,7 +19,7 @@ class FloatingProgressButtonWidget extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -87,15 +87,15 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
           margin: const EdgeInsets.only(top: 16),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.05),
+            color: Colors.blue.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.blue.withOpacity(0.25),
+              color: Colors.blue.withValues(alpha: 0.25),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -128,7 +128,7 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
                         strokeWidth: 3,
                         value: controller.backupProgress.value,
                         valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                        backgroundColor: Colors.blue.withOpacity(0.2),
+                        backgroundColor: Colors.blue.withValues(alpha: 0.2),
                       ),
                     ),
                   ),
@@ -150,7 +150,7 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
                           '${(controller.backupProgress.value * 100).toInt()}% Complete • ${_getEstimatedTimeRemaining()}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.blue.withOpacity(0.8),
+                            color: Colors.blue.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -159,10 +159,10 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
                   // Cancel button with enhanced styling
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.red.withOpacity(0.3),
+                        color: Colors.red.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -184,7 +184,7 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
               Container(
                 height: 8,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.15),
+                  color: Colors.blue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: FractionallySizedBox(
@@ -216,7 +216,7 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -230,7 +230,7 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
+                                color: Colors.blue.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -292,7 +292,7 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
                           Container(
                             height: 4,
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(2),
                             ),
                             child: FractionallySizedBox(
@@ -323,10 +323,10 @@ class EnhancedProgressDisplayWidget extends StatelessWidget {
               Obx(() => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: _getStatusColor().withOpacity(0.1),
+                      color: _getStatusColor().withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: _getStatusColor().withOpacity(0.4),
+                        color: _getStatusColor().withValues(alpha: 0.4),
                         width: 1,
                       ),
                     ),

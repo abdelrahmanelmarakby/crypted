@@ -105,12 +105,12 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: ColorsManager.primary.withOpacity(0.2),
+            color: ColorsManager.primary.withValues(alpha: 0.2),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -140,7 +140,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                         child: Icon(
                           Iconsax.map_1_copy,
                           size: 60,
-                          color: ColorsManager.grey.withOpacity(0.3),
+                          color: ColorsManager.grey.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
@@ -151,8 +151,8 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            ColorsManager.primary.withOpacity(0.1),
-                            ColorsManager.primary.withOpacity(0.05),
+                            ColorsManager.primary.withValues(alpha: 0.1),
+                            ColorsManager.primary.withValues(alpha: 0.05),
                           ],
                         ),
                       ),
@@ -191,7 +191,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                         color: ColorsManager.error,
                         shadows: [
                           Shadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withValues(alpha: 0.3),
                             blurRadius: 4,
                           ),
                         ],
@@ -216,7 +216,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: ColorsManager.primary.withOpacity(0.1),
+                          color: ColorsManager.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -272,10 +272,10 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: ColorsManager.primary.withOpacity(0.05),
+                        color: ColorsManager.primary.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: ColorsManager.primary.withOpacity(0.2),
+                          color: ColorsManager.primary.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Row(

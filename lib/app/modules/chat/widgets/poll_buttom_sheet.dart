@@ -83,7 +83,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
       Get.snackbar(
         "",
         Constants.kEnterPollQuestion.tr,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
@@ -100,7 +100,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
       Get.snackbar(
         "",
         Constants.kAtLeastTwoOptions.tr,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
@@ -187,7 +187,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: ColorsManager.primary.withOpacity(0.1),
+                              color: ColorsManager.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -252,7 +252,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color: Colors.black.withValues(alpha: 0.05),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
@@ -270,7 +270,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color:
-                                        ColorsManager.primary.withOpacity(0.1),
+                                        ColorsManager.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
@@ -317,7 +317,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(alpha: 0.05),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -334,7 +334,7 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
                                       color: ColorsManager.primary
-                                          .withOpacity(0.1),
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -370,12 +370,12 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: ColorsManager.primary
-                                          .withOpacity(0.3),
+                                          .withValues(alpha: 0.3),
                                       width: 2,
                                     ),
                                     borderRadius: BorderRadius.circular(16),
                                     color:
-                                        ColorsManager.primary.withOpacity(0.05),
+                                        ColorsManager.primary.withValues(alpha: 0.05),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,

@@ -991,7 +991,7 @@ class ChatController extends GetxController {
                     final contact = contacts[index];
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: ColorsManager.primary.withOpacity(0.1),
+                        backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
                         child: Text(
                           contact.fullName?.isNotEmpty == true
                               ? contact.fullName![0].toUpperCase()
@@ -1414,7 +1414,7 @@ class ChatController extends GetxController {
       onDelete: () => deleteMessage(message),
       onRestore: message.isDeleted ? () => restoreMessage(message) : null,
       onReaction: (emoji) => toggleReaction(message, emoji),
-      onEdit: canEditMsg ? () => showEditMessageSheet(message as TextMessage) : null,
+      onEdit: canEditMsg ? () => showEditMessageSheet(message) : null,
       isPinned: message.isPinned,
       isFavorite: message.isFavorite,
       canPin: true,

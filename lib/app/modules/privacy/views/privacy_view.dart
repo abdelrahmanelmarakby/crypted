@@ -279,7 +279,7 @@ class PrivacyView extends GetView<PrivacyController> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -404,7 +404,7 @@ class PrivacyView extends GetView<PrivacyController> {
                           ),
                           leading: CircleAvatar(
                             radius: 24,
-                            backgroundColor: ColorsManager.primary.withOpacity(0.1),
+                            backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
                             backgroundImage: user.imageUrl != null && user.imageUrl!.isNotEmpty
                                 ? NetworkImage(user.imageUrl!)
                                 : null,

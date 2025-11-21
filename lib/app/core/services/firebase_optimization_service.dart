@@ -560,7 +560,7 @@ class FirebaseMetrics {
     return {
       'cacheHits': cacheHits,
       'cacheMisses': cacheMisses,
-      'hitRate': (hitRate * 100).toStringAsFixed(2) + '%',
+      'hitRate': '${(hitRate * 100).toStringAsFixed(2)}%',
       'rateLimitBlocks': rateLimitBlocks,
       'totalQueries': totalQueries,
       'avgQueryTimeMs': avgQueryTime?.inMilliseconds ?? 0,

@@ -11,10 +11,10 @@ class ChatSearchBar extends StatefulWidget {
   final VoidCallback onClose;
 
   const ChatSearchBar({
-    Key? key,
+    super.key,
     required this.onSearch,
     required this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatSearchBar> createState() => _ChatSearchBarState();
@@ -65,7 +65,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
         color: Get.isDarkMode ? Colors.grey[900] : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

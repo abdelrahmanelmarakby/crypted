@@ -15,11 +15,11 @@ class SearchResultsWidget extends StatelessWidget {
   final Function(Message message) onMessageTap;
 
   const SearchResultsWidget({
-    Key? key,
+    super.key,
     required this.results,
     required this.searchQuery,
     required this.onMessageTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class SearchResultsWidget extends StatelessWidget {
             Icon(
               Icons.search_off,
               size: 64,
-              color: ColorsManager.grey.withOpacity(0.5),
+              color: ColorsManager.grey.withValues(alpha: 0.5),
             ),
             SizedBox(height: Paddings.normal),
             Text(
@@ -54,7 +54,7 @@ class SearchResultsWidget extends StatelessWidget {
             Icon(
               Icons.search,
               size: 64,
-              color: ColorsManager.grey.withOpacity(0.5),
+              color: ColorsManager.grey.withValues(alpha: 0.5),
             ),
             SizedBox(height: Paddings.normal),
             Text(
@@ -74,7 +74,7 @@ class SearchResultsWidget extends StatelessWidget {
       itemCount: results.length,
       separatorBuilder: (context, index) => Divider(
         height: Paddings.normal,
-        color: ColorsManager.grey.withOpacity(0.2),
+        color: ColorsManager.grey.withValues(alpha: 0.2),
       ),
       itemBuilder: (context, index) {
         final message = results[index];
@@ -172,8 +172,8 @@ class _SearchResultTile extends StatelessWidget {
         padding: EdgeInsets.all(Paddings.normal),
         decoration: BoxDecoration(
           color: Get.isDarkMode
-              ? Colors.grey[800]?.withOpacity(0.3)
-              : ColorsManager.grey.withOpacity(0.05),
+              ? Colors.grey[800]?.withValues(alpha: 0.3)
+              : ColorsManager.grey.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

@@ -251,7 +251,7 @@ class BackupProgressSheetWidget extends StatelessWidget {
                       strokeWidth: 8,
                       value: controller.backupProgress.value,
                       valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
-                      backgroundColor: ColorsManager.primary.withOpacity(0.2),
+                      backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
                     ),
                     Column(
                       mainAxisSize: MainAxisSize.min,
@@ -346,7 +346,7 @@ class LogoutConfirmationDialogWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: ColorsManager.error.withOpacity(0.1),
+                color: ColorsManager.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -447,7 +447,7 @@ class DeleteAccountConfirmationDialogWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: ColorsManager.error.withOpacity(0.1),
+                color: ColorsManager.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(

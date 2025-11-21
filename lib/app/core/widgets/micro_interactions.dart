@@ -119,8 +119,8 @@ class MicroInteractions {
           onTap();
         },
         borderRadius: borderRadius ?? BorderRadius.circular(12),
-        splashColor: (rippleColor ?? ColorsManager.primary).withOpacity(0.1),
-        highlightColor: (rippleColor ?? ColorsManager.primary).withOpacity(0.05),
+        splashColor: (rippleColor ?? ColorsManager.primary).withValues(alpha: 0.1),
+        highlightColor: (rippleColor ?? ColorsManager.primary).withValues(alpha: 0.05),
         child: child,
       ),
     );
@@ -229,7 +229,7 @@ class MicroInteractions {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: (color ?? ColorsManager.success).withOpacity(0.1),
+              color: (color ?? ColorsManager.success).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(

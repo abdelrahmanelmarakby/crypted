@@ -12,10 +12,10 @@ class StoryHeatMapView extends StatefulWidget {
   final VoidCallback? onCreateStory;
 
   const StoryHeatMapView({
-    Key? key,
+    super.key,
     required this.stories,
     this.onCreateStory,
-  }) : super(key: key);
+  });
 
   @override
   State<StoryHeatMapView> createState() => _StoryHeatMapViewState();
@@ -82,9 +82,9 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  ColorsManager.primary.withOpacity(0.1),
-                  Colors.purple.withOpacity(0.05),
-                  Colors.pink.withOpacity(0.05),
+                  ColorsManager.primary.withValues(alpha: 0.1),
+                  Colors.purple.withValues(alpha: 0.05),
+                  Colors.pink.withValues(alpha: 0.05),
                 ],
               ),
             ),
@@ -101,7 +101,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                 zoomLevel = matrix.getMaxScaleOnAxis();
               });
             },
-            child: Container(
+            child: SizedBox(
               width: Get.width * 3,
               height: Get.height * 3,
               child: CustomPaint(
@@ -145,7 +145,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -220,7 +220,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _getClusterColor(cluster).withOpacity(
+                    color: _getClusterColor(cluster).withValues(alpha: 
                       0.3 * (1 - _pulseController.value),
                     ),
                   ),
@@ -240,12 +240,12 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                 end: Alignment.bottomRight,
                 colors: [
                   _getClusterColor(cluster),
-                  _getClusterColor(cluster).withOpacity(0.7),
+                  _getClusterColor(cluster).withValues(alpha: 0.7),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _getClusterColor(cluster).withOpacity(0.4),
+                  color: _getClusterColor(cluster).withValues(alpha: 0.4),
                   blurRadius: 15,
                   offset: const Offset(0, 4),
                 ),
@@ -284,7 +284,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                     ),
                   ],
@@ -328,7 +328,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 30,
                 offset: const Offset(0, -5),
               ),
@@ -430,7 +430,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -477,7 +477,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.7),
+                        Colors.black.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
@@ -606,7 +606,7 @@ class HeatMapPainter extends CustomPainter {
 
         if (distance < 5.0) {
           // Draw connection line
-          paint.color = ColorsManager.primary.withOpacity(0.1 * appearAnimation.value);
+          paint.color = ColorsManager.primary.withValues(alpha: 0.1 * appearAnimation.value);
 
           final p1 = Offset(
             size.width / 2 + (cluster1.centerLatitude * 500),
