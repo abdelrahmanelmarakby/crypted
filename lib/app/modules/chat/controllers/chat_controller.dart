@@ -13,6 +13,9 @@ import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/core/events/event_bus.dart';
+import 'package:crypted_app/app/core/rate_limiting/rate_limiter.dart';
+import 'package:crypted_app/app/core/utils/debouncer.dart';
+import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
@@ -46,7 +49,9 @@ import 'package:get/get.dart';
 
 /// Main Chat Controller with new architecture integration
 /// Uses ChatControllerIntegration mixin for event bus, offline support, and state management
-class ChatController extends GetxController with ChatControllerIntegration {
+/// Includes rate limiting and debouncing for performance
+class ChatController extends GetxController
+    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
@@ -465,8 +470,23 @@ class ChatController extends GetxController with ChatControllerIntegration {
     }
   }
 
-  /// Send a message with proper validation
+  /// Send a message with proper validation and rate limiting
   Future<void> sendMessage(Message message) async {
+    // SEC-004 FIX: Check rate limit before sending
+    final rateLimitResult = recordMessageSend(roomId);
+    if (!rateLimitResult.allowed) {
+      _showErrorToast(rateLimitResult.message ?? 'Sending too fast. Please wait.');
+      return;
+    }
+
+    // PERF-008 FIX: Check connectivity before sending
+    if (!ConnectivityService().isOnline) {
+      // Queue message for offline sending
+      _logger.info('Offline - queueing message for later', context: 'ChatController');
+      // For now, show a warning - offline queue handles actual queueing
+      _showToast('You are offline. Message will be sent when connected.');
+    }
+
     try {
       // Stop typing indicator before sending
       await typingService.stopTyping(roomId);
@@ -1738,6 +1758,9 @@ class ChatController extends GetxController with ChatControllerIntegration {
 
     // Dispose new architecture resources (event bus subscriptions, etc.)
     disposeArchitecture();
+
+    // Dispose debouncers and throttlers
+    disposeDebouncers();
 
     // Dispose MessageController (NEW!)
     messageControllerService.onClose();
