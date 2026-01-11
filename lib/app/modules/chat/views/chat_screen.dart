@@ -1,6 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
-import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
@@ -72,22 +70,17 @@ class PrivateChatScreen extends GetView<ChatController> {
         }
 
 
+        // BUG-001 FIX: Use controller's existing chatDataSource instead of creating new instance
+        // This prevents memory leaks from orphaned Firestore listeners on every rebuild
         return StreamProvider<List<Message>>.value(
-          value: ChatDataSources(
-            chatConfiguration: ChatConfiguration(
-              members: controller.members,
-            ),
-          ).getLivePrivateMessage(controller.roomId),
+          value: controller.chatDataSource.getLivePrivateMessage(controller.roomId),
           initialData: const [],
-          catchError: (error, stackTrace) {
+          catchError: (context, error) {
             print("Error in Members: ${controller.members}");
             print(error);
-            print(stackTrace);
             return [];
           },
           builder: (context, child) {
-            print("members ${controller.members}");
-            print("Is group chat ? ${controller.isGroupChat.value} ${controller.isGroup}");
             final messages = Provider.of<List<Message>>(context);
             return Scaffold(
               backgroundColor: ColorsManager.navbarColor,
@@ -439,18 +432,37 @@ class PrivateChatScreen extends GetView<ChatController> {
   Widget _buildMessageItem(List<Message> messages, int index, dynamic otherUser) {
     final Message? previousMsg = index != messages.length - 1 ? messages[index + 1] : null;
     final Message currentMsg = messages[index];
-    
+
     final bool isMe = currentMsg.senderId == UserService.currentUser.value?.uid;
     final DateTime currentTime = currentMsg.timestamp;
     final DateTime? previousTime = previousMsg?.timestamp;
 
+    // BUG-003 FIX: Get the actual sender from message.senderId for group chats
+    // Instead of using otherUser which only works for 1-on-1 chats
+    String? senderName;
+    String? senderImage;
+
+    if (isMe) {
+      senderName = UserService.currentUser.value?.fullName;
+      senderImage = UserService.currentUser.value?.imageUrl;
+    } else if (controller.isGroupChat.value) {
+      // For group chats, find the actual sender from members list
+      final sender = controller.getMemberById(currentMsg.senderId);
+      senderName = sender?.fullName ?? 'Unknown';
+      senderImage = sender?.imageUrl;
+    } else {
+      // For 1-on-1 chats, use the other user
+      senderName = otherUser?.fullName ?? 'Unknown';
+      senderImage = otherUser?.imageUrl;
+    }
+
     return Column(
       children: [
         // Date separator
-        if (index == messages.length - 1 || 
+        if (index == messages.length - 1 ||
             (previousTime != null && !_isSameDay(previousTime, currentTime)))
           _buildDateSeparator(currentTime),
-        
+
         // Message
         Container(
           margin: const EdgeInsets.symmetric(vertical: 2),
@@ -458,12 +470,8 @@ class PrivateChatScreen extends GetView<ChatController> {
             !isMe,
             messageModel: currentMsg,
             timestamp: currentMsg.timestamp.toIso8601String(),
-            senderName: isMe 
-                ? UserService.currentUser.value?.fullName
-                : otherUser.fullName,
-            senderImage: isMe 
-                ? UserService.currentUser.value?.imageUrl
-                : otherUser.imageUrl,
+            senderName: senderName,
+            senderImage: senderImage,
           ),
         ),
       ],

@@ -131,9 +131,9 @@ class ChatController extends GetxController {
         update();
       })
     );
-    
-    // Setup typing indicator listener
-    _setupTypingListener();
+
+    // BUG-004 FIX: Don't setup typing listener here - roomId not initialized yet
+    // Typing listener is now setup in _initializeApp() after roomId is set
   }
   
   /// Setup typing indicator listener
@@ -161,6 +161,9 @@ class ChatController extends GetxController {
     _initializeChatDataSource();
     await _checkPermissions();
     _loadMessages();
+
+    // BUG-004 FIX: Setup typing listener AFTER roomId is initialized
+    _setupTypingListener();
   }
 
   Future<void> _initializeFromArguments() async {
@@ -387,12 +390,24 @@ class ChatController extends GetxController {
   /// Send message with reply context
   Future<void> sendMessageWithReply(Message message) async {
     try {
-      // Add reply context to message if replying
+      // BUG-002 FIX: Save reply context BEFORE clearing, then attach to message
       Message messageToSend = message;
+
       if (isReplying && replyingTo != null) {
-        // Create a copy of the message with reply context
-        // Note: This assumes the Message model supports reply context
-        // For now, we'll just clear the reply state
+        // Create reply context from the message being replied to
+        final replyContext = ReplyToMessage(
+          id: replyingTo!.id,
+          senderId: replyingTo!.senderId,
+          previewText: _getMessagePreview(replyingTo!),
+        );
+
+        // Create a copy of the message with reply context attached
+        messageToSend = message.copyWith(
+          id: message.id,
+          replyTo: replyContext,
+        ) as Message;
+
+        // Clear reply state AFTER attaching context to message
         clearReply();
       }
 
@@ -403,7 +418,7 @@ class ChatController extends GetxController {
       );
 
       _clearMessageInput();
-      print("✅ Message sent successfully");
+      print("✅ Message sent successfully with reply context");
     } catch (e) {
       print("❌ Failed to send message: $e");
       _showErrorToast('Failed to send message: ${e.toString()}');
@@ -687,26 +702,54 @@ class ChatController extends GetxController {
   void _showLoading() => BotToast.showLoading();
   void _hideLoading() => BotToast.closeAllLoading();
 
+  // BUG-005 FIX: Safe message copyWith helper to avoid unsafe type casting
+  /// Safely attempts to copy a message with updated fields.
+  /// Returns null if copyWith is not implemented for the message type.
+  Message? _safeCopyMessage(Message message, {
+    bool? isDeleted,
+    bool? isPinned,
+    bool? isFavorite,
+    ReplyToMessage? replyTo,
+  }) {
+    try {
+      final result = message.copyWith(
+        id: message.id,
+        isDeleted: isDeleted,
+        isPinned: isPinned,
+        isFavorite: isFavorite,
+        replyTo: replyTo,
+      );
+      // Verify the result is actually a Message
+      if (result is Message) {
+        return result;
+      }
+      return null;
+    } catch (e) {
+      _logger.warning('copyWith not implemented for ${message.runtimeType}', context: 'ChatController');
+      return null;
+    }
+  }
+
   /// Delete a message
   Future<void> deleteMessage(Message message) async {
     try {
       _showLoading();
 
-      // Update message to mark as deleted
-      final updatedMessage = message.copyWith(id: message.id, isDeleted: true) as Message;
-
-      // Update in Firestore
+      // Update in Firestore first (this is the source of truth)
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isDeleted': true},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely try to update local state, Firestore stream will sync regardless
+      final updatedMessage = _safeCopyMessage(message, isDeleted: true);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast('Message deleted');
@@ -722,21 +765,21 @@ class ChatController extends GetxController {
     try {
       _showLoading();
 
-      // Update message to mark as not deleted
-      final updatedMessage = message.copyWith(id: message.id, isDeleted: false) as Message;
-
-      // Update in Firestore
+      // Update in Firestore first (this is the source of truth)
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isDeleted': false},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely try to update local state
+      final updatedMessage = _safeCopyMessage(message, isDeleted: false);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast('Message restored');
@@ -768,36 +811,33 @@ class ChatController extends GetxController {
               updates: {'isPinned': false},
             );
 
-            // Update local messages list
-            final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
-            if (pinnedIndex != -1) {
-              messages[pinnedIndex] = pinnedMessage.copyWith(
-                id: pinnedMessage.id,
-                isPinned: false,
-              ) as Message;
+            // BUG-005 FIX: Use safe copy method
+            final unpinnedMessage = _safeCopyMessage(pinnedMessage, isPinned: false);
+            if (unpinnedMessage != null) {
+              final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
+              if (pinnedIndex != -1) {
+                messages[pinnedIndex] = unpinnedMessage;
+              }
             }
           }
         }
       }
 
-      // Now pin/unpin the target message
-      final updatedMessage = message.copyWith(
-        id: message.id,
-        isPinned: !isCurrentlyPinned,
-      ) as Message;
-
-      // Update in Firestore
+      // Update in Firestore first
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isPinned': !isCurrentlyPinned},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely update local state
+      final updatedMessage = _safeCopyMessage(message, isPinned: !isCurrentlyPinned);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast(isCurrentlyPinned ? 'Message unpinned' : 'Message pinned');
@@ -814,23 +854,22 @@ class ChatController extends GetxController {
       _showLoading();
 
       final isCurrentlyFavorite = message.isFavorite;
-      final updatedMessage = message.copyWith(
-        id: message.id,
-        isFavorite: !isCurrentlyFavorite,
-      ) as Message;
 
-      // Update in Firestore
+      // Update in Firestore first
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isFavorite': !isCurrentlyFavorite},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely update local state
+      final updatedMessage = _safeCopyMessage(message, isFavorite: !isCurrentlyFavorite);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast(isCurrentlyFavorite ? 'Removed from favorites' : 'Added to favorites');

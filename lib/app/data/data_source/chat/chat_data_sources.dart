@@ -106,20 +106,31 @@ class ChatDataSources {
   }
 
   /// Find existing chat room between specific members
+  /// BUG-007 FIX: Use arrayContains with first member to narrow results,
+  /// then filter for exact match. arrayContainsAny was returning incorrect rooms.
   Future<ChatRoom?> findExistingChatRoom(List<String> memberIds) async {
     try {
+      if (memberIds.isEmpty) return null;
+
       memberIds.sort(); // Sort to ensure consistent comparison
+
+      // Use arrayContains with the first member ID to get a narrower result set
+      // This is more efficient than arrayContainsAny which returns ANY match
       final querySnapshot = await chatCollection
-          .where('membersIds', arrayContainsAny: memberIds)
+          .where('membersIds', arrayContains: memberIds.first)
           .get();
-      
+
       for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final roomMemberIds = List<String>.from(data['membersIds'] ?? []);
         roomMemberIds.sort();
-        
+
+        // Exact match check - room must have exactly the same members
         if (_listsEqual(roomMemberIds, memberIds)) {
-          return ChatRoom.fromMap(data);
+          // Also verify the room ID is set
+          final roomData = Map<String, dynamic>.from(data);
+          roomData['id'] = doc.id;
+          return ChatRoom.fromMap(roomData);
         }
       }
       return null;
@@ -748,29 +759,37 @@ class ChatDataSources {
   }
 
   /// Send a message to a chat room
+  /// BUG-006 FIX: Use transaction to prevent race condition in chat room creation
   Future<void> sendMessage({
     Message? privateMessage,
     required String roomId,
     required List<SocialMediaUser>? members,
   }) async {
     try {
-      bool exists = await chatRoomExists();
-      
-      if (!exists) {
-        if (kDebugMode) {
-          print("✅ Chat room does not exist, creating new chat room");
+      // Use a transaction to atomically check and create chat room
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final roomRef = chatCollection.doc(roomId);
+        final roomSnapshot = await transaction.get(roomRef);
+
+        if (!roomSnapshot.exists) {
+          if (kDebugMode) {
+            print("✅ Chat room does not exist, creating new chat room in transaction");
+          }
+          // Create the chat room within the transaction
+          await _createChatRoomInTransaction(
+            transaction: transaction,
+            roomRef: roomRef,
+            roomId: roomId,
+            members: members,
+            privateMessage: privateMessage,
+          );
         }
-        await createNewChatRoom(
-          privateMessage: privateMessage,
-          roomId: roomId,
-          members: members,
-        );
-      }
-      
+      });
+
       if (kDebugMode) {
-        print("✅ Chat room exists, posting message");
+        print("✅ Chat room exists or was created, posting message");
       }
-      
+
       await postMessageToChat(privateMessage, roomId);
     } catch (error) {
       if (kDebugMode) {
@@ -780,6 +799,53 @@ class ChatDataSources {
       }
       rethrow;
     }
+  }
+
+  /// Helper method to create chat room within a transaction
+  /// BUG-006 FIX: This ensures atomic creation
+  Future<void> _createChatRoomInTransaction({
+    required Transaction transaction,
+    required DocumentReference roomRef,
+    required String roomId,
+    required List<SocialMediaUser>? members,
+    Message? privateMessage,
+  }) async {
+    // Check blocked users
+    final currentUserDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(UserService.currentUser.value?.uid);
+    var userSnapshot = await currentUserDoc.get();
+    List blockedList = [];
+
+    if (userSnapshot.exists && userSnapshot.data() != null) {
+      Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
+      blockedList = userData["blockedUser"] ?? [];
+
+      final memberUids = members?.map((e) => e.uid).toList() ?? [];
+      if (memberUids.isNotEmpty && blockedList.any((blocked) => memberUids.contains(blocked))) {
+        throw Exception('Cannot create chat room with blocked users');
+      }
+    }
+
+    final chatRoom = ChatRoom(
+      id: roomId,
+      keywords: List.generate(
+        members?.length ?? 0,
+        (index) => 'id+${members![index].uid}+'
+      ),
+      read: false,
+      membersIds: List.generate(
+        members?.length ?? 0,
+        (index) => members![index].uid ?? ""
+      ),
+      members: members,
+      lastMsg: setLastMessage(privateMessage),
+      lastSender: userId,
+      lastChat: DateTime.now().toIso8601String(),
+      isGroupChat: (members?.length ?? 0) > 2,
+    );
+
+    transaction.set(roomRef, chatRoom.toMap());
   }
 
   /// Post message to chat collection
