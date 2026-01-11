@@ -5,6 +5,7 @@ import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
 import 'package:crypted_app/app/modules/chat/widgets/optimized/optimized_message_list.dart';
+import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/core/locale/constant.dart';
@@ -99,6 +100,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                     onTap: () => FocusScope.of(context).unfocus(),
                     child: Column(
                       children: [
+                        // UI Migration: Offline status indicator
+                        _buildOfflineIndicator(),
                         // Messages area
                         Expanded(
                           child: Container(
@@ -539,6 +542,64 @@ class PrivateChatScreen extends GetView<ChatController> {
     return date1.year == date2.year &&
         date1.month == date2.month &&
         date1.day == date2.day;
+  }
+
+  /// UI Migration: Build offline status indicator
+  Widget _buildOfflineIndicator() {
+    return StreamBuilder<ConnectionStatus>(
+      stream: ConnectivityService().statusStream,
+      initialData: ConnectionStatus.online,
+      builder: (context, snapshot) {
+        final status = snapshot.data ?? ConnectionStatus.online;
+
+        // Don't show anything when online
+        if (status == ConnectionStatus.online) {
+          return const SizedBox.shrink();
+        }
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: status == ConnectionStatus.offline
+                ? ColorsManager.error.withValues(alpha: 0.9)
+                : Colors.orange.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                status == ConnectionStatus.offline
+                    ? Icons.cloud_off
+                    : Icons.sync,
+                size: 16,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                status == ConnectionStatus.offline
+                    ? 'You are offline. Messages will be sent when connected.'
+                    : 'Reconnecting...',
+                style: StylesManager.medium(
+                  fontSize: FontSize.xSmall,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Build avatar for group chats
