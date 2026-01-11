@@ -17,7 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:provider/provider.dart';
+// ARCH-004: Removed provider import - using GetX observables only
 
 class PrivateChatScreen extends GetView<ChatController> {
   const PrivateChatScreen({super.key});
@@ -67,18 +67,18 @@ class PrivateChatScreen extends GetView<ChatController> {
         }
 
 
-        // BUG-001 FIX: Use controller's existing chatDataSource instead of creating new instance
-        // This prevents memory leaks from orphaned Firestore listeners on every rebuild
-        return StreamProvider<List<Message>>.value(
-          value: controller.chatDataSource.getLivePrivateMessage(controller.roomId),
+        // ARCH-004: Replaced StreamProvider with StreamBuilder to consolidate state management
+        // Using pure Flutter StreamBuilder instead of mixing GetX with Provider
+        return StreamBuilder<List<Message>>(
+          stream: controller.chatDataSource.getLivePrivateMessage(controller.roomId),
           initialData: const [],
-          catchError: (context, error) {
-            print("Error in Members: ${controller.members}");
-            print(error);
-            return [];
-          },
-          builder: (context, child) {
-            final messages = Provider.of<List<Message>>(context);
+          builder: (context, snapshot) {
+            // Handle errors gracefully
+            if (snapshot.hasError) {
+              debugPrint("Error loading messages: ${snapshot.error}");
+            }
+
+            final messages = snapshot.data ?? [];
             return Scaffold(
               backgroundColor: ColorsManager.navbarColor,
               extendBodyBehindAppBar: false,
@@ -181,6 +181,8 @@ class PrivateChatScreen extends GetView<ChatController> {
       },
     );
   }
+
+  // ARCH-004: State management consolidated - removed Provider dependency
 
   /// Safely get the other user for app bar display
   dynamic _getOtherUserForAppBar() {
