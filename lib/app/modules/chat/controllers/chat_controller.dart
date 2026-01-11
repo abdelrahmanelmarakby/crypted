@@ -12,9 +12,15 @@ import 'package:crypted_app/app/core/services/read_receipt_service.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
+import 'package:crypted_app/app/core/events/event_bus.dart';
+import 'package:crypted_app/app/core/rate_limiting/rate_limiter.dart';
+import 'package:crypted_app/app/core/utils/debouncer.dart';
+import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
+import 'package:crypted_app/app/core/call/chat_call_handler.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
+import 'package:crypted_app/app/core/repositories/chat_repository.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_actions_bottom_sheet.dart';
@@ -32,6 +38,7 @@ import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
+import 'package:crypted_app/app/modules/chat/controllers/chat_controller_integration.dart';
 import 'package:crypted_app/app/modules/chat/widgets/edit_message_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -42,7 +49,12 @@ import 'package:geolocator/geolocator.dart';
 
 import 'package:get/get.dart';
 
-class ChatController extends GetxController {
+/// Main Chat Controller with new architecture integration
+/// Uses ChatControllerIntegration mixin for event bus, offline support, and state management
+/// Includes rate limiting and debouncing for performance
+/// ARCH-008: Uses CallHandlerMixin to move call logic from view to controller
+class ChatController extends GetxController
+    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin, CallHandlerMixin {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
@@ -72,6 +84,17 @@ class ChatController extends GetxController {
   RxString get replyToText => messageControllerService.replyToText;
 
   late final ChatDataSources chatDataSource;
+
+  // ARCH-003: Repository for abstracted data access
+  // This provides a clean interface that hides Firebase implementation details
+  IChatRepository? _repository;
+  IChatRepository get repository {
+    _repository ??= Get.isRegistered<IChatRepository>()
+        ? Get.find<IChatRepository>()
+        : null;
+    return _repository!;
+  }
+  bool get hasRepository => Get.isRegistered<IChatRepository>();
 
   // Real-time services
   final typingService = TypingService();
@@ -131,9 +154,9 @@ class ChatController extends GetxController {
         update();
       })
     );
-    
-    // Setup typing indicator listener
-    _setupTypingListener();
+
+    // BUG-004 FIX: Don't setup typing listener here - roomId not initialized yet
+    // Typing listener is now setup in _initializeApp() after roomId is set
   }
   
   /// Setup typing indicator listener
@@ -161,6 +184,51 @@ class ChatController extends GetxController {
     _initializeChatDataSource();
     await _checkPermissions();
     _loadMessages();
+
+    // BUG-004 FIX: Setup typing listener AFTER roomId is initialized
+    _setupTypingListener();
+
+    // Initialize new architecture components
+    _initializeNewArchitecture();
+  }
+
+  /// Initialize new architecture components (event bus, offline queue, etc.)
+  void _initializeNewArchitecture() {
+    // Initialize architecture from mixin
+    initializeArchitecture(
+      roomId: roomId,
+      messages: messages,
+    );
+
+    // Sync state with state manager
+    stateManager.roomId.value = roomId;
+    stateManager.isGroupChat.value = isGroupChat.value;
+    stateManager.chatName.value = chatName.value;
+    stateManager.chatDescription.value = chatDescription.value;
+    stateManager.groupImageUrl.value = groupImageUrl.value;
+
+    // Initialize group controller if available
+    groupController?.initialize(
+      roomId: roomId,
+      name: chatName.value,
+      description: chatDescription.value,
+      imageUrl: groupImageUrl.value,
+      membersList: members,
+      admins: [], // TODO: Load actual admins from Firestore
+    );
+
+    // ARCH-008: Initialize call handler
+    initializeCallHandler(
+      roomId: roomId,
+      sendMessage: sendMessage,
+    );
+
+    _logger.info('New architecture initialized', context: 'ChatController', data: {
+      'roomId': roomId,
+      'hasEventBus': true,
+      'hasOfflineQueue': true,
+      'hasCallHandler': true,
+    });
   }
 
   Future<void> _initializeFromArguments() async {
@@ -387,12 +455,24 @@ class ChatController extends GetxController {
   /// Send message with reply context
   Future<void> sendMessageWithReply(Message message) async {
     try {
-      // Add reply context to message if replying
+      // BUG-002 FIX: Save reply context BEFORE clearing, then attach to message
       Message messageToSend = message;
+
       if (isReplying && replyingTo != null) {
-        // Create a copy of the message with reply context
-        // Note: This assumes the Message model supports reply context
-        // For now, we'll just clear the reply state
+        // Create reply context from the message being replied to
+        final replyContext = ReplyToMessage(
+          id: replyingTo!.id,
+          senderId: replyingTo!.senderId,
+          previewText: _getMessagePreview(replyingTo!),
+        );
+
+        // Create a copy of the message with reply context attached
+        messageToSend = message.copyWith(
+          id: message.id,
+          replyTo: replyContext,
+        ) as Message;
+
+        // Clear reply state AFTER attaching context to message
         clearReply();
       }
 
@@ -403,7 +483,7 @@ class ChatController extends GetxController {
       );
 
       _clearMessageInput();
-      print("✅ Message sent successfully");
+      print("✅ Message sent successfully with reply context");
     } catch (e) {
       print("❌ Failed to send message: $e");
       _showErrorToast('Failed to send message: ${e.toString()}');
@@ -411,12 +491,28 @@ class ChatController extends GetxController {
     }
   }
 
-  /// Send a message with proper validation
+  /// Send a message with proper validation and rate limiting
+  /// ARCH-003: Uses IChatRepository when available for better abstraction
   Future<void> sendMessage(Message message) async {
+    // SEC-004 FIX: Check rate limit before sending
+    final rateLimitResult = recordMessageSend(roomId);
+    if (!rateLimitResult.allowed) {
+      _showErrorToast(rateLimitResult.message ?? 'Sending too fast. Please wait.');
+      return;
+    }
+
+    // PERF-008 FIX: Check connectivity before sending
+    if (!ConnectivityService().isOnline) {
+      // Queue message for offline sending
+      _logger.info('Offline - queueing message for later', context: 'ChatController');
+      // For now, show a warning - offline queue handles actual queueing
+      _showToast('You are offline. Message will be sent when connected.');
+    }
+
     try {
       // Stop typing indicator before sending
       await typingService.stopTyping(roomId);
-      
+
       // Verify that message sender is current user
       if (message.senderId != currentUser?.uid) {
         print("❌ ERROR: Message sender is not current user!");
@@ -425,15 +521,38 @@ class ChatController extends GetxController {
         throw Exception('Message sender is not current user');
       }
 
-      await chatDataSource.sendMessage(
-        privateMessage: message,
+      // ARCH-003: Use repository when available, fallback to data source
+      if (hasRepository) {
+        await repository.sendMessage(
+          message: message,
+          roomId: roomId,
+          members: members,
+        );
+      } else {
+        await chatDataSource.sendMessage(
+          privateMessage: message,
+          roomId: roomId,
+          members: members
+        );
+      }
+
+      // Emit message sent event through event bus
+      eventBus.emit(MessageSentEvent(
         roomId: roomId,
-        members: members
-      );
+        messageId: message.id,
+        localId: message.id,
+      ));
 
       _clearMessageInput();
       print("✅ Message sent successfully");
     } catch (e) {
+      // Emit message send failed event
+      eventBus.emit(MessageSendFailedEvent(
+        roomId: roomId,
+        localId: message.id,
+        error: e.toString(),
+      ));
+
       print("❌ Failed to send message: $e");
       _showErrorToast('Failed to send message: ${e.toString()}');
       rethrow;
@@ -687,26 +806,63 @@ class ChatController extends GetxController {
   void _showLoading() => BotToast.showLoading();
   void _hideLoading() => BotToast.closeAllLoading();
 
+  // BUG-005 FIX: Safe message copyWith helper to avoid unsafe type casting
+  /// Safely attempts to copy a message with updated fields.
+  /// Returns null if copyWith is not implemented for the message type.
+  Message? _safeCopyMessage(Message message, {
+    bool? isDeleted,
+    bool? isPinned,
+    bool? isFavorite,
+    ReplyToMessage? replyTo,
+  }) {
+    try {
+      final result = message.copyWith(
+        id: message.id,
+        isDeleted: isDeleted,
+        isPinned: isPinned,
+        isFavorite: isFavorite,
+        replyTo: replyTo,
+      );
+      // Verify the result is actually a Message
+      if (result is Message) {
+        return result;
+      }
+      return null;
+    } catch (e) {
+      _logger.warning('copyWith not implemented for ${message.runtimeType}', context: 'ChatController');
+      return null;
+    }
+  }
+
   /// Delete a message
+  /// ARCH-003: Uses IChatRepository when available
   Future<void> deleteMessage(Message message) async {
     try {
       _showLoading();
 
-      // Update message to mark as deleted
-      final updatedMessage = message.copyWith(id: message.id, isDeleted: true) as Message;
+      // ARCH-003: Use repository when available, fallback to data source
+      if (hasRepository) {
+        await repository.updateMessage(
+          roomId: roomId,
+          messageId: message.id,
+          updates: {'isDeleted': true},
+        );
+      } else {
+        await chatDataSource.updateMessage(
+          roomId: roomId,
+          messageId: message.id,
+          updates: {'isDeleted': true},
+        );
+      }
 
-      // Update in Firestore
-      await chatDataSource.updateMessage(
-        roomId: roomId,
-        messageId: message.id,
-        updates: {'isDeleted': true},
-      );
-
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely try to update local state, Firestore stream will sync regardless
+      final updatedMessage = _safeCopyMessage(message, isDeleted: true);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast('Message deleted');
@@ -722,21 +878,21 @@ class ChatController extends GetxController {
     try {
       _showLoading();
 
-      // Update message to mark as not deleted
-      final updatedMessage = message.copyWith(id: message.id, isDeleted: false) as Message;
-
-      // Update in Firestore
+      // Update in Firestore first (this is the source of truth)
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isDeleted': false},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely try to update local state
+      final updatedMessage = _safeCopyMessage(message, isDeleted: false);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast('Message restored');
@@ -768,36 +924,33 @@ class ChatController extends GetxController {
               updates: {'isPinned': false},
             );
 
-            // Update local messages list
-            final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
-            if (pinnedIndex != -1) {
-              messages[pinnedIndex] = pinnedMessage.copyWith(
-                id: pinnedMessage.id,
-                isPinned: false,
-              ) as Message;
+            // BUG-005 FIX: Use safe copy method
+            final unpinnedMessage = _safeCopyMessage(pinnedMessage, isPinned: false);
+            if (unpinnedMessage != null) {
+              final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
+              if (pinnedIndex != -1) {
+                messages[pinnedIndex] = unpinnedMessage;
+              }
             }
           }
         }
       }
 
-      // Now pin/unpin the target message
-      final updatedMessage = message.copyWith(
-        id: message.id,
-        isPinned: !isCurrentlyPinned,
-      ) as Message;
-
-      // Update in Firestore
+      // Update in Firestore first
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isPinned': !isCurrentlyPinned},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely update local state
+      final updatedMessage = _safeCopyMessage(message, isPinned: !isCurrentlyPinned);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast(isCurrentlyPinned ? 'Message unpinned' : 'Message pinned');
@@ -814,23 +967,22 @@ class ChatController extends GetxController {
       _showLoading();
 
       final isCurrentlyFavorite = message.isFavorite;
-      final updatedMessage = message.copyWith(
-        id: message.id,
-        isFavorite: !isCurrentlyFavorite,
-      ) as Message;
 
-      // Update in Firestore
+      // Update in Firestore first
       await chatDataSource.updateMessage(
         roomId: roomId,
         messageId: message.id,
         updates: {'isFavorite': !isCurrentlyFavorite},
       );
 
-      // Update local messages list
-      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-      if (messageIndex != -1) {
-        messages[messageIndex] = updatedMessage;
-        update();
+      // BUG-005 FIX: Safely update local state
+      final updatedMessage = _safeCopyMessage(message, isFavorite: !isCurrentlyFavorite);
+      if (updatedMessage != null) {
+        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+        if (messageIndex != -1) {
+          messages[messageIndex] = updatedMessage;
+          update();
+        }
       }
 
       _showToast(isCurrentlyFavorite ? 'Removed from favorites' : 'Added to favorites');
@@ -913,17 +1065,28 @@ class ChatController extends GetxController {
   // =================== REACTION METHODS ===================
 
   /// Toggle a reaction on a message
+  /// ARCH-003: Uses IChatRepository when available
   Future<void> toggleReaction(Message message, String emoji) async {
     try {
       final currentUserId = UserService.currentUser.value?.uid;
       if (currentUserId == null) return;
 
-      await chatDataSource.toggleReaction(
-        roomId: roomId,
-        messageId: message.id,
-        emoji: emoji,
-        userId: currentUserId,
-      );
+      // ARCH-003: Use repository when available, fallback to data source
+      if (hasRepository) {
+        await repository.toggleReaction(
+          roomId: roomId,
+          messageId: message.id,
+          emoji: emoji,
+          userId: currentUserId,
+        );
+      } else {
+        await chatDataSource.toggleReaction(
+          roomId: roomId,
+          messageId: message.id,
+          emoji: emoji,
+          userId: currentUserId,
+        );
+      }
 
       _logger.info('Toggled reaction $emoji on message ${message.id}');
     } catch (e) {
@@ -1643,6 +1806,15 @@ class ChatController extends GetxController {
       'roomId': roomId,
       'streamSubscriptions': _streamSubscriptions.length,
     });
+
+    // Dispose new architecture resources (event bus subscriptions, etc.)
+    disposeArchitecture();
+
+    // ARCH-008: Dispose call handler
+    disposeCallHandler();
+
+    // Dispose debouncers and throttlers
+    disposeDebouncers();
 
     // Dispose MessageController (NEW!)
     messageControllerService.onClose();

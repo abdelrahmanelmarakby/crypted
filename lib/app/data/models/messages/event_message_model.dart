@@ -33,14 +33,15 @@ class EventMessage extends Message {
         'eventDate': eventDate?.toIso8601String(),
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser
   factory EventMessage.fromMap(Map<String, dynamic> map) => EventMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
         title: map['title'],
         description: map['description'],
-        eventDate: map['eventDate'] != null ? DateTime.parse(map['eventDate']) : null,
+        eventDate: map['eventDate'] != null ? Message.parseTimestamp(map['eventDate']) : null,
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
         isPinned: map['isPinned'] ?? false,

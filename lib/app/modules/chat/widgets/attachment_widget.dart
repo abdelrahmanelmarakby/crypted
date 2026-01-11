@@ -10,6 +10,7 @@ import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/event_buttom_sheet.dart';
 import 'package:crypted_app/app/modules/chat/widgets/poll_buttom_sheet.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
+import 'package:crypted_app/app/core/security/input_sanitizer.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -30,6 +31,32 @@ import 'package:image_picker/image_picker.dart';
 
 class AttachmentWidget extends GetView<ChatController> {
   const AttachmentWidget({super.key});
+
+  // UI Migration: Input sanitizer for message validation
+  static final InputSanitizer _sanitizer = InputSanitizer();
+
+  /// Validate and send message with sanitization
+  void _sendSanitizedMessage(ChatController controller) {
+    final text = controller.messageController.text;
+    if (text.isEmpty) return;
+
+    // Validate and sanitize the message
+    final result = _sanitizer.validateMessage(text);
+    if (!result.isValid) {
+      Get.snackbar(
+        'Invalid Message',
+        result.errors.isNotEmpty ? result.errors.first : 'Message contains invalid content',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.error.withValues(alpha: 0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    // Send the sanitized message
+    controller.sendQuickTextMessage(result.sanitized, controller.roomId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,11 +96,8 @@ class AttachmentWidget extends GetView<ChatController> {
                       ),
                       inputAction: TextInputAction.newline,
                       onSubmit: (value) {
-                        if (controller.messageController.text.isNotEmpty) {
-                          controller.sendQuickTextMessage(
-                              controller.messageController.text,
-                              controller.roomId);
-                        }
+                        // UI Migration: Use sanitized message sending
+                        _sendSanitizedMessage(controller);
                       },
                       hint: Constants.kSendamessage.tr,
                       textColor: ColorsManager.black,
@@ -181,11 +205,8 @@ class AttachmentWidget extends GetView<ChatController> {
                 else
                   InkWell(
                     onTap: () {
-                      if (controller.messageController.text.isNotEmpty) {
-                        controller.sendQuickTextMessage(
-                            controller.messageController.text,
-                            controller.roomId);
-                      }
+                      // UI Migration: Use sanitized message sending
+                      _sendSanitizedMessage(controller);
                     },
                     child: Container(
                       width: Sizes.size50,

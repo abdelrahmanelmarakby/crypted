@@ -27,12 +27,13 @@ class VideoMessage extends Message {
         'video': video,
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser
   factory VideoMessage.fromMap(Map<String, dynamic> map) => VideoMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
-        video: map['video'],
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
+        video: map['video'] ?? '',
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
         isPinned: map['isPinned'] ?? false,

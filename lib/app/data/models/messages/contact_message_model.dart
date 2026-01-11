@@ -29,13 +29,14 @@ class ContactMessage extends Message {
         'phoneNumber': phoneNumber,
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser
   factory ContactMessage.fromMap(Map<String, dynamic> map) => ContactMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
-        name: map['name'],
-        phoneNumber: map['phoneNumber'],
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
+        name: map['name'] ?? '',
+        phoneNumber: map['phoneNumber'] ?? '',
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
         isPinned: map['isPinned'] ?? false,

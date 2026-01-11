@@ -35,14 +35,15 @@ class TextMessage extends Message {
         'originalText': originalText,
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser for consistent handling
   factory TextMessage.fromMap(Map<String, dynamic> map) => TextMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
-        text: map['text'],
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
+        text: map['text'] ?? '',
         isEdited: map['isEdited'] ?? false,
-        editedAt: map['editedAt'] != null ? DateTime.parse(map['editedAt']) : null,
+        editedAt: map['editedAt'] != null ? Message.parseTimestamp(map['editedAt']) : null,
         originalText: map['originalText'],
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),

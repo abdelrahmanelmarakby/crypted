@@ -7,6 +7,8 @@ import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/core/services/firebase_optimization_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
+import 'package:crypted_app/app/core/initialization/app_initializer.dart';
+import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:flutter/foundation.dart';
 import 'package:crypted_app/core/locale/my_locale.dart';
@@ -74,6 +76,35 @@ Future<void> main() async {
     );
   }
   await CacheHelper.init();
+
+  // Initialize app architecture (repositories, offline queue, migrations)
+  try {
+    final initResult = await AppInitializer.initialize(
+      onProgress: (step) {
+        if (kDebugMode) {
+          print('[AppInit] $step');
+        }
+      },
+      runMigrations: true,
+    );
+
+    if (initResult.success) {
+      LoggerService.instance.info(
+        'App architecture initialized in ${initResult.duration.inMilliseconds}ms',
+        context: 'main',
+      );
+    } else {
+      LoggerService.instance.warning(
+        'App initialization had issues: ${initResult.errors.join(", ")}',
+        context: 'main',
+      );
+    }
+  } catch (e) {
+    LoggerService.instance.logError('App initialization failed', error: e, context: 'main');
+  }
+
+  // Start connectivity monitoring
+  ConnectivityService().startMonitoring();
 
   ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
   ZegoUIKit().initLog().then((value) async {
@@ -151,11 +182,13 @@ class _CryptedAppState extends State<CryptedApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     switch (state) {
       case AppLifecycleState.resumed:
         // App came to foreground
         _setUserOnline();
+        // Resume connectivity monitoring
+        ConnectivityService().onAppResumed();
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
@@ -163,6 +196,8 @@ class _CryptedAppState extends State<CryptedApp> with WidgetsBindingObserver {
       case AppLifecycleState.hidden:
         // App went to background
         _setUserOffline();
+        // Pause connectivity monitoring
+        ConnectivityService().onAppPaused();
         break;
     }
   }
