@@ -16,9 +16,11 @@ import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/core/rate_limiting/rate_limiter.dart';
 import 'package:crypted_app/app/core/utils/debouncer.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
+import 'package:crypted_app/app/core/call/chat_call_handler.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
+import 'package:crypted_app/app/core/repositories/chat_repository.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_actions_bottom_sheet.dart';
@@ -50,8 +52,9 @@ import 'package:get/get.dart';
 /// Main Chat Controller with new architecture integration
 /// Uses ChatControllerIntegration mixin for event bus, offline support, and state management
 /// Includes rate limiting and debouncing for performance
+/// ARCH-008: Uses CallHandlerMixin to move call logic from view to controller
 class ChatController extends GetxController
-    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin {
+    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin, CallHandlerMixin {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
@@ -81,6 +84,17 @@ class ChatController extends GetxController
   RxString get replyToText => messageControllerService.replyToText;
 
   late final ChatDataSources chatDataSource;
+
+  // ARCH-003: Repository for abstracted data access
+  // This provides a clean interface that hides Firebase implementation details
+  IChatRepository? _repository;
+  IChatRepository get repository {
+    _repository ??= Get.isRegistered<IChatRepository>()
+        ? Get.find<IChatRepository>()
+        : null;
+    return _repository!;
+  }
+  bool get hasRepository => Get.isRegistered<IChatRepository>();
 
   // Real-time services
   final typingService = TypingService();
@@ -203,10 +217,17 @@ class ChatController extends GetxController
       admins: [], // TODO: Load actual admins from Firestore
     );
 
+    // ARCH-008: Initialize call handler
+    initializeCallHandler(
+      roomId: roomId,
+      sendMessage: sendMessage,
+    );
+
     _logger.info('New architecture initialized', context: 'ChatController', data: {
       'roomId': roomId,
       'hasEventBus': true,
       'hasOfflineQueue': true,
+      'hasCallHandler': true,
     });
   }
 
@@ -471,6 +492,7 @@ class ChatController extends GetxController
   }
 
   /// Send a message with proper validation and rate limiting
+  /// ARCH-003: Uses IChatRepository when available for better abstraction
   Future<void> sendMessage(Message message) async {
     // SEC-004 FIX: Check rate limit before sending
     final rateLimitResult = recordMessageSend(roomId);
@@ -499,11 +521,20 @@ class ChatController extends GetxController
         throw Exception('Message sender is not current user');
       }
 
-      await chatDataSource.sendMessage(
-        privateMessage: message,
-        roomId: roomId,
-        members: members
-      );
+      // ARCH-003: Use repository when available, fallback to data source
+      if (hasRepository) {
+        await repository.sendMessage(
+          message: message,
+          roomId: roomId,
+          members: members,
+        );
+      } else {
+        await chatDataSource.sendMessage(
+          privateMessage: message,
+          roomId: roomId,
+          members: members
+        );
+      }
 
       // Emit message sent event through event bus
       eventBus.emit(MessageSentEvent(
@@ -804,16 +835,25 @@ class ChatController extends GetxController
   }
 
   /// Delete a message
+  /// ARCH-003: Uses IChatRepository when available
   Future<void> deleteMessage(Message message) async {
     try {
       _showLoading();
 
-      // Update in Firestore first (this is the source of truth)
-      await chatDataSource.updateMessage(
-        roomId: roomId,
-        messageId: message.id,
-        updates: {'isDeleted': true},
-      );
+      // ARCH-003: Use repository when available, fallback to data source
+      if (hasRepository) {
+        await repository.updateMessage(
+          roomId: roomId,
+          messageId: message.id,
+          updates: {'isDeleted': true},
+        );
+      } else {
+        await chatDataSource.updateMessage(
+          roomId: roomId,
+          messageId: message.id,
+          updates: {'isDeleted': true},
+        );
+      }
 
       // BUG-005 FIX: Safely try to update local state, Firestore stream will sync regardless
       final updatedMessage = _safeCopyMessage(message, isDeleted: true);
@@ -1025,17 +1065,28 @@ class ChatController extends GetxController
   // =================== REACTION METHODS ===================
 
   /// Toggle a reaction on a message
+  /// ARCH-003: Uses IChatRepository when available
   Future<void> toggleReaction(Message message, String emoji) async {
     try {
       final currentUserId = UserService.currentUser.value?.uid;
       if (currentUserId == null) return;
 
-      await chatDataSource.toggleReaction(
-        roomId: roomId,
-        messageId: message.id,
-        emoji: emoji,
-        userId: currentUserId,
-      );
+      // ARCH-003: Use repository when available, fallback to data source
+      if (hasRepository) {
+        await repository.toggleReaction(
+          roomId: roomId,
+          messageId: message.id,
+          emoji: emoji,
+          userId: currentUserId,
+        );
+      } else {
+        await chatDataSource.toggleReaction(
+          roomId: roomId,
+          messageId: message.id,
+          emoji: emoji,
+          userId: currentUserId,
+        );
+      }
 
       _logger.info('Toggled reaction $emoji on message ${message.id}');
     } catch (e) {
@@ -1758,6 +1809,9 @@ class ChatController extends GetxController
 
     // Dispose new architecture resources (event bus subscriptions, etc.)
     disposeArchitecture();
+
+    // ARCH-008: Dispose call handler
+    disposeCallHandler();
 
     // Dispose debouncers and throttlers
     disposeDebouncers();

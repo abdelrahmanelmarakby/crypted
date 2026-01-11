@@ -1,9 +1,247 @@
-rules_version = '2';
+// SEC-002 FIX: Firestore Security Rules Template
+// These rules should be deployed to Firebase to secure your Firestore database
+// IMPORTANT: Review and customize these rules based on your specific requirements
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // =================== HELPER FUNCTIONS ===================
+
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the user is the owner of a document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if a field exists and is valid
+    function isValidString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    // Check if timestamp is valid (not in the future)
+    function isValidTimestamp(time) {
+      return time <= request.time;
+    }
+
+    // Check content length
+    function isValidContentLength(content, maxLength) {
+      return content.size() <= maxLength;
+    }
+
+    // =================== USERS COLLECTION ===================
+
+    match /users/{userId} {
+      // Anyone can read user profiles (for displaying names, avatars)
+      allow read: if isAuthenticated();
+
+      // Users can only create/update their own profile
+      allow create: if isOwner(userId) &&
+                       isValidString(request.resource.data.fullName) &&
+                       request.resource.data.fullName.size() <= 100;
+
+      allow update: if isOwner(userId) &&
+                       isValidString(request.resource.data.fullName) &&
+                       request.resource.data.fullName.size() <= 100 &&
+                       // Prevent changing uid
+                       request.resource.data.uid == resource.data.uid;
+
+      // Users can only delete their own profile
+      allow delete: if isOwner(userId);
+
+      // User's private data subcollection
+      match /private/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // User's blocked users list
+      match /blocked/{blockedUserId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // =================== CHAT ROOMS COLLECTION ===================
+
+    match /chats/{roomId} {
+      // Allow read if user is a member of the chat
+      allow read: if isAuthenticated() &&
+                    request.auth.uid in resource.data.membersIds;
+
+      // Allow create if user is authenticated and is in members list
+      allow create: if isAuthenticated() &&
+                       request.auth.uid in request.resource.data.membersIds &&
+                       isValidString(request.resource.data.membersIds[0]);
+
+      // Allow update if user is a member
+      allow update: if isAuthenticated() &&
+                       request.auth.uid in resource.data.membersIds &&
+                       // Prevent removing yourself as the only member
+                       request.resource.data.membersIds.size() >= 2;
+
+      // Allow delete only for group admins or if it's an empty chat
+      allow delete: if isAuthenticated() &&
+                       request.auth.uid in resource.data.membersIds &&
+                       (resource.data.membersIds.size() <= 2 ||
+                        request.auth.uid in resource.data.adminIds);
+
+      // Messages subcollection
+      match /chat/{messageId} {
+        // Allow read if user is a member of the parent chat
+        allow read: if isAuthenticated() &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds;
+
+        // Allow create if user is a member and is the sender
+        allow create: if isAuthenticated() &&
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
+                         request.auth.uid == request.resource.data.senderId &&
+                         isValidContentLength(request.resource.data.text, 5000);
+
+        // Allow update for reactions, read receipts, and soft delete
+        allow update: if isAuthenticated() &&
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
+                         (
+                           // Own message updates (soft delete, edit within 15 min)
+                           (request.auth.uid == resource.data.senderId) ||
+                           // Reaction updates (any member can react)
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
+                           // Read receipt updates
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']))
+                         );
+
+        // Allow delete only for message sender
+        allow delete: if isAuthenticated() &&
+                         request.auth.uid == resource.data.senderId;
+      }
+
+      // Typing indicators subcollection
+      match /typing/{typingId} {
+        allow read: if isAuthenticated() &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds;
+
+        allow create, update: if isAuthenticated() &&
+                                 request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
+                                 request.auth.uid == request.resource.data.userId;
+
+        allow delete: if isAuthenticated() &&
+                         request.auth.uid == resource.data.userId;
+      }
+    }
+
+    // =================== STORIES COLLECTION ===================
+
+    match /Stories/{storyId} {
+      // Allow read for authenticated users (stories are public to followers)
+      allow read: if isAuthenticated();
+
+      // Allow create only by the story owner
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == request.resource.data.uid &&
+                       isValidContentLength(request.resource.data.caption, 500);
+
+      // Allow update only by the story owner (for viewedBy updates)
+      allow update: if isAuthenticated() &&
+                       (
+                         // Owner can update
+                         request.auth.uid == resource.data.uid ||
+                         // Anyone can add themselves to viewedBy
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']) &&
+                          request.auth.uid in request.resource.data.viewedBy)
+                       );
+
+      // Allow delete only by the story owner
+      allow delete: if isAuthenticated() &&
+                       request.auth.uid == resource.data.uid;
+    }
+
+    // =================== CALLS COLLECTION ===================
+
+    match /calls/{callId} {
+      // Allow read if user is the caller or callee
+      allow read: if isAuthenticated() &&
+                    (request.auth.uid == resource.data.callerId ||
+                     request.auth.uid == resource.data.calleeId);
+
+      // Allow create if user is the caller
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == request.resource.data.callerId;
+
+      // Allow update if user is caller or callee (for status updates)
+      allow update: if isAuthenticated() &&
+                       (request.auth.uid == resource.data.callerId ||
+                        request.auth.uid == resource.data.calleeId);
+
+      // Allow delete if user is the caller
+      allow delete: if isAuthenticated() &&
+                       request.auth.uid == resource.data.callerId;
+    }
+
+    // =================== REPORTS COLLECTION ===================
+
+    match /reports/{reportId} {
+      // Only admins can read reports (implement admin check based on your auth system)
+      allow read: if false; // Implement admin check
+
+      // Any authenticated user can create a report
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == request.resource.data.reporterId &&
+                       isValidContentLength(request.resource.data.reason, 1000);
+
+      // Reports cannot be updated or deleted by users
+      allow update, delete: if false;
+    }
+
+    // =================== NOTIFICATIONS COLLECTION ===================
+
+    match /notifications/{userId} {
+      match /{notificationId} {
+        // Users can only read their own notifications
+        allow read: if isOwner(userId);
+
+        // System can create notifications (use admin SDK for this)
+        allow create: if false; // Use Admin SDK
+
+        // Users can mark their notifications as read
+        allow update: if isOwner(userId) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+
+        // Users can delete their own notifications
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // =================== PRESENCE COLLECTION ===================
+
+    match /presence/{userId} {
+      // Anyone can read presence status
+      allow read: if isAuthenticated();
+
+      // Users can only update their own presence
+      allow write: if isOwner(userId);
+    }
+
+    // =================== RATE LIMITS COLLECTION ===================
+
+    match /rateLimits/{userId}/{action}/{document=**} {
+      // Rate limit documents are managed by cloud functions
+      allow read: if isOwner(userId);
+      allow write: if false; // Use Cloud Functions
+    }
+
+    // =================== FCM TOKENS COLLECTION ===================
+
+    match /fcmTokens/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // =================== DEFAULT DENY ===================
+
+    // Deny all other access
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

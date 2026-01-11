@@ -40,9 +40,7 @@ class ChatBinding extends Bindings {
     // Chat Repository - singleton
     if (!Get.isRegistered<IChatRepository>()) {
       Get.put<IChatRepository>(
-        FirebaseChatRepository(
-          errorHandler: Get.find<ErrorHandler>(),
-        ),
+        FirebaseChatRepository(),
         permanent: true,
       );
     }
