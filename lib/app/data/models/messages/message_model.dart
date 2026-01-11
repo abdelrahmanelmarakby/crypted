@@ -78,6 +78,47 @@ abstract class Message {
     return ReplyToMessage.fromMap(Map<String, dynamic>.from(data));
   }
 
+  // BUG-008 FIX: Centralized timestamp parsing to handle multiple formats
+  /// Parses timestamp from various formats (Firestore Timestamp, ISO string, Map, DateTime)
+  static DateTime parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return DateTime.now();
+    if (timestamp is DateTime) return timestamp;
+
+    // Handle Firestore Timestamp directly
+    try {
+      // Using dynamic to avoid import issues - Timestamp has toDate() method
+      if (timestamp.runtimeType.toString().contains('Timestamp')) {
+        return (timestamp as dynamic).toDate();
+      }
+    } catch (_) {}
+
+    // Handle ISO 8601 string
+    if (timestamp is String) {
+      try {
+        return DateTime.parse(timestamp);
+      } catch (e) {
+        print('Error parsing timestamp string: $e');
+        return DateTime.now();
+      }
+    }
+
+    // Handle Firestore Timestamp as Map (from JSON serialization)
+    if (timestamp is Map) {
+      try {
+        final seconds = timestamp['_seconds'] ?? timestamp['seconds'] ?? 0;
+        final nanoseconds = timestamp['_nanoseconds'] ?? timestamp['nanoseconds'] ?? 0;
+        return DateTime.fromMillisecondsSinceEpoch(
+          (seconds as int) * 1000 + ((nanoseconds as int) ~/ 1000000),
+        );
+      } catch (e) {
+        print('Error parsing timestamp map: $e');
+        return DateTime.now();
+      }
+    }
+
+    return DateTime.now();
+  }
+
   Map<String, dynamic> baseMap() => {
         'id': id,
         'roomId': roomId,

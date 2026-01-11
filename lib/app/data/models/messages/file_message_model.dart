@@ -28,12 +28,13 @@ class FileMessage extends Message {
         'fileName': fileName,
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser
   factory FileMessage.fromMap(Map<String, dynamic> map) => FileMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
-        file: map['file'],
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
+        file: map['file'] ?? '',
         fileName: map['fileName'] ?? '',
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),

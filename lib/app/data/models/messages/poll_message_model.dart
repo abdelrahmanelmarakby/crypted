@@ -97,17 +97,18 @@ class PollMessage extends Message {
         ) ??
         {};
 
+    // BUG-008 FIX: Use centralized timestamp parser
     return PollMessage(
-      id: map['id'],
-      roomId: map['roomId'],
-      senderId: map['senderId'],
-      timestamp: DateTime.parse(map['timestamp']),
-      question: map['question'],
-      options: List<String>.from(map['options']),
+      id: map['id'] ?? '',
+      roomId: map['roomId'] ?? '',
+      senderId: map['senderId'] ?? '',
+      timestamp: Message.parseTimestamp(map['timestamp']),
+      question: map['question'] ?? '',
+      options: List<String>.from(map['options'] ?? []),
       votes: votes,
       totalVotes: map['totalVotes'] ?? 0,
       allowMultipleVotes: map['allowMultipleVotes'] ?? false,
-      closedAt: map['closedAt'] != null ? DateTime.parse(map['closedAt']) : null,
+      closedAt: map['closedAt'] != null ? Message.parseTimestamp(map['closedAt']) : null,
       isAnonymous: map['isAnonymous'] ?? false,
       reactions: Message.parseReactions(map['reactions']),
       replyTo: Message.parseReplyTo(map['replyTo']),

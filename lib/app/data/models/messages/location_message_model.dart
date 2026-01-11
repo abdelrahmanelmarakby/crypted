@@ -29,13 +29,14 @@ class LocationMessage extends Message {
         'longitude': longitude,
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser
   factory LocationMessage.fromMap(Map<String, dynamic> map) => LocationMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
-        latitude: map['latitude'],
-        longitude: map['longitude'],
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
+        latitude: (map['latitude'] ?? 0).toDouble(),
+        longitude: (map['longitude'] ?? 0).toDouble(),
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
         isPinned: map['isPinned'] ?? false,

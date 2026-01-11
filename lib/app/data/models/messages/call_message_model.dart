@@ -26,12 +26,13 @@ class CallMessage extends Message {
         'callModel': callModel.toMap(),
       };
 
+  // BUG-008 FIX: Use centralized timestamp parser
   factory CallMessage.fromMap(Map<String, dynamic> map) => CallMessage(
-        id: map['id'],
-        roomId: map['roomId'],
-        senderId: map['senderId'],
-        timestamp: DateTime.parse(map['timestamp']),
-        callModel: CallModel.fromMap(map['callModel']),
+        id: map['id'] ?? '',
+        roomId: map['roomId'] ?? '',
+        senderId: map['senderId'] ?? '',
+        timestamp: Message.parseTimestamp(map['timestamp']),
+        callModel: CallModel.fromMap(map['callModel'] ?? {}),
         reactions: Message.parseReactions(map['reactions']),
         replyTo: Message.parseReplyTo(map['replyTo']),
         isPinned: map['isPinned'] ?? false,
