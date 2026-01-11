@@ -12,6 +12,7 @@ import 'package:crypted_app/app/core/services/read_receipt_service.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
+import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
@@ -32,6 +33,7 @@ import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
+import 'package:crypted_app/app/modules/chat/controllers/chat_controller_integration.dart';
 import 'package:crypted_app/app/modules/chat/widgets/edit_message_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -42,7 +44,9 @@ import 'package:geolocator/geolocator.dart';
 
 import 'package:get/get.dart';
 
-class ChatController extends GetxController {
+/// Main Chat Controller with new architecture integration
+/// Uses ChatControllerIntegration mixin for event bus, offline support, and state management
+class ChatController extends GetxController with ChatControllerIntegration {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
@@ -164,6 +168,41 @@ class ChatController extends GetxController {
 
     // BUG-004 FIX: Setup typing listener AFTER roomId is initialized
     _setupTypingListener();
+
+    // Initialize new architecture components
+    _initializeNewArchitecture();
+  }
+
+  /// Initialize new architecture components (event bus, offline queue, etc.)
+  void _initializeNewArchitecture() {
+    // Initialize architecture from mixin
+    initializeArchitecture(
+      roomId: roomId,
+      messages: messages,
+    );
+
+    // Sync state with state manager
+    stateManager.roomId.value = roomId;
+    stateManager.isGroupChat.value = isGroupChat.value;
+    stateManager.chatName.value = chatName.value;
+    stateManager.chatDescription.value = chatDescription.value;
+    stateManager.groupImageUrl.value = groupImageUrl.value;
+
+    // Initialize group controller if available
+    groupController?.initialize(
+      roomId: roomId,
+      name: chatName.value,
+      description: chatDescription.value,
+      imageUrl: groupImageUrl.value,
+      membersList: members,
+      admins: [], // TODO: Load actual admins from Firestore
+    );
+
+    _logger.info('New architecture initialized', context: 'ChatController', data: {
+      'roomId': roomId,
+      'hasEventBus': true,
+      'hasOfflineQueue': true,
+    });
   }
 
   Future<void> _initializeFromArguments() async {
@@ -431,7 +470,7 @@ class ChatController extends GetxController {
     try {
       // Stop typing indicator before sending
       await typingService.stopTyping(roomId);
-      
+
       // Verify that message sender is current user
       if (message.senderId != currentUser?.uid) {
         print("❌ ERROR: Message sender is not current user!");
@@ -446,9 +485,23 @@ class ChatController extends GetxController {
         members: members
       );
 
+      // Emit message sent event through event bus
+      eventBus.emit(MessageSentEvent(
+        roomId: roomId,
+        messageId: message.id,
+        localId: message.id,
+      ));
+
       _clearMessageInput();
       print("✅ Message sent successfully");
     } catch (e) {
+      // Emit message send failed event
+      eventBus.emit(MessageSendFailedEvent(
+        roomId: roomId,
+        localId: message.id,
+        error: e.toString(),
+      ));
+
       print("❌ Failed to send message: $e");
       _showErrorToast('Failed to send message: ${e.toString()}');
       rethrow;
@@ -1682,6 +1735,9 @@ class ChatController extends GetxController {
       'roomId': roomId,
       'streamSubscriptions': _streamSubscriptions.length,
     });
+
+    // Dispose new architecture resources (event bus subscriptions, etc.)
+    disposeArchitecture();
 
     // Dispose MessageController (NEW!)
     messageControllerService.onClose();
