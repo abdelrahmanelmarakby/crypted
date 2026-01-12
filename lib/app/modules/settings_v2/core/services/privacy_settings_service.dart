@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
+import 'package:uuid/uuid.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/utils/debouncer.dart';
 
 /// Enhanced Privacy Settings Service
 /// Provides comprehensive privacy settings management with:
@@ -12,11 +14,15 @@ import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings
 /// - Privacy exceptions per contact
 /// - Security logging
 /// - Privacy checkup
+/// - Debounced saves to prevent race conditions
 
 class PrivacySettingsService extends GetxService {
   static PrivacySettingsService get instance => Get.find();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Debouncer for save operations to prevent race conditions
+  final Debouncer _saveDebouncer = Debouncer(milliseconds: 500);
 
   // Reactive settings
   final Rx<EnhancedPrivacySettingsModel> settings =
@@ -54,6 +60,7 @@ class PrivacySettingsService extends GetxService {
   void onClose() {
     _settingsSubscription?.cancel();
     _sessionsSubscription?.cancel();
+    _saveDebouncer.dispose();
     super.onClose();
   }
 
@@ -110,7 +117,7 @@ class PrivacySettingsService extends GetxService {
     if (doc.exists) {
       settings.value = EnhancedPrivacySettingsModel.fromMap(doc.data());
     } else {
-      // Create default settings
+      // Create default settings - use immediate save for initial setup
       settings.value = EnhancedPrivacySettingsModel.defaultSettings();
       await _saveSettings();
     }
@@ -195,7 +202,19 @@ class PrivacySettingsService extends GetxService {
   // SAVING
   // ============================================================================
 
+  /// Debounced save to prevent race conditions from rapid setting changes.
+  /// Multiple calls within 500ms will be coalesced into a single save.
+  Future<void> _debouncedSave() {
+    return _saveDebouncer.run(() => _saveSettingsInternal());
+  }
+
+  /// Immediate save without debouncing (used for initial setup and reset).
   Future<bool> _saveSettings() async {
+    _saveDebouncer.cancel(); // Cancel any pending debounced save
+    return _saveSettingsInternal();
+  }
+
+  Future<bool> _saveSettingsInternal() async {
     try {
       isSaving.value = true;
       errorMessage.value = null;
@@ -231,13 +250,16 @@ class PrivacySettingsService extends GetxService {
     }
   }
 
+  // UUID generator for unique IDs
+  static const _uuid = Uuid();
+
   Future<void> _logSecurityEvent(SecurityEventType type, {Map<String, dynamic>? metadata}) async {
     try {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return;
 
       final entry = SecurityLogEntry(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: _uuid.v4(), // Use UUID for guaranteed uniqueness
         eventType: type,
         timestamp: DateTime.now(),
         metadata: metadata,
@@ -272,7 +294,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       profileVisibility: settings.value.profileVisibility.copyWith(lastSeen: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.privacyChanged, metadata: {'field': 'lastSeen'});
   }
 
@@ -281,7 +303,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       profileVisibility: settings.value.profileVisibility.copyWith(profilePhoto: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.privacyChanged, metadata: {'field': 'profilePhoto'});
   }
 
@@ -290,7 +312,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       profileVisibility: settings.value.profileVisibility.copyWith(about: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.privacyChanged, metadata: {'field': 'about'});
   }
 
@@ -299,7 +321,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       profileVisibility: settings.value.profileVisibility.copyWith(onlineStatus: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.privacyChanged, metadata: {'field': 'onlineStatus'});
   }
 
@@ -308,7 +330,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       profileVisibility: settings.value.profileVisibility.copyWith(status: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.privacyChanged, metadata: {'field': 'status'});
   }
 
@@ -321,7 +343,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       communication: settings.value.communication.copyWith(whoCanMessage: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update who can call
@@ -329,7 +351,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       communication: settings.value.communication.copyWith(whoCanCall: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update who can add to groups
@@ -337,7 +359,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       communication: settings.value.communication.copyWith(whoCanAddToGroups: setting),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle typing indicator
@@ -345,7 +367,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       communication: settings.value.communication.copyWith(showTypingIndicator: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle read receipts
@@ -353,7 +375,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       communication: settings.value.communication.copyWith(showReadReceipts: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -365,7 +387,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       contentProtection: settings.value.contentProtection.copyWith(allowScreenshots: allowed),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle forwarding
@@ -373,7 +395,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       contentProtection: settings.value.contentProtection.copyWith(allowForwarding: allowed),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update default disappearing duration
@@ -383,7 +405,7 @@ class PrivacySettingsService extends GetxService {
         defaultDisappearingDuration: duration,
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle hide media in gallery
@@ -391,7 +413,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       contentProtection: settings.value.contentProtection.copyWith(hideMediaInGallery: hide),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -407,7 +429,7 @@ class PrivacySettingsService extends GetxService {
         ),
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(
       enabled ? SecurityEventType.twoStepEnabled : SecurityEventType.twoStepDisabled,
     );
@@ -423,7 +445,7 @@ class PrivacySettingsService extends GetxService {
         ),
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle app lock
@@ -433,7 +455,7 @@ class PrivacySettingsService extends GetxService {
         appLock: settings.value.security.appLock.copyWith(enabled: enabled),
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.appLockChanged, metadata: {'enabled': enabled});
   }
 
@@ -444,7 +466,7 @@ class PrivacySettingsService extends GetxService {
         appLock: settings.value.security.appLock.copyWith(timeout: timeout),
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle biometric for app lock
@@ -454,7 +476,7 @@ class PrivacySettingsService extends GetxService {
         appLock: settings.value.security.appLock.copyWith(biometricEnabled: enabled),
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Lock a chat
@@ -463,7 +485,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       security: settings.value.security.copyWith(lockedChats: lockedChats),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Unlock a chat
@@ -474,7 +496,7 @@ class PrivacySettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       security: settings.value.security.copyWith(lockedChats: lockedChats),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Check if chat is locked
@@ -492,7 +514,7 @@ class PrivacySettingsService extends GetxService {
 
     final blockedUsers = [...settings.value.blockedUsers, user];
     settings.value = settings.value.copyWith(blockedUsers: blockedUsers);
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.blockedUser, metadata: {'userId': user.userId});
 
     // Also update the user's global blocked list
@@ -510,7 +532,7 @@ class PrivacySettingsService extends GetxService {
         .where((b) => b.userId != userIdToUnblock)
         .toList();
     settings.value = settings.value.copyWith(blockedUsers: blockedUsers);
-    await _saveSettings();
+    await _debouncedSave();
     await _logSecurityEvent(SecurityEventType.unblockedUser, metadata: {'userId': userIdToUnblock});
 
     // Also update the user's global blocked list
@@ -681,7 +703,12 @@ class PrivacySettingsService extends GetxService {
   Future<PrivacyCheckupResult> runPrivacyCheckup() async {
     final issues = <PrivacyIssue>[];
     final recommendations = <PrivacyRecommendation>[];
-    int score = 100;
+    int totalDeductions = 0;
+
+    // Helper to track deductions safely
+    void addDeduction(int points) {
+      totalDeductions += points;
+    }
 
     // Check profile visibility settings
     if (settings.value.profileVisibility.lastSeen.level == VisibilityLevel.everyone) {
@@ -693,7 +720,7 @@ class PrivacySettingsService extends GetxService {
         severityScore: 5,
         canAutoFix: true,
       ));
-      score -= 5;
+      addDeduction(5);
     }
 
     if (settings.value.profileVisibility.profilePhoto.level == VisibilityLevel.everyone) {
@@ -705,7 +732,7 @@ class PrivacySettingsService extends GetxService {
         severityScore: 3,
         canAutoFix: true,
       ));
-      score -= 3;
+      addDeduction(3);
     }
 
     // Check communication settings
@@ -718,7 +745,7 @@ class PrivacySettingsService extends GetxService {
         severityScore: 5,
         canAutoFix: true,
       ));
-      score -= 5;
+      addDeduction(5);
     }
 
     // Check security settings
@@ -737,7 +764,7 @@ class PrivacySettingsService extends GetxService {
         actionLabel: 'Enable',
         priority: 1,
       ));
-      score -= 15;
+      addDeduction(15);
     }
 
     if (!settings.value.security.appLock.enabled) {
@@ -755,7 +782,7 @@ class PrivacySettingsService extends GetxService {
         actionLabel: 'Enable',
         priority: 2,
       ));
-      score -= 10;
+      addDeduction(10);
     }
 
     // Check content protection
@@ -767,7 +794,7 @@ class PrivacySettingsService extends GetxService {
         actionLabel: 'Configure',
         priority: 3,
       ));
-      score -= 5;
+      addDeduction(5);
     }
 
     // Check active sessions
@@ -779,10 +806,14 @@ class PrivacySettingsService extends GetxService {
         severityScore: 3,
         canAutoFix: true,
       ));
+      // Note: Sessions count doesn't affect score to avoid over-penalization
     }
 
+    // Calculate final score with proper clamping
+    final score = (100 - totalDeductions).clamp(0, 100);
+
     final result = PrivacyCheckupResult(
-      score: score.clamp(0, 100),
+      score: score,
       issues: issues,
       recommendations: recommendations,
       checkedAt: DateTime.now(),
@@ -790,7 +821,7 @@ class PrivacySettingsService extends GetxService {
 
     // Save checkup result
     settings.value = settings.value.copyWith(lastCheckupResult: result);
-    await _saveSettings();
+    await _debouncedSave();
 
     return result;
   }
@@ -828,7 +859,7 @@ class PrivacySettingsService extends GetxService {
   /// Reset all privacy settings to defaults
   Future<void> resetToDefaults() async {
     settings.value = EnhancedPrivacySettingsModel.defaultSettings();
-    await _saveSettings();
+    await _saveSettings(); // Use immediate save for reset operation
     _updatePrivacyScore();
   }
 

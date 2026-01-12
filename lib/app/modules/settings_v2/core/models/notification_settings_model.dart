@@ -803,10 +803,20 @@ class DNDSettings {
   /// Get the current active schedule if any
   DNDSchedule? get activeSchedule {
     if (!isActive) return null;
-    return schedules.firstWhere(
-      (s) => s.isActiveNow(),
-      orElse: () => schedules.first,
-    );
+    if (schedules.isEmpty) return null;
+
+    // Find the first schedule that is currently active
+    for (final schedule in schedules) {
+      if (schedule.isActiveNow()) {
+        return schedule;
+      }
+    }
+
+    // If quick toggle is enabled but no schedule matches, return null
+    // (quick toggle doesn't require a schedule)
+    if (quickToggleEnabled) return null;
+
+    return null;
   }
 
   DNDSettings copyWith({
@@ -886,6 +896,50 @@ class ChatNotificationOverride {
   bool get isMuted {
     if (mutedUntil == null) return enabled == false;
     return DateTime.now().isBefore(mutedUntil!);
+  }
+
+  /// Check if this override has any customizations
+  bool get hasCustomizations {
+    return enabled != null ||
+        sound != null ||
+        vibration != null ||
+        priority != null ||
+        showPreview != null ||
+        mutedUntil != null ||
+        ledColor != null;
+  }
+
+  /// Create a new override that uses global settings for all fields.
+  /// This effectively "clears" all customizations.
+  ChatNotificationOverride resetToGlobalSettings() {
+    return ChatNotificationOverride(
+      chatId: chatId,
+      enabled: null,
+      sound: null,
+      vibration: null,
+      priority: null,
+      showPreview: null,
+      mutedUntil: null,
+      ledColor: null,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Clear the mute (set mutedUntil to null and enabled to null)
+  ChatNotificationOverride clearMute() {
+    return ChatNotificationOverride(
+      chatId: chatId,
+      enabled: null, // Reset to use global setting
+      sound: sound,
+      vibration: vibration,
+      priority: priority,
+      showPreview: showPreview,
+      mutedUntil: null, // Clear mute
+      ledColor: ledColor,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
   }
 
   ChatNotificationOverride copyWith({

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/utils/debouncer.dart';
 
 /// Enhanced Notification Settings Service
 /// Provides comprehensive notification settings management with:
@@ -12,11 +13,15 @@ import 'package:crypted_app/app/modules/settings_v2/core/models/notification_set
 /// - Per-chat overrides
 /// - DND scheduling
 /// - Caching and offline support
+/// - Debounced saves to prevent race conditions
 
 class NotificationSettingsService extends GetxService {
   static NotificationSettingsService get instance => Get.find();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Debouncer for save operations to prevent race conditions
+  final Debouncer _saveDebouncer = Debouncer(milliseconds: 500);
 
   // Reactive settings
   final Rx<EnhancedNotificationSettingsModel> settings =
@@ -49,6 +54,7 @@ class NotificationSettingsService extends GetxService {
   void onClose() {
     _settingsSubscription?.cancel();
     _overridesSubscription?.cancel();
+    _saveDebouncer.dispose();
     super.onClose();
   }
 
@@ -100,7 +106,7 @@ class NotificationSettingsService extends GetxService {
     if (doc.exists) {
       settings.value = EnhancedNotificationSettingsModel.fromMap(doc.data());
     } else {
-      // Create default settings
+      // Create default settings - use immediate save for initial setup
       settings.value = EnhancedNotificationSettingsModel.defaultSettings();
       await _saveSettings();
     }
@@ -176,7 +182,19 @@ class NotificationSettingsService extends GetxService {
   // SAVING
   // ============================================================================
 
+  /// Debounced save to prevent race conditions from rapid setting changes.
+  /// Multiple calls within 500ms will be coalesced into a single save.
+  Future<void> _debouncedSave() {
+    return _saveDebouncer.run(() => _saveSettingsInternal());
+  }
+
+  /// Immediate save without debouncing (used for initial setup).
   Future<bool> _saveSettings() async {
+    _saveDebouncer.cancel(); // Cancel any pending debounced save
+    return _saveSettingsInternal();
+  }
+
+  Future<bool> _saveSettingsInternal() async {
     try {
       isSaving.value = true;
       errorMessage.value = null;
@@ -219,7 +237,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       global: settings.value.global.copyWith(masterSwitch: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update preview level
@@ -227,7 +245,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       global: settings.value.global.copyWith(showPreviews: level),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update notification grouping
@@ -235,7 +253,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       global: settings.value.global.copyWith(grouping: grouping),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle in-app sounds
@@ -243,7 +261,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       global: settings.value.global.copyWith(inAppSounds: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle in-app vibration
@@ -251,7 +269,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       global: settings.value.global.copyWith(inAppVibration: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -263,7 +281,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       messages: settings.value.messages.copyWith(enabled: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update message notification sound
@@ -271,7 +289,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       messages: settings.value.messages.copyWith(sound: sound),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update message notification vibration
@@ -279,7 +297,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       messages: settings.value.messages.copyWith(vibration: pattern),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle message reaction notifications
@@ -287,7 +305,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       messages: settings.value.messages.copyWith(reactions: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -299,7 +317,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       groups: settings.value.groups.copyWith(enabled: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update group notification sound
@@ -307,7 +325,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       groups: settings.value.groups.copyWith(sound: sound),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update group notification vibration
@@ -315,7 +333,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       groups: settings.value.groups.copyWith(vibration: pattern),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle mentions only for groups
@@ -323,7 +341,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       groups: settings.value.groups.copyWith(mentionsOnly: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle group reaction notifications
@@ -331,7 +349,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       groups: settings.value.groups.copyWith(reactions: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -343,7 +361,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       status: settings.value.status.copyWith(enabled: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update status notification sound
@@ -351,7 +369,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       status: settings.value.status.copyWith(sound: sound),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle status reaction notifications
@@ -359,7 +377,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       status: settings.value.status.copyWith(reactions: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -371,7 +389,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       calls: settings.value.calls.copyWith(ringtone: sound),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update call vibration
@@ -379,7 +397,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       calls: settings.value.calls.copyWith(vibration: pattern),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Toggle silent calls during DND
@@ -387,7 +405,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       calls: settings.value.calls.copyWith(silentWhenDND: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -399,7 +417,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       reminders: settings.value.reminders.copyWith(enabled: enabled),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   // ============================================================================
@@ -414,7 +432,7 @@ class NotificationSettingsService extends GetxService {
         quickToggleUntil: until,
       ),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Add DND schedule
@@ -423,7 +441,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       dnd: settings.value.dnd.copyWith(schedules: schedules),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Update DND schedule
@@ -434,7 +452,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       dnd: settings.value.dnd.copyWith(schedules: schedules),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Delete DND schedule
@@ -445,7 +463,7 @@ class NotificationSettingsService extends GetxService {
     settings.value = settings.value.copyWith(
       dnd: settings.value.dnd.copyWith(schedules: schedules),
     );
-    await _saveSettings();
+    await _debouncedSave();
   }
 
   /// Check if DND is currently active
@@ -649,7 +667,7 @@ class NotificationSettingsService extends GetxService {
   /// Reset all notification settings to defaults
   Future<void> resetToDefaults() async {
     settings.value = EnhancedNotificationSettingsModel.defaultSettings();
-    await _saveSettings();
+    await _saveSettings(); // Use immediate save for reset operation
 
     // Clear all chat overrides
     final userId = UserService.currentUserValue?.uid;
