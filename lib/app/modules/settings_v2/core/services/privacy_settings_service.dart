@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/repositories/privacy_settings_repository.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/utils/debouncer.dart';
 
 /// Enhanced Privacy Settings Service
@@ -15,11 +15,13 @@ import 'package:crypted_app/app/modules/settings_v2/core/utils/debouncer.dart';
 /// - Security logging
 /// - Privacy checkup
 /// - Debounced saves to prevent race conditions
+/// - Repository abstraction for testability
 
 class PrivacySettingsService extends GetxService {
   static PrivacySettingsService get instance => Get.find();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Repository for data access (injected for testability)
+  late final PrivacySettingsRepository _repository;
 
   // Debouncer for save operations to prevent race conditions
   final Debouncer _saveDebouncer = Debouncer(milliseconds: 500);
@@ -45,6 +47,14 @@ class PrivacySettingsService extends GetxService {
 
   // Current privacy score
   final RxInt privacyScore = 0.obs;
+
+  // UUID generator for unique IDs
+  static const _uuid = Uuid();
+
+  /// Create service with optional repository injection (for testing)
+  PrivacySettingsService({PrivacySettingsRepository? repository}) {
+    _repository = repository ?? FirestorePrivacySettingsRepository();
+  }
 
   // ============================================================================
   // LIFECYCLE
@@ -107,15 +117,10 @@ class PrivacySettingsService extends GetxService {
   // ============================================================================
 
   Future<void> _loadSettings(String userId) async {
-    final doc = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('settings')
-        .doc('privacy')
-        .get();
+    final loadedSettings = await _repository.getSettings(userId);
 
-    if (doc.exists) {
-      settings.value = EnhancedPrivacySettingsModel.fromMap(doc.data());
+    if (loadedSettings != null) {
+      settings.value = loadedSettings;
     } else {
       // Create default settings - use immediate save for initial setup
       settings.value = EnhancedPrivacySettingsModel.defaultSettings();
@@ -125,16 +130,10 @@ class PrivacySettingsService extends GetxService {
 
   void _setupSettingsListener(String userId) {
     _settingsSubscription?.cancel();
-    _settingsSubscription = _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('settings')
-        .doc('privacy')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        if (snapshot.exists) {
-          settings.value = EnhancedPrivacySettingsModel.fromMap(snapshot.data());
+    _settingsSubscription = _repository.watchSettings(userId).listen(
+      (loadedSettings) {
+        if (loadedSettings != null) {
+          settings.value = loadedSettings;
           _updatePrivacyScore();
         }
       },
@@ -150,18 +149,9 @@ class PrivacySettingsService extends GetxService {
 
   Future<void> _loadActiveSessions(String userId) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sessions')
-          .orderBy('lastActive', descending: true)
-          .limit(10)
-          .get();
-
+      final sessions = await _repository.getActiveSessions(userId);
       activeSessions.clear();
-      for (final doc in snapshot.docs) {
-        activeSessions.add(ActiveSession.fromMap(doc.data()));
-      }
+      activeSessions.addAll(sessions);
     } catch (e) {
       developer.log(
         'Failed to load active sessions',
@@ -173,18 +163,9 @@ class PrivacySettingsService extends GetxService {
 
   Future<void> _loadSecurityLog(String userId) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('securityLog')
-          .orderBy('timestamp', descending: true)
-          .limit(20)
-          .get();
-
+      final logs = await _repository.getSecurityLog(userId);
       securityLog.clear();
-      for (final doc in snapshot.docs) {
-        securityLog.add(SecurityLogEntry.fromMap(doc.data()));
-      }
+      securityLog.addAll(logs);
     } catch (e) {
       developer.log(
         'Failed to load security log',
@@ -222,12 +203,7 @@ class PrivacySettingsService extends GetxService {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return false;
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('settings')
-          .doc('privacy')
-          .set(settings.value.toMap());
+      await _repository.saveSettings(userId, settings.value);
 
       _updatePrivacyScore();
 
@@ -250,9 +226,6 @@ class PrivacySettingsService extends GetxService {
     }
   }
 
-  // UUID generator for unique IDs
-  static const _uuid = Uuid();
-
   Future<void> _logSecurityEvent(SecurityEventType type, {Map<String, dynamic>? metadata}) async {
     try {
       final userId = UserService.currentUserValue?.uid;
@@ -265,12 +238,7 @@ class PrivacySettingsService extends GetxService {
         metadata: metadata,
       );
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('securityLog')
-          .doc(entry.id)
-          .set(entry.toMap());
+      await _repository.addSecurityLogEntry(userId, entry);
 
       securityLog.insert(0, entry);
       if (securityLog.length > 20) {
@@ -520,9 +488,7 @@ class PrivacySettingsService extends GetxService {
     // Also update the user's global blocked list
     final userId = UserService.currentUserValue?.uid;
     if (userId != null) {
-      await _firestore.collection('users').doc(userId).update({
-        'blockedUser': FieldValue.arrayUnion([user.userId]),
-      });
+      await _repository.addToBlockedList(userId, user.userId);
     }
   }
 
@@ -538,9 +504,7 @@ class PrivacySettingsService extends GetxService {
     // Also update the user's global blocked list
     final userId = UserService.currentUserValue?.uid;
     if (userId != null) {
-      await _firestore.collection('users').doc(userId).update({
-        'blockedUser': FieldValue.arrayRemove([userIdToUnblock]),
-      });
+      await _repository.removeFromBlockedList(userId, userIdToUnblock);
     }
   }
 
@@ -559,12 +523,7 @@ class PrivacySettingsService extends GetxService {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return;
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sessions')
-          .doc(sessionId)
-          .delete();
+      await _repository.deleteSession(userId, sessionId);
 
       activeSessions.removeWhere((s) => s.sessionId == sessionId);
       await _logSecurityEvent(SecurityEventType.deviceRemoved, metadata: {'sessionId': sessionId});
@@ -583,17 +542,11 @@ class PrivacySettingsService extends GetxService {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return;
 
-      final batch = _firestore.batch();
-      for (final session in activeSessions) {
-        if (!session.isCurrentSession) {
-          batch.delete(_firestore
-              .collection('users')
-              .doc(userId)
-              .collection('sessions')
-              .doc(session.sessionId));
-        }
-      }
-      await batch.commit();
+      // Find current session ID
+      final currentSession = activeSessions.firstWhereOrNull((s) => s.isCurrentSession);
+      if (currentSession == null) return;
+
+      await _repository.deleteAllOtherSessions(userId, currentSession.sessionId);
 
       activeSessions.removeWhere((s) => !s.isCurrentSession);
     } catch (e) {
@@ -858,9 +811,38 @@ class PrivacySettingsService extends GetxService {
 
   /// Reset all privacy settings to defaults
   Future<void> resetToDefaults() async {
-    settings.value = EnhancedPrivacySettingsModel.defaultSettings();
-    await _saveSettings(); // Use immediate save for reset operation
-    _updatePrivacyScore();
+    try {
+      final userId = UserService.currentUserValue?.uid;
+      if (userId == null) return;
+
+      // Reset settings to defaults
+      settings.value = EnhancedPrivacySettingsModel.defaultSettings();
+
+      // Use repository to delete all settings (sessions, security logs)
+      await _repository.deleteAllSettings(userId);
+
+      // Save new default settings
+      await _saveSettings();
+
+      // Clear local caches
+      activeSessions.clear();
+      securityLog.clear();
+
+      _updatePrivacyScore();
+
+      developer.log(
+        'Privacy settings reset to defaults',
+        name: 'PrivacySettingsService',
+      );
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to reset privacy settings',
+        name: 'PrivacySettingsService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      errorMessage.value = 'Failed to reset settings';
+    }
   }
 
   /// Refresh settings from server

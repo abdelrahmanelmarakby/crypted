@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/repositories/notification_settings_repository.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/utils/debouncer.dart';
 
 /// Enhanced Notification Settings Service
@@ -14,11 +14,13 @@ import 'package:crypted_app/app/modules/settings_v2/core/utils/debouncer.dart';
 /// - DND scheduling
 /// - Caching and offline support
 /// - Debounced saves to prevent race conditions
+/// - Repository abstraction for testability
 
 class NotificationSettingsService extends GetxService {
   static NotificationSettingsService get instance => Get.find();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Repository for data access (injected for testability)
+  late final NotificationSettingsRepository _repository;
 
   // Debouncer for save operations to prevent race conditions
   final Debouncer _saveDebouncer = Debouncer(milliseconds: 500);
@@ -39,6 +41,11 @@ class NotificationSettingsService extends GetxService {
   final RxBool isLoading = false.obs;
   final RxBool isSaving = false.obs;
   final Rx<String?> errorMessage = Rx<String?>(null);
+
+  /// Create service with optional repository injection (for testing)
+  NotificationSettingsService({NotificationSettingsRepository? repository}) {
+    _repository = repository ?? FirestoreNotificationSettingsRepository();
+  }
 
   // ============================================================================
   // LIFECYCLE
@@ -69,7 +76,7 @@ class NotificationSettingsService extends GetxService {
         return;
       }
 
-      // Load initial settings
+      // Load initial settings using repository
       await _loadSettings(userId);
 
       // Set up real-time listener
@@ -96,15 +103,10 @@ class NotificationSettingsService extends GetxService {
   // ============================================================================
 
   Future<void> _loadSettings(String userId) async {
-    final doc = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('settings')
-        .doc('notifications')
-        .get();
+    final loadedSettings = await _repository.getSettings(userId);
 
-    if (doc.exists) {
-      settings.value = EnhancedNotificationSettingsModel.fromMap(doc.data());
+    if (loadedSettings != null) {
+      settings.value = loadedSettings;
     } else {
       // Create default settings - use immediate save for initial setup
       settings.value = EnhancedNotificationSettingsModel.defaultSettings();
@@ -114,16 +116,10 @@ class NotificationSettingsService extends GetxService {
 
   void _setupSettingsListener(String userId) {
     _settingsSubscription?.cancel();
-    _settingsSubscription = _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('settings')
-        .doc('notifications')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        if (snapshot.exists) {
-          settings.value = EnhancedNotificationSettingsModel.fromMap(snapshot.data());
+    _settingsSubscription = _repository.watchSettings(userId).listen(
+      (loadedSettings) {
+        if (loadedSettings != null) {
+          settings.value = loadedSettings;
         }
       },
       onError: (error) {
@@ -137,40 +133,25 @@ class NotificationSettingsService extends GetxService {
   }
 
   Future<void> _loadChatOverrides(String userId) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('chatNotificationOverrides')
-        .get();
-
+    final overrides = await _repository.getAllChatOverrides(userId);
     _chatOverrides.clear();
-    for (final doc in snapshot.docs) {
-      final override = ChatNotificationOverride.fromMap(doc.data());
+    for (final override in overrides) {
       _chatOverrides[override.chatId] = override;
     }
   }
 
   void _setupOverridesListener(String userId) {
     _overridesSubscription?.cancel();
-    _overridesSubscription = _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('chatNotificationOverrides')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        for (final change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.removed) {
-            _chatOverrides.remove(change.doc.id);
-          } else {
-            final override = ChatNotificationOverride.fromMap(change.doc.data()!);
-            _chatOverrides[override.chatId] = override;
-          }
+    _overridesSubscription = _repository.watchChatOverrides(userId).listen(
+      (overrides) {
+        _chatOverrides.clear();
+        for (final override in overrides) {
+          _chatOverrides[override.chatId] = override;
         }
       },
       onError: (error) {
         developer.log(
-          'Overrides listener error',
+          'Chat overrides listener error',
           name: 'NotificationSettingsService',
           error: error,
         );
@@ -202,12 +183,7 @@ class NotificationSettingsService extends GetxService {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return false;
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('settings')
-          .doc('notifications')
-          .set(settings.value.toMap());
+      await _repository.saveSettings(userId, settings.value);
 
       developer.log(
         'Notification settings saved',
@@ -487,13 +463,7 @@ class NotificationSettingsService extends GetxService {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return;
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('chatNotificationOverrides')
-          .doc(override.chatId)
-          .set(override.toMap());
-
+      await _repository.saveChatOverride(userId, override);
       _chatOverrides[override.chatId] = override;
     } catch (e) {
       developer.log(
@@ -523,13 +493,7 @@ class NotificationSettingsService extends GetxService {
       final userId = UserService.currentUserValue?.uid;
       if (userId == null) return;
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('chatNotificationOverrides')
-          .doc(chatId)
-          .delete();
-
+      await _repository.deleteChatOverride(userId, chatId);
       _chatOverrides.remove(chatId);
     } catch (e) {
       developer.log(
@@ -666,22 +630,34 @@ class NotificationSettingsService extends GetxService {
 
   /// Reset all notification settings to defaults
   Future<void> resetToDefaults() async {
-    settings.value = EnhancedNotificationSettingsModel.defaultSettings();
-    await _saveSettings(); // Use immediate save for reset operation
+    try {
+      final userId = UserService.currentUserValue?.uid;
+      if (userId == null) return;
 
-    // Clear all chat overrides
-    final userId = UserService.currentUserValue?.uid;
-    if (userId != null) {
-      final batch = _firestore.batch();
-      for (final chatId in _chatOverrides.keys) {
-        batch.delete(_firestore
-            .collection('users')
-            .doc(userId)
-            .collection('chatNotificationOverrides')
-            .doc(chatId));
-      }
-      await batch.commit();
+      // Reset settings to defaults
+      settings.value = EnhancedNotificationSettingsModel.defaultSettings();
+
+      // Use repository to delete all settings (including chat overrides)
+      await _repository.deleteAllSettings(userId);
+
+      // Save new default settings
+      await _saveSettings();
+
+      // Clear local cache
       _chatOverrides.clear();
+
+      developer.log(
+        'Notification settings reset to defaults',
+        name: 'NotificationSettingsService',
+      );
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to reset notification settings',
+        name: 'NotificationSettingsService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      errorMessage.value = 'Failed to reset settings';
     }
   }
 
