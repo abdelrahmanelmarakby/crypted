@@ -3,6 +3,8 @@ import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
+import 'package:crypted_app/app/modules/chat/widgets/blocked_chat_banner.dart';
+import 'package:crypted_app/app/core/services/chat_privacy_helper.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
 import 'package:crypted_app/app/modules/chat/widgets/optimized/optimized_message_list.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
@@ -102,6 +104,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                       children: [
                         // UI Migration: Offline status indicator
                         _buildOfflineIndicator(),
+                        // Blocked chat banner (for private chats)
+                        _buildBlockedChatBanner(),
                         // Messages area
                         Expanded(
                           child: Container(
@@ -155,21 +159,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                           ),
                         ),
                         
-                        // Input area
-                        if (controller.blockingUserId == null)
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, -2),
-                                ),
-                              ],
-                            ),
-                            child: AttachmentWidget(),
-                          ),
+                        // Input area - shows blocked input bar if blocked
+                        _buildInputArea(),
                       ],
                     ),
                   ),
@@ -1001,6 +992,72 @@ class PrivateChatScreen extends GetView<ChatController> {
         Constants.kDec.tr
       ];
       return '${date.day} ${monthNames[date.month - 1]} ${date.year}';
+    }
+  }
+
+  /// Build blocked chat banner for private chats
+  Widget _buildBlockedChatBanner() {
+    // Only show for private chats
+    if (controller.isGroupChat.value) {
+      return const SizedBox.shrink();
+    }
+
+    return Obx(() {
+      final blockInfo = controller.blockedChatInfo.value;
+      if (!blockInfo.isBlocked) {
+        return const SizedBox.shrink();
+      }
+
+      return BlockedChatBanner(
+        blockInfo: blockInfo,
+        onUnblock: blockInfo.blockedByMe ? () => _showUnblockConfirmation() : null,
+      );
+    });
+  }
+
+  /// Build input area - shows blocked input bar if blocked
+  Widget _buildInputArea() {
+    return Obx(() {
+      final blockInfo = controller.blockedChatInfo.value;
+
+      // Show blocked input bar if blocked
+      if (blockInfo.isBlocked) {
+        return BlockedChatInputBar(
+          blockInfo: blockInfo,
+          onUnblock: blockInfo.blockedByMe ? () => _showUnblockConfirmation() : null,
+        );
+      }
+
+      // Show normal input area
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: AttachmentWidget(),
+      );
+    });
+  }
+
+  /// Show unblock confirmation dialog
+  void _showUnblockConfirmation() async {
+    final otherUser = controller.otherUser;
+    if (otherUser == null) return;
+
+    final confirmed = await UnblockConfirmationSheet.show(
+      context: Get.context!,
+      userName: otherUser.fullName ?? 'this user',
+      userPhotoUrl: otherUser.imageUrl,
+    );
+
+    if (confirmed == true) {
+      await controller.unblockUser();
     }
   }
 }

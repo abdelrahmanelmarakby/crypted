@@ -10,6 +10,8 @@ import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/typing_service.dart';
 import 'package:crypted_app/app/core/services/read_receipt_service.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
+import 'package:crypted_app/app/core/services/chat_privacy_helper.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/core/events/event_bus.dart';
@@ -78,6 +80,14 @@ class ChatController extends GetxController
   final RxString groupImageUrl = ''.obs;
 
   String? blockingUserId;
+
+  // Blocked chat state
+  final Rx<BlockedChatInfo> blockedChatInfo = const BlockedChatInfo(
+    isBlocked: false,
+    blockedByMe: false,
+    blockedByThem: false,
+    message: '',
+  ).obs;
 
   // Reply functionality (delegated to MessageController)
   Rx<Message?> get replyToMessage => messageControllerService.replyToMessage;
@@ -190,6 +200,93 @@ class ChatController extends GetxController
 
     // Initialize new architecture components
     _initializeNewArchitecture();
+
+    // Load blocked chat info for private chats
+    await _loadBlockedChatInfo();
+  }
+
+  /// Get the other user's ID in a private chat
+  String? get otherUserId {
+    if (isGroupChat.value) return null;
+    final currentUserId = currentUser?.uid;
+    if (currentUserId == null) return null;
+
+    for (final member in members) {
+      if (member.uid != currentUserId) {
+        return member.uid;
+      }
+    }
+    return null;
+  }
+
+  /// Get the other user in a private chat
+  SocialMediaUser? get otherUser {
+    if (isGroupChat.value) return null;
+    final currentUserId = currentUser?.uid;
+    if (currentUserId == null) return null;
+
+    for (final member in members) {
+      if (member.uid != currentUserId) {
+        return member;
+      }
+    }
+    return null;
+  }
+
+  /// Load blocked chat info for private chats
+  Future<void> _loadBlockedChatInfo() async {
+    // Only check for private chats
+    if (isGroupChat.value) return;
+
+    final userId = otherUserId;
+    if (userId == null) return;
+
+    try {
+      final chatPrivacyHelper = ChatPrivacyHelper();
+      final info = await chatPrivacyHelper.getBlockedChatInfo(userId);
+      blockedChatInfo.value = info;
+
+      if (info.isBlocked) {
+        _logger.info('Chat blocked', context: 'ChatController', data: {
+          'blockedByMe': info.blockedByMe,
+          'blockedByThem': info.blockedByThem,
+        });
+      }
+    } catch (e) {
+      _logger.error('Error loading blocked chat info: $e', context: 'ChatController');
+    }
+  }
+
+  /// Unblock the other user in the chat
+  Future<void> unblockUser() async {
+    final userId = otherUserId;
+    if (userId == null) return;
+
+    try {
+      // Get the privacy settings service
+      final privacyService = Get.find<PrivacySettingsService>();
+      await privacyService.unblockUser(userId);
+
+      // Reload blocked chat info
+      await _loadBlockedChatInfo();
+
+      Get.snackbar(
+        'Success',
+        'User has been unblocked',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      _logger.error('Error unblocking user: $e', context: 'ChatController');
+      Get.snackbar(
+        'Error',
+        'Failed to unblock user',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+    }
   }
 
   /// Initialize new architecture components (event bus, offline queue, etc.)
