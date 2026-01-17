@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
 
@@ -8,6 +10,9 @@ import 'package:crypted_app/app/modules/settings_v2/core/services/notification_s
 
 class NotificationSettingsController extends GetxController {
   late final NotificationSettingsService _service;
+
+  // Audio player for sound preview
+  AudioPlayer? _audioPlayer;
 
   // Computed getters for reactive UI
   EnhancedNotificationSettingsModel get settings => _service.settings.value;
@@ -25,6 +30,13 @@ class NotificationSettingsController extends GetxController {
   void onInit() {
     super.onInit();
     _service = Get.find<NotificationSettingsService>();
+    _audioPlayer = AudioPlayer();
+  }
+
+  @override
+  void onClose() {
+    _audioPlayer?.dispose();
+    super.onClose();
   }
 
   // ============================================================================
@@ -191,26 +203,100 @@ class NotificationSettingsController extends GetxController {
   // SOUND PREVIEW
   // ============================================================================
 
-  void previewSound(NotificationSound sound) {
-    // TODO: Implement sound preview using audio player
-    // This would play a short preview of the selected sound
-    Get.snackbar(
-      'Sound Preview',
-      'Playing: ${sound.displayName}',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+  /// Preview notification sound
+  Future<void> previewSound(NotificationSound sound) async {
+    try {
+      // Stop any currently playing preview
+      await _audioPlayer?.stop();
+
+      // Map sound to asset path
+      final assetPath = _getSoundAssetPath(sound);
+      if (assetPath == null) {
+        // If no asset, just show a message
+        Get.snackbar(
+          'Sound',
+          sound.displayName,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 1),
+        );
+        return;
+      }
+
+      // Play the sound
+      await _audioPlayer?.setAsset(assetPath);
+      await _audioPlayer?.play();
+    } catch (e) {
+      // Fallback to snackbar if audio fails
+      Get.snackbar(
+        'Sound Preview',
+        'Playing: ${sound.displayName}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 1),
+      );
+    }
   }
 
+  /// Get asset path for notification sound
+  String? _getSoundAssetPath(NotificationSound sound) {
+    switch (sound) {
+      case NotificationSound.default_:
+        return 'assets/sounds/notification.mp3';
+      case NotificationSound.ping:
+        return 'assets/sounds/ping.mp3';
+      case NotificationSound.chime:
+        return 'assets/sounds/chime.mp3';
+      case NotificationSound.bell:
+        return 'assets/sounds/bell.mp3';
+      case NotificationSound.whistle:
+        return 'assets/sounds/whistle.mp3';
+      case NotificationSound.gentle:
+        return 'assets/sounds/gentle.mp3';
+      case NotificationSound.electronic:
+        return 'assets/sounds/electronic.mp3';
+      case NotificationSound.classic:
+        return 'assets/sounds/classic.mp3';
+      case NotificationSound.none:
+        return null;
+    }
+  }
+
+  /// Preview vibration pattern
   void previewVibration(VibrationPattern pattern) {
-    // TODO: Implement vibration preview using HapticFeedback
-    // This would trigger the vibration pattern
-    Get.snackbar(
-      'Vibration Preview',
-      'Pattern: ${pattern.displayName}',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+    switch (pattern) {
+      case VibrationPattern.none:
+        // No vibration
+        break;
+      case VibrationPattern.short:
+        HapticFeedback.lightImpact();
+        break;
+      case VibrationPattern.medium:
+        HapticFeedback.mediumImpact();
+        break;
+      case VibrationPattern.long_:
+        HapticFeedback.heavyImpact();
+        break;
+      case VibrationPattern.double_:
+        // Double vibration: two light impacts
+        HapticFeedback.lightImpact();
+        Future.delayed(const Duration(milliseconds: 150), () {
+          HapticFeedback.lightImpact();
+        });
+        break;
+      case VibrationPattern.triple:
+        // Triple vibration: three light impacts
+        HapticFeedback.lightImpact();
+        Future.delayed(const Duration(milliseconds: 150), () {
+          HapticFeedback.lightImpact();
+          Future.delayed(const Duration(milliseconds: 150), () {
+            HapticFeedback.lightImpact();
+          });
+        });
+        break;
+      case VibrationPattern.custom:
+        // Custom pattern - use medium impact as demo
+        HapticFeedback.mediumImpact();
+        break;
+    }
   }
 
   // ============================================================================
