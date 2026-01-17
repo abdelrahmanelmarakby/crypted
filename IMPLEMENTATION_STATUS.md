@@ -197,7 +197,6 @@
 |---------|----------|--------|
 | Security audit log viewer | Low | 4 hours |
 | Screenshot protection enforcement | Medium | 4 hours |
-| Disappearing messages UI | Medium | 6 hours |
 | Live location privacy controls | Low | 4 hours |
 
 #### Partially Implemented ⚠️
@@ -225,7 +224,7 @@
 | Shared groups display | Controller | List with navigation |
 | Chat encryption info | UI placeholder | E2E indicator |
 | Custom notifications | Model exists | Per-user override |
-| Disappearing messages | Model exists | Per-chat setting |
+| Disappearing messages | `disappearing_messages_settings.dart` | Full UI with per-chat settings |
 
 #### Recently Completed ✅
 | Feature | Status | Notes |
@@ -234,6 +233,7 @@
 | Group invite links | Complete | Create, share, revoke, QR code support |
 | Privacy checkup wizard | Complete | Multi-step guided privacy review |
 | Two-step verification UI | Complete | PIN setup, recovery email, hint, verification |
+| Disappearing messages UI | Complete | Duration selector, per-chat and default settings |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -352,6 +352,7 @@
 | PrivacyExceptionListEditor | `privacy_exception_list_editor.dart` | Contact selector |
 | PrivacyCheckupWizard | `privacy_checkup_wizard.dart` | Multi-step privacy review |
 | TwoStepVerificationSetup | `two_step_verification_setup.dart` | 2FA setup wizard |
+| DisappearingMessagesSettings | `disappearing_messages_settings.dart` | Duration selector & settings |
 
 ### Widgets Needing Integration
 
