@@ -234,6 +234,7 @@
 | Two-step verification UI | Complete | PIN setup, recovery email, hint, verification |
 | Disappearing messages UI | Complete | Duration selector, per-chat and default settings |
 | Security audit log viewer | Complete | Timeline view, filtering, search, event details |
+| Export chat functionality | Complete | Multiple formats (txt, HTML, JSON), share support |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -241,7 +242,6 @@
 | Contact info editing | Low | 3 hours |
 | Add to contacts | Medium | 4 hours |
 | Share contact | Low | 2 hours |
-| Export chat | Low | 4 hours |
 | Wallpaper per chat | Low | 4 hours |
 
 #### Partially Implemented ⚠️
@@ -354,6 +354,7 @@
 | TwoStepVerificationSetup | `two_step_verification_setup.dart` | 2FA setup wizard |
 | DisappearingMessagesSettings | `disappearing_messages_settings.dart` | Duration selector & settings |
 | SecurityAuditLogViewer | `security_audit_log_viewer.dart` | Timeline view with filtering |
+| ChatExportDialog | `chat_export_dialog.dart` | Multi-format export with options |
 
 ### Widgets Needing Integration
 
@@ -381,7 +382,6 @@ All medium priority tasks completed!
 
 | Task | Feature Area | Effort |
 |------|--------------|--------|
-| Export chat functionality | User Info | 4 hours |
 | Per-chat wallpaper | User Info | 4 hours |
 
 ---
