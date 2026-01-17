@@ -13,7 +13,7 @@
 | Notification Settings | 92% | Near Complete |
 | Privacy Settings | 92% | Near Complete |
 | Other User Info | 92% | Near Complete |
-| Group Info | 92% | Near Complete |
+| Group Info | 96% | Near Complete |
 
 ---
 
@@ -79,6 +79,17 @@
 | Add member picker | Complete | `add_member_picker.dart` |
 | Multi-select with chips | Complete | `add_member_picker.dart` |
 | View integration | Complete | `group_info_view.dart` |
+
+### Phase 3.8: Group Permissions ✅
+| Task | Status | Files |
+|------|--------|-------|
+| GroupPermissions model | Complete | `group_permissions_editor.dart` |
+| PermissionLevel enum | Complete | `group_permissions_editor.dart` |
+| GroupPermissionsEditor widget | Complete | `group_permissions_editor.dart` |
+| PermissionsSummaryTile widget | Complete | `group_permissions_editor.dart` |
+| Permissions controller methods | Complete | `group_info_controller.dart` |
+| Permissions Firestore loading | Complete | `group_info_controller.dart` |
+| View integration (admin only) | Complete | `group_info_view.dart` |
 
 ### Phase 4: Testing & Polish ⏳
 | Task | Status | Priority |
@@ -212,7 +223,7 @@
 
 ---
 
-### 4. Group Info (92% Complete)
+### 4. Group Info (96% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -234,14 +245,18 @@
 | Remove admin UI | View + Controller | With creator protection |
 | Member search | View + Controller | Search bar for 5+ members |
 | Add member picker | `add_member_picker.dart` | Multi-select with chips |
+| Group permissions settings | `group_permissions_editor.dart` | Full permissions editor |
+| Who can edit group info | `group_permissions_editor.dart` | Admin/Everyone options |
+| Who can send messages | `group_permissions_editor.dart` | Admin/Everyone options |
+| Who can add members | `group_permissions_editor.dart` | Admin/Everyone options |
+| Who can pin messages | `group_permissions_editor.dart` | Admin/Everyone options |
+| Admin approval toggle | `group_permissions_editor.dart` | Approve new members |
+| Member invites toggle | `group_permissions_editor.dart` | Allow member invites |
+| PermissionsSummaryTile | `group_permissions_editor.dart` | Quick overview tile |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
-| Group permissions settings | Medium | 6 hours |
-| Who can edit group info | Medium | 4 hours |
-| Who can send messages | Medium | 4 hours |
-| Admin approval for joins | Low | 6 hours |
 | Group invite links | Medium | 6 hours |
 | Group QR code | Low | 4 hours |
 | Pinned messages | Medium | 6 hours |
@@ -338,7 +353,7 @@
 |------|--------------|--------|
 | Two-step verification UI | Privacy | 8 hours |
 | Privacy checkup wizard | Privacy | 6 hours |
-| Group permissions settings | Group Info | 6 hours |
+| Group invite links | Group Info | 6 hours |
 | Per-contact notification override | Notifications | 4 hours |
 | Search in conversation | User Info | 6 hours |
 
