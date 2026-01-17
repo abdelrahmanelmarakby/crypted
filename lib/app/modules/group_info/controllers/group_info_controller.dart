@@ -40,6 +40,10 @@ class GroupInfoController extends GetxController {
   final RxBool isRefreshing = false.obs;
   final RxBool isFavorite = false.obs;
 
+  // Member search
+  final RxString memberSearchQuery = ''.obs;
+  final TextEditingController memberSearchController = TextEditingController();
+
   // Data source
   final ChatDataSources _chatDataSources = ChatDataSources();
 
@@ -1292,6 +1296,176 @@ class GroupInfoController extends GetxController {
     return false;
   }
 
+  /// Check if a specific user is the creator
+  bool isUserCreator(String userId) {
+    return createdBy.value != null && createdBy.value == userId;
+  }
+
+  /// Make a user an admin
+  Future<void> makeAdmin(String userId) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot make admin: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (!isCurrentUserAdmin) {
+      Get.snackbar(
+        "Error",
+        "Only admins can make other members admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (adminIds.contains(userId)) {
+      Get.snackbar(
+        "Info",
+        "This user is already an admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .update({
+        'adminIds': FieldValue.arrayUnion([userId]),
+      });
+
+      // Update local state
+      adminIds.add(userId);
+
+      // Get member name for snackbar
+      final member = members.value?.firstWhere(
+        (m) => m.uid == userId,
+        orElse: () => SocialMediaUser(uid: userId, fullName: 'User'),
+      );
+
+      Get.snackbar(
+        "Success",
+        "${member?.fullName ?? 'User'} is now a group admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print("❌ Error making admin: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to make admin: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Remove admin privileges from a user
+  Future<void> removeAdmin(String userId) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot remove admin: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (!isCurrentUserAdmin) {
+      Get.snackbar(
+        "Error",
+        "Only admins can remove admin privileges",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Cannot remove creator's admin status
+    if (isUserCreator(userId)) {
+      Get.snackbar(
+        "Error",
+        "Cannot remove admin privileges from the group creator",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Cannot remove yourself if you're the only admin
+    if (userId == currentUser?.uid && adminIds.length <= 1) {
+      Get.snackbar(
+        "Error",
+        "You cannot remove yourself as the only admin. Make someone else admin first.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .update({
+        'adminIds': FieldValue.arrayRemove([userId]),
+      });
+
+      // Update local state
+      adminIds.remove(userId);
+
+      // Get member name for snackbar
+      final member = members.value?.firstWhere(
+        (m) => m.uid == userId,
+        orElse: () => SocialMediaUser(uid: userId, fullName: 'User'),
+      );
+
+      Get.snackbar(
+        "Success",
+        "${member?.fullName ?? 'User'} is no longer an admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print("❌ Error removing admin: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to remove admin: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// Get non-admin members (for removal options)
   List<SocialMediaUser> get removableMembers {
     if (members.value == null || !isCurrentUserAdmin) return [];
@@ -1313,4 +1487,34 @@ class GroupInfoController extends GetxController {
 
   // Check if group has description
   bool get hasDescription => groupDescription.value != null && groupDescription.value!.isNotEmpty;
+
+  /// Get filtered members based on search query
+  List<SocialMediaUser> get filteredMembers {
+    if (members.value == null) return [];
+    if (memberSearchQuery.value.isEmpty) return members.value!;
+
+    final query = memberSearchQuery.value.toLowerCase();
+    return members.value!.where((member) {
+      final name = member.fullName?.toLowerCase() ?? '';
+      final bio = member.bio?.toLowerCase() ?? '';
+      return name.contains(query) || bio.contains(query);
+    }).toList();
+  }
+
+  /// Update member search query
+  void updateMemberSearch(String query) {
+    memberSearchQuery.value = query;
+  }
+
+  /// Clear member search
+  void clearMemberSearch() {
+    memberSearchQuery.value = '';
+    memberSearchController.clear();
+  }
+
+  @override
+  void onClose() {
+    memberSearchController.dispose();
+    super.onClose();
+  }
 }
