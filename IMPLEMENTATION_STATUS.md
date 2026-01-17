@@ -187,7 +187,7 @@
 | Content protection settings | Model exists | Needs enforcement |
 | Privacy checkup wizard | `privacy_checkup_wizard.dart` | Multi-step guided review |
 | Two-step verification UI | `two_step_verification_setup.dart` | PIN, recovery email, hint |
-| Security audit log | Model exists | Backend only |
+| Security audit log | `security_audit_log_viewer.dart` | Full UI with filtering |
 | Blocked users list | Service + UI | Complete |
 | Cloud Functions enforcement | `functions/index.js` | 6 functions |
 | Firestore rules | `firestore.rules` | Privacy-aware |
@@ -195,7 +195,6 @@
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
-| Security audit log viewer | Low | 4 hours |
 | Screenshot protection enforcement | Medium | 4 hours |
 | Live location privacy controls | Low | 4 hours |
 
@@ -234,6 +233,7 @@
 | Privacy checkup wizard | Complete | Multi-step guided privacy review |
 | Two-step verification UI | Complete | PIN setup, recovery email, hint, verification |
 | Disappearing messages UI | Complete | Duration selector, per-chat and default settings |
+| Security audit log viewer | Complete | Timeline view, filtering, search, event details |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -353,6 +353,7 @@
 | PrivacyCheckupWizard | `privacy_checkup_wizard.dart` | Multi-step privacy review |
 | TwoStepVerificationSetup | `two_step_verification_setup.dart` | 2FA setup wizard |
 | DisappearingMessagesSettings | `disappearing_messages_settings.dart` | Duration selector & settings |
+| SecurityAuditLogViewer | `security_audit_log_viewer.dart` | Timeline view with filtering |
 
 ### Widgets Needing Integration
 
@@ -380,7 +381,6 @@ All medium priority tasks completed!
 
 | Task | Feature Area | Effort |
 |------|--------------|--------|
-| Security audit log viewer | Privacy | 4 hours |
 | Export chat functionality | User Info | 4 hours |
 | Per-chat wallpaper | User Info | 4 hours |
 
