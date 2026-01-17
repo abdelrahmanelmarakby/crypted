@@ -442,4 +442,25 @@ class ErrorHandlerService {
       ),
     );
   }
+
+  /// Show error message (simple error without handling)
+  void showError(
+    String message, {
+    Duration? duration,
+  }) {
+    Get.snackbar(
+      'خطأ / Error',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: duration ?? const Duration(seconds: 4),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+      icon: const Icon(
+        Icons.error_outline,
+        color: Colors.white,
+      ),
+    );
+  }
 }

@@ -85,9 +85,9 @@ class ReportValidator {
     }
 
     // Sanitize the content
-    final sanitizedReason = _sanitizer.sanitizeText(reason);
+    final sanitizedReason = _sanitizer.sanitize(reason).sanitized;
     final sanitizedAdditionalInfo = additionalInfo != null
-        ? _sanitizer.sanitizeText(additionalInfo)
+        ? _sanitizer.sanitize(additionalInfo).sanitized
         : null;
 
     // Track this report

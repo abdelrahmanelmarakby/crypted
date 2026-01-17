@@ -28,7 +28,7 @@ class MessageTextExtractor {
       case VideoMessage _:
         return '🎥 ${Constants.kVideo.tr}';
       case AudioMessage m:
-        return '🎵 ${_formatDuration(m.duration)}';
+        return '🎵 ${_formatDuration(m.duration ?? '0:00')}';
       case FileMessage m:
         return '📎 ${m.fileName}';
       default:

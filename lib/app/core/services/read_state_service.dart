@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 /// STATE-004: Reactive Read State Service

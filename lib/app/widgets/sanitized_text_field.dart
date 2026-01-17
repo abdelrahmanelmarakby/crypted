@@ -95,7 +95,7 @@ class _SanitizedTextFieldState extends State<SanitizedTextField> {
 
       if (!result.isValid && widget.showValidationErrors) {
         setState(() {
-          _errorText = result.errors.isNotEmpty ? result.errors.first : null;
+          _errorText = result.error;
         });
       } else {
         setState(() {
@@ -118,7 +118,7 @@ class _SanitizedTextFieldState extends State<SanitizedTextField> {
       widget.onSubmitted?.call(result.sanitized);
     } else if (widget.showValidationErrors) {
       setState(() {
-        _errorText = result.errors.isNotEmpty ? result.errors.first : null;
+        _errorText = result.error;
       });
     }
   }
@@ -134,7 +134,7 @@ class _SanitizedTextFieldState extends State<SanitizedTextField> {
     );
 
     if (!result.isValid) {
-      return result.errors.isNotEmpty ? result.errors.first : 'Invalid input';
+      return result.error ?? 'Invalid input';
     }
 
     return widget.validator?.call(result.sanitized);
@@ -256,7 +256,7 @@ class _SanitizedMessageInputState extends State<SanitizedMessageInput> {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.errors.isNotEmpty ? result.errors.first : 'Invalid message'),
+          content: Text(result.error ?? 'Invalid message'),
           backgroundColor: ColorsManager.error,
         ),
       );

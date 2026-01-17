@@ -32,13 +32,13 @@ mixin OfflineSupportMixin on GetxController {
     await _offlineQueue.initialize();
 
     // Listen to sync status
-    _syncStatusSubscription = _eventBus.on<SyncStatusEvent>().listen((event) {
+    _syncStatusSubscription = _eventBus.on<SyncStatusEvent>((event) {
       isSyncing.value = event.isSyncing;
       pendingOperationsCount.value = event.pendingCount;
     });
 
     // Listen to connectivity changes
-    _connectivitySubscription = _eventBus.on<ConnectivityChangedEvent>().listen((event) {
+    _connectivitySubscription = _eventBus.on<ConnectivityChangedEvent>((event) {
       isOnline.value = event.isOnline;
     });
 

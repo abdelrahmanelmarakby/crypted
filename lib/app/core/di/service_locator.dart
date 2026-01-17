@@ -12,7 +12,7 @@ import 'package:crypted_app/app/core/factories/message_factory.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/offline/offline_queue.dart';
 import 'package:crypted_app/app/core/security/input_sanitizer.dart';
-import 'package:crypted_app/app/modules/chat/services/typing_service.dart';
+import 'package:crypted_app/app/core/services/typing_service.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 /// Service Locator using GetX for dependency injection

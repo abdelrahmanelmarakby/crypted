@@ -128,6 +128,7 @@ class ChatController extends GetxController
 
   double get totalVotes => (yesVotes.value + noVotes.value).toDouble();
   bool get isGroup => isGroupChat.value;
+  RxBool get isTyping => RxBool(typingUsers.isNotEmpty);
   SocialMediaUser? get currentUser => UserService.currentUser.value;
   SocialMediaUser? get sender => members.isNotEmpty ? members.first : null;
   SocialMediaUser? get receiver => members.length > 1 ? members[1] : null;

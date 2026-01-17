@@ -188,7 +188,7 @@ class CachedChatRoomService {
   /// Cache keys
   String _roomKey(String roomId) => 'room:$roomId';
   String _membersKey(String roomId) => 'members:$roomId';
-  String _userKey(String oderId) => 'user:$userId';
+  String _userKey(String oderId) => 'user:$oderId';
 
   /// Get or fetch chat room
   Future<Map<String, dynamic>?> getChatRoom(
@@ -205,7 +205,7 @@ class CachedChatRoomService {
 
   /// Get or fetch user profile
   Future<Map<String, dynamic>?> getUserProfile(
-    String oderId,
+    String userId,
     Future<Map<String, dynamic>?> Function() fetcher,
   ) {
     return _cache.getOrFetch(
@@ -267,7 +267,7 @@ class CachedChatRoomService {
   }
 
   /// Invalidate user cache
-  void invalidateUser(String oderId) {
+  void invalidateUser(String userId) {
     _cache.invalidate(_userKey(userId));
   }
 

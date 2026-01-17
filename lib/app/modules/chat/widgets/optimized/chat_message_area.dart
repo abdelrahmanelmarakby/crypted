@@ -114,11 +114,11 @@ class OptimizedChatMessageArea extends StatelessWidget {
       senderImage = sender?.imageUrl;
     }
 
-    // Use the existing MsgBuilder for compatibility
+    // Use the existing MessageBuilder for compatibility
     // This ensures existing styling and logic is preserved
-    return MsgBuilder(
-      message: message,
-      isSameUser: !showAvatar,
+    return MessageBuilder(
+      !showAvatar, // senderType: true if same user (no avatar)
+      messageModel: message,
       senderName: senderName,
       senderImage: senderImage,
     );

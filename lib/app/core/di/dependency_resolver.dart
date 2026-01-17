@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 

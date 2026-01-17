@@ -32,6 +32,10 @@ class Constants {
   static const String kTypeAMessage = 'Type a message...';
   static const String kNoMessages = 'No messages yet';
   static const String kNoChats = 'No chats yet';
+  static const String kPhoto = 'Photo';
+  static const String kVideo = 'Video';
+  static const String kStartConversation = 'Start a conversation';
+  static const String kArchived = 'Archived';
   static const String kSearchChats = 'Search chats...';
   static const String kOnline = 'Online';
   static const String kOffline = 'Offline';

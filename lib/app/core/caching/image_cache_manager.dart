@@ -4,7 +4,7 @@
 import 'dart:collection';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// Configuration for image cache
 class ImageCacheConfig {
@@ -72,7 +72,7 @@ class CachedImage {
 class ImageCacheManager {
   static final ImageCacheManager _instance = ImageCacheManager._internal();
   factory ImageCacheManager() => _instance;
-  ImageCacheManager._internal();
+  ImageCacheManager._internal() : _config = const ImageCacheConfig();
 
   final ImageCacheConfig _config;
   final LinkedHashMap<String, CachedImage> _cache = LinkedHashMap();

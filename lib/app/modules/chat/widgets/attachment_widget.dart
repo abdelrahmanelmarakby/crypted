@@ -45,7 +45,7 @@ class AttachmentWidget extends GetView<ChatController> {
     if (!result.isValid) {
       Get.snackbar(
         'Invalid Message',
-        result.errors.isNotEmpty ? result.errors.first : 'Message contains invalid content',
+        result.error ?? 'Message contains invalid content',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.error.withValues(alpha: 0.9),
         colorText: Colors.white,

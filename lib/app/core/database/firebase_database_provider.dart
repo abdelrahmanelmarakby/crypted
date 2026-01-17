@@ -271,7 +271,8 @@ class FirebaseTransaction implements ITransaction {
   @override
   Future<T?> get<T>(IDocumentReference<T> documentReference) async {
     if (documentReference is FirebaseDocumentReference) {
-      final snapshot = await _transaction.get(documentReference._doc);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      final snapshot = await _transaction.get(firebaseRef._doc);
       if (snapshot.exists) {
         final data = snapshot.data();
         if (data != null) {
@@ -286,21 +287,24 @@ class FirebaseTransaction implements ITransaction {
   @override
   void set<T>(IDocumentReference<T> documentReference, T data) {
     if (documentReference is FirebaseDocumentReference && data is Map<String, dynamic>) {
-      _transaction.set(documentReference._doc, data);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      _transaction.set(firebaseRef._doc, data);
     }
   }
 
   @override
   void update<T>(IDocumentReference<T> documentReference, Map<String, dynamic> data) {
     if (documentReference is FirebaseDocumentReference) {
-      _transaction.update(documentReference._doc, data);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      _transaction.update(firebaseRef._doc, data);
     }
   }
 
   @override
   void delete<T>(IDocumentReference<T> documentReference) {
     if (documentReference is FirebaseDocumentReference) {
-      _transaction.delete(documentReference._doc);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      _transaction.delete(firebaseRef._doc);
     }
   }
 }
@@ -314,21 +318,24 @@ class FirebaseWriteBatch implements IWriteBatch {
   @override
   void set<T>(IDocumentReference<T> documentReference, T data) {
     if (documentReference is FirebaseDocumentReference && data is Map<String, dynamic>) {
-      _batch.set(documentReference._doc, data);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      _batch.set(firebaseRef._doc, data);
     }
   }
 
   @override
   void update<T>(IDocumentReference<T> documentReference, Map<String, dynamic> data) {
     if (documentReference is FirebaseDocumentReference) {
-      _batch.update(documentReference._doc, data);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      _batch.update(firebaseRef._doc, data);
     }
   }
 
   @override
   void delete<T>(IDocumentReference<T> documentReference) {
     if (documentReference is FirebaseDocumentReference) {
-      _batch.delete(documentReference._doc);
+      final firebaseRef = documentReference as FirebaseDocumentReference;
+      _batch.delete(firebaseRef._doc);
     }
   }
 

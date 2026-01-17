@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show VoidCallback;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';

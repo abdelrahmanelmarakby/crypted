@@ -108,7 +108,9 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
       return snapshot.docs
           .map((doc) {
             try {
-              return ChatRoom.fromQuery(doc);
+              final data = doc.data();
+              data['id'] = doc.id;
+              return ChatRoom.fromMap(data);
             } catch (e) {
               _logError('getChatRooms', e);
               return null;
@@ -118,8 +120,7 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
           .cast<ChatRoom>()
           .where((room) {
             // Filter by archive status client-side
-            final userSettings = room.userSettings[_currentUserId];
-            final isArchived = userSettings?['archived'] ?? false;
+            final isArchived = room.isArchived ?? false;
             return archivedOnly ? isArchived : !isArchived;
           })
           .toList();
@@ -131,7 +132,9 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
     try {
       final doc = await _chatsCollection.doc(roomId).get();
       if (!doc.exists) return null;
-      return ChatRoom.fromQuery(doc);
+      final data = doc.data()!;
+      data['id'] = doc.id;
+      return ChatRoom.fromMap(data);
     } catch (e) {
       _logError('getChatRoomById', e);
       return null;
@@ -152,7 +155,10 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
           .get();
 
       if (snapshot.docs.isEmpty) return null;
-      return ChatRoom.fromQuery(snapshot.docs.first);
+      final doc = snapshot.docs.first;
+      final data = doc.data();
+      data['id'] = doc.id;
+      return ChatRoom.fromMap(data);
     } catch (e) {
       _logError('findExistingChatRoom', e);
       return null;
@@ -192,7 +198,9 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
     await _chatsCollection.doc(roomId).set(roomData);
 
     final doc = await _chatsCollection.doc(roomId).get();
-    return ChatRoom.fromQuery(doc);
+    final data = doc.data()!;
+    data['id'] = doc.id;
+    return ChatRoom.fromMap(data);
   }
 
   @override
@@ -272,14 +280,15 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
       final room = await getChatRoomById(roomId);
       if (room == null) return false;
 
-      final memberToRemove = room.members.firstWhere(
+      final memberToRemove = room.members?.firstWhere(
         (m) => m.uid == memberId,
         orElse: () => SocialMediaUser(),
       );
 
       await _chatsCollection.doc(roomId).update({
         'membersIds': FieldValue.arrayRemove([memberId]),
-        'members': FieldValue.arrayRemove([memberToRemove.toMap()]),
+        if (memberToRemove != null)
+          'members': FieldValue.arrayRemove([memberToRemove.toMap()]),
       });
       return true;
     } catch (e) {
@@ -335,7 +344,9 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
       return snapshot.docs
           .map((doc) {
             try {
-              return ChatRoom.fromQuery(doc);
+              final data = doc.data();
+              data['id'] = doc.id;
+              return ChatRoom.fromMap(data);
             } catch (e) {
               return null;
             }
@@ -343,8 +354,7 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
           .where((room) => room != null)
           .cast<ChatRoom>()
           .where((room) {
-            final userSettings = room.userSettings[userId];
-            return userSettings?['archived'] ?? false;
+            return room.isArchived ?? false;
           })
           .toList();
     } catch (e) {

@@ -9,6 +9,7 @@ import 'package:crypted_app/app/core/offline/offline_queue.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
 import 'package:crypted_app/app/core/repositories/firebase_chat_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 /// App initialization result
@@ -196,7 +197,7 @@ class AppInitializer {
     if (!Get.isRegistered<IChatRepository>()) {
       final errorHandler = Get.find<ErrorHandler>();
       Get.put<IChatRepository>(
-        FirebaseChatRepository(errorHandler: errorHandler),
+        FirebaseChatRepository(),
         permanent: true,
       );
     }
