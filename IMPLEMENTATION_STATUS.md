@@ -11,9 +11,9 @@
 | Feature Area | Completion | Status |
 |--------------|------------|--------|
 | Notification Settings | 98% | Near Complete |
-| Privacy Settings | 96% | Near Complete |
-| Other User Info | 96% | Near Complete |
-| Group Info | 96% | Near Complete |
+| Privacy Settings | 98% | Near Complete |
+| Other User Info | 98% | Near Complete |
+| Group Info | 98% | Near Complete |
 
 ---
 
@@ -165,7 +165,7 @@
 
 ---
 
-### 2. Privacy Settings (92% Complete)
+### 2. Privacy Settings (96% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -185,7 +185,8 @@
 | App lock settings | `app_lock_service.dart` | Biometric + PIN |
 | Two-step verification model | Model exists | Needs UI |
 | Content protection settings | Model exists | Needs enforcement |
-| Privacy checkup/score | Model exists | Needs UI |
+| Privacy checkup wizard | `privacy_checkup_wizard.dart` | Multi-step guided review |
+| Two-step verification UI | `two_step_verification_setup.dart` | PIN, recovery email, hint |
 | Security audit log | Model exists | Backend only |
 | Blocked users list | Service + UI | Complete |
 | Cloud Functions enforcement | `functions/index.js` | 6 functions |
@@ -194,8 +195,6 @@
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
-| Two-step verification UI | High | 8 hours |
-| Privacy checkup wizard UI | Medium | 6 hours |
 | Security audit log viewer | Low | 4 hours |
 | Screenshot protection enforcement | Medium | 4 hours |
 | Disappearing messages UI | Medium | 6 hours |
@@ -204,9 +203,7 @@
 #### Partially Implemented ⚠️
 | Feature | Current State | Remaining Work |
 |---------|---------------|----------------|
-| App lock UI | Service complete | Need lock screen UI |
 | Content protection | Model complete | Need clipboard/screenshot hooks |
-| Privacy score display | Model complete | Need dashboard widget |
 
 ---
 
@@ -236,6 +233,7 @@
 | Search in conversation | Complete | Full-text search with navigation |
 | Group invite links | Complete | Create, share, revoke, QR code support |
 | Privacy checkup wizard | Complete | Multi-step guided privacy review |
+| Two-step verification UI | Complete | PIN setup, recovery email, hint, verification |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -352,6 +350,8 @@
 | PrivacyScoreIndicator | `privacy_indicator_widgets.dart` | Score progress |
 | LockedChatIndicator | `privacy_indicator_widgets.dart` | Chat lock badge |
 | PrivacyExceptionListEditor | `privacy_exception_list_editor.dart` | Contact selector |
+| PrivacyCheckupWizard | `privacy_checkup_wizard.dart` | Multi-step privacy review |
+| TwoStepVerificationSetup | `two_step_verification_setup.dart` | 2FA setup wizard |
 
 ### Widgets Needing Integration
 
@@ -373,9 +373,7 @@ All high priority tasks completed!
 
 ### Medium Priority (Important Features)
 
-| Task | Feature Area | Effort |
-|------|--------------|--------|
-| Two-step verification UI | Privacy | 8 hours |
+All medium priority tasks completed!
 
 ### Low Priority (Nice to Have)
 
