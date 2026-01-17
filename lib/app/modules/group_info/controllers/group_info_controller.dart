@@ -1,6 +1,7 @@
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_controlls.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_item.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
+import 'package:crypted_app/app/core/utils/file_download_helper.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -26,6 +27,10 @@ class GroupInfoController extends GetxController {
   final Rx<String?> groupImageUrl = Rx<String?>(null);
   final Rx<int?> memberCount = Rx<int?>(null);
   final Rx<List<SocialMediaUser>?> members = Rx<List<SocialMediaUser>?>(null);
+
+  // Admin tracking
+  final RxList<String> adminIds = <String>[].obs;
+  final Rx<String?> createdBy = Rx<String?>(null);
 
   // Room data
   String? roomId;
@@ -57,15 +62,24 @@ class GroupInfoController extends GetxController {
       groupImageUrl.value = arguments['groupImageUrl'] as String?;
       roomId = arguments['roomId'] as String?;
 
+      // Load admin info from arguments if available
+      if (arguments['adminIds'] != null) {
+        adminIds.value = List<String>.from(arguments['adminIds'] as List);
+      }
+      if (arguments['createdBy'] != null) {
+        createdBy.value = arguments['createdBy'] as String?;
+      }
+
       print("✅ Loaded group data:");
       print("   Name: ${groupName.value}");
       print("   Members: ${memberCount.value}");
+      print("   Admins: ${adminIds.length}");
       print("   Description: ${groupDescription.value?.isNotEmpty == true ? 'Yes' : 'No'}");
 
       // Ensure current user is in members list if not present
       _ensureCurrentUserInMembers();
 
-      // Load favorite status if we have a room ID
+      // Load favorite status and admin info if we have a room ID
       if (roomId != null) {
         await _loadGroupStatus();
       }
@@ -75,7 +89,7 @@ class GroupInfoController extends GetxController {
     }
   }
 
-  /// Load group status (favorite)
+  /// Load group status (favorite) and admin info
   Future<void> _loadGroupStatus() async {
     if (roomId == null) return;
 
@@ -83,9 +97,44 @@ class GroupInfoController extends GetxController {
       final chatRoom = await _chatDataSources.getChatRoomById(roomId!);
       if (chatRoom != null) {
         isFavorite.value = chatRoom.isFavorite ?? false;
+
+        // Load admin info from ChatRoom if not already loaded
+        if (adminIds.isEmpty && chatRoom.adminIds != null) {
+          adminIds.value = chatRoom.adminIds!;
+        }
+        if (createdBy.value == null && chatRoom.createdBy != null) {
+          createdBy.value = chatRoom.createdBy;
+        }
+
+        // Fallback: if no adminIds, set first member as admin and update Firestore
+        if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+          final firstMemberId = members.value!.first.uid;
+          if (firstMemberId != null) {
+            adminIds.add(firstMemberId);
+            // Optionally update Firestore to persist this
+            _migrateAdminIds(firstMemberId);
+          }
+        }
       }
     } catch (e) {
       print("❌ Error loading group status: $e");
+    }
+  }
+
+  /// Migrate legacy groups to use adminIds field
+  Future<void> _migrateAdminIds(String adminId) async {
+    if (roomId == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .update({
+        'adminIds': [adminId],
+        'createdBy': adminId,
+      });
+      print("✅ Migrated adminIds for group $roomId");
+    } catch (e) {
+      print("⚠️ Could not migrate adminIds: $e");
     }
   }
 
@@ -1190,87 +1239,70 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  /// Download file from URL to device
+  /// Download file from URL to device (platform-aware)
   Future<void> _downloadFile(String url, String fileName) async {
-    try {
-      // Request storage permission
-      final status = await Permission.storage.request();
+    FileDownloadHelper.showDownloadProgress(fileName);
 
-      if (status.isGranted || status.isLimited) {
-        Get.snackbar(
-          Constants.kBackup.tr,
-          'Downloading $fileName...',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: ColorsManager.primary,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
+    final result = await FileDownloadHelper.downloadFile(
+      url: url,
+      fileName: fileName,
+      onProgress: (progress) {
+        print('Download progress: $progress%');
+      },
+    );
 
-        // Use Dio to download the file
-        final dio = Dio();
-        final appDir = '/storage/emulated/0/Download'; // Android Downloads folder
-
-        // Create the download path
-        final savePath = '$appDir/$fileName';
-
-        // Download file
-        await dio.download(
-          url,
-          savePath,
-          onReceiveProgress: (received, total) {
-            if (total != -1) {
-              final progress = (received / total * 100).toStringAsFixed(0);
-              print('Download progress: $progress%');
-            }
-          },
-        );
-
-        Get.snackbar(
-          Constants.kSuccess.tr,
-          'File downloaded successfully to Downloads folder',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-      } else if (status.isPermanentlyDenied) {
-        Get.snackbar(
-          Constants.kError.tr,
-          'Storage permission is required. Please enable it in settings.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        await openAppSettings();
-      } else {
-        Get.snackbar(
-          Constants.kError.tr,
-          'Storage permission denied',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        Constants.kError.tr,
-        'Failed to download file: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    if (result.success) {
+      FileDownloadHelper.showDownloadComplete(fileName, result.filePath!);
+    } else {
+      FileDownloadHelper.showDownloadError(result.errorMessage ?? 'Download failed');
     }
   }
 
-  /// Check if current user is an admin (first member or creator)
+  /// Check if current user is an admin
   bool get isCurrentUserAdmin {
-    if (members.value == null || members.value!.isEmpty || currentUser == null) return false;
-    return members.value!.first.uid == currentUser!.uid;
+    if (currentUser == null) return false;
+    final userId = currentUser!.uid;
+    if (userId == null) return false;
+
+    // Check adminIds list first
+    if (adminIds.contains(userId)) {
+      return true;
+    }
+
+    // Check if user is the creator
+    if (createdBy.value != null && createdBy.value == userId) {
+      return true;
+    }
+
+    // Legacy fallback: first member is admin (only if no adminIds set)
+    if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+      return members.value!.first.uid == userId;
+    }
+
+    return false;
+  }
+
+  /// Check if a specific user is an admin
+  bool isUserAdmin(String userId) {
+    if (adminIds.contains(userId)) return true;
+    if (createdBy.value != null && createdBy.value == userId) return true;
+    if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+      return members.value!.first.uid == userId;
+    }
+    return false;
   }
 
   /// Get non-admin members (for removal options)
   List<SocialMediaUser> get removableMembers {
     if (members.value == null || !isCurrentUserAdmin) return [];
-    return members.value!.where((member) => member.uid != currentUser?.uid).toList();
+    return members.value!.where((member) {
+      final uid = member.uid;
+      if (uid == null) return false;
+      // Exclude current user and other admins
+      if (uid == currentUser?.uid) return false;
+      if (isUserAdmin(uid)) return false;
+      return true;
+    }).toList();
   }
 
   // Getters for easy access

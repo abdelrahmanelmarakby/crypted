@@ -6,6 +6,7 @@ import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
+import 'package:crypted_app/app/core/utils/file_download_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:photo_view/photo_view.dart';
@@ -1163,66 +1164,22 @@ class ContactInfoController extends GetxController {
     );
   }
 
-  /// Download file from URL to device
+  /// Download file from URL to device (platform-aware)
   Future<void> _downloadFile(String url, String fileName) async {
-    try {
-      // Request storage permission
-      final status = await Permission.storage.request();
+    FileDownloadHelper.showDownloadProgress(fileName);
 
-      if (status.isGranted || status.isLimited) {
-        Get.snackbar(
-          Constants.kBackup.tr,
-          'Downloading $fileName...',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: ColorsManager.primary,
-          colorText: Colors.white,
-          duration: Duration(seconds: 2),
-        );
+    final result = await FileDownloadHelper.downloadFile(
+      url: url,
+      fileName: fileName,
+      onProgress: (progress) {
+        print('Download progress: $progress%');
+      },
+    );
 
-        // Use Dio to download the file
-        final dio = Dio();
-        final appDir = '/storage/emulated/0/Download'; // Android Downloads folder
-
-        // Create the download path
-        final savePath = '$appDir/$fileName';
-
-        // Download file
-        await dio.download(
-          url,
-          savePath,
-          onReceiveProgress: (received, total) {
-            if (total != -1) {
-              final progress = (received / total * 100).toStringAsFixed(0);
-              print('Download progress: $progress%');
-            }
-          },
-        );
-      } else if (status.isPermanentlyDenied) {
-        Get.snackbar(
-          Constants.kError.tr,
-          'Storage permission is required. Please enable it in settings.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        await openAppSettings();
-      } else {
-        Get.snackbar(
-          Constants.kError.tr,
-          'Storage permission denied',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        Constants.kError.tr,
-        'Failed to download file: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    if (result.success) {
+      FileDownloadHelper.showDownloadComplete(fileName, result.filePath!);
+    } else {
+      FileDownloadHelper.showDownloadError(result.errorMessage ?? 'Download failed');
     }
   }
 }

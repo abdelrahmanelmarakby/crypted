@@ -45,6 +45,24 @@ import '../modules/backup/bindings/backup_binding.dart';
 import '../modules/backup/views/backup_view.dart';
 import '../modules/backup/views/backup_settings_view.dart';
 
+// Modern Settings V2 imports
+import '../modules/settings_v2/notifications/bindings/notification_settings_binding.dart';
+import '../modules/settings_v2/notifications/views/notification_settings_view.dart';
+import '../modules/settings_v2/privacy/bindings/privacy_settings_binding.dart';
+import '../modules/settings_v2/privacy/views/privacy_settings_view.dart';
+
+// Modern User Info imports
+import '../modules/user_info/bindings/other_user_info_binding.dart';
+import '../modules/user_info/views/other_user_info_view.dart';
+import '../modules/user_info/bindings/group_info_binding.dart' as enhanced;
+import '../modules/user_info/views/group_info_view.dart' as enhanced;
+
+// Media Gallery and Starred Messages imports
+import '../modules/media_gallery/bindings/media_gallery_binding.dart';
+import '../modules/media_gallery/views/media_gallery_view.dart';
+import '../modules/starred_messages/bindings/starred_messages_binding.dart';
+import '../modules/starred_messages/views/starred_messages_view.dart';
+
 //import 'package:crypted_app/app/modules/templates/stories2/bindings/stories2_binding.dart';
 
 part 'app_routes.dart';
@@ -174,6 +192,42 @@ class AppPages {
       name: _Paths.BACKUP_SETTINGS,
       page: () => const BackupSettingsView(),
       binding: BackupBinding(),
+    ),
+
+    // Modern Settings V2 Routes
+    GetPage(
+      name: _Paths.NOTIFICATION_SETTINGS,
+      page: () => const NotificationSettingsView(),
+      binding: NotificationSettingsBinding(),
+    ),
+    GetPage(
+      name: _Paths.PRIVACY_SETTINGS,
+      page: () => const PrivacySettingsView(),
+      binding: PrivacySettingsBinding(),
+    ),
+
+    // Modern User Info Routes
+    GetPage(
+      name: _Paths.OTHER_USER_INFO,
+      page: () => const OtherUserInfoView(),
+      binding: OtherUserInfoBinding(),
+    ),
+    GetPage(
+      name: _Paths.ENHANCED_GROUP_INFO,
+      page: () => const enhanced.GroupInfoView(),
+      binding: enhanced.GroupInfoBinding(),
+    ),
+
+    // Media Gallery and Starred Messages Routes
+    GetPage(
+      name: _Paths.MEDIA_GALLERY,
+      page: () => const MediaGalleryView(),
+      binding: MediaGalleryBinding(),
+    ),
+    GetPage(
+      name: _Paths.STARRED_MESSAGES,
+      page: () => const StarredMessagesView(),
+      binding: StarredMessagesBinding(),
     ),
   ];
 }
