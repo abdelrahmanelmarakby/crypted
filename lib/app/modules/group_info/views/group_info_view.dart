@@ -16,6 +16,7 @@ import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../controllers/group_info_controller.dart';
 
 class GroupInfoView extends GetView<GroupInfoController> {
@@ -196,6 +197,10 @@ class GroupInfoView extends GetView<GroupInfoController> {
                     const GroupActionsSection(),
                     SizedBox(height: Sizes.size4),
 
+                    // Invite Link Section
+                    _buildInviteLinkSection(context),
+                    SizedBox(height: Sizes.size4),
+
                     // Group Permissions (admin only)
                     Obx(() {
                       if (!controller.isCurrentUserAdmin) return const SizedBox.shrink();
@@ -295,5 +300,79 @@ class GroupInfoView extends GetView<GroupInfoController> {
         colorText: Colors.white,
       );
     }
+  }
+
+  /// Build invite link section
+  Widget _buildInviteLinkSection(BuildContext context) {
+    return CustomContainer(
+      children: [
+        // Invite link tile
+        Obx(() {
+          final hasLink = controller.hasInviteLink.value;
+          final link = controller.primaryInviteLink.value;
+
+          return ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ColorsManager.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Iconsax.link,
+                color: ColorsManager.primary,
+                size: 20,
+              ),
+            ),
+            title: Text(
+              'Invite Link',
+              style: StylesManager.medium(fontSize: FontSize.medium),
+            ),
+            subtitle: hasLink
+                ? Text(
+                    link?.fullLink ?? 'Tap to view',
+                    style: StylesManager.regular(
+                      fontSize: FontSize.xSmall,
+                      color: ColorsManager.grey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : Text(
+                    'Create a link to invite people',
+                    style: StylesManager.regular(
+                      fontSize: FontSize.xSmall,
+                      color: ColorsManager.grey,
+                    ),
+                  ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasLink)
+                  IconButton(
+                    icon: Icon(Iconsax.copy, size: 18, color: ColorsManager.primary),
+                    onPressed: controller.copyInviteLink,
+                    tooltip: 'Copy link',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                if (hasLink)
+                  IconButton(
+                    icon: Icon(Iconsax.share, size: 18, color: ColorsManager.primary),
+                    onPressed: controller.shareInviteLink,
+                    tooltip: 'Share link',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                Icon(
+                  Icons.chevron_right,
+                  color: ColorsManager.grey,
+                ),
+              ],
+            ),
+            onTap: () => controller.openInviteLinkManager(context),
+          );
+        }),
+      ],
+    );
   }
 }

@@ -234,6 +234,7 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Search in conversation | Complete | Full-text search with navigation |
+| Group invite links | Complete | Create, share, revoke, QR code support |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -375,14 +376,12 @@ All high priority tasks completed!
 |------|--------------|--------|
 | Two-step verification UI | Privacy | 8 hours |
 | Privacy checkup wizard | Privacy | 6 hours |
-| Group invite links | Group Info | 6 hours |
 
 ### Low Priority (Nice to Have)
 
 | Task | Feature Area | Effort |
 |------|--------------|--------|
 | Security audit log viewer | Privacy | 4 hours |
-| Group invite links | Group Info | 6 hours |
 | Export chat functionality | User Info | 4 hours |
 | Per-chat wallpaper | User Info | 4 hours |
 

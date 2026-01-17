@@ -1,8 +1,10 @@
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_controlls.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_item.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/group_permissions_editor.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/group_invite_link_manager.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/app/core/utils/file_download_helper.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -47,6 +49,10 @@ class GroupInfoController extends GetxController {
 
   // Group permissions
   final Rx<GroupPermissions> permissions = const GroupPermissions().obs;
+
+  // Invite link state
+  final Rx<GroupInviteLink?> primaryInviteLink = Rx<GroupInviteLink?>(null);
+  final RxBool hasInviteLink = false.obs;
 
   // Data source
   final ChatDataSources _chatDataSources = ChatDataSources();
@@ -139,6 +145,9 @@ class GroupInfoController extends GetxController {
           );
         }
       }
+
+      // Load invite link
+      await loadInviteLink();
     } catch (e) {
       print("❌ Error loading group status: $e");
     }
@@ -1550,6 +1559,105 @@ class GroupInfoController extends GetxController {
   void clearMemberSearch() {
     memberSearchQuery.value = '';
     memberSearchController.clear();
+  }
+
+  // ===========================================================================
+  // INVITE LINK MANAGEMENT
+  // ===========================================================================
+
+  /// Load primary invite link for the group
+  Future<void> loadInviteLink() async {
+    if (roomId == null) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('group_invite_links')
+          .where('groupId', isEqualTo: roomId)
+          .where('isRevoked', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final doc = snapshot.docs.first;
+        final link = GroupInviteLink.fromMap(doc.id, doc.data());
+        if (link.isValid) {
+          primaryInviteLink.value = link;
+          hasInviteLink.value = true;
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading invite link: $e');
+    }
+  }
+
+  /// Open invite link manager
+  Future<void> openInviteLinkManager(BuildContext context) async {
+    if (roomId == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot manage invite links: No room ID',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    await GroupInviteLinkManager.show(
+      context: context,
+      groupId: roomId!,
+      groupName: displayName,
+      isAdmin: isCurrentUserAdmin,
+    );
+
+    // Reload invite link after manager closes
+    await loadInviteLink();
+  }
+
+  /// Copy invite link to clipboard
+  void copyInviteLink() {
+    if (primaryInviteLink.value == null) {
+      Get.snackbar(
+        'No Link',
+        'Create an invite link first',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: primaryInviteLink.value!.fullLink));
+    HapticFeedback.lightImpact();
+
+    Get.snackbar(
+      'Copied',
+      'Invite link copied to clipboard',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.withValues(alpha: 0.9),
+      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  /// Share invite link
+  void shareInviteLink() {
+    if (primaryInviteLink.value == null) {
+      Get.snackbar(
+        'No Link',
+        'Create an invite link first',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Share.share(
+      'Join $displayName on Crypted!\n\n${primaryInviteLink.value!.fullLink}',
+      subject: 'Join $displayName',
+    );
   }
 
   @override
