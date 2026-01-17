@@ -10,6 +10,7 @@ import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settin
 import 'package:crypted_app/app/modules/settings_v2/shared/widgets/settings_widgets.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/privacy_checkup_wizard.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/two_step_verification_setup.dart';
+import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/disappearing_messages_settings.dart';
 import '../controllers/privacy_settings_controller.dart';
 
 /// Enhanced Privacy Settings View
@@ -341,7 +342,23 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
       child: Column(
         children: [
           SettingsSection(
+            title: 'Content Protection',
             children: [
+              Obx(() {
+                final duration = service
+                    .settings.value.contentProtection.defaultDisappearingDuration;
+                return SettingsTile(
+                  icon: Icons.timer_outlined,
+                  iconColor: duration != DisappearingDuration.off
+                      ? ColorsManager.primary
+                      : Colors.grey,
+                  title: 'Disappearing Messages',
+                  subtitle: duration != DisappearingDuration.off
+                      ? 'Default: ${duration.displayName}'
+                      : 'Off - Messages stay permanently',
+                  onTap: () => DefaultDisappearingMessagesSettings.show(context),
+                );
+              }),
               Obx(() => SettingsSwitch(
                     icon: Icons.photo_library_rounded,
                     title: 'Hide Media in Gallery',

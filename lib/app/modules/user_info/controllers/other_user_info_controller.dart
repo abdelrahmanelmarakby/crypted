@@ -11,6 +11,7 @@ import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/controllers/notification_settings_controller.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 
 /// Enhanced controller for viewing other user's information
 class OtherUserInfoController extends GetxController {
@@ -546,5 +547,35 @@ class OtherUserInfoController extends GetxController {
         }
       },
     );
+  }
+
+  /// Update disappearing messages duration for this chat
+  Future<void> updateDisappearingMessages(DisappearingDuration duration) async {
+    final roomId = state.value.roomId;
+
+    if (roomId == null) {
+      _showError('Cannot update disappearing messages: Missing room data');
+      return;
+    }
+
+    try {
+      // Update local state
+      state.value = state.value.copyWith(disappearingDuration: duration);
+
+      // Save to Firestore
+      await _repository.updateDisappearingDuration(roomId, duration);
+
+      developer.log(
+        'Disappearing messages updated to: ${duration.displayName}',
+        name: 'OtherUserInfoController',
+      );
+    } catch (e) {
+      developer.log(
+        'Error updating disappearing messages',
+        name: 'OtherUserInfoController',
+        error: e,
+      );
+      _showError('Failed to update disappearing messages');
+    }
   }
 }

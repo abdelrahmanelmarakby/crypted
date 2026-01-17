@@ -1,5 +1,6 @@
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/user_info/repositories/user_info_repository.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 
 /// Comprehensive state model for user info screen
 class UserInfoState {
@@ -17,6 +18,7 @@ class UserInfoState {
   final List<SocialMediaUser> mutualContacts;
   final String? errorMessage;
   final UserInfoAction? pendingAction;
+  final DisappearingDuration disappearingDuration;
 
   const UserInfoState({
     this.user,
@@ -33,6 +35,7 @@ class UserInfoState {
     this.mutualContacts = const [],
     this.errorMessage,
     this.pendingAction,
+    this.disappearingDuration = DisappearingDuration.off,
   });
 
   UserInfoState copyWith({
@@ -50,6 +53,7 @@ class UserInfoState {
     List<SocialMediaUser>? mutualContacts,
     String? errorMessage,
     UserInfoAction? pendingAction,
+    DisappearingDuration? disappearingDuration,
   }) {
     return UserInfoState(
       user: user ?? this.user,
@@ -66,8 +70,12 @@ class UserInfoState {
       mutualContacts: mutualContacts ?? this.mutualContacts,
       errorMessage: errorMessage,
       pendingAction: pendingAction,
+      disappearingDuration: disappearingDuration ?? this.disappearingDuration,
     );
   }
+
+  /// Chat ID for navigation
+  String? get chatId => roomId;
 
   /// User display name
   String get displayName => user?.fullName ?? 'Unknown User';

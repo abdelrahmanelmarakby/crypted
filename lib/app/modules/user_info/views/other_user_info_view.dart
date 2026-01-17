@@ -5,6 +5,8 @@ import 'package:crypted_app/app/modules/user_info/controllers/other_user_info_co
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_header.dart';
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_section.dart';
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_action_tile.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/disappearing_messages_settings.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 
 class OtherUserInfoView extends GetView<OtherUserInfoController> {
@@ -259,6 +261,25 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                       icon: Iconsax.star,
                       title: 'Starred Messages',
                       onTap: controller.viewStarredMessages,
+                    ),
+                    UserInfoActionTile(
+                      icon: Iconsax.timer,
+                      title: 'Disappearing Messages',
+                      subtitle: state.disappearingDuration != DisappearingDuration.off
+                          ? state.disappearingDuration.displayName
+                          : 'Off',
+                      onTap: () async {
+                        final result = await DisappearingMessagesSheet.show(
+                          context,
+                          chatId: state.chatId ?? '',
+                          chatName: state.displayName,
+                          isGroup: false,
+                          currentDuration: state.disappearingDuration,
+                        );
+                        if (result != null) {
+                          controller.updateDisappearingMessages(result);
+                        }
+                      },
                     ),
                     UserInfoActionTile(
                       icon: state.isMuted ? Iconsax.notification_bing : Iconsax.notification,

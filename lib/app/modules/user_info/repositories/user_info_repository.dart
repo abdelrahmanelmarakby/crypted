@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 
 /// Repository interface for user info operations
 abstract class UserInfoRepository {
@@ -53,6 +54,9 @@ abstract class UserInfoRepository {
 
   /// Get last seen timestamp
   Future<DateTime?> getLastSeen(String userId);
+
+  /// Update disappearing messages duration for a chat
+  Future<void> updateDisappearingDuration(String roomId, DisappearingDuration duration);
 }
 
 /// Media counts for a chat
@@ -296,5 +300,16 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
     } catch (e) {
       return null;
     }
+  }
+
+  @override
+  Future<void> updateDisappearingDuration(
+    String roomId,
+    DisappearingDuration duration,
+  ) async {
+    await _firestore.collection('chat_rooms').doc(roomId).update({
+      'disappearingDuration': duration.name,
+      'disappearingDurationUpdatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }
