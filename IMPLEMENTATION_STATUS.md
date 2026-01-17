@@ -10,7 +10,7 @@
 
 | Feature Area | Completion | Status |
 |--------------|------------|--------|
-| Notification Settings | 72% | In Progress |
+| Notification Settings | 88% | Near Complete |
 | Privacy Settings | 92% | Near Complete |
 | Other User Info | 88% | Near Complete |
 | Group Info | 78% | In Progress |
@@ -49,6 +49,17 @@
 | Admin action widgets | Complete | `admin_action_widgets.dart` |
 | Privacy indicator widgets | Complete | `privacy_indicator_widgets.dart` |
 
+### Phase 3.5: Notification Settings Enhancement ✅
+| Task | Status | Files |
+|------|--------|-------|
+| Sound picker with preview | Complete | `notification_sound_picker.dart` |
+| Vibration pattern picker | Complete | `notification_sound_picker.dart` |
+| DND schedule editor | Complete | `dnd_schedule_editor.dart` |
+| Quick DND options | Complete | `dnd_schedule_editor.dart` |
+| Muted chats manager | Complete | `muted_chats_manager.dart` |
+| Per-contact override UI | Complete | `muted_chats_manager.dart` |
+| View integration | Complete | `notification_settings_view.dart` |
+
 ### Phase 4: Testing & Polish ⏳
 | Task | Status | Priority |
 |------|--------|----------|
@@ -62,7 +73,7 @@
 
 ## Detailed Feature Status
 
-### 1. Notification Settings (72% Complete)
+### 1. Notification Settings (88% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -72,25 +83,31 @@
 | NotificationDecision logic | `notification_settings_service.dart` | shouldDeliverNotification() |
 | FCM integration | `fcm_service.dart` | Checks settings before showing |
 | Mute/unmute chats | `notification_settings_model.dart` | Per-chat muting |
-| Custom notification sounds | Model exists | Needs UI picker |
-| Notification preview control | Model exists | showPreview setting |
+| Custom notification sounds | `notification_sound_picker.dart` | Full UI with audio preview |
+| Notification preview control | Model + UI | showPreview setting |
+| Sound picker UI | `notification_sound_picker.dart` | Audio preview, selection |
+| Vibration pattern selector | `notification_sound_picker.dart` | Haptic preview, selection |
+| DND schedule editor | `dnd_schedule_editor.dart` | Full schedule creation/editing |
+| Quick DND options | `dnd_schedule_editor.dart` | Duration-based quick toggle |
+| Muted chats manager | `muted_chats_manager.dart` | View/manage muted chats |
+| Per-contact notification override | `muted_chats_manager.dart` | ContactNotificationOverride widget |
+| Message notification settings | View connected | Sound, vibration, reactions |
+| Group notification settings | View connected | Sound, vibration, mentions |
+| Status notification settings | View connected | Sound, reactions |
+| Call notification settings | View connected | Ringtone, vibration, DND behavior |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
-| Sound picker UI | Medium | 4 hours |
-| Vibration pattern selector | Low | 2 hours |
 | LED color picker (Android) | Low | 2 hours |
-| Notification schedule (quiet hours) | Medium | 6 hours |
-| Per-contact notification override | Medium | 4 hours |
 | Notification history view | Low | 4 hours |
+| Allowed contacts during DND | Medium | 4 hours |
 
 #### Partially Implemented ⚠️
 | Feature | Current State | Remaining Work |
 |---------|---------------|----------------|
-| NotificationSettingsView | UI exists | Needs action connections |
-| Group notification settings | Model exists | UI not connected |
-| Call notification settings | Model exists | UI not connected |
+| Sound assets | Picker exists | Need actual audio files |
+| DND allowed contacts | UI placeholder | Need contact selector integration |
 
 ---
 
