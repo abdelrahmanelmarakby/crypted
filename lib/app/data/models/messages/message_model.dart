@@ -224,3 +224,111 @@ class ReplyToMessage {
         previewText: map['previewText'],
       );
 }
+
+/// MessageModel - A simplified model for media gallery and other UI components
+/// that need quick access to message data without the full Message hierarchy
+class MessageModel {
+  final String? messageId;
+  final String? senderId;
+  final String? type;
+  final String? text;
+  final DateTime? timestamp;
+
+  // Media URLs
+  final String? photoUrl;
+  final String? videoUrl;
+  final String? audioUrl;
+  final String? fileUrl;
+
+  // File metadata
+  final String? fileName;
+  final String? fileSize;
+  final String? audioDuration;
+
+  // Thumbnail for videos
+  final String? thumbnailUrl;
+
+  MessageModel({
+    this.messageId,
+    this.senderId,
+    this.type,
+    this.text,
+    this.timestamp,
+    this.photoUrl,
+    this.videoUrl,
+    this.audioUrl,
+    this.fileUrl,
+    this.fileName,
+    this.fileSize,
+    this.audioDuration,
+    this.thumbnailUrl,
+  });
+
+  /// Create MessageModel from a Firestore DocumentSnapshot
+  factory MessageModel.fromQuery(dynamic doc) {
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) {
+      return MessageModel(messageId: doc.id);
+    }
+
+    return MessageModel(
+      messageId: doc.id,
+      senderId: data['senderId'] as String?,
+      type: data['type'] as String?,
+      text: data['text'] as String? ?? data['content'] as String?,
+      timestamp: Message.parseTimestamp(data['timestamp']),
+      photoUrl: data['photoUrl'] as String? ?? data['imageUrl'] as String?,
+      videoUrl: data['videoUrl'] as String?,
+      audioUrl: data['audioUrl'] as String?,
+      fileUrl: data['fileUrl'] as String? ?? data['url'] as String?,
+      fileName: data['fileName'] as String? ?? data['name'] as String?,
+      fileSize: _formatFileSize(data['fileSize']),
+      audioDuration: _formatDuration(data['audioDuration'] ?? data['duration']),
+      thumbnailUrl: data['thumbnailUrl'] as String?,
+    );
+  }
+
+  /// Create MessageModel from a Map
+  factory MessageModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    return MessageModel(
+      messageId: id ?? map['id'] as String?,
+      senderId: map['senderId'] as String?,
+      type: map['type'] as String?,
+      text: map['text'] as String? ?? map['content'] as String?,
+      timestamp: Message.parseTimestamp(map['timestamp']),
+      photoUrl: map['photoUrl'] as String? ?? map['imageUrl'] as String?,
+      videoUrl: map['videoUrl'] as String?,
+      audioUrl: map['audioUrl'] as String?,
+      fileUrl: map['fileUrl'] as String? ?? map['url'] as String?,
+      fileName: map['fileName'] as String? ?? map['name'] as String?,
+      fileSize: _formatFileSize(map['fileSize']),
+      audioDuration: _formatDuration(map['audioDuration'] ?? map['duration']),
+      thumbnailUrl: map['thumbnailUrl'] as String?,
+    );
+  }
+
+  /// Format file size to human-readable string
+  static String? _formatFileSize(dynamic size) {
+    if (size == null) return null;
+    if (size is String) return size;
+
+    final bytes = size is int ? size : (size as num).toInt();
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  /// Format duration to human-readable string
+  static String? _formatDuration(dynamic duration) {
+    if (duration == null) return null;
+    if (duration is String) return duration;
+
+    final seconds = duration is int ? duration : (duration as num).toInt();
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+}

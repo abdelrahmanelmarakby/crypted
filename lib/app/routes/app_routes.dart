@@ -27,7 +27,16 @@ abstract class Routes {
   static const GROUP_INFO = _Paths.GROUP_INFO;
   static const STORIES2 = _Paths.STORIES2;
   static const CALL = _Paths.CALL;
-//  static const PRIVET_CHAT = _Paths.PRIVET_CHAT;
+
+  // Modern Settings V2 Routes
+  static const NOTIFICATION_SETTINGS = _Paths.NOTIFICATION_SETTINGS;
+  static const PRIVACY_SETTINGS = _Paths.PRIVACY_SETTINGS;
+
+  // Modern User Info Routes
+  static const OTHER_USER_INFO = _Paths.OTHER_USER_INFO;
+  static const ENHANCED_GROUP_INFO = _Paths.ENHANCED_GROUP_INFO;
+  static const MEDIA_GALLERY = _Paths.MEDIA_GALLERY;
+  static const STARRED_MESSAGES = _Paths.STARRED_MESSAGES;
 }
 
 abstract class _Paths {
@@ -55,6 +64,15 @@ abstract class _Paths {
   static const CALLFRIEND = '/callfriend';
   static const GROUP_INFO = '/group-info';
   static const STORIES2 = '/stories2';
-  static const CALL='/call';
-//  static const PRIVET_CHAT = '/privet-chat';
+  static const CALL = '/call';
+
+  // Modern Settings V2 Paths
+  static const NOTIFICATION_SETTINGS = '/notification-settings';
+  static const PRIVACY_SETTINGS = '/privacy-settings';
+
+  // Modern User Info Paths
+  static const OTHER_USER_INFO = '/other-user-info';
+  static const ENHANCED_GROUP_INFO = '/enhanced-group-info';
+  static const MEDIA_GALLERY = '/media-gallery';
+  static const STARRED_MESSAGES = '/starred-messages';
 }

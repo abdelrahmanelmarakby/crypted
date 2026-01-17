@@ -1101,6 +1101,474 @@ async function shouldSendNotification(userId, notificationType) {
 }
 
 // ============================================================================
+// PRIVACY-AWARE DATA ACCESS (Phase 2)
+// ============================================================================
+
+/**
+ * Get user profile with privacy enforcement
+ * Returns filtered user data based on privacy settings and blocking status
+ */
+exports.getUserProfile = functions.https.onCall(async (data, context) => {
+  // Verify authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const viewerId = context.auth.uid;
+  const targetUserId = data.userId;
+
+  if (!targetUserId) {
+    throw new functions.https.HttpsError('invalid-argument', 'User ID is required');
+  }
+
+  try {
+    // Get target user document
+    const targetUserDoc = await db.collection('users').doc(targetUserId).get();
+    if (!targetUserDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'User not found');
+    }
+
+    const targetUserData = targetUserDoc.data();
+
+    // Check if viewer is blocked by target user
+    const blockedUsers = targetUserData.blockedUser || targetUserData.blockedUsers || [];
+    if (blockedUsers.includes(viewerId)) {
+      throw new functions.https.HttpsError('permission-denied', 'User not found');
+    }
+
+    // Get privacy settings
+    const privacySettings = targetUserData.privacySettings || {};
+
+    // Check if viewer is a contact
+    const contacts = targetUserData.contacts || [];
+    const isContact = contacts.includes(viewerId);
+
+    // Check if viewer is blocked by viewer (reciprocal check)
+    const viewerDoc = await db.collection('users').doc(viewerId).get();
+    const viewerBlockedUsers = viewerDoc.exists ?
+      (viewerDoc.data().blockedUser || viewerDoc.data().blockedUsers || []) : [];
+    const hasViewerBlocked = viewerBlockedUsers.includes(targetUserId);
+
+    // Build filtered profile based on privacy settings
+    const profile = {
+      uid: targetUserId,
+      fullName: targetUserData.fullName,
+      // Always include basic info
+    };
+
+    // Apply privacy filters
+    const visibilityLevel = getVisibilityLevel(privacySettings, isContact, viewerId);
+
+    // Profile photo
+    if (shouldShowField(privacySettings.profilePhoto, visibilityLevel)) {
+      profile.imageUrl = targetUserData.imageUrl;
+      profile.photoUrl = targetUserData.photoUrl;
+    }
+
+    // Bio/About
+    if (shouldShowField(privacySettings.about, visibilityLevel)) {
+      profile.bio = targetUserData.bio;
+      profile.about = targetUserData.about;
+    }
+
+    // Online status
+    if (shouldShowField(privacySettings.onlineStatus, visibilityLevel)) {
+      profile.isOnline = targetUserData.isOnline;
+    }
+
+    // Last seen
+    if (shouldShowField(privacySettings.lastSeen, visibilityLevel)) {
+      profile.lastSeen = targetUserData.lastSeen;
+    }
+
+    // Phone number (contacts only by default)
+    if (isContact) {
+      profile.phoneNumber = targetUserData.phoneNumber;
+    }
+
+    // Add relationship flags
+    profile.isContact = isContact;
+    profile.isBlocked = hasViewerBlocked;
+
+    functions.logger.log(`Profile accessed: ${viewerId} viewed ${targetUserId}`);
+    return profile;
+  } catch (error) {
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    functions.logger.error('Error getting user profile:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to get user profile');
+  }
+});
+
+/**
+ * Helper: Determine visibility level for user
+ */
+function getVisibilityLevel(privacySettings, isContact, viewerId) {
+  return {
+    isContact,
+    isEveryone: true,
+    isNobody: false,
+    viewerId,
+  };
+}
+
+/**
+ * Helper: Check if field should be shown based on visibility setting
+ */
+function shouldShowField(setting, visibility) {
+  if (!setting) return true; // Default to showing
+
+  const level = setting.level || 'everyone';
+
+  switch (level) {
+    case 'nobody':
+      // Check exceptions
+      const allowExceptions = setting.allowExceptions || [];
+      return allowExceptions.includes(visibility.viewerId);
+    case 'contacts':
+      return visibility.isContact;
+    case 'contactsExcept':
+      const blockExceptions = setting.blockExceptions || [];
+      return visibility.isContact && !blockExceptions.includes(visibility.viewerId);
+    case 'nobodyExcept':
+      const nobodyExceptions = setting.allowExceptions || [];
+      return nobodyExceptions.includes(visibility.viewerId);
+    case 'everyone':
+    default:
+      return true;
+  }
+}
+
+/**
+ * Block a user with proper enforcement
+ */
+exports.blockUser = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const blockerId = context.auth.uid;
+  const blockedUserId = data.userId;
+
+  if (!blockedUserId) {
+    throw new functions.https.HttpsError('invalid-argument', 'User ID is required');
+  }
+
+  if (blockerId === blockedUserId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Cannot block yourself');
+  }
+
+  try {
+    const batch = db.batch();
+
+    // Add to blocker's blocked list
+    const blockerRef = db.collection('users').doc(blockerId);
+    batch.update(blockerRef, {
+      blockedUser: admin.firestore.FieldValue.arrayUnion(blockedUserId),
+      blockedUsers: admin.firestore.FieldValue.arrayUnion(blockedUserId)
+    });
+
+    // Update any shared chat rooms
+    const chatsSnapshot = await db
+      .collection('chat_rooms')
+      .where('membersIds', 'array-contains', blockerId)
+      .get();
+
+    for (const chatDoc of chatsSnapshot.docs) {
+      const chatData = chatDoc.data();
+      if (chatData.membersIds && chatData.membersIds.includes(blockedUserId)) {
+        // If it's a private chat, add blocking info
+        if (!chatData.isGroupChat) {
+          batch.update(chatDoc.ref, {
+            blockedUsers: admin.firestore.FieldValue.arrayUnion(blockedUserId),
+            blockingUserId: blockerId
+          });
+        }
+      }
+    }
+
+    // Log the block action for security audit
+    const auditRef = db.collection('securityAuditLogs').doc();
+    batch.set(auditRef, {
+      action: 'block_user',
+      actorId: blockerId,
+      targetId: blockedUserId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        chatsAffected: chatsSnapshot.size
+      }
+    });
+
+    await batch.commit();
+
+    functions.logger.log(`User ${blockerId} blocked ${blockedUserId}`);
+    return { success: true, blockedUserId };
+  } catch (error) {
+    functions.logger.error('Error blocking user:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to block user');
+  }
+});
+
+/**
+ * Unblock a user
+ */
+exports.unblockUser = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const unblockerId = context.auth.uid;
+  const unblockedUserId = data.userId;
+
+  if (!unblockedUserId) {
+    throw new functions.https.HttpsError('invalid-argument', 'User ID is required');
+  }
+
+  try {
+    const batch = db.batch();
+
+    // Remove from unblocker's blocked list
+    const unblockerRef = db.collection('users').doc(unblockerId);
+    batch.update(unblockerRef, {
+      blockedUser: admin.firestore.FieldValue.arrayRemove(unblockedUserId),
+      blockedUsers: admin.firestore.FieldValue.arrayRemove(unblockedUserId)
+    });
+
+    // Update any shared chat rooms
+    const chatsSnapshot = await db
+      .collection('chat_rooms')
+      .where('blockingUserId', '==', unblockerId)
+      .get();
+
+    for (const chatDoc of chatsSnapshot.docs) {
+      batch.update(chatDoc.ref, {
+        blockedUsers: admin.firestore.FieldValue.arrayRemove(unblockedUserId),
+        blockingUserId: admin.firestore.FieldValue.delete()
+      });
+    }
+
+    // Log the unblock action
+    const auditRef = db.collection('securityAuditLogs').doc();
+    batch.set(auditRef, {
+      action: 'unblock_user',
+      actorId: unblockerId,
+      targetId: unblockedUserId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    await batch.commit();
+
+    functions.logger.log(`User ${unblockerId} unblocked ${unblockedUserId}`);
+    return { success: true, unblockedUserId };
+  } catch (error) {
+    functions.logger.error('Error unblocking user:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to unblock user');
+  }
+});
+
+/**
+ * Validate message before sending (privacy check)
+ */
+exports.validateMessage = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const senderId = context.auth.uid;
+  const { recipientId, chatId } = data;
+
+  if (!recipientId && !chatId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Recipient or chat ID required');
+  }
+
+  try {
+    // If direct message, check if blocked
+    if (recipientId) {
+      const recipientDoc = await db.collection('users').doc(recipientId).get();
+      if (recipientDoc.exists) {
+        const recipientData = recipientDoc.data();
+        const blockedUsers = recipientData.blockedUser || recipientData.blockedUsers || [];
+
+        if (blockedUsers.includes(senderId)) {
+          return {
+            allowed: false,
+            reason: 'blocked',
+            message: 'Cannot send message to this user'
+          };
+        }
+
+        // Check who can message setting
+        const privacySettings = recipientData.privacySettings || {};
+        const whoCanMessage = privacySettings.whoCanMessage || 'everyone';
+        const contacts = recipientData.contacts || [];
+        const isContact = contacts.includes(senderId);
+
+        if (whoCanMessage === 'nobody') {
+          return {
+            allowed: false,
+            reason: 'privacy_setting',
+            message: 'User does not accept messages'
+          };
+        }
+
+        if (whoCanMessage === 'contacts' && !isContact) {
+          return {
+            allowed: false,
+            reason: 'contacts_only',
+            message: 'User only accepts messages from contacts'
+          };
+        }
+      }
+    }
+
+    // If group message, check membership
+    if (chatId) {
+      const chatDoc = await db.collection('chat_rooms').doc(chatId).get();
+      if (chatDoc.exists) {
+        const chatData = chatDoc.data();
+        const membersIds = chatData.membersIds || [];
+
+        if (!membersIds.includes(senderId)) {
+          return {
+            allowed: false,
+            reason: 'not_member',
+            message: 'Not a member of this chat'
+          };
+        }
+
+        // Check if blocked in chat
+        const blockedUsers = chatData.blockedUsers || [];
+        if (blockedUsers.includes(senderId)) {
+          return {
+            allowed: false,
+            reason: 'blocked_in_chat',
+            message: 'Cannot send messages in this chat'
+          };
+        }
+      }
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    functions.logger.error('Error validating message:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to validate message');
+  }
+});
+
+/**
+ * Check if read receipts should be sent based on privacy
+ */
+exports.shouldSendReadReceipt = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const readerId = context.auth.uid;
+  const { messageId, chatId } = data;
+
+  try {
+    // Get reader's privacy settings
+    const readerDoc = await db.collection('users').doc(readerId).get();
+    if (!readerDoc.exists) {
+      return { shouldSend: true };
+    }
+
+    const readerData = readerDoc.data();
+    const privacySettings = readerData.privacySettings || {};
+
+    // Check if read receipts are enabled
+    if (privacySettings.readReceipts === false) {
+      return { shouldSend: false, reason: 'read_receipts_disabled' };
+    }
+
+    // Check typing indicators setting as well
+    const showTyping = privacySettings.typingIndicators !== false;
+
+    return {
+      shouldSend: true,
+      showTypingIndicators: showTyping
+    };
+  } catch (error) {
+    functions.logger.error('Error checking read receipt settings:', error);
+    return { shouldSend: true }; // Default to sending on error
+  }
+});
+
+/**
+ * Report user with validation
+ */
+exports.reportUser = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const reporterId = context.auth.uid;
+  const { reportedUserId, reason, details, type } = data;
+
+  if (!reportedUserId || !reason) {
+    throw new functions.https.HttpsError('invalid-argument', 'User ID and reason are required');
+  }
+
+  // Validate reason is in allowed list
+  const validReasons = [
+    'inappropriate_content',
+    'spam',
+    'harassment',
+    'fake_account',
+    'other'
+  ];
+
+  if (!validReasons.includes(reason)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid report reason');
+  }
+
+  try {
+    // Check if user has already reported this user recently (prevent spam)
+    const recentReports = await db
+      .collection('reports')
+      .where('reporterId', '==', reporterId)
+      .where('reportedUserId', '==', reportedUserId)
+      .where('createdAt', '>', admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
+      ))
+      .get();
+
+    if (!recentReports.empty) {
+      throw new functions.https.HttpsError(
+        'already-exists',
+        'You have already reported this user recently'
+      );
+    }
+
+    // Create report
+    const reportRef = db.collection('reports').doc();
+    await reportRef.set({
+      reporterId,
+      reportedUserId,
+      reason,
+      details: details || '',
+      type: type || 'user',
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        reporterIp: context.rawRequest?.ip || 'unknown',
+        userAgent: context.rawRequest?.headers?.['user-agent'] || 'unknown'
+      }
+    });
+
+    functions.logger.log(`User ${reporterId} reported ${reportedUserId} for ${reason}`);
+    return { success: true, reportId: reportRef.id };
+  } catch (error) {
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    functions.logger.error('Error creating report:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to submit report');
+  }
+});
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 

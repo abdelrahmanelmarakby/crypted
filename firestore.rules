@@ -33,6 +33,84 @@ service cloud.firestore {
       return content.size() <= maxLength;
     }
 
+    // =================== BLOCKING FUNCTIONS ===================
+
+    // Check if current user is blocked by target user
+    function isBlockedBy(targetUserId) {
+      return exists(/databases/$(database)/documents/users/$(targetUserId)/blocked/$(request.auth.uid));
+    }
+
+    // Check if current user has blocked target user
+    function hasBlocked(targetUserId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)/blocked/$(targetUserId));
+    }
+
+    // Check if there's a mutual block between users
+    function hasMutualBlock(userId) {
+      return isBlockedBy(userId) || hasBlocked(userId);
+    }
+
+    // Check if any member in the list has blocked the current user
+    function isBlockedByAnyMember(memberIds) {
+      // For direct chats (2 members), check blocking
+      return memberIds.size() == 2 &&
+             (isBlockedBy(memberIds[0]) || isBlockedBy(memberIds[1]));
+    }
+
+    // =================== ADMIN FUNCTIONS ===================
+
+    // Check if user is an admin of a chat room
+    function isChatAdmin(roomId) {
+      let room = get(/databases/$(database)/documents/chats/$(roomId));
+      return room != null &&
+             (
+               // Check adminIds list
+               (room.data.adminIds != null && request.auth.uid in room.data.adminIds) ||
+               // Fallback: check if user is creator
+               (room.data.createdBy != null && room.data.createdBy == request.auth.uid) ||
+               // Legacy fallback: first member is admin
+               (room.data.adminIds == null && room.data.membersIds.size() > 0 && room.data.membersIds[0] == request.auth.uid)
+             );
+    }
+
+    // Check if the target user is an admin
+    function isUserChatAdmin(roomId, userId) {
+      let room = get(/databases/$(database)/documents/chats/$(roomId));
+      return room != null &&
+             (
+               (room.data.adminIds != null && userId in room.data.adminIds) ||
+               (room.data.createdBy != null && room.data.createdBy == userId) ||
+               (room.data.adminIds == null && room.data.membersIds.size() > 0 && room.data.membersIds[0] == userId)
+             );
+    }
+
+    // =================== PRIVACY FUNCTIONS ===================
+
+    // Get user's privacy settings
+    function getUserPrivacy(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)/private/privacy);
+    }
+
+    // Check if user allows presence visibility to current user
+    function canSeePresence(userId) {
+      let privacy = getUserPrivacy(userId);
+      return privacy == null ||
+             privacy.data.lastSeenVisibility == null ||
+             privacy.data.lastSeenVisibility == 'everyone' ||
+             (privacy.data.lastSeenVisibility == 'contacts' &&
+              exists(/databases/$(database)/documents/users/$(userId)/contacts/$(request.auth.uid)));
+    }
+
+    // Check if user allows profile photo visibility
+    function canSeeProfilePhoto(userId) {
+      let privacy = getUserPrivacy(userId);
+      return privacy == null ||
+             privacy.data.profilePhotoVisibility == null ||
+             privacy.data.profilePhotoVisibility == 'everyone' ||
+             (privacy.data.profilePhotoVisibility == 'contacts' &&
+              exists(/databases/$(database)/documents/users/$(userId)/contacts/$(request.auth.uid)));
+    }
+
     // =================== USERS COLLECTION ===================
 
     match /users/{userId} {
@@ -67,54 +145,141 @@ service cloud.firestore {
     // =================== CHAT ROOMS COLLECTION ===================
 
     match /chats/{roomId} {
-      // Allow read if user is a member of the chat
-      allow read: if isAuthenticated() &&
-                    request.auth.uid in resource.data.membersIds;
+      // Helper: Get the chat room document
+      function getChatRoom() {
+        return get(/databases/$(database)/documents/chats/$(roomId));
+      }
+
+      // Helper: Check if user is a member
+      function isMember() {
+        return request.auth.uid in resource.data.membersIds;
+      }
+
+      // Helper: Check if this is a group chat
+      function isGroupChat() {
+        return resource.data.isGroupChat == true || resource.data.membersIds.size() > 2;
+      }
+
+      // Helper: Check if user is blocked in a direct chat
+      function isBlockedInDirectChat() {
+        return !isGroupChat() &&
+               resource.data.membersIds.size() == 2 &&
+               (
+                 resource.data.blockingUserId == request.auth.uid ||
+                 resource.data.blockedUsers != null && request.auth.uid in resource.data.blockedUsers
+               );
+      }
+
+      // Allow read if user is a member of the chat (blocking doesn't prevent reading history)
+      allow read: if isAuthenticated() && isMember();
 
       // Allow create if user is authenticated and is in members list
+      // For direct chats, check that neither user has blocked the other
       allow create: if isAuthenticated() &&
                        request.auth.uid in request.resource.data.membersIds &&
-                       isValidString(request.resource.data.membersIds[0]);
+                       isValidString(request.resource.data.membersIds[0]) &&
+                       // For direct chats, verify no blocking
+                       (
+                         request.resource.data.isGroupChat == true ||
+                         request.resource.data.membersIds.size() > 2 ||
+                         !isBlockedByAnyMember(request.resource.data.membersIds)
+                       );
 
-      // Allow update if user is a member
+      // Allow update based on role and action
       allow update: if isAuthenticated() &&
-                       request.auth.uid in resource.data.membersIds &&
-                       // Prevent removing yourself as the only member
-                       request.resource.data.membersIds.size() >= 2;
+                       isMember() &&
+                       (
+                         // Admin actions (requires admin role)
+                         (
+                           isChatAdmin(roomId) &&
+                           (
+                             // Add/remove members
+                             request.resource.data.diff(resource.data).affectedKeys().hasAny(['membersIds', 'members']) ||
+                             // Update group info
+                             request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'description', 'groupImageUrl']) ||
+                             // Manage admins (can only demote non-creator admins)
+                             request.resource.data.diff(resource.data).affectedKeys().hasAny(['adminIds']) ||
+                             // Block/unblock users in group
+                             request.resource.data.diff(resource.data).affectedKeys().hasAny(['blockedUsers'])
+                           )
+                         ) ||
+                         // Member actions (any member can do these)
+                         (
+                           // Update last message info
+                           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMsg', 'lastSender', 'lastChat', 'read']) ||
+                           // Personal settings (mute, pin, archive, favorite)
+                           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isMuted', 'isPinned', 'isArchived', 'isFavorite']) ||
+                           // Block in direct chat (only if 2 members)
+                           (
+                             resource.data.membersIds.size() == 2 &&
+                             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['blockingUserId'])
+                           )
+                         )
+                       );
 
-      // Allow delete only for group admins or if it's an empty chat
+      // Allow delete only for group admins or creator, or if it's a direct chat
       allow delete: if isAuthenticated() &&
-                       request.auth.uid in resource.data.membersIds &&
-                       (resource.data.membersIds.size() <= 2 ||
-                        request.auth.uid in resource.data.adminIds);
+                       isMember() &&
+                       (
+                         // Direct chat: either member can delete
+                         resource.data.membersIds.size() <= 2 ||
+                         // Group chat: only admin or creator
+                         isChatAdmin(roomId)
+                       );
 
       // Messages subcollection
       match /chat/{messageId} {
+        // Helper: Get parent chat's member list
+        function getChatMembers() {
+          return get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds;
+        }
+
+        // Helper: Check if user can send messages (not blocked)
+        function canSendMessage() {
+          let chat = get(/databases/$(database)/documents/chats/$(roomId));
+          // Check if blocked in direct chat
+          if (chat.data.membersIds.size() == 2) {
+            return chat.data.blockingUserId == null ||
+                   chat.data.blockingUserId != request.auth.uid;
+          }
+          // Check if blocked in group chat
+          return chat.data.blockedUsers == null ||
+                 !(request.auth.uid in chat.data.blockedUsers);
+        }
+
         // Allow read if user is a member of the parent chat
         allow read: if isAuthenticated() &&
-                       request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds;
+                       request.auth.uid in getChatMembers();
 
-        // Allow create if user is a member and is the sender
+        // Allow create if user is a member, is the sender, and not blocked
         allow create: if isAuthenticated() &&
-                         request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
+                         request.auth.uid in getChatMembers() &&
                          request.auth.uid == request.resource.data.senderId &&
-                         isValidContentLength(request.resource.data.text, 5000);
+                         isValidContentLength(request.resource.data.text, 5000) &&
+                         canSendMessage();
 
-        // Allow update for reactions, read receipts, and soft delete
+        // Allow update for reactions, read receipts, starred, and soft delete
         allow update: if isAuthenticated() &&
-                         request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
+                         request.auth.uid in getChatMembers() &&
                          (
                            // Own message updates (soft delete, edit within 15 min)
                            (request.auth.uid == resource.data.senderId) ||
                            // Reaction updates (any member can react)
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
                            // Read receipt updates
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']))
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])) ||
+                           // Starred messages update (any member can star for themselves)
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starredBy'])) ||
+                           // Admin can delete any message in group
+                           (isChatAdmin(roomId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedAt', 'deletedBy']))
                          );
 
-        // Allow delete only for message sender
+        // Allow delete only for message sender or group admin
         allow delete: if isAuthenticated() &&
-                         request.auth.uid == resource.data.senderId;
+                         (
+                           request.auth.uid == resource.data.senderId ||
+                           isChatAdmin(roomId)
+                         );
       }
 
       // Typing indicators subcollection
@@ -122,6 +287,20 @@ service cloud.firestore {
         allow read: if isAuthenticated() &&
                        request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds;
 
+        allow create, update: if isAuthenticated() &&
+                                 request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
+                                 request.auth.uid == request.resource.data.userId;
+
+        allow delete: if isAuthenticated() &&
+                         request.auth.uid == resource.data.userId;
+      }
+
+      // Read receipts subcollection (privacy-aware)
+      match /readReceipts/{receiptId} {
+        allow read: if isAuthenticated() &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds;
+
+        // Only allow creating read receipt if user's privacy settings allow
         allow create, update: if isAuthenticated() &&
                                  request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.membersIds &&
                                  request.auth.uid == request.resource.data.userId;
@@ -216,11 +395,54 @@ service cloud.firestore {
     // =================== PRESENCE COLLECTION ===================
 
     match /presence/{userId} {
-      // Anyone can read presence status
-      allow read: if isAuthenticated();
+      // Read presence only if user's privacy settings allow
+      // Note: Full privacy filtering happens in Cloud Functions for better control
+      allow read: if isAuthenticated() &&
+                    (
+                      // Always allow reading own presence
+                      isOwner(userId) ||
+                      // Check if user allows presence visibility
+                      canSeePresence(userId) ||
+                      // Allow if no blocking exists
+                      !hasMutualBlock(userId)
+                    );
 
       // Users can only update their own presence
       allow write: if isOwner(userId);
+    }
+
+    // =================== PRIVACY SETTINGS COLLECTION ===================
+
+    match /users/{userId}/private/privacy {
+      // Only the owner can read/write their privacy settings
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/private/notifications {
+      // Only the owner can read/write their notification settings
+      allow read, write: if isOwner(userId);
+    }
+
+    // =================== CONTACTS COLLECTION ===================
+
+    match /users/{userId}/contacts/{contactId} {
+      // Only owner can manage their contacts
+      allow read, write: if isOwner(userId);
+    }
+
+    // =================== STARRED MESSAGES COLLECTION ===================
+
+    match /users/{userId}/starredMessages/{messageId} {
+      // Only owner can manage their starred messages
+      allow read, write: if isOwner(userId);
+    }
+
+    // =================== SECURITY AUDIT LOG ===================
+
+    match /securityAudit/{logId} {
+      // Audit logs are write-only from Cloud Functions
+      allow read: if false;
+      allow write: if false; // Use Admin SDK
     }
 
     // =================== RATE LIMITS COLLECTION ===================

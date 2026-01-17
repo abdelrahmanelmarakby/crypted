@@ -21,7 +21,8 @@ class ChatRoom {
   bool? isArchived;
   bool? isFavorite;
   List<String>? blockedUsers;
-  
+  List<String>? adminIds;
+  String? createdBy;
 
   ChatRoom({
     this.id,
@@ -42,7 +43,26 @@ class ChatRoom {
     this.isArchived = false,
     this.isFavorite = false,
     this.blockedUsers,
+    this.adminIds,
+    this.createdBy,
   });
+
+  /// Check if a user is an admin of this chat room
+  bool isUserAdmin(String userId) {
+    // First check adminIds list
+    if (adminIds != null && adminIds!.contains(userId)) {
+      return true;
+    }
+    // Fallback: check if user is the creator
+    if (createdBy != null && createdBy == userId) {
+      return true;
+    }
+    // Fallback for legacy data: first member is admin
+    if (adminIds == null && membersIds != null && membersIds!.isNotEmpty) {
+      return membersIds!.first == userId;
+    }
+    return false;
+  }
 
   ChatRoom copyWith({
     String? id,
@@ -63,6 +83,8 @@ class ChatRoom {
     bool? isArchived,
     bool? isFavorite,
     List<String>? blockedUsers,
+    List<String>? adminIds,
+    String? createdBy,
   }) {
     return ChatRoom(
       blockingUserId: blockingUserId ?? this.blockingUserId,
@@ -83,6 +105,8 @@ class ChatRoom {
       isArchived: isArchived ?? this.isArchived,
       isFavorite: isFavorite ?? this.isFavorite,
       blockedUsers: blockedUsers ?? this.blockedUsers,
+      adminIds: adminIds ?? this.adminIds,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 
@@ -106,6 +130,8 @@ class ChatRoom {
       'isArchived': isArchived,
       'isFavorite': isFavorite,
       'blockedUsers': blockedUsers,
+      'adminIds': adminIds,
+      'createdBy': createdBy,
     };
   }
 
@@ -139,6 +165,10 @@ class ChatRoom {
         blockedUsers: data['blockedUsers'] != null
             ? (data['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
             : null,
+        adminIds: data['adminIds'] != null
+            ? (data['adminIds'] as List<dynamic>).map((e) => e.toString()).toList()
+            : null,
+        createdBy: _safeGet(data, 'createdBy'),
       );
     })
         .where((chatRoom) => chatRoom != null)
@@ -187,6 +217,10 @@ class ChatRoom {
       blockedUsers: map['blockedUsers'] != null
           ? (map['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
           : null,
+      adminIds: map['adminIds'] != null
+          ? (map['adminIds'] as List<dynamic>).map((e) => e.toString()).toList()
+          : null,
+      createdBy: map['createdBy'] as String?,
     );
   }
 

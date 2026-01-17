@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
 /// Production-grade Read Receipt Service for 1M+ users
 /// Manages message read receipts with batch operations
+/// Now includes privacy-aware read receipts
 class ReadReceiptService {
   static final ReadReceiptService _instance = ReadReceiptService._internal();
   factory ReadReceiptService() => _instance;
@@ -11,10 +14,43 @@ class ReadReceiptService {
 
   final Set<String> _markedAsRead = {};
 
-  /// Mark a single message as read
+  // Privacy settings service reference (lazy loaded)
+  PrivacySettingsService? _privacyService;
+
+  PrivacySettingsService? get _privacy {
+    if (_privacyService == null) {
+      try {
+        _privacyService = Get.find<PrivacySettingsService>();
+      } catch (_) {
+        // Service not registered yet
+      }
+    }
+    return _privacyService;
+  }
+
+  /// Check if current user's privacy settings allow sending read receipts
+  bool get _canSendReadReceipts {
+    if (_privacy == null) return true; // Default to allowing if service not available
+    return _privacy!.settings.value.communication.showReadReceipts;
+  }
+
+  /// Mark a single message as read (privacy-aware)
+  /// Will only create a read receipt if:
+  /// - The current user's privacy settings allow sending read receipts
+  /// - The message sender hasn't blocked the current user
   Future<void> markMessageAsRead(String messageId) async {
     // Prevent duplicate marking
     if (_markedAsRead.contains(messageId)) return;
+
+    // Check privacy settings before sending read receipt
+    if (!_canSendReadReceipts) {
+      // Still track locally that we've seen the message
+      _markedAsRead.add(messageId);
+      if (kDebugMode) {
+        print('ℹ️ Read receipts disabled by privacy settings');
+      }
+      return;
+    }
 
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -30,6 +66,18 @@ class ReadReceiptService {
 
       final senderId = messageDoc.data()?['senderId'] as String?;
       if (senderId == userId) return; // Don't mark own messages
+
+      // Check if we're blocked by the sender (don't send receipts to users who blocked us)
+      if (senderId != null) {
+        final isBlocked = await _checkIfBlockedBy(senderId);
+        if (isBlocked) {
+          _markedAsRead.add(messageId);
+          if (kDebugMode) {
+            print('ℹ️ Not sending read receipt - blocked by sender');
+          }
+          return;
+        }
+      }
 
       // Create read receipt
       await FirebaseFirestore.instance
@@ -54,9 +102,37 @@ class ReadReceiptService {
     }
   }
 
-  /// Mark multiple messages as read (batch operation)
+  /// Check if current user is blocked by another user
+  Future<bool> _checkIfBlockedBy(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return false;
+
+    try {
+      final blockedDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUserId)
+          .collection('blocked')
+          .doc(currentUserId)
+          .get();
+      return blockedDoc.exists;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Mark multiple messages as read (batch operation, privacy-aware)
   Future<void> markMessagesAsRead(List<String> messageIds) async {
     if (messageIds.isEmpty) return;
+
+    // Check privacy settings before sending read receipts
+    if (!_canSendReadReceipts) {
+      // Still track locally that we've seen these messages
+      _markedAsRead.addAll(messageIds);
+      if (kDebugMode) {
+        print('ℹ️ Read receipts disabled by privacy settings (batch)');
+      }
+      return;
+    }
 
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -75,17 +151,31 @@ class ReadReceiptService {
             FirebaseFirestore.instance.collection('messages').doc(id).get()),
       );
 
-      // Filter out own messages
+      // Cache blocked status to avoid repeated queries
+      final blockedByCache = <String, bool>{};
+
+      // Filter out own messages and messages from users who blocked us
       final messagesToMark = <String>[];
       for (var i = 0; i < messageDocs.length; i++) {
         final doc = messageDocs[i];
         if (!doc.exists) continue;
 
         final senderId = doc.data()?['senderId'] as String?;
-        if (senderId != userId) {
-          messagesToMark.add(unreadMessages[i]);
+        if (senderId == userId) continue; // Skip own messages
+
+        // Check blocking status (with caching)
+        if (senderId != null) {
+          if (!blockedByCache.containsKey(senderId)) {
+            blockedByCache[senderId] = await _checkIfBlockedBy(senderId);
+          }
+          if (blockedByCache[senderId] == true) continue; // Skip if blocked
         }
+
+        messagesToMark.add(unreadMessages[i]);
       }
+
+      // Mark all as locally read (even if we don't send receipts for some)
+      _markedAsRead.addAll(unreadMessages);
 
       if (messagesToMark.isEmpty) return;
 
@@ -102,8 +192,6 @@ class ReadReceiptService {
           'readAt': FieldValue.serverTimestamp(),
           'userId': userId,
         });
-
-        _markedAsRead.add(messageId);
       }
 
       await batch.commit();

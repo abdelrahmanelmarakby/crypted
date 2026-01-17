@@ -1,6 +1,10 @@
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_controlls.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_item.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/group_permissions_editor.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/group_invite_link_manager.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
+import 'package:crypted_app/app/core/utils/file_download_helper.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -27,6 +31,10 @@ class GroupInfoController extends GetxController {
   final Rx<int?> memberCount = Rx<int?>(null);
   final Rx<List<SocialMediaUser>?> members = Rx<List<SocialMediaUser>?>(null);
 
+  // Admin tracking
+  final RxList<String> adminIds = <String>[].obs;
+  final Rx<String?> createdBy = Rx<String?>(null);
+
   // Room data
   String? roomId;
 
@@ -34,6 +42,17 @@ class GroupInfoController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isRefreshing = false.obs;
   final RxBool isFavorite = false.obs;
+
+  // Member search
+  final RxString memberSearchQuery = ''.obs;
+  final TextEditingController memberSearchController = TextEditingController();
+
+  // Group permissions
+  final Rx<GroupPermissions> permissions = const GroupPermissions().obs;
+
+  // Invite link state
+  final Rx<GroupInviteLink?> primaryInviteLink = Rx<GroupInviteLink?>(null);
+  final RxBool hasInviteLink = false.obs;
 
   // Data source
   final ChatDataSources _chatDataSources = ChatDataSources();
@@ -57,15 +76,24 @@ class GroupInfoController extends GetxController {
       groupImageUrl.value = arguments['groupImageUrl'] as String?;
       roomId = arguments['roomId'] as String?;
 
+      // Load admin info from arguments if available
+      if (arguments['adminIds'] != null) {
+        adminIds.value = List<String>.from(arguments['adminIds'] as List);
+      }
+      if (arguments['createdBy'] != null) {
+        createdBy.value = arguments['createdBy'] as String?;
+      }
+
       print("✅ Loaded group data:");
       print("   Name: ${groupName.value}");
       print("   Members: ${memberCount.value}");
+      print("   Admins: ${adminIds.length}");
       print("   Description: ${groupDescription.value?.isNotEmpty == true ? 'Yes' : 'No'}");
 
       // Ensure current user is in members list if not present
       _ensureCurrentUserInMembers();
 
-      // Load favorite status if we have a room ID
+      // Load favorite status and admin info if we have a room ID
       if (roomId != null) {
         await _loadGroupStatus();
       }
@@ -75,7 +103,7 @@ class GroupInfoController extends GetxController {
     }
   }
 
-  /// Load group status (favorite)
+  /// Load group status (favorite) and admin info
   Future<void> _loadGroupStatus() async {
     if (roomId == null) return;
 
@@ -83,9 +111,62 @@ class GroupInfoController extends GetxController {
       final chatRoom = await _chatDataSources.getChatRoomById(roomId!);
       if (chatRoom != null) {
         isFavorite.value = chatRoom.isFavorite ?? false;
+
+        // Load admin info from ChatRoom if not already loaded
+        if (adminIds.isEmpty && chatRoom.adminIds != null) {
+          adminIds.value = chatRoom.adminIds!;
+        }
+        if (createdBy.value == null && chatRoom.createdBy != null) {
+          createdBy.value = chatRoom.createdBy;
+        }
+
+        // Fallback: if no adminIds, set first member as admin and update Firestore
+        if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+          final firstMemberId = members.value!.first.uid;
+          if (firstMemberId != null) {
+            adminIds.add(firstMemberId);
+            // Optionally update Firestore to persist this
+            _migrateAdminIds(firstMemberId);
+          }
+        }
       }
+
+      // Load permissions from Firestore directly
+      final roomDoc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .get();
+
+      if (roomDoc.exists) {
+        final data = roomDoc.data();
+        if (data != null && data['permissions'] != null) {
+          permissions.value = GroupPermissions.fromMap(
+            Map<String, dynamic>.from(data['permissions']),
+          );
+        }
+      }
+
+      // Load invite link
+      await loadInviteLink();
     } catch (e) {
       print("❌ Error loading group status: $e");
+    }
+  }
+
+  /// Migrate legacy groups to use adminIds field
+  Future<void> _migrateAdminIds(String adminId) async {
+    if (roomId == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .update({
+        'adminIds': [adminId],
+        'createdBy': adminId,
+      });
+      print("✅ Migrated adminIds for group $roomId");
+    } catch (e) {
+      print("⚠️ Could not migrate adminIds: $e");
     }
   }
 
@@ -1190,87 +1271,261 @@ class GroupInfoController extends GetxController {
     );
   }
 
-  /// Download file from URL to device
+  /// Download file from URL to device (platform-aware)
   Future<void> _downloadFile(String url, String fileName) async {
-    try {
-      // Request storage permission
-      final status = await Permission.storage.request();
+    FileDownloadHelper.showDownloadProgress(fileName);
 
-      if (status.isGranted || status.isLimited) {
-        Get.snackbar(
-          Constants.kBackup.tr,
-          'Downloading $fileName...',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: ColorsManager.primary,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
+    final result = await FileDownloadHelper.downloadFile(
+      url: url,
+      fileName: fileName,
+      onProgress: (progress) {
+        print('Download progress: $progress%');
+      },
+    );
 
-        // Use Dio to download the file
-        final dio = Dio();
-        final appDir = '/storage/emulated/0/Download'; // Android Downloads folder
-
-        // Create the download path
-        final savePath = '$appDir/$fileName';
-
-        // Download file
-        await dio.download(
-          url,
-          savePath,
-          onReceiveProgress: (received, total) {
-            if (total != -1) {
-              final progress = (received / total * 100).toStringAsFixed(0);
-              print('Download progress: $progress%');
-            }
-          },
-        );
-
-        Get.snackbar(
-          Constants.kSuccess.tr,
-          'File downloaded successfully to Downloads folder',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-      } else if (status.isPermanentlyDenied) {
-        Get.snackbar(
-          Constants.kError.tr,
-          'Storage permission is required. Please enable it in settings.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        await openAppSettings();
-      } else {
-        Get.snackbar(
-          Constants.kError.tr,
-          'Storage permission denied',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        Constants.kError.tr,
-        'Failed to download file: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    if (result.success) {
+      FileDownloadHelper.showDownloadComplete(fileName, result.filePath!);
+    } else {
+      FileDownloadHelper.showDownloadError(result.errorMessage ?? 'Download failed');
     }
   }
 
-  /// Check if current user is an admin (first member or creator)
+  /// Check if current user is an admin
   bool get isCurrentUserAdmin {
-    if (members.value == null || members.value!.isEmpty || currentUser == null) return false;
-    return members.value!.first.uid == currentUser!.uid;
+    if (currentUser == null) return false;
+    final userId = currentUser!.uid;
+    if (userId == null) return false;
+
+    // Check adminIds list first
+    if (adminIds.contains(userId)) {
+      return true;
+    }
+
+    // Check if user is the creator
+    if (createdBy.value != null && createdBy.value == userId) {
+      return true;
+    }
+
+    // Legacy fallback: first member is admin (only if no adminIds set)
+    if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+      return members.value!.first.uid == userId;
+    }
+
+    return false;
+  }
+
+  /// Check if a specific user is an admin
+  bool isUserAdmin(String userId) {
+    if (adminIds.contains(userId)) return true;
+    if (createdBy.value != null && createdBy.value == userId) return true;
+    if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+      return members.value!.first.uid == userId;
+    }
+    return false;
+  }
+
+  /// Check if a specific user is the creator
+  bool isUserCreator(String userId) {
+    return createdBy.value != null && createdBy.value == userId;
+  }
+
+  /// Make a user an admin
+  Future<void> makeAdmin(String userId) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot make admin: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (!isCurrentUserAdmin) {
+      Get.snackbar(
+        "Error",
+        "Only admins can make other members admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (adminIds.contains(userId)) {
+      Get.snackbar(
+        "Info",
+        "This user is already an admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .update({
+        'adminIds': FieldValue.arrayUnion([userId]),
+      });
+
+      // Update local state
+      adminIds.add(userId);
+
+      // Get member name for snackbar
+      final member = members.value?.firstWhere(
+        (m) => m.uid == userId,
+        orElse: () => SocialMediaUser(uid: userId, fullName: 'User'),
+      );
+
+      Get.snackbar(
+        "Success",
+        "${member?.fullName ?? 'User'} is now a group admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print("❌ Error making admin: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to make admin: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Remove admin privileges from a user
+  Future<void> removeAdmin(String userId) async {
+    if (roomId == null) {
+      Get.snackbar(
+        "Error",
+        "Cannot remove admin: No room ID available",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (!isCurrentUserAdmin) {
+      Get.snackbar(
+        "Error",
+        "Only admins can remove admin privileges",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Cannot remove creator's admin status
+    if (isUserCreator(userId)) {
+      Get.snackbar(
+        "Error",
+        "Cannot remove admin privileges from the group creator",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Cannot remove yourself if you're the only admin
+    if (userId == currentUser?.uid && adminIds.length <= 1) {
+      Get.snackbar(
+        "Error",
+        "You cannot remove yourself as the only admin. Make someone else admin first.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .update({
+        'adminIds': FieldValue.arrayRemove([userId]),
+      });
+
+      // Update local state
+      adminIds.remove(userId);
+
+      // Get member name for snackbar
+      final member = members.value?.firstWhere(
+        (m) => m.uid == userId,
+        orElse: () => SocialMediaUser(uid: userId, fullName: 'User'),
+      );
+
+      Get.snackbar(
+        "Success",
+        "${member?.fullName ?? 'User'} is no longer an admin",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print("❌ Error removing admin: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to remove admin: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Update group permissions
+  Future<void> updatePermissions(GroupPermissions newPermissions) async {
+    permissions.value = newPermissions;
+  }
+
+  /// Check if user can perform action based on permissions
+  bool canEditGroupInfo() {
+    if (permissions.value.editGroupInfo == PermissionLevel.everyone) return true;
+    return isCurrentUserAdmin;
+  }
+
+  bool canSendMessages() {
+    if (permissions.value.sendMessages == PermissionLevel.everyone) return true;
+    return isCurrentUserAdmin;
+  }
+
+  bool canAddMembers() {
+    if (permissions.value.addMembers == PermissionLevel.everyone) return true;
+    return isCurrentUserAdmin;
   }
 
   /// Get non-admin members (for removal options)
   List<SocialMediaUser> get removableMembers {
     if (members.value == null || !isCurrentUserAdmin) return [];
-    return members.value!.where((member) => member.uid != currentUser?.uid).toList();
+    return members.value!.where((member) {
+      final uid = member.uid;
+      if (uid == null) return false;
+      // Exclude current user and other admins
+      if (uid == currentUser?.uid) return false;
+      if (isUserAdmin(uid)) return false;
+      return true;
+    }).toList();
   }
 
   // Getters for easy access
@@ -1281,4 +1536,133 @@ class GroupInfoController extends GetxController {
 
   // Check if group has description
   bool get hasDescription => groupDescription.value != null && groupDescription.value!.isNotEmpty;
+
+  /// Get filtered members based on search query
+  List<SocialMediaUser> get filteredMembers {
+    if (members.value == null) return [];
+    if (memberSearchQuery.value.isEmpty) return members.value!;
+
+    final query = memberSearchQuery.value.toLowerCase();
+    return members.value!.where((member) {
+      final name = member.fullName?.toLowerCase() ?? '';
+      final bio = member.bio?.toLowerCase() ?? '';
+      return name.contains(query) || bio.contains(query);
+    }).toList();
+  }
+
+  /// Update member search query
+  void updateMemberSearch(String query) {
+    memberSearchQuery.value = query;
+  }
+
+  /// Clear member search
+  void clearMemberSearch() {
+    memberSearchQuery.value = '';
+    memberSearchController.clear();
+  }
+
+  // ===========================================================================
+  // INVITE LINK MANAGEMENT
+  // ===========================================================================
+
+  /// Load primary invite link for the group
+  Future<void> loadInviteLink() async {
+    if (roomId == null) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('group_invite_links')
+          .where('groupId', isEqualTo: roomId)
+          .where('isRevoked', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final doc = snapshot.docs.first;
+        final link = GroupInviteLink.fromMap(doc.id, doc.data());
+        if (link.isValid) {
+          primaryInviteLink.value = link;
+          hasInviteLink.value = true;
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading invite link: $e');
+    }
+  }
+
+  /// Open invite link manager
+  Future<void> openInviteLinkManager(BuildContext context) async {
+    if (roomId == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot manage invite links: No room ID',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    await GroupInviteLinkManager.show(
+      context: context,
+      groupId: roomId!,
+      groupName: displayName,
+      isAdmin: isCurrentUserAdmin,
+    );
+
+    // Reload invite link after manager closes
+    await loadInviteLink();
+  }
+
+  /// Copy invite link to clipboard
+  void copyInviteLink() {
+    if (primaryInviteLink.value == null) {
+      Get.snackbar(
+        'No Link',
+        'Create an invite link first',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: primaryInviteLink.value!.fullLink));
+    HapticFeedback.lightImpact();
+
+    Get.snackbar(
+      'Copied',
+      'Invite link copied to clipboard',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.withValues(alpha: 0.9),
+      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  /// Share invite link
+  void shareInviteLink() {
+    if (primaryInviteLink.value == null) {
+      Get.snackbar(
+        'No Link',
+        'Create an invite link first',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Share.share(
+      'Join $displayName on Crypted!\n\n${primaryInviteLink.value!.fullLink}',
+      subject: 'Join $displayName',
+    );
+  }
+
+  @override
+  void onClose() {
+    memberSearchController.dispose();
+    super.onClose();
+  }
 }

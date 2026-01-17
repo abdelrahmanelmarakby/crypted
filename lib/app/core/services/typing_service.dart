@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
 /// Production-grade Typing Service for 1M+ users
 /// Manages typing indicators with auto-stop and debouncing
+/// Now includes privacy-aware typing indicators
 class TypingService {
   static final TypingService _instance = TypingService._internal();
   factory TypingService() => _instance;
@@ -15,8 +18,36 @@ class TypingService {
   final Duration _autoStopDuration = const Duration(seconds: 5);
   final Duration _debounceDuration = const Duration(milliseconds: 300);
 
-  /// Start typing in a chat
+  // Privacy settings service reference (lazy loaded)
+  PrivacySettingsService? _privacyService;
+
+  PrivacySettingsService? get _privacy {
+    if (_privacyService == null) {
+      try {
+        _privacyService = Get.find<PrivacySettingsService>();
+      } catch (_) {
+        // Service not registered yet
+      }
+    }
+    return _privacyService;
+  }
+
+  /// Check if current user's privacy settings allow showing typing indicators
+  bool get _canShowTypingIndicator {
+    if (_privacy == null) return true; // Default to allowing if service not available
+    return _privacy!.settings.value.communication.showTypingIndicator;
+  }
+
+  /// Start typing in a chat (privacy-aware)
   Future<void> startTyping(String chatId) async {
+    // Check privacy settings before broadcasting typing
+    if (!_canShowTypingIndicator) {
+      if (kDebugMode) {
+        print('ℹ️ Typing indicator disabled by privacy settings');
+      }
+      return;
+    }
+
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;

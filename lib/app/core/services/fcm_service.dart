@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -19,8 +21,16 @@ class FCMService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
+  // Notification settings service for decision logic
+  NotificationSettingsService? _notificationSettingsService;
+
   String? _currentToken;
   bool _isInitialized = false;
+
+  /// Initialize with notification settings service
+  void setNotificationSettingsService(NotificationSettingsService service) {
+    _notificationSettingsService = service;
+  }
 
   /// Initialize FCM service
   Future<void> initialize() async {
@@ -251,16 +261,47 @@ class FCMService {
   }
 
   /// Handle new message notification
-  void _handleNewMessageNotification(RemoteMessage message) {
+  Future<void> _handleNewMessageNotification(RemoteMessage message) async {
     final chatId = message.data['chatId'] as String?;
-    final messageId = message.data['messageId'] as String?;
+    final senderId = message.data['senderId'] as String?;
+    final isGroup = message.data['isGroup'] == 'true';
+    final isReaction = message.data['isReaction'] == 'true';
+    final isMention = message.data['isMention'] == 'true';
 
-    // Show local notification
-    _showLocalNotification(
-      message,
-      channelId: 'messages',
-      payload: 'chat:$chatId',
-    );
+    // Check notification settings before showing
+    if (_notificationSettingsService != null && chatId != null && senderId != null) {
+      final decision = _notificationSettingsService!.shouldDeliverNotification(
+        senderId: senderId,
+        chatId: chatId,
+        category: isGroup ? NotificationCategory.group : NotificationCategory.message,
+        isContact: true, // TODO: Check if sender is a contact
+        isStarred: false, // TODO: Check if sender is starred
+        isReaction: isReaction,
+        isMention: isMention,
+      );
+
+      if (!decision.shouldDeliver) {
+        if (kDebugMode) {
+          print('🔕 Notification blocked: ${decision.blockReason?.displayMessage}');
+        }
+        return;
+      }
+
+      // Use decision settings for notification
+      await _showLocalNotificationWithSettings(
+        message,
+        channelId: isGroup ? 'groups' : 'messages',
+        payload: 'chat:$chatId',
+        decision: decision,
+      );
+    } else {
+      // Fallback to default notification
+      await _showLocalNotification(
+        message,
+        channelId: 'messages',
+        payload: 'chat:$chatId',
+      );
+    }
 
     // Update chat list if visible
     // This will be handled by Firestore listeners
@@ -323,15 +364,43 @@ class FCMService {
   }
 
   /// Handle new story notification
-  void _handleNewStoryNotification(RemoteMessage message) {
+  Future<void> _handleNewStoryNotification(RemoteMessage message) async {
     final storyId = message.data['storyId'] as String?;
     final userId = message.data['userId'] as String?;
+    final isContact = message.data['isContact'] == 'true';
 
-    _showLocalNotification(
-      message,
-      channelId: 'stories',
-      payload: 'story:$userId',
-    );
+    // Check notification settings before showing
+    if (_notificationSettingsService != null && userId != null) {
+      final decision = _notificationSettingsService!.shouldDeliverNotification(
+        senderId: userId,
+        chatId: 'story_$userId',
+        category: NotificationCategory.status,
+        isContact: isContact,
+        isStarred: false,
+        isReaction: false,
+        isMention: false,
+      );
+
+      if (!decision.shouldDeliver) {
+        if (kDebugMode) {
+          print('🔕 Story notification blocked: ${decision.blockReason?.displayMessage}');
+        }
+        return;
+      }
+
+      await _showLocalNotificationWithSettings(
+        message,
+        channelId: 'stories',
+        payload: 'story:$userId',
+        decision: decision,
+      );
+    } else {
+      await _showLocalNotification(
+        message,
+        channelId: 'stories',
+        payload: 'story:$userId',
+      );
+    }
   }
 
   /// Handle backup notification
@@ -365,6 +434,81 @@ class FCMService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      message.hashCode,
+      notification.title,
+      notification.body,
+      details,
+      payload: payload ?? message.data['chatId'] as String?,
+    );
+  }
+
+  /// Show local notification with custom settings from NotificationDecision
+  Future<void> _showLocalNotificationWithSettings(
+    RemoteMessage message, {
+    String channelId = 'general',
+    String? payload,
+    required NotificationDecision decision,
+  }) async {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    // Map priority to Android importance
+    Importance importance = Importance.high;
+    Priority priority = Priority.high;
+    if (decision.priority != null) {
+      switch (decision.priority!) {
+        case NotificationPriority.silent:
+          importance = Importance.min;
+          priority = Priority.min;
+          break;
+        case NotificationPriority.low:
+          importance = Importance.low;
+          priority = Priority.low;
+          break;
+        case NotificationPriority.normal:
+          importance = Importance.defaultImportance;
+          priority = Priority.defaultPriority;
+          break;
+        case NotificationPriority.high:
+          importance = Importance.high;
+          priority = Priority.high;
+          break;
+        case NotificationPriority.urgent:
+          importance = Importance.max;
+          priority = Priority.max;
+          break;
+      }
+    }
+
+    // Check if sound should be enabled
+    final playSound = decision.sound?.enabled ?? true;
+
+    // Check vibration pattern
+    final enableVibration = decision.vibration != null &&
+        decision.vibration != VibrationPattern.none;
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelId.capitalize ?? channelId,
+      importance: importance,
+      priority: priority,
+      showWhen: true,
+      enableVibration: enableVibration,
+      playSound: playSound,
+    );
+
+    final iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: playSound,
     );
 
     final details = NotificationDetails(
