@@ -235,6 +235,7 @@
 |---------|--------|-------|
 | Search in conversation | Complete | Full-text search with navigation |
 | Group invite links | Complete | Create, share, revoke, QR code support |
+| Privacy checkup wizard | Complete | Multi-step guided privacy review |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -375,7 +376,6 @@ All high priority tasks completed!
 | Task | Feature Area | Effort |
 |------|--------------|--------|
 | Two-step verification UI | Privacy | 8 hours |
-| Privacy checkup wizard | Privacy | 6 hours |
 
 ### Low Priority (Nice to Have)
 

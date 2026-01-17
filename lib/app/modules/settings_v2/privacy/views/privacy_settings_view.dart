@@ -8,6 +8,7 @@ import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 import 'package:crypted_app/app/modules/settings_v2/shared/widgets/settings_widgets.dart';
+import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/privacy_checkup_wizard.dart';
 import '../controllers/privacy_settings_controller.dart';
 
 /// Enhanced Privacy Settings View
@@ -395,10 +396,7 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
   }
 
   void _showPrivacyCheckup() {
-    Get.bottomSheet(
-      _PrivacyCheckupSheet(controller: controller),
-      isScrollControlled: true,
-    );
+    PrivacyCheckupWizard.show(Get.context!);
   }
 
   void _showTwoStepSettings() {
