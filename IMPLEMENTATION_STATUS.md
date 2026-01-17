@@ -12,8 +12,8 @@
 |--------------|------------|--------|
 | Notification Settings | 88% | Near Complete |
 | Privacy Settings | 92% | Near Complete |
-| Other User Info | 88% | Near Complete |
-| Group Info | 78% | In Progress |
+| Other User Info | 92% | Near Complete |
+| Group Info | 88% | Near Complete |
 
 ---
 
@@ -59,6 +59,16 @@
 | Muted chats manager | Complete | `muted_chats_manager.dart` |
 | Per-contact override UI | Complete | `muted_chats_manager.dart` |
 | View integration | Complete | `notification_settings_view.dart` |
+
+### Phase 3.6: Group Info Admin Management ✅
+| Task | Status | Files |
+|------|--------|-------|
+| Make admin functionality | Complete | `group_info_controller.dart` |
+| Remove admin functionality | Complete | `group_info_controller.dart` |
+| Creator protection | Complete | `group_info_controller.dart` |
+| Member search | Complete | `group_info_controller.dart` |
+| AdminMemberTile integration | Complete | `group_info_view.dart` |
+| Admin action dialogs | Complete | `admin_action_widgets.dart` |
 
 ### Phase 4: Testing & Polish ⏳
 | Task | Status | Priority |
@@ -156,7 +166,7 @@
 
 ---
 
-### 3. Other User Info (88% Complete)
+### 3. Other User Info (92% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -169,8 +179,8 @@
 | Block/Unblock user | Controller + Service | With confirmation |
 | Report user | Controller + Cloud Function | With categories |
 | Mute notifications | Controller | Per-user setting |
-| Media gallery link | Route exists | MediaGalleryView |
-| Starred messages link | Route exists | StarredMessagesView |
+| Media gallery | `media_gallery_view.dart` | Full gallery with tabs |
+| Starred messages | `starred_messages_view.dart` | Full viewer with actions |
 | Shared groups display | Controller | List with navigation |
 | Chat encryption info | UI placeholder | E2E indicator |
 | Custom notifications | Model exists | Per-user override |
@@ -189,36 +199,35 @@
 #### Partially Implemented ⚠️
 | Feature | Current State | Remaining Work |
 |---------|---------------|----------------|
-| Media gallery | View exists | Needs data loading |
-| Starred messages | View exists | Needs data loading |
-| Custom notifications UI | Model exists | Need selector UI |
+| Custom notifications UI | Model exists | Need selector UI integration |
 
 ---
 
-### 4. Group Info (78% Complete)
+### 4. Group Info (88% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
 |---------|----------|-------|
 | GroupInfoController | `group_info_controller.dart` | Full controller |
-| GroupInfoView | Existing | Needs UI updates |
+| GroupInfoView | `group_info_view.dart` | Full UI with admin widgets |
 | Admin detection | Controller | Fixed with adminIds |
 | Admin badge | `admin_action_widgets.dart` | Creator distinction |
-| Member list | Controller + View | With roles |
-| Member actions sheet | `admin_action_widgets.dart` | Admin options |
+| Member list | Controller + View | With AdminMemberTile |
+| Member actions sheet | `admin_action_widgets.dart` | Full admin options |
 | Add members | Controller | Admin only |
 | Remove members | Controller | Admin only |
 | Update group info | Controller | Name, description, image |
 | Leave group | Controller | With confirmation |
-| Group media | Controller | Photos, videos, files |
+| Group media | `media_gallery_view.dart` | Full gallery with tabs |
 | Favorite toggle | Controller | Per-user setting |
 | Mute toggle | Controller | Per-user setting |
+| Make admin UI | View + Controller | With confirmation dialog |
+| Remove admin UI | View + Controller | With creator protection |
+| Member search | View + Controller | Search bar for 5+ members |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
-| Make admin UI | High | 3 hours |
-| Remove admin UI | High | 3 hours |
 | Group permissions settings | Medium | 6 hours |
 | Who can edit group info | Medium | 4 hours |
 | Who can send messages | Medium | 4 hours |
@@ -231,9 +240,7 @@
 #### Partially Implemented ⚠️
 | Feature | Current State | Remaining Work |
 |---------|---------------|----------------|
-| Admin management | Controller logic exists | Need UI buttons |
-| Group media gallery | Data loading exists | Need UI integration |
-| Member search | Not implemented | Add search bar |
+| Add member picker | Placeholder exists | Need contact selector |
 
 ---
 
