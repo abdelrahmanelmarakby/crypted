@@ -91,6 +91,17 @@
 | Permissions Firestore loading | Complete | `group_info_controller.dart` |
 | View integration (admin only) | Complete | `group_info_view.dart` |
 
+### Phase 3.9: Blocked Chat Integration ✅
+| Task | Status | Files |
+|------|--------|-------|
+| BlockedChatInfo reactive state | Complete | `chat_controller.dart` |
+| otherUserId/otherUser getters | Complete | `chat_controller.dart` |
+| _loadBlockedChatInfo() method | Complete | `chat_controller.dart` |
+| unblockUser() method | Complete | `chat_controller.dart` |
+| BlockedChatBanner integration | Complete | `chat_screen.dart` |
+| BlockedChatInputBar integration | Complete | `chat_screen.dart` |
+| Unblock confirmation dialog | Complete | `chat_screen.dart` |
+
 ### Phase 4: Testing & Polish ⏳
 | Task | Status | Priority |
 |------|--------|----------|
@@ -327,9 +338,9 @@
 
 | Widget | Target Location | Integration Notes |
 |--------|-----------------|-------------------|
-| BlockedChatBanner | ChatView | Add to chat app bar |
-| BlockedChatInputBar | ChatView | Replace input when blocked |
-| AdminBadge | GroupInfoView | Add to member list |
+| BlockedChatBanner | ChatView | ✅ Integrated |
+| BlockedChatInputBar | ChatView | ✅ Integrated |
+| AdminBadge | GroupInfoView | ✅ Integrated |
 | PrivacyLevelIndicator | SettingsView | Add to privacy rows |
 | LockedChatIndicator | ChatListTile | Add for locked chats |
 
@@ -341,8 +352,6 @@
 
 | Task | Feature Area | Effort |
 |------|--------------|--------|
-| Integrate blocked widgets into ChatView | Chat | 4 hours |
-| Add make/remove admin UI | Group Info | 4 hours |
 | Create app lock screen UI | Privacy | 6 hours |
 | Connect notification settings actions | Notifications | 4 hours |
 | Load real data in MediaGalleryView | User Info | 4 hours |
