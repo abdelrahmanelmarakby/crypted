@@ -83,31 +83,69 @@ class RetryHelper {
   /// Execute an operation with retry, returning null on failure instead of throwing.
   ///
   /// Useful when you want to gracefully handle failures without exceptions.
+  /// The operation itself can return null (e.g., when a document doesn't exist).
   static Future<T?> withRetryOrNull<T>(
-    Future<T> Function() operation, {
+    Future<T?> Function() operation, {
     int maxAttempts = 3,
     Duration initialDelay = const Duration(seconds: 1),
     Duration maxDelay = const Duration(seconds: 30),
     bool Function(Exception)? retryIf,
     void Function(int attempt, Exception error, Duration nextDelay)? onRetry,
   }) async {
-    try {
-      return await withRetry(
-        operation,
-        maxAttempts: maxAttempts,
-        initialDelay: initialDelay,
-        maxDelay: maxDelay,
-        retryIf: retryIf,
-        onRetry: onRetry,
-      );
-    } catch (e) {
-      developer.log(
-        'All retry attempts failed',
-        name: 'RetryHelper',
-        error: e,
-      );
-      return null;
+    Exception? lastException;
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await operation();
+      } on Exception catch (e) {
+        lastException = e;
+
+        // Check if we should retry this error
+        if (retryIf != null && !retryIf(e)) {
+          developer.log(
+            'Non-retryable error encountered',
+            name: 'RetryHelper',
+            error: e,
+          );
+          return null;
+        }
+
+        // Don't retry if this was the last attempt
+        if (attempt == maxAttempts) {
+          break;
+        }
+
+        // Calculate delay with exponential backoff and jitter
+        final baseDelay = initialDelay * pow(2, attempt - 1);
+        final jitter = Duration(
+          milliseconds: Random().nextInt(baseDelay.inMilliseconds ~/ 2),
+        );
+        final delay = Duration(
+          milliseconds: min(
+            (baseDelay + jitter).inMilliseconds,
+            maxDelay.inMilliseconds,
+          ),
+        );
+
+        // Notify about retry
+        onRetry?.call(attempt, e, delay);
+
+        developer.log(
+          'Retry attempt $attempt/$maxAttempts after ${delay.inMilliseconds}ms',
+          name: 'RetryHelper',
+          error: e,
+        );
+
+        await Future.delayed(delay);
+      }
     }
+
+    developer.log(
+      'All retry attempts failed',
+      name: 'RetryHelper',
+      error: lastException,
+    );
+    return null;
   }
 
   /// Check if an exception is typically retryable (network errors, timeouts, etc.)

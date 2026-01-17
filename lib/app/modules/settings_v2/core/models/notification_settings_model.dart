@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 enum NotificationSound {
   none('None', null),
   defaultSound('Default', 'default'),
+  default_('Default', 'default'),
   chime('Chime', 'chime'),
   ding('Ding', 'ding'),
   pop('Pop', 'pop'),
@@ -24,7 +25,11 @@ enum NotificationSound {
   droplet('Droplet', 'droplet'),
   bamboo('Bamboo', 'bamboo'),
   chord('Chord', 'chord'),
-  ping('Ping', 'ping');
+  ping('Ping', 'ping'),
+  whistle('Whistle', 'whistle'),
+  gentle('Gentle', 'gentle'),
+  electronic('Electronic', 'electronic'),
+  classic('Classic', 'classic');
 
   const NotificationSound(this.displayName, this.fileName);
   final String displayName;
@@ -45,12 +50,16 @@ enum VibrationPattern {
   short('Short', [100]),
   medium('Medium', [200]),
   long_('Long', [400]),
+  long('Long', [400]),
   double_('Double', [100, 100, 100]),
+  doubleShort('Double Short', [100, 100, 100]),
   triple('Triple', [100, 100, 100, 100, 100]),
   heartbeat('Heartbeat', [100, 100, 300]),
   sos('SOS', [100, 100, 100, 100, 100, 100, 300, 300, 300, 100, 100, 100]),
   pulse('Pulse', [150, 50, 150, 50, 150]),
-  gentle('Gentle', [50, 50, 50]);
+  gentle('Gentle', [50, 50, 50]),
+  defaultPattern('Default', [200]),
+  custom('Custom', [200, 100, 200]);
 
   const VibrationPattern(this.displayName, this.pattern);
   final String displayName;
@@ -67,7 +76,8 @@ enum VibrationPattern {
 
 /// Notification priority levels
 enum NotificationPriority {
-  low('Low', 'min'),
+  silent('Silent', 'min'),
+  low('Low', 'low'),
   normal('Normal', 'default'),
   high('High', 'high'),
   urgent('Urgent', 'max');
@@ -168,9 +178,11 @@ enum DigestFrequency {
 /// Mute duration options
 enum MuteDuration {
   oneHour('1 Hour', Duration(hours: 1)),
+  hours8('8 Hours', Duration(hours: 8)),
   eightHours('8 Hours', Duration(hours: 8)),
   oneDay('1 Day', Duration(days: 1)),
   oneWeek('1 Week', Duration(days: 7)),
+  week1('1 Week', Duration(days: 7)),
   forever('Forever', null);
 
   const MuteDuration(this.displayName, this.duration);
@@ -208,6 +220,9 @@ class SoundConfig {
     this.customSound = false,
     this.customSoundPath,
   });
+
+  /// Check if sound is enabled (sound is not none and volume > 0)
+  bool get enabled => sound != NotificationSound.none && volume > 0;
 
   SoundConfig copyWith({
     NotificationSound? sound,
@@ -655,16 +670,24 @@ class DNDSchedule {
     this.autoReplyMessage,
   });
 
+  /// Convenience getters (aliases for compatibility)
+  List<int> get weekdays => daysOfWeek;
+  bool get allowCalls => mode != DNDMode.totalSilence;
+  bool get allowRepeatedCalls => allowRepeatCallers;
+
   DNDSchedule copyWith({
     String? id,
     String? name,
     bool? enabled,
     List<int>? daysOfWeek,
+    List<int>? weekdays, // Alias for daysOfWeek
     TimeOfDay? startTime,
     TimeOfDay? endTime,
     DNDMode? mode,
     List<String>? allowedContacts,
     bool? allowRepeatCallers,
+    bool? allowCalls, // Ignored - mode controls this
+    bool? allowRepeatedCalls, // Alias for allowRepeatCallers
     int? repeatCallsThreshold,
     int? repeatCallsWindow,
     String? autoReplyMessage,
@@ -673,12 +696,12 @@ class DNDSchedule {
       id: id ?? this.id,
       name: name ?? this.name,
       enabled: enabled ?? this.enabled,
-      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      daysOfWeek: daysOfWeek ?? weekdays ?? this.daysOfWeek,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       mode: mode ?? this.mode,
       allowedContacts: allowedContacts ?? this.allowedContacts,
-      allowRepeatCallers: allowRepeatCallers ?? this.allowRepeatCallers,
+      allowRepeatCallers: allowRepeatCallers ?? allowRepeatedCalls ?? this.allowRepeatCallers,
       repeatCallsThreshold: repeatCallsThreshold ?? this.repeatCallsThreshold,
       repeatCallsWindow: repeatCallsWindow ?? this.repeatCallsWindow,
       autoReplyMessage: autoReplyMessage ?? this.autoReplyMessage,
@@ -788,6 +811,9 @@ class DNDSettings {
     this.allowStarredContacts = true,
   });
 
+  /// Convenience getter (alias for globalAllowedContacts)
+  List<String> get allowedContacts => globalAllowedContacts;
+
   /// Check if DND is currently active
   bool get isActive {
     // Quick toggle takes priority
@@ -824,13 +850,14 @@ class DNDSettings {
     DateTime? quickToggleUntil,
     List<DNDSchedule>? schedules,
     List<String>? globalAllowedContacts,
+    List<String>? allowedContacts, // Alias for globalAllowedContacts
     bool? allowStarredContacts,
   }) {
     return DNDSettings(
       quickToggleEnabled: quickToggleEnabled ?? this.quickToggleEnabled,
       quickToggleUntil: quickToggleUntil ?? this.quickToggleUntil,
       schedules: schedules ?? this.schedules,
-      globalAllowedContacts: globalAllowedContacts ?? this.globalAllowedContacts,
+      globalAllowedContacts: globalAllowedContacts ?? allowedContacts ?? this.globalAllowedContacts,
       allowStarredContacts: allowStarredContacts ?? this.allowStarredContacts,
     );
   }

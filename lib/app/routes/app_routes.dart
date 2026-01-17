@@ -37,6 +37,7 @@ abstract class Routes {
   static const ENHANCED_GROUP_INFO = _Paths.ENHANCED_GROUP_INFO;
   static const MEDIA_GALLERY = _Paths.MEDIA_GALLERY;
   static const STARRED_MESSAGES = _Paths.STARRED_MESSAGES;
+  static const ADD_GROUP_MEMBERS = _Paths.ADD_GROUP_MEMBERS;
 }
 
 abstract class _Paths {
@@ -75,4 +76,5 @@ abstract class _Paths {
   static const ENHANCED_GROUP_INFO = '/enhanced-group-info';
   static const MEDIA_GALLERY = '/media-gallery';
   static const STARRED_MESSAGES = '/starred-messages';
+  static const ADD_GROUP_MEMBERS = '/add-group-members';
 }

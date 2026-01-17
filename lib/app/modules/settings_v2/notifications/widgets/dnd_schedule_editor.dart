@@ -102,8 +102,8 @@ class _DNDScheduleEditorState extends State<DNDScheduleEditor> {
       endTime: _endTime,
       daysOfWeek: _selectedDays.toList()..sort(),
       enabled: _enabled,
-      allowCalls: _allowCalls,
-      allowRepeatedCalls: _allowRepeatedCalls,
+      mode: _allowCalls ? DNDMode.priorityOnly : DNDMode.totalSilence,
+      allowRepeatCallers: _allowRepeatedCalls,
     );
 
     widget.onSave(schedule);

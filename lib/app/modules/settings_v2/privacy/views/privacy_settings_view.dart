@@ -301,7 +301,7 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 iconColor: ColorsManager.primary,
                 title: 'Security Activity',
                 subtitle: '${service.securityLog.length} recent events',
-                onTap: () => SecurityAuditLogViewer.show(context),
+                onTap: () => SecurityAuditLogViewer.show(Get.context!),
               )),
         ],
       ),
@@ -364,7 +364,7 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                   subtitle: duration != DisappearingDuration.off
                       ? 'Default: ${duration.displayName}'
                       : 'Off - Messages stay permanently',
-                  onTap: () => DefaultDisappearingMessagesSettings.show(context),
+                  onTap: () => DefaultDisappearingMessagesSettings.show(Get.context!),
                 );
               }),
               Obx(() => SettingsSwitch(

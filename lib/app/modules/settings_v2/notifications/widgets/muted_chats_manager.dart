@@ -105,7 +105,7 @@ class MutedChatsManager extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final chat = mutedChats[index];
                   return _MutedChatTile(
-                    override: chat,
+                    chatOverride: chat,
                     onUnmute: () => controller.unmuteChat(chat.chatId),
                   );
                 },
@@ -119,18 +119,18 @@ class MutedChatsManager extends StatelessWidget {
 }
 
 class _MutedChatTile extends StatelessWidget {
-  final ChatNotificationOverride override;
+  final ChatNotificationOverride chatOverride;
   final VoidCallback onUnmute;
 
   const _MutedChatTile({
-    required this.override,
+    required this.chatOverride,
     required this.onUnmute,
   });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_ChatInfo?>(
-      future: _fetchChatInfo(override.chatId),
+      future: _fetchChatInfo(chatOverride.chatId),
       builder: (context, snapshot) {
         final chatInfo = snapshot.data;
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
@@ -171,7 +171,7 @@ class _MutedChatTile extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (override.sound != null)
+              if (chatOverride.sound != null)
                 Tooltip(
                   message: 'Custom sound',
                   child: Icon(
@@ -196,12 +196,12 @@ class _MutedChatTile extends StatelessWidget {
   }
 
   String _getMuteDescription() {
-    if (override.mutedUntil == null) {
+    if (chatOverride.mutedUntil == null) {
       return 'Muted indefinitely';
     }
 
     final now = DateTime.now();
-    final until = override.mutedUntil!;
+    final until = chatOverride.mutedUntil!;
 
     if (until.isBefore(now)) {
       return 'Mute expired';

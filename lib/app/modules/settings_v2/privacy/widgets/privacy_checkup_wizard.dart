@@ -1167,8 +1167,12 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
         return 'Everyone';
       case VisibilityLevel.contacts:
         return 'Contacts';
+      case VisibilityLevel.contactsExcept:
+        return 'Contacts except...';
       case VisibilityLevel.nobody:
         return 'Nobody';
+      case VisibilityLevel.nobodyExcept:
+        return 'Nobody except...';
     }
   }
 
@@ -1178,8 +1182,12 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
         return 'Anyone can see this';
       case VisibilityLevel.contacts:
         return 'Only your contacts can see this';
+      case VisibilityLevel.contactsExcept:
+        return 'Your contacts except some people';
       case VisibilityLevel.nobody:
         return 'Nobody can see this';
+      case VisibilityLevel.nobodyExcept:
+        return 'Nobody except some people';
     }
   }
 

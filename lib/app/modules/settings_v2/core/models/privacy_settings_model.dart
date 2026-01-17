@@ -333,6 +333,10 @@ class CommunicationSettings {
     this.showReadReceipts = true,
   });
 
+  /// Convenience getters (aliases for compatibility)
+  bool get typingIndicator => showTypingIndicator;
+  bool get readReceipts => showReadReceipts;
+
   CommunicationSettings copyWith({
     VisibilitySettingWithExceptions? whoCanMessage,
     VisibilitySettingWithExceptions? whoCanCall,
@@ -635,6 +639,11 @@ class SecuritySettings {
     this.hideSecurityNotifications = false,
     this.showSecurityAlerts = true,
   });
+
+  /// Convenience getters for easier access
+  bool get appLockEnabled => appLock.enabled;
+  bool get biometricEnabled => appLock.biometricEnabled;
+  bool get twoStepEnabled => twoStepVerification.enabled;
 
   SecuritySettings copyWith({
     TwoStepVerificationSettings? twoStepVerification,

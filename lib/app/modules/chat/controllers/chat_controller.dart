@@ -619,7 +619,7 @@ class ChatController extends GetxController
       }
       // Search in event titles
       if (message is EventMessage) {
-        return message.title.toLowerCase().contains(lowerQuery) ||
+        return (message.title?.toLowerCase().contains(lowerQuery) ?? false) ||
                (message.description?.toLowerCase().contains(lowerQuery) ?? false);
       }
       return false;

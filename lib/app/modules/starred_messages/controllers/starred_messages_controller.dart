@@ -150,8 +150,11 @@ class StarredMessagesController extends GetxController {
 
     // Sort by timestamp
     allStarred.sort((a, b) {
-      final aTime = a.message.timestamp ?? '';
-      final bTime = b.message.timestamp ?? '';
+      final aTime = a.message.timestamp;
+      final bTime = b.message.timestamp;
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
       return bTime.compareTo(aTime);
     });
 

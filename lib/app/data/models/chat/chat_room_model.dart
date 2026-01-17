@@ -224,6 +224,9 @@ class ChatRoom {
     );
   }
 
+  /// Factory constructor from JSON string
+  factory ChatRoom.fromJson(Map<String, dynamic> json) => ChatRoom.fromMap(json);
+
   @override
   String toString() {
     return 'ChatRoom(blockingUserId: $blockingUserId, id: $id, membersIds: $membersIds, lastMsg: $lastMsg, lastSender: $lastSender, lastChat: $lastChat, keywords: $keywords, read: $read, isMuted: $isMuted, isPinned: $isPinned, isArchived: $isArchived, isFavorite: $isFavorite)';

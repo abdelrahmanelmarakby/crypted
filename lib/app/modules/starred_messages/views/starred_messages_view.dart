@@ -498,10 +498,10 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
     );
   }
 
-  String _formatDate(String? timestamp) {
+  String _formatDate(DateTime? timestamp) {
     if (timestamp == null) return '';
     try {
-      final date = DateTime.parse(timestamp);
+      final date = timestamp;
       final now = DateTime.now();
       final diff = now.difference(date);
 

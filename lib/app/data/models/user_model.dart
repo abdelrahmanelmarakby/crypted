@@ -591,6 +591,22 @@ class SocialMediaUser {
   factory SocialMediaUser.fromJson(String source) =>
       SocialMediaUser.fromMap(json.decode(source) as Map<String, dynamic>);
 
+  /// Factory constructor from Firestore QueryDocumentSnapshot
+  static SocialMediaUser fromQuery(dynamic doc) {
+    if (doc is Map<String, dynamic>) {
+      return SocialMediaUser.fromMap(doc);
+    }
+    // Handle QueryDocumentSnapshot from Firestore
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) {
+      return const SocialMediaUser();
+    }
+    return SocialMediaUser.fromMap(data);
+  }
+
+  /// Convenience getter (alias for imageUrl)
+  String? get photoUrl => imageUrl;
+
   @override
   String toString() {
     return 'SocialMediaUser(fullName: $fullName, email: $email, imageUrl: $imageUrl, provider: $provider, uid: $uid, phoneNumber: $phoneNumber, address: $address, bio: $bio, following: $following, followers: $followers, blockedUser: $blockedUser, fcmToken: $fcmToken, privacySettings: $privacySettings, chatSettings: $chatSettings, notificationSettings: $notificationSettings)';

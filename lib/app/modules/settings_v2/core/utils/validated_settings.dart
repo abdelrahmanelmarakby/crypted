@@ -4,6 +4,7 @@
 /// to ensure data integrity before persistence.
 
 import 'dart:developer' as developer;
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/utils/validation.dart';
@@ -95,8 +96,8 @@ class ValidatedNotificationSettings {
         chatId: chatIdResult.sanitizedValue ?? chatId,
         enabled: enabled,
         mutedUntil: validatedMuteUntil,
-        customSound: customSound,
-        customVibration: customVibration,
+        sound: customSound,
+        vibration: customVibration,
         createdAt: now,
         updatedAt: now,
       ),
@@ -108,9 +109,9 @@ class ValidatedNotificationSettings {
   static ValidatedResult<DNDSchedule> createDNDSchedule({
     required String id,
     required String name,
-    required Duration startTime,
-    required Duration endTime,
-    required List<int> weekdays,
+    required TimeOfDay startTime,
+    required TimeOfDay endTime,
+    required List<int> daysOfWeek,
     List<String>? allowedContacts,
   }) {
     final errors = <String>[];
@@ -122,14 +123,16 @@ class ValidatedNotificationSettings {
       errors.add(nameResult.errorMessage!);
     }
 
-    // Validate time range
-    final timeResult = SettingsValidator.validateScheduleTimeRange(startTime, endTime);
+    // Validate time range using Duration for validation
+    final startDuration = Duration(hours: startTime.hour, minutes: startTime.minute);
+    final endDuration = Duration(hours: endTime.hour, minutes: endTime.minute);
+    final timeResult = SettingsValidator.validateScheduleTimeRange(startDuration, endDuration);
     if (!timeResult.isValid) {
       errors.add(timeResult.errorMessage!);
     }
 
     // Validate weekdays
-    final weekdaysResult = SettingsValidator.validateWeekdays(weekdays);
+    final weekdaysResult = SettingsValidator.validateWeekdays(daysOfWeek);
     if (!weekdaysResult.isValid) {
       errors.add(weekdaysResult.errorMessage!);
     }
@@ -155,7 +158,7 @@ class ValidatedNotificationSettings {
         enabled: true,
         startTime: startTime,
         endTime: endTime,
-        weekdays: weekdaysResult.value ?? weekdays,
+        daysOfWeek: weekdaysResult.value ?? daysOfWeek,
         allowedContacts: allowedContacts ?? [],
       ),
       warnings: warnings,
@@ -230,8 +233,8 @@ class ValidatedPrivacySettings {
     return ValidatedResult.success(
       BlockedUser(
         userId: userIdResult.sanitizedValue ?? userId,
-        displayName: sanitizedName,
-        photoUrl: sanitizedPhotoUrl,
+        userName: sanitizedName,
+        userPhotoUrl: sanitizedPhotoUrl,
         reason: sanitizedReason,
         blockedAt: DateTime.now(),
       ),
@@ -273,7 +276,7 @@ class ValidatedPrivacySettings {
   }
 
   /// Validate two-step verification setup
-  static ValidatedResult<TwoStepVerification> validateTwoStepSetup({
+  static ValidatedResult<TwoStepVerificationSettings> validateTwoStepSetup({
     required bool enabled,
     String? recoveryEmail,
     String? hint,
@@ -307,7 +310,7 @@ class ValidatedPrivacySettings {
         : null;
 
     return ValidatedResult.success(
-      TwoStepVerification(
+      TwoStepVerificationSettings(
         enabled: enabled,
         recoveryEmail: validatedEmail,
         emailVerified: false, // Must be verified separately
@@ -424,8 +427,14 @@ class ValidatedPrivacySettings {
     return ValidatedResult.success(
       VisibilitySettingWithExceptions(
         level: level,
-        exceptContacts: exceptContacts ?? [],
-        onlyContacts: onlyContacts ?? [],
+        excludedUsers: (exceptContacts ?? []).map((id) => PrivacyException(
+          userId: id,
+          addedAt: DateTime.now(),
+        )).toList(),
+        includedUsers: (onlyContacts ?? []).map((id) => PrivacyException(
+          userId: id,
+          addedAt: DateTime.now(),
+        )).toList(),
       ),
       warnings: warnings,
     );

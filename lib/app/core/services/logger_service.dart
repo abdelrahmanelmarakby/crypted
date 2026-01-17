@@ -148,6 +148,17 @@ class LoggerService {
     _warningCount++;
   }
 
+  /// Log error message (alias for logError)
+  void error(
+    String message, {
+    dynamic error,
+    StackTrace? stackTrace,
+    String? context,
+    Map<String, dynamic>? data,
+  }) {
+    logError(message, error: error, stackTrace: stackTrace, context: context, data: data);
+  }
+
   /// Log error with optional error object and stack trace
   void logError(
     String message, {

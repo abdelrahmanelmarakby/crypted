@@ -42,7 +42,7 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
                       imageUrl: state.imageUrl,
                       memberCount: state.members.length,
                       description: state.description,
-                      isAdmin: controller.isCurrentUserAdmin,
+                      canEdit: controller.isCurrentUserAdmin,
                       onEditTap: controller.isCurrentUserAdmin
                           ? controller.showEditGroupDialog
                           : null,
@@ -362,7 +362,7 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
 
         // Members list
         ...state.members.map((member) {
-          final isAdmin = state.admins.any((a) => a.uid == member.uid);
+          final isAdmin = state.admins.any((a) => a == member.uid);
           final isCurrentUser = member.uid == currentUserId;
 
           return GroupMemberTile(

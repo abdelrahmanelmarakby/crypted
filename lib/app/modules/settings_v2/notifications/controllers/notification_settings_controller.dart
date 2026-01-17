@@ -255,6 +255,7 @@ class NotificationSettingsController extends GetxController {
   String? _getSoundAssetPath(NotificationSound sound) {
     switch (sound) {
       case NotificationSound.default_:
+      case NotificationSound.defaultSound:
         return 'assets/sounds/notification.mp3';
       case NotificationSound.ping:
         return 'assets/sounds/ping.mp3';
@@ -272,6 +273,8 @@ class NotificationSettingsController extends GetxController {
         return 'assets/sounds/classic.mp3';
       case NotificationSound.none:
         return null;
+      default:
+        return 'assets/sounds/notification.mp3';
     }
   }
 
@@ -288,9 +291,11 @@ class NotificationSettingsController extends GetxController {
         HapticFeedback.mediumImpact();
         break;
       case VibrationPattern.long_:
+      case VibrationPattern.long:
         HapticFeedback.heavyImpact();
         break;
       case VibrationPattern.double_:
+      case VibrationPattern.doubleShort:
         // Double vibration: two light impacts
         HapticFeedback.lightImpact();
         Future.delayed(const Duration(milliseconds: 150), () {
@@ -308,7 +313,12 @@ class NotificationSettingsController extends GetxController {
         });
         break;
       case VibrationPattern.custom:
-        // Custom pattern - use medium impact as demo
+      case VibrationPattern.defaultPattern:
+        // Custom/Default pattern - use medium impact as demo
+        HapticFeedback.mediumImpact();
+        break;
+      default:
+        // Handle heartbeat, sos, pulse, gentle, etc.
         HapticFeedback.mediumImpact();
         break;
     }

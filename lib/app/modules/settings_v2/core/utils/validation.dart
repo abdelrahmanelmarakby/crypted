@@ -259,7 +259,7 @@ class SettingsValidator {
   }
 
   /// Validate mute duration
-  static TypedValidationResult<DateTime> validateMuteUntil(DateTime? muteUntil) {
+  static TypedValidationResult<DateTime?> validateMuteUntil(DateTime? muteUntil) {
     if (muteUntil == null) {
       return TypedValidationResult.valid(muteUntil);
     }

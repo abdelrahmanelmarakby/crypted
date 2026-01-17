@@ -683,22 +683,22 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
       return '[Voice Message]';
     } else if (message is VideoMessage) {
       if (_options.includeMedia) {
-        return '[Video: ${message.videoUrl}]';
+        return '[Video: ${message.video}]';
       }
       return '[Video]';
     } else if (message is FileMessage) {
       if (_options.includeMedia) {
-        return '[File: ${message.fileName} - ${message.fileUrl}]';
+        return '[File: ${message.fileName} - ${message.file}]';
       }
       return '[File: ${message.fileName}]';
     } else if (message is LocationMessage) {
       return '[Location: ${message.latitude}, ${message.longitude}]';
     } else if (message is ContactMessage) {
-      return '[Contact: ${message.contactName}]';
+      return '[Contact: ${message.name}]';
     } else if (message is PollMessage) {
       return '[Poll: ${message.question}]';
     } else if (message is CallMessage) {
-      return '[Call: ${message.callType} - ${message.duration}s]';
+      return '[Call: ${message.callModel.callType?.name ?? 'unknown'} - ${message.callModel.callDuration ?? 0}s]';
     }
     return '[Unknown Message]';
   }
@@ -726,8 +726,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
   String? _getMediaUrl(Message message) {
     if (message is PhotoMessage) return message.imageUrl;
     if (message is AudioMessage) return message.audioUrl;
-    if (message is VideoMessage) return message.videoUrl;
-    if (message is FileMessage) return message.fileUrl;
+    if (message is VideoMessage) return message.video;
+    if (message is FileMessage) return message.file;
     return null;
   }
 

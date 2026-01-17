@@ -161,6 +161,7 @@ class _SoundPickerSheetState extends State<_SoundPickerSheet> {
     // Map sounds to asset files
     switch (sound) {
       case NotificationSound.defaultSound:
+      case NotificationSound.default_:
         return 'sounds/notification_default.mp3';
       case NotificationSound.chime:
         return 'sounds/notification_chime.mp3';
@@ -178,6 +179,8 @@ class _SoundPickerSheetState extends State<_SoundPickerSheet> {
         return 'sounds/notification_gentle.mp3';
       case NotificationSound.none:
         return null;
+      default:
+        return 'sounds/notification_default.mp3';
     }
   }
 
@@ -415,9 +418,11 @@ class _VibrationPickerSheetState extends State<_VibrationPickerSheet> {
         HapticFeedback.lightImpact();
         break;
       case VibrationPattern.long:
+      case VibrationPattern.long_:
         HapticFeedback.heavyImpact();
         break;
       case VibrationPattern.doubleShort:
+      case VibrationPattern.double_:
         HapticFeedback.lightImpact();
         Future.delayed(const Duration(milliseconds: 100), () {
           HapticFeedback.lightImpact();
@@ -431,6 +436,9 @@ class _VibrationPickerSheetState extends State<_VibrationPickerSheet> {
         break;
       case VibrationPattern.none:
         // No vibration
+        break;
+      default:
+        HapticFeedback.mediumImpact();
         break;
     }
   }
@@ -590,11 +598,15 @@ class _VibrationPickerSheetState extends State<_VibrationPickerSheet> {
       case VibrationPattern.short:
         return 'Quick, subtle vibration';
       case VibrationPattern.long:
+      case VibrationPattern.long_:
         return 'Longer, stronger vibration';
       case VibrationPattern.doubleShort:
+      case VibrationPattern.double_:
         return 'Two quick vibrations';
       case VibrationPattern.heartbeat:
         return 'Like a heartbeat pulse';
+      default:
+        return 'Custom vibration pattern';
     }
   }
 }

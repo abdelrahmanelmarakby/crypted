@@ -105,7 +105,7 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                         onTap: () => controller.startCall(isVideo: true),
                       ),
                       _buildQuickAction(
-                        icon: state.isFavorite ? Iconsax.heart5 : Iconsax.heart,
+                        icon: state.isFavorite ? Iconsax.heart_add : Iconsax.heart,
                         label: 'Favorite',
                         isActive: state.isFavorite,
                         onTap: controller.toggleFavorite,
@@ -300,17 +300,11 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                       onTap: controller.toggleArchive,
                     ),
                     ChatWallpaperTile(
+                      chatId: state.chatId ?? '',
+                      chatName: state.displayName,
                       currentWallpaper: state.chatWallpaper,
-                      onTap: () async {
-                        final result = await ChatWallpaperPicker.show(
-                          context,
-                          chatId: state.chatId ?? '',
-                          chatName: state.displayName,
-                          currentWallpaper: state.chatWallpaper,
-                        );
-                        if (result != null) {
-                          controller.updateWallpaper(result);
-                        }
+                      onWallpaperChanged: (result) {
+                        controller.updateWallpaper(result);
                       },
                     ),
                   ],
