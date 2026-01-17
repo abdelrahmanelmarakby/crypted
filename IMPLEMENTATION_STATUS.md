@@ -10,7 +10,7 @@
 
 | Feature Area | Completion | Status |
 |--------------|------------|--------|
-| Notification Settings | 92% | Near Complete |
+| Notification Settings | 98% | Near Complete |
 | Privacy Settings | 96% | Near Complete |
 | Other User Info | 92% | Near Complete |
 | Group Info | 96% | Near Complete |
@@ -365,7 +365,6 @@
 
 | Task | Feature Area | Effort |
 |------|--------------|--------|
-| Connect notification settings actions | Notifications | 4 hours |
 | Load real data in MediaGalleryView | User Info | 4 hours |
 
 ### Medium Priority (Important Features)
@@ -382,7 +381,6 @@
 
 | Task | Feature Area | Effort |
 |------|--------------|--------|
-| Notification sound picker | Notifications | 4 hours |
 | Security audit log viewer | Privacy | 4 hours |
 | Group invite links | Group Info | 6 hours |
 | Export chat functionality | User Info | 4 hours |
