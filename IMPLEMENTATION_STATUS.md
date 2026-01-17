@@ -372,7 +372,6 @@ All high priority tasks completed!
 | Two-step verification UI | Privacy | 8 hours |
 | Privacy checkup wizard | Privacy | 6 hours |
 | Group invite links | Group Info | 6 hours |
-| Per-contact notification override | Notifications | 4 hours |
 | Search in conversation | User Info | 6 hours |
 
 ### Low Priority (Nice to Have)
