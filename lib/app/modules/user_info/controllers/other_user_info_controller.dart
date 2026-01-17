@@ -12,6 +12,8 @@ import 'package:crypted_app/app/modules/settings_v2/notifications/controllers/no
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_export_dialog.dart';
+import 'package:crypted_app/app/data/models/messages/message_model.dart';
 
 /// Enhanced controller for viewing other user's information
 class OtherUserInfoController extends GetxController {
@@ -576,6 +578,48 @@ class OtherUserInfoController extends GetxController {
         error: e,
       );
       _showError('Failed to update disappearing messages');
+    }
+  }
+
+  /// Export chat to file
+  Future<void> exportChat(BuildContext context) async {
+    final roomId = state.value.roomId;
+    final user = state.value.user;
+
+    if (roomId == null || user == null) {
+      _showError('Cannot export chat: Missing data');
+      return;
+    }
+
+    try {
+      // Fetch messages from repository
+      final messages = await _repository.getChatMessages(roomId);
+
+      if (messages.isEmpty) {
+        _showError('No messages to export');
+        return;
+      }
+
+      // Build sender names map
+      final senderNames = <String, String>{};
+      senderNames[currentUser?.uid ?? ''] = currentUser?.fullName ?? 'You';
+      senderNames[user.uid ?? ''] = user.fullName ?? 'Unknown';
+
+      // Show export dialog
+      await ChatExportDialog.show(
+        context,
+        chatId: roomId,
+        chatName: state.value.displayName,
+        messages: messages,
+        senderNames: senderNames,
+      );
+    } catch (e) {
+      developer.log(
+        'Error exporting chat',
+        name: 'OtherUserInfoController',
+        error: e,
+      );
+      _showError('Failed to export chat');
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
+import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 
 /// Repository interface for user info operations
@@ -57,6 +58,9 @@ abstract class UserInfoRepository {
 
   /// Update disappearing messages duration for a chat
   Future<void> updateDisappearingDuration(String roomId, DisappearingDuration duration);
+
+  /// Get all messages from a chat room for export
+  Future<List<Message>> getChatMessages(String roomId);
 }
 
 /// Media counts for a chat
@@ -311,5 +315,27 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
       'disappearingDuration': duration.name,
       'disappearingDurationUpdatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  @override
+  Future<List<Message>> getChatMessages(String roomId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('chat_rooms')
+          .doc(roomId)
+          .collection('chat')
+          .orderBy('timestamp', descending: false)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        data['roomId'] = roomId;
+        return Message.fromMap(data);
+      }).toList();
+    } catch (e) {
+      print('Error getting chat messages: $e');
+      return [];
+    }
   }
 }

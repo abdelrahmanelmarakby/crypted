@@ -7,6 +7,7 @@ import 'package:crypted_app/app/modules/user_info/widgets/user_info_section.dart
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_action_tile.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/disappearing_messages_settings.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_export_dialog.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 
 class OtherUserInfoView extends GetView<OtherUserInfoController> {
@@ -301,11 +302,16 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                 ),
               ),
 
-              // Danger zone section
+              // Export and danger zone section
               SliverToBoxAdapter(
                 child: UserInfoSection(
                   title: '',
                   children: [
+                    UserInfoActionTile(
+                      icon: Iconsax.export_1,
+                      title: 'Export Chat',
+                      onTap: () => controller.exportChat(context),
+                    ),
                     UserInfoActionTile(
                       icon: Iconsax.trash,
                       title: 'Clear Chat',
