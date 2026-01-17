@@ -266,6 +266,12 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                       onTap: controller.toggleMute,
                     ),
                     UserInfoActionTile(
+                      icon: Iconsax.setting_4,
+                      title: 'Custom Notifications',
+                      subtitle: state.hasCustomNotifications ? 'Custom' : 'Default',
+                      onTap: () => controller.openCustomNotificationSettings(context),
+                    ),
+                    UserInfoActionTile(
                       icon: state.isArchived ? Iconsax.archive_tick : Iconsax.archive,
                       title: state.isArchived ? 'Unarchive Chat' : 'Archive Chat',
                       onTap: controller.toggleArchive,

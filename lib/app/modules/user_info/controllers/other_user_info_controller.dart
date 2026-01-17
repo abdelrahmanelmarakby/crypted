@@ -8,6 +8,9 @@ import 'package:crypted_app/app/modules/user_info/repositories/user_info_reposit
 import 'package:crypted_app/app/modules/user_info/models/user_info_state.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/modules/settings_v2/notifications/controllers/notification_settings_controller.dart';
+import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 
 /// Enhanced controller for viewing other user's information
 class OtherUserInfoController extends GetxController {
@@ -488,6 +491,60 @@ class OtherUserInfoController extends GetxController {
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.green.withValues(alpha: 0.9),
       colorText: Colors.white,
+    );
+  }
+
+  /// Open custom notification settings for this contact
+  Future<void> openCustomNotificationSettings(BuildContext context) async {
+    final roomId = state.value.roomId;
+    final user = state.value.user;
+
+    if (roomId == null || user == null) {
+      _showError('Cannot open notification settings: Missing data');
+      return;
+    }
+
+    // Get current notification override if exists
+    ChatNotificationOverride? currentOverride;
+    try {
+      final notificationController = Get.find<NotificationSettingsController>();
+      currentOverride = notificationController.getChatOverride(roomId);
+    } catch (e) {
+      // Controller not registered, proceed without override
+      developer.log(
+        'NotificationSettingsController not found',
+        name: 'OtherUserInfoController',
+      );
+    }
+
+    // Show contact notification override sheet
+    await ContactNotificationOverride.show(
+      context: context,
+      contactId: roomId,
+      contactName: user.fullName ?? 'User',
+      contactImageUrl: user.imageUrl,
+      currentOverride: currentOverride,
+      onSave: (newOverride) async {
+        try {
+          final notificationController = Get.find<NotificationSettingsController>();
+          if (newOverride != null) {
+            await notificationController.setChatOverride(newOverride);
+            state.value = state.value.copyWith(hasCustomNotifications: true);
+            _showSuccess('Custom notifications saved');
+          } else {
+            await notificationController.removeChatOverride(roomId);
+            state.value = state.value.copyWith(hasCustomNotifications: false);
+            _showSuccess('Using default notifications');
+          }
+        } catch (e) {
+          developer.log(
+            'Error saving notification override',
+            name: 'OtherUserInfoController',
+            error: e,
+          );
+          _showError('Failed to save notification settings');
+        }
+      },
     );
   }
 }

@@ -199,6 +199,21 @@ class NotificationSettingsController extends GetxController {
 
   List<ChatNotificationOverride> get mutedChats => _service.mutedChats;
 
+  /// Get notification override for a specific chat
+  ChatNotificationOverride? getChatOverride(String chatId) {
+    return _service.getChatOverride(chatId);
+  }
+
+  /// Set custom notification override for a chat
+  Future<void> setChatOverride(ChatNotificationOverride override) async {
+    await _service.setChatOverride(override);
+  }
+
+  /// Remove custom notification override for a chat
+  Future<void> removeChatOverride(String chatId) async {
+    await _service.unmuteChat(chatId);
+  }
+
   // ============================================================================
   // SOUND PREVIEW
   // ============================================================================

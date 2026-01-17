@@ -171,7 +171,7 @@ class _MutedChatTile extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (override.customSound != null)
+              if (override.sound != null)
                 Tooltip(
                   message: 'Custom sound',
                   child: Icon(
@@ -459,20 +459,23 @@ class _ContactNotificationOverrideState
   void initState() {
     super.initState();
     final override = widget.currentOverride;
-    _useCustomSettings = override != null;
-    _sound = override?.customSound?.sound ?? NotificationSound.defaultSound;
-    _vibration = override?.customVibration ?? VibrationPattern.defaultPattern;
+    _useCustomSettings = override?.hasCustomizations ?? false;
+    _sound = override?.sound?.sound ?? NotificationSound.default_;
+    _vibration = override?.vibration ?? VibrationPattern.medium;
     _showPreview = override?.showPreview ?? true;
   }
 
   void _save() {
+    final now = DateTime.now();
     if (_useCustomSettings) {
       final override = ChatNotificationOverride(
         chatId: widget.contactId,
-        muted: false,
-        customSound: SoundConfig(sound: _sound),
-        customVibration: _vibration,
+        enabled: true,
+        sound: SoundConfig(sound: _sound),
+        vibration: _vibration,
         showPreview: _showPreview,
+        createdAt: widget.currentOverride?.createdAt ?? now,
+        updatedAt: now,
       );
       widget.onSave(override);
     } else {

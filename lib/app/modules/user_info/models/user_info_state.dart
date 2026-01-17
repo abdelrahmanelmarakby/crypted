@@ -11,6 +11,7 @@ class UserInfoState {
   final bool isArchived;
   final bool isMuted;
   final bool isOnline;
+  final bool hasCustomNotifications;
   final DateTime? lastSeen;
   final MediaCounts mediaCounts;
   final List<SocialMediaUser> mutualContacts;
@@ -26,6 +27,7 @@ class UserInfoState {
     this.isArchived = false,
     this.isMuted = false,
     this.isOnline = false,
+    this.hasCustomNotifications = false,
     this.lastSeen,
     this.mediaCounts = const MediaCounts(),
     this.mutualContacts = const [],
@@ -42,6 +44,7 @@ class UserInfoState {
     bool? isArchived,
     bool? isMuted,
     bool? isOnline,
+    bool? hasCustomNotifications,
     DateTime? lastSeen,
     MediaCounts? mediaCounts,
     List<SocialMediaUser>? mutualContacts,
@@ -57,6 +60,7 @@ class UserInfoState {
       isArchived: isArchived ?? this.isArchived,
       isMuted: isMuted ?? this.isMuted,
       isOnline: isOnline ?? this.isOnline,
+      hasCustomNotifications: hasCustomNotifications ?? this.hasCustomNotifications,
       lastSeen: lastSeen ?? this.lastSeen,
       mediaCounts: mediaCounts ?? this.mediaCounts,
       mutualContacts: mutualContacts ?? this.mutualContacts,
