@@ -8,6 +8,7 @@ import 'package:crypted_app/app/modules/user_info/widgets/user_info_action_tile.
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/disappearing_messages_settings.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_export_dialog.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 
 class OtherUserInfoView extends GetView<OtherUserInfoController> {
@@ -297,6 +298,20 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                       icon: state.isArchived ? Iconsax.archive_tick : Iconsax.archive,
                       title: state.isArchived ? 'Unarchive Chat' : 'Archive Chat',
                       onTap: controller.toggleArchive,
+                    ),
+                    ChatWallpaperTile(
+                      currentWallpaper: state.chatWallpaper,
+                      onTap: () async {
+                        final result = await ChatWallpaperPicker.show(
+                          context,
+                          chatId: state.chatId ?? '',
+                          chatName: state.displayName,
+                          currentWallpaper: state.chatWallpaper,
+                        );
+                        if (result != null) {
+                          controller.updateWallpaper(result);
+                        }
+                      },
                     ),
                   ],
                 ),

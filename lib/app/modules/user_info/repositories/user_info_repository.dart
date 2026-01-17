@@ -3,6 +3,7 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 
 /// Repository interface for user info operations
 abstract class UserInfoRepository {
@@ -61,6 +62,9 @@ abstract class UserInfoRepository {
 
   /// Get all messages from a chat room for export
   Future<List<Message>> getChatMessages(String roomId);
+
+  /// Update chat wallpaper for a room
+  Future<void> updateChatWallpaper(String roomId, ChatWallpaper wallpaper);
 }
 
 /// Media counts for a chat
@@ -337,5 +341,13 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
       print('Error getting chat messages: $e');
       return [];
     }
+  }
+
+  @override
+  Future<void> updateChatWallpaper(String roomId, ChatWallpaper wallpaper) async {
+    await _firestore.collection('chat_rooms').doc(roomId).update({
+      'wallpaper': wallpaper.toMap(),
+      'wallpaperUpdatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

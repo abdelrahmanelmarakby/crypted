@@ -13,6 +13,7 @@ import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_export_dialog.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 
 /// Enhanced controller for viewing other user's information
@@ -620,6 +621,36 @@ class OtherUserInfoController extends GetxController {
         error: e,
       );
       _showError('Failed to export chat');
+    }
+  }
+
+  /// Update chat wallpaper
+  Future<void> updateWallpaper(ChatWallpaper wallpaper) async {
+    final roomId = state.value.roomId;
+
+    if (roomId == null) {
+      _showError('Cannot update wallpaper: Missing room data');
+      return;
+    }
+
+    try {
+      // Update local state
+      state.value = state.value.copyWith(chatWallpaper: wallpaper);
+
+      // Save to Firestore
+      await _repository.updateChatWallpaper(roomId, wallpaper);
+
+      developer.log(
+        'Chat wallpaper updated: ${wallpaper.type.name}',
+        name: 'OtherUserInfoController',
+      );
+    } catch (e) {
+      developer.log(
+        'Error updating chat wallpaper',
+        name: 'OtherUserInfoController',
+        error: e,
+      );
+      _showError('Failed to update wallpaper');
     }
   }
 }

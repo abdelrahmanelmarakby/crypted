@@ -1,6 +1,7 @@
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/user_info/repositories/user_info_repository.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 
 /// Comprehensive state model for user info screen
 class UserInfoState {
@@ -19,6 +20,7 @@ class UserInfoState {
   final String? errorMessage;
   final UserInfoAction? pendingAction;
   final DisappearingDuration disappearingDuration;
+  final ChatWallpaper chatWallpaper;
 
   const UserInfoState({
     this.user,
@@ -36,6 +38,7 @@ class UserInfoState {
     this.errorMessage,
     this.pendingAction,
     this.disappearingDuration = DisappearingDuration.off,
+    this.chatWallpaper = ChatWallpaper.none,
   });
 
   UserInfoState copyWith({
@@ -54,6 +57,7 @@ class UserInfoState {
     String? errorMessage,
     UserInfoAction? pendingAction,
     DisappearingDuration? disappearingDuration,
+    ChatWallpaper? chatWallpaper,
   }) {
     return UserInfoState(
       user: user ?? this.user,
@@ -71,6 +75,7 @@ class UserInfoState {
       errorMessage: errorMessage,
       pendingAction: pendingAction,
       disappearingDuration: disappearingDuration ?? this.disappearingDuration,
+      chatWallpaper: chatWallpaper ?? this.chatWallpaper,
     );
   }
 
