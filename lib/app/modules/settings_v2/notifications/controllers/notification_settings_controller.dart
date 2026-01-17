@@ -159,6 +159,16 @@ class NotificationSettingsController extends GetxController {
     await _service.deleteDNDSchedule(scheduleId);
   }
 
+  /// Update allowed contacts during DND
+  Future<void> updateAllowedContacts(List<String> contactIds) async {
+    final currentDnd = _service.settings.value.dnd;
+    final newDnd = currentDnd.copyWith(allowedContacts: contactIds);
+    await _service.updateDNDSettings(newDnd);
+  }
+
+  /// Get current allowed contacts
+  List<String> get allowedContacts => _service.settings.value.dnd.allowedContacts;
+
   // ============================================================================
   // PER-CHAT SETTINGS
   // ============================================================================

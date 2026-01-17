@@ -3,6 +3,7 @@ import 'package:crypted_app/app/modules/group_info/widgets/group_actions_section
 import 'package:crypted_app/app/modules/group_info/widgets/group_details_section.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/group_loading_view.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/admin_action_widgets.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/add_member_picker.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/profile_header.dart';
 import 'package:crypted_app/app/widgets/custom_container.dart';
 import 'package:crypted_app/app/widgets/custom_dvider.dart';
@@ -231,15 +232,31 @@ class GroupInfoView extends GetView<GroupInfoController> {
     );
   }
 
-  void _showAddMemberSheet(BuildContext context) {
-    Get.snackbar(
-      'Coming Soon',
-      'Add member functionality will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.orange.withValues(alpha: 0.9),
-      colorText: Colors.white,
+  void _showAddMemberSheet(BuildContext context) async {
+    final existingMemberIds = controller.members.value
+            ?.map((m) => m.uid)
+            .whereType<String>()
+            .toList() ??
+        [];
+
+    final selectedMembers = await AddMemberPicker.show(
+      context: context,
+      existingMemberIds: existingMemberIds,
     );
-    // TODO: Implement contact picker to add new members
-    // This would typically show a list of contacts that are not already members
+
+    if (selectedMembers != null && selectedMembers.isNotEmpty) {
+      // Add each member
+      for (final member in selectedMembers) {
+        await controller.addMember(member);
+      }
+
+      Get.snackbar(
+        'Success',
+        '${selectedMembers.length} member${selectedMembers.length == 1 ? '' : 's'} added to group',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    }
   }
 }

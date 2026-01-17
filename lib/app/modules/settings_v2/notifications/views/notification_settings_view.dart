@@ -11,6 +11,7 @@ import 'package:crypted_app/app/modules/settings_v2/shared/widgets/settings_widg
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/notification_sound_picker.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/dnd_schedule_editor.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
+import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/allowed_contacts_editor.dart';
 import '../controllers/notification_settings_controller.dart';
 
 /// Enhanced Notification Settings View
@@ -584,12 +585,24 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
     return '$hour:$minute';
   }
 
-  void _showAllowedContactsSettings() {
-    Get.snackbar(
-      'Coming Soon',
-      'Allowed contacts feature will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
+  void _showAllowedContactsSettings() async {
+    final result = await AllowedContactsEditor.show(
+      context: Get.context!,
+      selectedContactIds: controller.allowedContacts,
     );
+
+    if (result != null) {
+      await controller.updateAllowedContacts(result);
+      Get.snackbar(
+        'Saved',
+        result.isEmpty
+            ? 'All contacts will be silenced during DND'
+            : '${result.length} contact${result.length == 1 ? '' : 's'} can reach you during DND',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    }
   }
 
   void _showMutedChats() {

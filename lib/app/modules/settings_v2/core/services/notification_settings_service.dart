@@ -442,6 +442,12 @@ class NotificationSettingsService extends GetxService {
     await _debouncedSave();
   }
 
+  /// Update entire DND settings
+  Future<void> updateDNDSettings(DNDSettings dnd) async {
+    settings.value = settings.value.copyWith(dnd: dnd);
+    await _debouncedSave();
+  }
+
   /// Check if DND is currently active
   bool get isDNDActive => settings.value.dnd.isActive;
 
