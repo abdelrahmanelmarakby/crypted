@@ -11,6 +11,7 @@ import 'package:crypted_app/app/modules/settings_v2/shared/widgets/settings_widg
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/privacy_checkup_wizard.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/two_step_verification_setup.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/disappearing_messages_settings.dart';
+import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/security_audit_log_viewer.dart';
 import '../controllers/privacy_settings_controller.dart';
 
 /// Enhanced Privacy Settings View
@@ -294,6 +295,13 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 title: 'Active Sessions',
                 subtitle: '${service.activeSessions.length} devices',
                 onTap: () => _showActiveSessions(),
+              )),
+          Obx(() => SettingsTile(
+                icon: Icons.history_rounded,
+                iconColor: ColorsManager.primary,
+                title: 'Security Activity',
+                subtitle: '${service.securityLog.length} recent events',
+                onTap: () => SecurityAuditLogViewer.show(context),
               )),
         ],
       ),
