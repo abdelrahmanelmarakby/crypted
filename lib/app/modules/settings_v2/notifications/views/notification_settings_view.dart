@@ -8,6 +8,9 @@ import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
 import 'package:crypted_app/app/modules/settings_v2/shared/widgets/settings_widgets.dart';
+import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/notification_sound_picker.dart';
+import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/dnd_schedule_editor.dart';
+import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
 import '../controllers/notification_settings_controller.dart';
 
 /// Enhanced Notification Settings View
@@ -111,26 +114,33 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
     return SettingsSection(
       title: 'Do Not Disturb',
       children: [
+        // Quick DND toggle with duration options
         Obx(() {
           final dnd = service.settings.value.dnd;
-          return SettingsSwitch(
-            icon: Icons.do_not_disturb_on_rounded,
-            iconColor: Colors.indigo,
-            title: 'Do Not Disturb',
-            subtitle: dnd.isActive
-                ? 'Active${dnd.quickToggleUntil != null ? ' until ${_formatTime(dnd.quickToggleUntil!)}' : ''}'
-                : 'Pause notifications temporarily',
-            value: dnd.quickToggleEnabled,
-            onChanged: (enabled) => controller.toggleQuickDND(enabled),
+          return Padding(
+            padding: const EdgeInsets.all(Paddings.medium),
+            child: QuickDNDOptions(
+              isActive: dnd.isActive,
+              activeUntil: dnd.quickToggleUntil,
+              onToggle: (enabled, duration) {
+                controller.toggleQuickDND(enabled, duration: duration);
+              },
+            ),
           );
         }),
-        SettingsTile(
-          icon: Icons.schedule_rounded,
-          iconColor: Colors.indigo,
-          title: 'Scheduled',
-          subtitle: 'Set up automatic DND times',
-          onTap: () => _showDNDScheduleSettings(),
-        ),
+        const Divider(height: 1),
+        Obx(() {
+          final schedules = service.settings.value.dnd.schedules;
+          return SettingsTile(
+            icon: Icons.schedule_rounded,
+            iconColor: Colors.indigo,
+            title: 'Scheduled',
+            subtitle: schedules.isEmpty
+                ? 'Set up automatic DND times'
+                : '${schedules.length} schedule${schedules.length > 1 ? 's' : ''} configured',
+            onTap: () => _showDNDScheduleSettings(),
+          );
+        }),
         SettingsTile(
           icon: Icons.person_rounded,
           iconColor: Colors.indigo,
@@ -154,31 +164,17 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
               value: service.settings.value.messages.enabled,
               onChanged: controller.toggleMessageNotifications,
             )),
-        Obx(() => SettingsDropdown<NotificationSound>(
-              icon: Icons.volume_up_rounded,
-              iconColor: Colors.blue,
-              title: 'Sound',
-              value: service.settings.value.messages.sound.sound,
-              options: NotificationSound.values
-                  .map((s) => DropdownOption(
-                        value: s,
-                        label: s.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateMessageSound,
+        Obx(() => NotificationSoundPicker(
+              currentSound: service.settings.value.messages.sound.sound,
+              title: 'Message Sound',
+              accentColor: Colors.blue,
+              onSoundSelected: controller.updateMessageSound,
             )),
-        Obx(() => SettingsDropdown<VibrationPattern>(
-              icon: Icons.vibration_rounded,
-              iconColor: Colors.blue,
-              title: 'Vibration',
-              value: service.settings.value.messages.vibration,
-              options: VibrationPattern.values
-                  .map((v) => DropdownOption(
-                        value: v,
-                        label: v.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateMessageVibration,
+        Obx(() => VibrationPatternPicker(
+              currentPattern: service.settings.value.messages.vibration,
+              title: 'Message Vibration',
+              accentColor: Colors.blue,
+              onPatternSelected: controller.updateMessageVibration,
             )),
         Obx(() => SettingsSwitch(
               icon: Icons.favorite_rounded,
@@ -204,31 +200,17 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
               value: service.settings.value.groups.enabled,
               onChanged: controller.toggleGroupNotifications,
             )),
-        Obx(() => SettingsDropdown<NotificationSound>(
-              icon: Icons.volume_up_rounded,
-              iconColor: Colors.green,
-              title: 'Sound',
-              value: service.settings.value.groups.sound.sound,
-              options: NotificationSound.values
-                  .map((s) => DropdownOption(
-                        value: s,
-                        label: s.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateGroupSound,
+        Obx(() => NotificationSoundPicker(
+              currentSound: service.settings.value.groups.sound.sound,
+              title: 'Group Sound',
+              accentColor: Colors.green,
+              onSoundSelected: controller.updateGroupSound,
             )),
-        Obx(() => SettingsDropdown<VibrationPattern>(
-              icon: Icons.vibration_rounded,
-              iconColor: Colors.green,
-              title: 'Vibration',
-              value: service.settings.value.groups.vibration,
-              options: VibrationPattern.values
-                  .map((v) => DropdownOption(
-                        value: v,
-                        label: v.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateGroupVibration,
+        Obx(() => VibrationPatternPicker(
+              currentPattern: service.settings.value.groups.vibration,
+              title: 'Group Vibration',
+              accentColor: Colors.green,
+              onPatternSelected: controller.updateGroupVibration,
             )),
         Obx(() => SettingsSwitch(
               icon: Icons.alternate_email_rounded,
@@ -262,18 +244,11 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
               value: service.settings.value.status.enabled,
               onChanged: controller.toggleStatusNotifications,
             )),
-        Obx(() => SettingsDropdown<NotificationSound>(
-              icon: Icons.volume_up_rounded,
-              iconColor: Colors.orange,
-              title: 'Sound',
-              value: service.settings.value.status.sound.sound,
-              options: NotificationSound.values
-                  .map((s) => DropdownOption(
-                        value: s,
-                        label: s.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateStatusSound,
+        Obx(() => NotificationSoundPicker(
+              currentSound: service.settings.value.status.sound.sound,
+              title: 'Status Sound',
+              accentColor: Colors.orange,
+              onSoundSelected: controller.updateStatusSound,
             )),
         Obx(() => SettingsSwitch(
               icon: Icons.favorite_rounded,
@@ -291,31 +266,17 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
     return SettingsSection(
       title: 'Calls',
       children: [
-        Obx(() => SettingsDropdown<NotificationSound>(
-              icon: Icons.ring_volume_rounded,
-              iconColor: Colors.purple,
+        Obx(() => NotificationSoundPicker(
+              currentSound: service.settings.value.calls.ringtone.sound,
               title: 'Ringtone',
-              value: service.settings.value.calls.ringtone.sound,
-              options: NotificationSound.values
-                  .map((s) => DropdownOption(
-                        value: s,
-                        label: s.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateCallRingtone,
+              accentColor: Colors.purple,
+              onSoundSelected: controller.updateCallRingtone,
             )),
-        Obx(() => SettingsDropdown<VibrationPattern>(
-              icon: Icons.vibration_rounded,
-              iconColor: Colors.purple,
-              title: 'Vibration',
-              value: service.settings.value.calls.vibration,
-              options: VibrationPattern.values
-                  .map((v) => DropdownOption(
-                        value: v,
-                        label: v.displayName,
-                      ))
-                  .toList(),
-              onChanged: controller.updateCallVibration,
+        Obx(() => VibrationPatternPicker(
+              currentPattern: service.settings.value.calls.vibration,
+              title: 'Call Vibration',
+              accentColor: Colors.purple,
+              onPatternSelected: controller.updateCallVibration,
             )),
         Obx(() => SettingsSwitch(
               icon: Icons.do_not_disturb_rounded,
@@ -458,8 +419,15 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () {
-                      // Add new schedule
+                    onPressed: () async {
+                      Get.back(); // Close current sheet
+                      final schedule = await DNDScheduleEditor.show(
+                        context: Get.context!,
+                      );
+                      if (schedule != null) {
+                        controller.addDNDSchedule(schedule);
+                        _showDNDScheduleSettings(); // Reopen
+                      }
                     },
                   ),
                 ],
@@ -477,8 +445,15 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
                     title: 'No Schedules',
                     subtitle: 'Add a schedule to automatically enable DND',
                     actionLabel: 'Add Schedule',
-                    onAction: () {
-                      // Add schedule
+                    onAction: () async {
+                      Get.back(); // Close current sheet
+                      final schedule = await DNDScheduleEditor.show(
+                        context: Get.context!,
+                      );
+                      if (schedule != null) {
+                        controller.addDNDSchedule(schedule);
+                        _showDNDScheduleSettings(); // Reopen
+                      }
                     },
                   );
                 }
@@ -500,28 +475,107 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
   }
 
   Widget _buildScheduleItem(DNDSchedule schedule) {
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.indigo.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+    return Dismissible(
+      key: Key(schedule.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        return await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('Delete Schedule'),
+            content: Text('Delete "${schedule.name}" schedule?'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Get.back(result: true),
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ) ?? false;
+      },
+      onDismissed: (direction) {
+        controller.deleteDNDSchedule(schedule.id);
+      },
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.indigo.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.schedule, color: Colors.indigo),
         ),
-        child: const Icon(Icons.schedule, color: Colors.indigo),
-      ),
-      title: Text(schedule.name),
-      subtitle: Text(
-        '${_formatTimeOfDay(schedule.startTime)} - ${_formatTimeOfDay(schedule.endTime)}',
-      ),
-      trailing: Switch.adaptive(
-        value: schedule.enabled,
-        onChanged: (value) {
-          controller.updateDNDSchedule(schedule.copyWith(enabled: value));
-        },
-        activeColor: ColorsManager.primary,
+        title: Text(schedule.name),
+        subtitle: Text(
+          '${_formatTimeOfDay(schedule.startTime)} - ${_formatTimeOfDay(schedule.endTime)} • ${_formatDays(schedule.daysOfWeek)}',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch.adaptive(
+              value: schedule.enabled,
+              onChanged: (value) {
+                controller.updateDNDSchedule(schedule.copyWith(enabled: value));
+              },
+              activeColor: ColorsManager.primary,
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              onPressed: () async {
+                Get.back(); // Close current sheet
+                final updatedSchedule = await DNDScheduleEditor.show(
+                  context: Get.context!,
+                  schedule: schedule,
+                );
+                if (updatedSchedule != null) {
+                  controller.updateDNDSchedule(updatedSchedule);
+                }
+                _showDNDScheduleSettings(); // Reopen
+              },
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  String _formatDays(List<int> days) {
+    if (days.length == 7) return 'Every day';
+    if (days.length == 5 &&
+        days.contains(DateTime.monday) &&
+        days.contains(DateTime.tuesday) &&
+        days.contains(DateTime.wednesday) &&
+        days.contains(DateTime.thursday) &&
+        days.contains(DateTime.friday)) {
+      return 'Weekdays';
+    }
+    if (days.length == 2 &&
+        days.contains(DateTime.saturday) &&
+        days.contains(DateTime.sunday)) {
+      return 'Weekends';
+    }
+    return days.map((d) {
+      switch (d) {
+        case DateTime.monday: return 'Mon';
+        case DateTime.tuesday: return 'Tue';
+        case DateTime.wednesday: return 'Wed';
+        case DateTime.thursday: return 'Thu';
+        case DateTime.friday: return 'Fri';
+        case DateTime.saturday: return 'Sat';
+        case DateTime.sunday: return 'Sun';
+        default: return '';
+      }
+    }).join(', ');
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
@@ -539,59 +593,7 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
   }
 
   void _showMutedChats() {
-    Get.bottomSheet(
-      Container(
-        height: Get.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            _buildBottomSheetHandle(),
-            Padding(
-              padding: const EdgeInsets.all(Paddings.large),
-              child: Text(
-                'Muted Chats',
-                style: StylesManager.semiBold(fontSize: FontSize.large),
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: Obx(() {
-                final mutedChats = controller.mutedChats;
-
-                if (mutedChats.isEmpty) {
-                  return SettingsEmptyState(
-                    icon: Icons.notifications_off,
-                    title: 'No Muted Chats',
-                    subtitle: 'You haven\'t muted any chats',
-                  );
-                }
-
-                return ListView.builder(
-                  itemCount: mutedChats.length,
-                  itemBuilder: (context, index) {
-                    final chat = mutedChats[index];
-                    return ListTile(
-                      title: Text('Chat ${chat.chatId.substring(0, 8)}...'),
-                      subtitle: chat.mutedUntil != null
-                          ? Text('Muted until ${_formatTime(chat.mutedUntil!)}')
-                          : const Text('Muted indefinitely'),
-                      trailing: TextButton(
-                        onPressed: () => controller.unmuteChat(chat.chatId),
-                        child: const Text('Unmute'),
-                      ),
-                    );
-                  },
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-      isScrollControlled: true,
-    );
+    MutedChatsManager.show(Get.context!);
   }
 
   Widget _buildBottomSheetHandle() {
