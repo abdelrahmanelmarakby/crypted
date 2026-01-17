@@ -535,6 +535,170 @@ class ChatController extends GetxController
     onChangeRec(!isRecording.value);
   }
 
+  // ===========================================================================
+  // SEARCH IN CONVERSATION
+  // ===========================================================================
+
+  /// Whether search mode is active
+  final RxBool isSearchMode = false.obs;
+
+  /// Current search query
+  final RxString searchQuery = ''.obs;
+
+  /// Search results - filtered messages matching the query
+  final RxList<Message> searchResults = <Message>[].obs;
+
+  /// Current search result index (for navigation)
+  final RxInt currentSearchIndex = 0.obs;
+
+  /// Scroll controller for navigating to search results
+  ScrollController? _messageScrollController;
+
+  /// Set scroll controller from the view
+  void setScrollController(ScrollController controller) {
+    _messageScrollController = controller;
+  }
+
+  /// Toggle search mode
+  void toggleSearchMode() {
+    isSearchMode.value = !isSearchMode.value;
+    if (!isSearchMode.value) {
+      clearSearch();
+    }
+  }
+
+  /// Open search mode
+  void openSearch() {
+    isSearchMode.value = true;
+  }
+
+  /// Close search mode
+  void closeSearch() {
+    isSearchMode.value = false;
+    clearSearch();
+  }
+
+  /// Search messages with the given query
+  void searchMessages(String query) {
+    searchQuery.value = query;
+
+    if (query.trim().isEmpty) {
+      searchResults.clear();
+      currentSearchIndex.value = 0;
+      return;
+    }
+
+    final lowerQuery = query.toLowerCase();
+
+    // Filter messages that match the query
+    searchResults.value = messages.where((message) {
+      // Search in text messages
+      if (message is TextMessage) {
+        return message.text.toLowerCase().contains(lowerQuery);
+      }
+      // Search in file names
+      if (message is FileMessage) {
+        return message.fileName.toLowerCase().contains(lowerQuery);
+      }
+      // Search in contact names
+      if (message is ContactMessage) {
+        return message.name.toLowerCase().contains(lowerQuery);
+      }
+      // Search in poll questions
+      if (message is PollMessage) {
+        return message.question.toLowerCase().contains(lowerQuery) ||
+               message.options.any((opt) => opt.toLowerCase().contains(lowerQuery));
+      }
+      // Search in event titles
+      if (message is EventMessage) {
+        return message.title.toLowerCase().contains(lowerQuery) ||
+               (message.description?.toLowerCase().contains(lowerQuery) ?? false);
+      }
+      return false;
+    }).toList();
+
+    // Reset to first result
+    currentSearchIndex.value = searchResults.isNotEmpty ? 0 : -1;
+
+    _logger.debug('Search found ${searchResults.length} results for "$query"',
+                  context: 'ChatController');
+  }
+
+  /// Clear search query and results
+  void clearSearch() {
+    searchQuery.value = '';
+    searchResults.clear();
+    currentSearchIndex.value = 0;
+  }
+
+  /// Navigate to next search result
+  void nextSearchResult() {
+    if (searchResults.isEmpty) return;
+
+    currentSearchIndex.value = (currentSearchIndex.value + 1) % searchResults.length;
+    scrollToCurrentSearchResult();
+  }
+
+  /// Navigate to previous search result
+  void previousSearchResult() {
+    if (searchResults.isEmpty) return;
+
+    currentSearchIndex.value = currentSearchIndex.value - 1;
+    if (currentSearchIndex.value < 0) {
+      currentSearchIndex.value = searchResults.length - 1;
+    }
+    scrollToCurrentSearchResult();
+  }
+
+  /// Scroll to a specific message
+  void scrollToMessage(Message message) {
+    final index = messages.indexOf(message);
+    if (index != -1) {
+      scrollToMessageIndex(index);
+    }
+  }
+
+  /// Scroll to message at specific index
+  void scrollToMessageIndex(int index) {
+    if (_messageScrollController == null) return;
+
+    // Estimate scroll position (messages are in reverse order)
+    // Average message height is approximately 80 pixels
+    const estimatedMessageHeight = 80.0;
+    final targetOffset = index * estimatedMessageHeight;
+
+    _messageScrollController!.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  /// Scroll to current search result
+  void scrollToCurrentSearchResult() {
+    if (searchResults.isEmpty || currentSearchIndex.value < 0) return;
+
+    final targetMessage = searchResults[currentSearchIndex.value];
+    scrollToMessage(targetMessage);
+  }
+
+  /// Get current search result message
+  Message? get currentSearchResult {
+    if (searchResults.isEmpty || currentSearchIndex.value < 0) return null;
+    return searchResults[currentSearchIndex.value];
+  }
+
+  /// Check if a message is the current search result (for highlighting)
+  bool isCurrentSearchResult(Message message) {
+    final current = currentSearchResult;
+    return current != null && current.id == message.id;
+  }
+
+  /// Check if a message matches the search query (for highlighting)
+  bool isSearchResult(Message message) {
+    return searchResults.any((m) => m.id == message.id);
+  }
+
   /// Reply functionality methods (delegated to MessageController)
   Message? get replyingTo => messageControllerService.replyingTo;
   bool get isReplying => messageControllerService.isReplying;

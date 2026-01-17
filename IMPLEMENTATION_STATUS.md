@@ -230,13 +230,17 @@
 | Custom notifications | Model exists | Per-user override |
 | Disappearing messages | Model exists | Per-chat setting |
 
+#### Recently Completed ✅
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Search in conversation | Complete | Full-text search with navigation |
+
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
 | Contact info editing | Low | 3 hours |
 | Add to contacts | Medium | 4 hours |
 | Share contact | Low | 2 hours |
-| Search in conversation | Medium | 6 hours |
 | Export chat | Low | 4 hours |
 | Wallpaper per chat | Low | 4 hours |
 
@@ -372,7 +376,6 @@ All high priority tasks completed!
 | Two-step verification UI | Privacy | 8 hours |
 | Privacy checkup wizard | Privacy | 6 hours |
 | Group invite links | Group Info | 6 hours |
-| Search in conversation | User Info | 6 hours |
 
 ### Low Priority (Nice to Have)
 
