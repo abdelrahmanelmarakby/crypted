@@ -28,6 +28,7 @@ import 'package:social_media_recorder/screen/social_media_recorder.dart';
 import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart'
     as native_contact;
 import 'package:image_picker/image_picker.dart';
+import 'package:just_audio/just_audio.dart';
 
 class AttachmentWidget extends GetView<ChatController> {
   const AttachmentWidget({super.key});
@@ -151,10 +152,65 @@ class AttachmentWidget extends GetView<ChatController> {
                           sendRequestFunction: (soundFile, time) async {
                             controller.onChangeRec(false);
                             try {
+                              print("🎤 ========== AUDIO DEBUG START ==========");
                               print("🎤 Sending audio message...");
                               print("  File path: ${soundFile.path}");
                               print("  Duration: $time");
                               print("  Room ID: ${controller.roomId}");
+
+                              // Debug: Check file details
+                              final file = File(soundFile.path);
+                              final exists = await file.exists();
+                              print("  File exists: $exists");
+
+                              if (exists) {
+                                final fileSize = await file.length();
+                                print("  File size: $fileSize bytes (${(fileSize / 1024).toStringAsFixed(2)} KB)");
+
+                                // Read first few bytes to check format
+                                final bytes = await file.openRead(0, 12).first;
+                                print("  First bytes (hex): ${bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}");
+
+                                if (fileSize == 0) {
+                                  print("❌ ERROR: Audio file is EMPTY (0 bytes)!");
+                                  Get.snackbar(
+                                    "Recording Error",
+                                    "Audio file is empty. Please check microphone permissions.",
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: Colors.red,
+                                    colorText: Colors.white,
+                                  );
+                                  return;
+                                }
+
+                                if (fileSize < 1000) {
+                                  print("⚠️ WARNING: Audio file is very small ($fileSize bytes)");
+                                }
+                              } else {
+                                print("❌ ERROR: Audio file does not exist!");
+                                Get.snackbar(
+                                  "Recording Error",
+                                  "Audio file was not created",
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.red,
+                                  colorText: Colors.white,
+                                );
+                                return;
+                              }
+                              print("🎤 ========================================");
+
+                              // Test: Try to play locally to verify audio content
+                              print("🔊 Testing local playback...");
+                              try {
+                                final testPlayer = AudioPlayer();
+                                await testPlayer.setFilePath(soundFile.path);
+                                final duration = testPlayer.duration;
+                                print("  Local duration detected: $duration");
+                                await testPlayer.dispose();
+                                print("✅ Local audio file is playable");
+                              } catch (e) {
+                                print("❌ Local playback test FAILED: $e");
+                              }
 
                               final audioMessage =
                                   await FirebaseUtils.uploadAudio(

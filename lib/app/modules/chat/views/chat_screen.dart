@@ -69,6 +69,16 @@ class PrivateChatScreen extends GetView<ChatController> {
           );
         }
 
+        // Wait for chatDataSource to be initialized
+        if (!controller.isChatDataSourceReady.value) {
+          return Scaffold(
+            backgroundColor: ColorsManager.navbarColor,
+            body: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
 
         // ARCH-004: Replaced StreamProvider with StreamBuilder to consolidate state management
         // Using pure Flutter StreamBuilder instead of mixing GetX with Provider

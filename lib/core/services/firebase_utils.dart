@@ -31,11 +31,19 @@ class FirebaseUtils {
       final fileSize = await file.length();
       log("  File size: ${formatFileSize(fileSize)}");
 
+      // Check if file has content
+      if (fileSize == 0) {
+        log("❌ Audio file is empty (0 bytes)");
+        return null;
+      }
+
       final now = DateTime.now();
       final id = generateUniqueId("audio", roomId);
 
       log("  Uploading to Firebase Storage...");
-      final url = await _uploadFile(file, "audios", id, onProgress: onProgress);
+
+      // Upload with proper audio metadata
+      final url = await _uploadAudioFile(file, "audios", id, onProgress: onProgress);
 
       if (url == null) {
         log("❌ Failed to get download URL");
@@ -56,6 +64,74 @@ class FirebaseUtils {
     } catch (e, stackTrace) {
       log("❌ Error uploading audio: $e");
       log("Stack trace: $stackTrace");
+      return null;
+    }
+  }
+
+  // 🎵 Helper for uploading audio with correct metadata
+  static Future<String?> _uploadAudioFile(
+    File file,
+    String folder,
+    String id, {
+    Function(double progress)? onProgress,
+  }) async {
+    try {
+      final String today = _getTodayString();
+
+      // Determine the correct content type based on file extension
+      final extension = file.path.split('.').last.toLowerCase();
+      String contentType;
+      switch (extension) {
+        case 'aac':
+          contentType = 'audio/aac';
+          break;
+        case 'm4a':
+          contentType = 'audio/mp4';
+          break;
+        case 'mp3':
+          contentType = 'audio/mpeg';
+          break;
+        case 'wav':
+          contentType = 'audio/wav';
+          break;
+        case 'ogg':
+          contentType = 'audio/ogg';
+          break;
+        default:
+          contentType = 'audio/aac'; // Default for social_media_recorder
+      }
+
+      log("  Audio content type: $contentType");
+      log("  File extension: $extension");
+
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child(folder)
+          .child(today)
+          .child('$id.${extension.isEmpty ? 'aac' : extension}');
+
+      // Set proper metadata for audio file
+      final metadata = SettableMetadata(
+        contentType: contentType,
+        customMetadata: {
+          'uploaded': DateTime.now().toIso8601String(),
+        },
+      );
+
+      final uploadTask = ref.putFile(file, metadata);
+
+      // Listen to upload progress if callback provided
+      if (onProgress != null) {
+        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          onProgress(progress);
+        });
+      }
+
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      log("❌ Error uploading audio to Firebase Storage: $e");
       return null;
     }
   }

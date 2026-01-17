@@ -95,6 +95,9 @@ class ChatController extends GetxController
 
   late final ChatDataSources chatDataSource;
 
+  /// Flag to indicate if chatDataSource has been initialized
+  final RxBool isChatDataSourceReady = false.obs;
+
   // ARCH-003: Repository for abstracted data access
   // This provides a clean interface that hides Firebase implementation details
   IChatRepository? _repository;
@@ -450,6 +453,10 @@ class ChatController extends GetxController
       roomId: roomId,
       members: members,
     );
+
+    // Mark chatDataSource as ready
+    isChatDataSourceReady.value = true;
+    update(); // Trigger UI rebuild
 
     _logger.info('ChatDataSource and MessageController initialized', context: 'ChatController');
   }
