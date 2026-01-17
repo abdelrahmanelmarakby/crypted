@@ -9,6 +9,7 @@ import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 import 'package:crypted_app/app/modules/settings_v2/shared/widgets/settings_widgets.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/privacy_checkup_wizard.dart';
+import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/two_step_verification_setup.dart';
 import '../controllers/privacy_settings_controller.dart';
 
 /// Enhanced Privacy Settings View
@@ -399,12 +400,19 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
     PrivacyCheckupWizard.show(Get.context!);
   }
 
-  void _showTwoStepSettings() {
-    Get.snackbar(
-      'Coming Soon',
-      'Two-step verification setup will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
+  void _showTwoStepSettings() async {
+    final service = Get.find<PrivacySettingsService>();
+    final isEnabled = service.settings.value.security.twoStepVerification.enabled;
+
+    final result = await TwoStepVerificationSetup.show(
+      Get.context!,
+      isEnabled: isEnabled,
     );
+
+    // Refresh the controller after changes
+    if (result == true) {
+      controller.refresh();
+    }
   }
 
   void _showAppLockSettings() {

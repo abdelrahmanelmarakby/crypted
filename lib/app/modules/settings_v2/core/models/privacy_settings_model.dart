@@ -439,16 +439,22 @@ class ContentProtectionSettings {
 /// Two-step verification settings
 class TwoStepVerificationSettings {
   final bool enabled;
+  final String? pinHash;
   final String? recoveryEmail;
   final bool emailVerified;
+  final String? hint;
+  final DateTime? setupAt;
   final DateTime? lastPasswordChange;
   final int failedAttempts;
   final DateTime? lockedUntil;
 
   const TwoStepVerificationSettings({
     this.enabled = false,
+    this.pinHash,
     this.recoveryEmail,
     this.emailVerified = false,
+    this.hint,
+    this.setupAt,
     this.lastPasswordChange,
     this.failedAttempts = 0,
     this.lockedUntil,
@@ -457,18 +463,26 @@ class TwoStepVerificationSettings {
   bool get isLocked =>
       lockedUntil != null && DateTime.now().isBefore(lockedUntil!);
 
+  bool get hasPin => pinHash != null && pinHash!.isNotEmpty;
+
   TwoStepVerificationSettings copyWith({
     bool? enabled,
+    String? pinHash,
     String? recoveryEmail,
     bool? emailVerified,
+    String? hint,
+    DateTime? setupAt,
     DateTime? lastPasswordChange,
     int? failedAttempts,
     DateTime? lockedUntil,
   }) {
     return TwoStepVerificationSettings(
       enabled: enabled ?? this.enabled,
+      pinHash: pinHash ?? this.pinHash,
       recoveryEmail: recoveryEmail ?? this.recoveryEmail,
       emailVerified: emailVerified ?? this.emailVerified,
+      hint: hint ?? this.hint,
+      setupAt: setupAt ?? this.setupAt,
       lastPasswordChange: lastPasswordChange ?? this.lastPasswordChange,
       failedAttempts: failedAttempts ?? this.failedAttempts,
       lockedUntil: lockedUntil ?? this.lockedUntil,
@@ -478,8 +492,11 @@ class TwoStepVerificationSettings {
   Map<String, dynamic> toMap() {
     return {
       'enabled': enabled,
+      'pinHash': pinHash,
       'recoveryEmail': recoveryEmail,
       'emailVerified': emailVerified,
+      'hint': hint,
+      'setupAt': setupAt?.millisecondsSinceEpoch,
       'lastPasswordChange': lastPasswordChange?.millisecondsSinceEpoch,
       'failedAttempts': failedAttempts,
       'lockedUntil': lockedUntil?.millisecondsSinceEpoch,
@@ -490,8 +507,13 @@ class TwoStepVerificationSettings {
     if (map == null) return const TwoStepVerificationSettings();
     return TwoStepVerificationSettings(
       enabled: map['enabled'] ?? false,
+      pinHash: map['pinHash'],
       recoveryEmail: map['recoveryEmail'],
       emailVerified: map['emailVerified'] ?? false,
+      hint: map['hint'],
+      setupAt: map['setupAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['setupAt'])
+          : null,
       lastPasswordChange: map['lastPasswordChange'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['lastPasswordChange'])
           : null,

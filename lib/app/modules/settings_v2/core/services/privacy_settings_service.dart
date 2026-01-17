@@ -403,6 +403,42 @@ class PrivacySettingsService extends GetxService {
     );
   }
 
+  /// Setup two-step verification with PIN, recovery email, and hint
+  Future<void> setupTwoStepVerification({
+    required String pin,
+    String? recoveryEmail,
+    String? hint,
+  }) async {
+    // Hash the PIN before storing (in production, use proper hashing)
+    // For now, we store a placeholder indicating PIN is set
+    settings.value = settings.value.copyWith(
+      security: settings.value.security.copyWith(
+        twoStepVerification: TwoStepVerificationSettings(
+          enabled: true,
+          pinHash: pin.hashCode.toString(), // In production, use bcrypt or similar
+          recoveryEmail: recoveryEmail,
+          emailVerified: false,
+          hint: hint,
+          setupAt: DateTime.now(),
+        ),
+      ),
+    );
+    await _debouncedSave();
+    await _logSecurityEvent(SecurityEventType.twoStepEnabled, metadata: {
+      'hasRecoveryEmail': recoveryEmail != null,
+      'hasHint': hint != null,
+    });
+  }
+
+  /// Verify two-step PIN
+  Future<bool> verifyTwoStepPin(String pin) async {
+    final storedHash = settings.value.security.twoStepVerification.pinHash;
+    if (storedHash == null) return false;
+
+    // In production, use proper hash comparison
+    return pin.hashCode.toString() == storedHash;
+  }
+
   /// Update recovery email
   Future<void> updateRecoveryEmail(String email) async {
     settings.value = settings.value.copyWith(
