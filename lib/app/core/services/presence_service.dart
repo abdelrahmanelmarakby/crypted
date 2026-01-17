@@ -3,14 +3,32 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
 /// Production-grade Presence Service for 1M+ users
 /// Manages user online/offline status with heartbeat mechanism
+/// Now includes privacy-aware presence visibility
 class PresenceService {
   static final PresenceService _instance = PresenceService._internal();
   factory PresenceService() => _instance;
   PresenceService._internal();
+
+  // Privacy settings service reference (lazy loaded)
+  PrivacySettingsService? _privacyService;
+
+  PrivacySettingsService? get _privacy {
+    if (_privacyService == null) {
+      try {
+        _privacyService = Get.find<PrivacySettingsService>();
+      } catch (_) {
+        // Service not registered yet
+      }
+    }
+    return _privacyService;
+  }
 
   String? _sessionId;
   Timer? _heartbeatTimer;
@@ -232,29 +250,275 @@ class PresenceService {
     }
   }
 
-  /// Listen to user online status
+  /// Listen to user online status (privacy-aware)
+  /// Returns false if:
+  /// - User is blocked
+  /// - User's privacy settings don't allow viewing online status
   Stream<bool> listenToUserOnlineStatus(String userId) {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .snapshots()
-        .map((doc) {
+        .asyncMap((doc) async {
       if (!doc.exists) return false;
+
+      // Check privacy settings
+      final visibilityResult = await _checkOnlineStatusVisibility(userId);
+      if (!visibilityResult.canView) {
+        return false;
+      }
+
       return doc.data()?['isOnline'] ?? false;
     });
   }
 
-  /// Get user last seen
+  /// Get user last seen (privacy-aware)
+  /// Returns null if:
+  /// - User is blocked
+  /// - User's privacy settings don't allow viewing last seen
   Stream<DateTime?> listenToUserLastSeen(String userId) {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .snapshots()
-        .map((doc) {
+        .asyncMap((doc) async {
       if (!doc.exists) return null;
+
+      // Check privacy settings
+      final visibilityResult = await _checkLastSeenVisibility(userId);
+      if (!visibilityResult.canView) {
+        return null;
+      }
+
       final lastSeen = doc.data()?['lastSeen'] as Timestamp?;
       return lastSeen?.toDate();
     });
+  }
+
+  /// Privacy-aware online status stream with visibility info
+  Stream<PresenceInfo> listenToUserPresence(String userId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .asyncMap((doc) async {
+      if (!doc.exists) {
+        return PresenceInfo(
+          isOnline: false,
+          lastSeen: null,
+          isHiddenByPrivacy: false,
+          isBlocked: false,
+        );
+      }
+
+      // Check blocking first
+      final isBlocked = await _checkIfBlocked(userId);
+      if (isBlocked) {
+        return PresenceInfo(
+          isOnline: false,
+          lastSeen: null,
+          isHiddenByPrivacy: true,
+          isBlocked: true,
+        );
+      }
+
+      // Check online status visibility
+      final onlineVisibility = await _checkOnlineStatusVisibility(userId);
+      final lastSeenVisibility = await _checkLastSeenVisibility(userId);
+
+      final isOnline = onlineVisibility.canView
+          ? (doc.data()?['isOnline'] ?? false)
+          : false;
+
+      DateTime? lastSeen;
+      if (lastSeenVisibility.canView) {
+        final timestamp = doc.data()?['lastSeen'] as Timestamp?;
+        lastSeen = timestamp?.toDate();
+      }
+
+      return PresenceInfo(
+        isOnline: isOnline,
+        lastSeen: lastSeen,
+        isHiddenByPrivacy: !onlineVisibility.canView,
+        isBlocked: false,
+        hiddenReason: onlineVisibility.canView ? null : onlineVisibility.reason,
+      );
+    });
+  }
+
+  /// Check if user allows viewing their online status
+  Future<VisibilityCheckResult> _checkOnlineStatusVisibility(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      return VisibilityCheckResult(canView: false, reason: 'Not authenticated');
+    }
+
+    // Always allow viewing own presence
+    if (currentUserId == targetUserId) {
+      return VisibilityCheckResult(canView: true);
+    }
+
+    // Check if blocked
+    final isBlocked = await _checkIfBlocked(targetUserId);
+    if (isBlocked) {
+      return VisibilityCheckResult(canView: false, reason: 'User is blocked');
+    }
+
+    // Check target user's privacy settings
+    try {
+      final targetPrivacy = await _getTargetUserPrivacySettings(targetUserId);
+      if (targetPrivacy == null) {
+        // Default: allow if no privacy settings
+        return VisibilityCheckResult(canView: true);
+      }
+
+      final isContact = await _checkIfContact(targetUserId);
+      final onlineStatusSetting = targetPrivacy.profileVisibility.onlineStatus;
+
+      final canView = onlineStatusSetting.isVisibleTo(
+        currentUserId,
+        isContact: isContact,
+      );
+
+      return VisibilityCheckResult(
+        canView: canView,
+        reason: canView ? null : 'Hidden by user\'s privacy settings',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error checking online status visibility: $e');
+      }
+      // Default: allow on error to prevent breaking existing functionality
+      return VisibilityCheckResult(canView: true);
+    }
+  }
+
+  /// Check if user allows viewing their last seen
+  Future<VisibilityCheckResult> _checkLastSeenVisibility(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      return VisibilityCheckResult(canView: false, reason: 'Not authenticated');
+    }
+
+    // Always allow viewing own last seen
+    if (currentUserId == targetUserId) {
+      return VisibilityCheckResult(canView: true);
+    }
+
+    // Check if blocked
+    final isBlocked = await _checkIfBlocked(targetUserId);
+    if (isBlocked) {
+      return VisibilityCheckResult(canView: false, reason: 'User is blocked');
+    }
+
+    // Check target user's privacy settings
+    try {
+      final targetPrivacy = await _getTargetUserPrivacySettings(targetUserId);
+      if (targetPrivacy == null) {
+        // Default: allow if no privacy settings
+        return VisibilityCheckResult(canView: true);
+      }
+
+      final isContact = await _checkIfContact(targetUserId);
+      final lastSeenSetting = targetPrivacy.profileVisibility.lastSeen;
+
+      final canView = lastSeenSetting.isVisibleTo(
+        currentUserId,
+        isContact: isContact,
+      );
+
+      return VisibilityCheckResult(
+        canView: canView,
+        reason: canView ? null : 'Hidden by user\'s privacy settings',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error checking last seen visibility: $e');
+      }
+      // Default: allow on error
+      return VisibilityCheckResult(canView: true);
+    }
+  }
+
+  /// Check if current user has blocked or is blocked by target user
+  Future<bool> _checkIfBlocked(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return false;
+
+    // Use local privacy service if available (faster)
+    if (_privacy != null) {
+      if (_privacy!.isUserBlocked(targetUserId)) {
+        return true;
+      }
+    }
+
+    // Check if current user blocked target
+    try {
+      final blockedDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('blocked')
+          .doc(targetUserId)
+          .get();
+      if (blockedDoc.exists) return true;
+
+      // Check if target user blocked current user
+      final blockedByDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUserId)
+          .collection('blocked')
+          .doc(currentUserId)
+          .get();
+      if (blockedByDoc.exists) return true;
+
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error checking blocked status: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Check if target user is a contact
+  Future<bool> _checkIfContact(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return false;
+
+    try {
+      final contactDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('contacts')
+          .doc(targetUserId)
+          .get();
+      return contactDoc.exists;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get target user's privacy settings from Firestore
+  Future<EnhancedPrivacySettingsModel?> _getTargetUserPrivacySettings(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('private')
+          .doc('privacy')
+          .get();
+
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+
+      return EnhancedPrivacySettingsModel.fromMap(doc.data());
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error getting target user privacy settings: $e');
+      }
+      return null;
+    }
   }
 
   /// Format last seen text
@@ -362,5 +626,85 @@ class PresenceService {
         await _updateHeartbeat(userId);
       }
     }
+  }
+
+  /// Format presence for display (privacy-aware version)
+  String formatPresenceInfo(PresenceInfo presence) {
+    if (presence.isBlocked) {
+      return ''; // Don't show any presence info for blocked users
+    }
+
+    if (presence.isHiddenByPrivacy) {
+      return ''; // Don't show any presence info if hidden
+    }
+
+    return formatLastSeen(presence.lastSeen, presence.isOnline);
+  }
+}
+
+// ============================================================================
+// HELPER CLASSES
+// ============================================================================
+
+/// Result of a visibility check
+class VisibilityCheckResult {
+  final bool canView;
+  final String? reason;
+
+  const VisibilityCheckResult({
+    required this.canView,
+    this.reason,
+  });
+}
+
+/// Complete presence information with privacy status
+class PresenceInfo {
+  final bool isOnline;
+  final DateTime? lastSeen;
+  final bool isHiddenByPrivacy;
+  final bool isBlocked;
+  final String? hiddenReason;
+
+  const PresenceInfo({
+    required this.isOnline,
+    this.lastSeen,
+    required this.isHiddenByPrivacy,
+    required this.isBlocked,
+    this.hiddenReason,
+  });
+
+  /// Whether to show presence info at all
+  bool get shouldShow => !isHiddenByPrivacy && !isBlocked;
+
+  /// Get display text for presence
+  String get displayText {
+    if (isBlocked || isHiddenByPrivacy) return '';
+    if (isOnline) return 'Online';
+    if (lastSeen == null) return 'Last seen recently';
+    return _formatLastSeen(lastSeen!);
+  }
+
+  String _formatLastSeen(DateTime lastSeen) {
+    final now = DateTime.now();
+    final difference = now.difference(lastSeen);
+
+    if (difference.inMinutes < 1) {
+      return 'Last seen just now';
+    } else if (difference.inMinutes < 60) {
+      return 'Last seen ${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (difference.inHours < 24) {
+      return 'Last seen ${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
+    } else if (difference.inDays == 1) {
+      return 'Last seen yesterday';
+    } else if (difference.inDays < 7) {
+      return 'Last seen ${difference.inDays} days ago';
+    } else {
+      return 'Last seen on ${lastSeen.month}/${lastSeen.day}';
+    }
+  }
+
+  @override
+  String toString() {
+    return 'PresenceInfo(isOnline: $isOnline, lastSeen: $lastSeen, isHiddenByPrivacy: $isHiddenByPrivacy, isBlocked: $isBlocked)';
   }
 }
