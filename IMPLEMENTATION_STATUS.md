@@ -12,7 +12,7 @@
 |--------------|------------|--------|
 | Notification Settings | 98% | Near Complete |
 | Privacy Settings | 98% | Near Complete |
-| Other User Info | 98% | Near Complete |
+| Other User Info | 100% | Complete |
 | Group Info | 98% | Near Complete |
 
 ---
@@ -205,7 +205,7 @@
 
 ---
 
-### 3. Other User Info (92% Complete)
+### 3. Other User Info (100% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -235,6 +235,7 @@
 | Disappearing messages UI | Complete | Duration selector, per-chat and default settings |
 | Security audit log viewer | Complete | Timeline view, filtering, search, event details |
 | Export chat functionality | Complete | Multiple formats (txt, HTML, JSON), share support |
+| Per-chat wallpaper | Complete | Solid colors, gradients, custom images, picker UI |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -242,7 +243,6 @@
 | Contact info editing | Low | 3 hours |
 | Add to contacts | Medium | 4 hours |
 | Share contact | Low | 2 hours |
-| Wallpaper per chat | Low | 4 hours |
 
 #### Partially Implemented ⚠️
 | Feature | Current State | Remaining Work |
@@ -355,6 +355,8 @@
 | DisappearingMessagesSettings | `disappearing_messages_settings.dart` | Duration selector & settings |
 | SecurityAuditLogViewer | `security_audit_log_viewer.dart` | Timeline view with filtering |
 | ChatExportDialog | `chat_export_dialog.dart` | Multi-format export with options |
+| ChatWallpaperPicker | `chat_wallpaper_picker.dart` | Color, gradient, custom wallpaper picker |
+| ChatWallpaperTile | `chat_wallpaper_picker.dart` | Settings tile for wallpaper option |
 
 ### Widgets Needing Integration
 
@@ -380,9 +382,7 @@ All medium priority tasks completed!
 
 ### Low Priority (Nice to Have)
 
-| Task | Feature Area | Effort |
-|------|--------------|--------|
-| Per-chat wallpaper | User Info | 4 hours |
+All low priority tasks completed!
 
 ---
 
