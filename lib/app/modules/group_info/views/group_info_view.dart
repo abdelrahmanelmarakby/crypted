@@ -4,6 +4,7 @@ import 'package:crypted_app/app/modules/group_info/widgets/group_details_section
 import 'package:crypted_app/app/modules/group_info/widgets/group_loading_view.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/admin_action_widgets.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/add_member_picker.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/group_permissions_editor.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/profile_header.dart';
 import 'package:crypted_app/app/widgets/custom_container.dart';
 import 'package:crypted_app/app/widgets/custom_dvider.dart';
@@ -195,6 +196,20 @@ class GroupInfoView extends GetView<GroupInfoController> {
                     const GroupActionsSection(),
                     SizedBox(height: Sizes.size4),
 
+                    // Group Permissions (admin only)
+                    Obx(() {
+                      if (!controller.isCurrentUserAdmin) return const SizedBox.shrink();
+                      return Column(
+                        children: [
+                          PermissionsSummaryTile(
+                            permissions: controller.permissions.value,
+                            onTap: () => _showPermissionsEditor(context),
+                          ),
+                          SizedBox(height: Sizes.size4),
+                        ],
+                      );
+                    }),
+
                     // Show admin status
                     if (controller.isCurrentUserAdmin)
                       Row(
@@ -253,6 +268,28 @@ class GroupInfoView extends GetView<GroupInfoController> {
       Get.snackbar(
         'Success',
         '${selectedMembers.length} member${selectedMembers.length == 1 ? '' : 's'} added to group',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  void _showPermissionsEditor(BuildContext context) async {
+    final roomId = controller.roomId;
+    if (roomId == null) return;
+
+    final updatedPermissions = await GroupPermissionsEditor.show(
+      context: context,
+      roomId: roomId,
+      initialPermissions: controller.permissions.value,
+    );
+
+    if (updatedPermissions != null) {
+      await controller.updatePermissions(updatedPermissions);
+      Get.snackbar(
+        'Success',
+        'Group permissions updated',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.withValues(alpha: 0.9),
         colorText: Colors.white,

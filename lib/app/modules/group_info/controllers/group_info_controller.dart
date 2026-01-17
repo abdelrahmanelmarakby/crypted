@@ -1,5 +1,6 @@
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_controlls.dart';
 import 'package:crypted_app/app/modules/group_info/widgets/group_media_item.dart';
+import 'package:crypted_app/app/modules/group_info/widgets/group_permissions_editor.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/app/core/utils/file_download_helper.dart';
 import 'package:get/get.dart';
@@ -43,6 +44,9 @@ class GroupInfoController extends GetxController {
   // Member search
   final RxString memberSearchQuery = ''.obs;
   final TextEditingController memberSearchController = TextEditingController();
+
+  // Group permissions
+  final Rx<GroupPermissions> permissions = const GroupPermissions().obs;
 
   // Data source
   final ChatDataSources _chatDataSources = ChatDataSources();
@@ -118,6 +122,21 @@ class GroupInfoController extends GetxController {
             // Optionally update Firestore to persist this
             _migrateAdminIds(firstMemberId);
           }
+        }
+      }
+
+      // Load permissions from Firestore directly
+      final roomDoc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .get();
+
+      if (roomDoc.exists) {
+        final data = roomDoc.data();
+        if (data != null && data['permissions'] != null) {
+          permissions.value = GroupPermissions.fromMap(
+            Map<String, dynamic>.from(data['permissions']),
+          );
         }
       }
     } catch (e) {
@@ -1464,6 +1483,27 @@ class GroupInfoController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Update group permissions
+  Future<void> updatePermissions(GroupPermissions newPermissions) async {
+    permissions.value = newPermissions;
+  }
+
+  /// Check if user can perform action based on permissions
+  bool canEditGroupInfo() {
+    if (permissions.value.editGroupInfo == PermissionLevel.everyone) return true;
+    return isCurrentUserAdmin;
+  }
+
+  bool canSendMessages() {
+    if (permissions.value.sendMessages == PermissionLevel.everyone) return true;
+    return isCurrentUserAdmin;
+  }
+
+  bool canAddMembers() {
+    if (permissions.value.addMembers == PermissionLevel.everyone) return true;
+    return isCurrentUserAdmin;
   }
 
   /// Get non-admin members (for removal options)
