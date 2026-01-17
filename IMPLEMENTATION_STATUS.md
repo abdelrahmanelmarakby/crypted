@@ -10,10 +10,10 @@
 
 | Feature Area | Completion | Status |
 |--------------|------------|--------|
-| Notification Settings | 88% | Near Complete |
+| Notification Settings | 92% | Near Complete |
 | Privacy Settings | 92% | Near Complete |
 | Other User Info | 92% | Near Complete |
-| Group Info | 88% | Near Complete |
+| Group Info | 92% | Near Complete |
 
 ---
 
@@ -70,6 +70,16 @@
 | AdminMemberTile integration | Complete | `group_info_view.dart` |
 | Admin action dialogs | Complete | `admin_action_widgets.dart` |
 
+### Phase 3.7: Contacts & Members Enhancement ✅
+| Task | Status | Files |
+|------|--------|-------|
+| Allowed contacts during DND | Complete | `allowed_contacts_editor.dart` |
+| DND settings update service | Complete | `notification_settings_service.dart` |
+| Allowed contacts controller method | Complete | `notification_settings_controller.dart` |
+| Add member picker | Complete | `add_member_picker.dart` |
+| Multi-select with chips | Complete | `add_member_picker.dart` |
+| View integration | Complete | `group_info_view.dart` |
+
 ### Phase 4: Testing & Polish ⏳
 | Task | Status | Priority |
 |------|--------|----------|
@@ -83,7 +93,7 @@
 
 ## Detailed Feature Status
 
-### 1. Notification Settings (88% Complete)
+### 1. Notification Settings (92% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -105,19 +115,18 @@
 | Group notification settings | View connected | Sound, vibration, mentions |
 | Status notification settings | View connected | Sound, reactions |
 | Call notification settings | View connected | Ringtone, vibration, DND behavior |
+| Allowed contacts during DND | `allowed_contacts_editor.dart` | Contact selector with search |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
 |---------|----------|--------|
 | LED color picker (Android) | Low | 2 hours |
 | Notification history view | Low | 4 hours |
-| Allowed contacts during DND | Medium | 4 hours |
 
 #### Partially Implemented ⚠️
 | Feature | Current State | Remaining Work |
 |---------|---------------|----------------|
 | Sound assets | Picker exists | Need actual audio files |
-| DND allowed contacts | UI placeholder | Need contact selector integration |
 
 ---
 
@@ -203,7 +212,7 @@
 
 ---
 
-### 4. Group Info (88% Complete)
+### 4. Group Info (92% Complete)
 
 #### Implemented ✅
 | Feature | Location | Notes |
@@ -224,6 +233,7 @@
 | Make admin UI | View + Controller | With confirmation dialog |
 | Remove admin UI | View + Controller | With creator protection |
 | Member search | View + Controller | Search bar for 5+ members |
+| Add member picker | `add_member_picker.dart` | Multi-select with chips |
 
 #### Not Implemented ❌
 | Feature | Priority | Effort |
@@ -236,11 +246,6 @@
 | Group QR code | Low | 4 hours |
 | Pinned messages | Medium | 6 hours |
 | Group events/polls | Low | 8 hours |
-
-#### Partially Implemented ⚠️
-| Feature | Current State | Remaining Work |
-|---------|---------------|----------------|
-| Add member picker | Placeholder exists | Need contact selector |
 
 ---
 
