@@ -15,16 +15,16 @@ abstract class Routes {
   static const SETTINGS = _Paths.SETTINGS;
   static const NAVBAR = _Paths.NAVBAR;
   static const PROFILE = _Paths.PROFILE;
-  static const PRIVACY = _Paths.PRIVACY;
-  static const NOTIFICATIONS = _Paths.NOTIFICATIONS;
+  static const PRIVACY = _Paths.PRIVACY_SETTINGS;
+  static const NOTIFICATIONS = _Paths.NOTIFICATION_SETTINGS;
   static const HELP = _Paths.HELP;
   static const INVITE_FRIEND = _Paths.INVITE_FRIEND;
   static const CHAT = _Paths.CHAT;
   static const BACKUP = _Paths.BACKUP;
   static const BACKUP_SETTINGS = _Paths.BACKUP_SETTINGS;
-  static const CONTACT_INFO = _Paths.CONTACT_INFO;
+  static const CONTACT_INFO = _Paths.OTHER_USER_INFO;
   static const CALLFRIEND = _Paths.CALLFRIEND;
-  static const GROUP_INFO = _Paths.GROUP_INFO;
+  static const GROUP_INFO = _Paths.ENHANCED_GROUP_INFO;
   static const STORIES2 = _Paths.STORIES2;
   static const CALL = _Paths.CALL;
 
@@ -36,6 +36,7 @@ abstract class Routes {
   static const OTHER_USER_INFO = _Paths.OTHER_USER_INFO;
   static const ENHANCED_GROUP_INFO = _Paths.ENHANCED_GROUP_INFO;
   static const MEDIA_GALLERY = _Paths.MEDIA_GALLERY;
+  static const MEDIA_VIEWER = _Paths.MEDIA_VIEWER;
   static const STARRED_MESSAGES = _Paths.STARRED_MESSAGES;
   static const ADD_GROUP_MEMBERS = _Paths.ADD_GROUP_MEMBERS;
 }
@@ -75,6 +76,7 @@ abstract class _Paths {
   static const OTHER_USER_INFO = '/other-user-info';
   static const ENHANCED_GROUP_INFO = '/enhanced-group-info';
   static const MEDIA_GALLERY = '/media-gallery';
+  static const MEDIA_VIEWER = '/media-viewer';
   static const STARRED_MESSAGES = '/starred-messages';
   static const ADD_GROUP_MEMBERS = '/add-group-members';
 }

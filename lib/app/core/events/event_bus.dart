@@ -382,3 +382,18 @@ class SyncStatusEvent extends AppEvent {
     required this.pendingCount,
   });
 }
+
+/// Room-specific sync status (for SyncService)
+class RoomSyncStatusEvent extends AppEvent {
+  final String roomId;
+  final bool isSyncing;
+  final double? progress;
+  final String? message;
+
+  RoomSyncStatusEvent({
+    required this.roomId,
+    required this.isSyncing,
+    this.progress,
+    this.message,
+  });
+}

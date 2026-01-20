@@ -327,8 +327,52 @@ class FirebaseChatRepository implements IChatRepository {
 
   @override
   Future<List<Message>> searchMessages(String roomId, String query) async {
-    // TODO: Implement search functionality
-    return [];
+    if (query.trim().isEmpty) return [];
+
+    try {
+      final queryLower = query.toLowerCase().trim();
+
+      // Firestore doesn't support full-text search, so we fetch messages
+      // and filter client-side. For better performance at scale,
+      // consider using Algolia, Typesense, or ElasticSearch.
+      final snapshot = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(roomId)
+          .collection('chat')
+          .orderBy('timestamp', descending: true)
+          .limit(500) // Limit to recent messages for performance
+          .get();
+
+      final results = <Message>[];
+
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          data['roomId'] = roomId;
+
+          final text = (data['text'] as String?)?.toLowerCase() ?? '';
+          final content = (data['content'] as String?)?.toLowerCase() ?? '';
+          final fileName = (data['fileName'] as String?)?.toLowerCase() ?? '';
+
+          // Check if any searchable field contains the query
+          if (text.contains(queryLower) ||
+              content.contains(queryLower) ||
+              fileName.contains(queryLower)) {
+            final message = Message.fromMap(data);
+            results.add(message);
+          }
+        } catch (e) {
+          // Skip malformed messages
+          continue;
+        }
+      }
+
+      return results;
+    } catch (e) {
+      _logError('searchMessages', e);
+      return [];
+    }
   }
 
   // =================== HELPERS ===================

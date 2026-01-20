@@ -3,6 +3,7 @@
 // This enables gradual migration without breaking existing functionality
 
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/error_handling/error_handler.dart';
 import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/core/offline/offline_queue.dart';
@@ -11,6 +12,7 @@ import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_state_manager.dart';
 import 'package:crypted_app/app/modules/chat/controllers/group_management_controller.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_actions_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 /// Mixin that adds new architecture integration to ChatController
@@ -169,14 +171,75 @@ mixin ChatControllerIntegration on GetxController {
   // =================== OFFLINE HANDLERS ===================
 
   Future<void> _handleOfflineSendMessage(Map<String, dynamic> data) async {
-    final repository = chatRepository;
-    if (repository == null) {
-      throw Exception('Chat repository not available');
+    final roomId = data['roomId'] as String?;
+    final messageData = data['message'] as Map<String, dynamic>?;
+
+    if (roomId == null || messageData == null) {
+      throw ArgumentError('Missing roomId or message data for offline send');
     }
 
-    // Reconstruct message and send
-    // This is a placeholder - actual implementation depends on message serialization
-    throw UnimplementedError('Implement message reconstruction and send');
+    final firestore = FirebaseFirestore.instance;
+
+    // Remove local-only fields before sending to Firestore
+    final cleanedData = Map<String, dynamic>.from(messageData);
+    cleanedData.remove('isLocal');
+    cleanedData.remove('localId');
+    cleanedData.remove('isSynced');
+
+    // Use server timestamp for consistency
+    cleanedData['timestamp'] = FieldValue.serverTimestamp();
+
+    // Send message to Firestore
+    await firestore
+        .collection('chat_rooms')
+        .doc(roomId)
+        .collection('chat')
+        .add(cleanedData);
+
+    // Update chat room's last message metadata
+    final lastMessagePreview = _getMessagePreview(messageData);
+    await firestore.collection('chat_rooms').doc(roomId).update({
+      'lastMessage': lastMessagePreview,
+      'lastMessageTimestamp': FieldValue.serverTimestamp(),
+      'lastMessageSenderId': messageData['senderId'],
+    });
+
+    if (kDebugMode) {
+      print('[ChatControllerIntegration] Offline message synced to room: $roomId');
+    }
+  }
+
+  /// Get a preview string for the message (for last message display)
+  String _getMessagePreview(Map<String, dynamic> messageData) {
+    final type = messageData['type'] as String? ?? 'text';
+    final text = messageData['text'] as String?;
+
+    switch (type) {
+      case 'text':
+        return text ?? '';
+      case 'image':
+      case 'photo':
+        return '📷 Photo';
+      case 'video':
+        return '🎥 Video';
+      case 'audio':
+      case 'voice':
+        return '🎵 Voice message';
+      case 'file':
+      case 'document':
+        final fileName = messageData['fileName'] as String?;
+        return '📄 ${fileName ?? 'File'}';
+      case 'location':
+        return '📍 Location';
+      case 'contact':
+        return '👤 Contact';
+      case 'poll':
+        return '📊 Poll';
+      case 'call':
+        return '📞 Call';
+      default:
+        return text ?? 'Message';
+    }
   }
 
   Future<void> _handleOfflineDeleteMessage(Map<String, dynamic> data) async {

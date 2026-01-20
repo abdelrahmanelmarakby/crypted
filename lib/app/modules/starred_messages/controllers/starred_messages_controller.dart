@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/widgets/chat_picker_dialog.dart';
 
 /// Arguments for navigating to starred messages
 class StarredMessagesArguments {
@@ -191,13 +192,6 @@ class StarredMessagesController extends GetxController {
           .update({'isFavorite': false});
 
       starredMessages.removeWhere((m) => m.message.messageId == messageId);
-
-      Get.snackbar(
-        'Unstarred',
-        'Message removed from starred',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
     } catch (e) {
       log('Error unstarring message: $e');
       Get.snackbar('Error', 'Failed to unstar message');
@@ -247,8 +241,6 @@ class StarredMessagesController extends GetxController {
       );
       selectedIds.clear();
       isSelectionMode.value = false;
-
-      Get.snackbar('Success', 'Messages unstarred');
     } catch (e) {
       log('Error unstarring messages: $e');
       Get.snackbar('Error', 'Failed to unstar some messages');
@@ -293,13 +285,169 @@ class StarredMessagesController extends GetxController {
   }
 
   /// Refresh starred messages
+  @override
   Future<void> refresh() async {
     await _loadStarredMessages();
   }
 
   /// Forward selected messages
   Future<void> forwardSelected() async {
-    // TODO: Implement forward functionality
-    Get.snackbar('Info', 'Forward functionality coming soon');
+    if (selectedIds.isEmpty) return;
+
+    final context = Get.context;
+    if (context == null) return;
+
+    // Show chat picker
+    final selectedChats = await ChatPickerDialog.show(
+      context: context,
+      multiSelect: true,
+      title: 'Forward to',
+      subtitle: '${selectedIds.length} message(s) selected',
+    );
+
+    if (selectedChats == null || selectedChats.isEmpty) return;
+
+    try {
+      final userId = currentUser?.uid;
+      if (userId == null) return;
+
+      // Get selected messages
+      final messagesToForward = starredMessages
+          .where((m) => selectedIds.contains(m.message.messageId))
+          .toList();
+
+      // Forward to each selected chat
+      for (final chat in selectedChats) {
+        for (final item in messagesToForward) {
+          await _forwardMessageToChat(item, chat.id, userId);
+        }
+      }
+
+      // Exit selection mode
+      selectedIds.clear();
+      isSelectionMode.value = false;
+
+      Get.snackbar(
+        'Forwarded',
+        'Message(s) forwarded to ${selectedChats.length} chat(s)',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      log('Error forwarding messages: $e');
+      Get.snackbar('Error', 'Failed to forward messages');
+    }
+  }
+
+  /// Forward a single message to a chat
+  Future<void> _forwardMessageToChat(
+    StarredMessageItem item,
+    String targetRoomId,
+    String senderId,
+  ) async {
+    final originalMessage = item.message;
+
+    // Create forwarded message data
+    final forwardedMessageData = <String, dynamic>{
+      'senderId': senderId,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isForwarded': true,
+      'forwardedFrom': item.roomName ?? 'Unknown',
+      'type': originalMessage.type ?? 'text',
+    };
+
+    // Copy content based on message type
+    if (originalMessage.text != null) {
+      forwardedMessageData['text'] = originalMessage.text;
+    }
+    if (originalMessage.photoUrl != null) {
+      forwardedMessageData['photoUrl'] = originalMessage.photoUrl;
+    }
+    if (originalMessage.videoUrl != null) {
+      forwardedMessageData['videoUrl'] = originalMessage.videoUrl;
+    }
+    if (originalMessage.audioUrl != null) {
+      forwardedMessageData['audioUrl'] = originalMessage.audioUrl;
+    }
+    if (originalMessage.fileUrl != null) {
+      forwardedMessageData['fileUrl'] = originalMessage.fileUrl;
+    }
+    if (originalMessage.fileName != null) {
+      forwardedMessageData['fileName'] = originalMessage.fileName;
+    }
+    if (originalMessage.fileSize != null) {
+      forwardedMessageData['fileSize'] = originalMessage.fileSize;
+    }
+    if (originalMessage.audioDuration != null) {
+      forwardedMessageData['audioDuration'] = originalMessage.audioDuration;
+    }
+    if (originalMessage.thumbnailUrl != null) {
+      forwardedMessageData['thumbnailUrl'] = originalMessage.thumbnailUrl;
+    }
+
+    // Add the message to the target chat room
+    await FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .doc(targetRoomId)
+        .collection('chat')
+        .add(forwardedMessageData);
+
+    // Update last message in chat room
+    await FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .doc(targetRoomId)
+        .set({
+      'lastMessage': _getLastMessagePreview(originalMessage),
+      'lastMessageTimestamp': FieldValue.serverTimestamp(),
+      'lastMessageSenderId': senderId,
+    }, SetOptions(merge: true));
+  }
+
+  /// Get preview text for last message
+  String _getLastMessagePreview(MessageModel message) {
+    final type = message.type ?? 'text';
+    switch (type) {
+      case 'photo':
+        return '📷 Photo';
+      case 'video':
+        return '🎥 Video';
+      case 'audio':
+        return '🎵 Audio';
+      case 'file':
+        return '📄 ${message.fileName ?? 'File'}';
+      default:
+        return message.text ?? '';
+    }
+  }
+
+  /// Forward a single message
+  Future<void> forwardMessage(StarredMessageItem item) async {
+    final context = Get.context;
+    if (context == null) return;
+
+    final selectedChats = await ChatPickerDialog.show(
+      context: context,
+      multiSelect: true,
+      title: 'Forward to',
+    );
+
+    if (selectedChats == null || selectedChats.isEmpty) return;
+
+    try {
+      final userId = currentUser?.uid;
+      if (userId == null) return;
+
+      for (final chat in selectedChats) {
+        await _forwardMessageToChat(item, chat.id, userId);
+      }
+
+      Get.snackbar(
+        'Forwarded',
+        'Message forwarded to ${selectedChats.length} chat(s)',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      log('Error forwarding message: $e');
+      Get.snackbar('Error', 'Failed to forward message');
+    }
   }
 }

@@ -25,7 +25,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              if (controller.errorMessage?.value?.isNotEmpty ?? false) {
+              if (controller.errorMessage?.value.isNotEmpty ?? false) {
                 return _buildErrorState();
               }
 
@@ -48,11 +48,32 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => Get.back(),
-      ),
+      leading: Obx(() {
+        if (controller.isSearchMode.value) {
+          return IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: controller.toggleSearchMode,
+          );
+        }
+        return IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        );
+      }),
       title: Obx(() {
+        if (controller.isSearchMode.value) {
+          return TextField(
+            controller: controller.searchController,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Search media...',
+              border: InputBorder.none,
+              hintStyle: TextStyle(color: ColorsManager.lightGrey),
+            ),
+            style: const TextStyle(fontSize: 16),
+            onChanged: controller.updateSearchQuery,
+          );
+        }
         if (controller.isSelectionMode.value) {
           return Text('${controller.selectedIds.length} selected');
         }
@@ -60,6 +81,15 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
       }),
       actions: [
         Obx(() {
+          if (controller.isSearchMode.value) {
+            if (controller.searchQuery.value.isNotEmpty) {
+              return IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: controller.clearSearch,
+              );
+            }
+            return const SizedBox.shrink();
+          }
           if (controller.isSelectionMode.value) {
             return IconButton(
               icon: const Icon(Icons.close),
@@ -68,10 +98,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           }
           return IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: Implement search
-              Get.snackbar('Info', 'Search coming soon');
-            },
+            onPressed: controller.toggleSearchMode,
           );
         }),
       ],
@@ -80,12 +107,12 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
 
   Widget _buildTabBar() {
     return Container(
-      color: Colors.white,
+      color: ColorsManager.white,
       child: TabBar(
         controller: controller.tabController,
         isScrollable: true,
         labelColor: ColorsManager.primary,
-        unselectedLabelColor: Colors.grey,
+        unselectedLabelColor: ColorsManager.grey,
         indicatorColor: ColorsManager.primary,
         tabs: MediaType.values.map((type) {
           return Obx(() {
@@ -202,9 +229,9 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           if (isSelected)
             Container(
               color: ColorsManager.primary.withValues(alpha: 0.3),
-              child: const Icon(
+              child: Icon(
                 Icons.check_circle,
-                color: Colors.white,
+                color: ColorsManager.white,
                 size: 32,
               ),
             ),
@@ -217,12 +244,12 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
+                  color: ColorsManager.black.withValues(alpha: 0.54),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.play_arrow,
-                  color: Colors.white,
+                  color: ColorsManager.white,
                   size: 16,
                 ),
               ),
@@ -236,10 +263,10 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
     final imageUrl = item.photoUrl ?? item.videoUrl;
     if (imageUrl == null || imageUrl.isEmpty) {
       return Container(
-        color: Colors.grey.shade200,
+        color: ColorsManager.veryLightGrey,
         child: Icon(
           type == MediaType.photos ? Icons.image : Icons.videocam,
-          color: Colors.grey,
+          color: ColorsManager.grey,
         ),
       );
     }
@@ -248,14 +275,14 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
       imageUrl: imageUrl,
       fit: BoxFit.cover,
       placeholder: (context, url) => Container(
-        color: Colors.grey.shade200,
+        color: ColorsManager.veryLightGrey,
         child: const Center(
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
       errorWidget: (context, url, error) => Container(
-        color: Colors.grey.shade200,
-        child: const Icon(Icons.error, color: Colors.grey),
+        color: ColorsManager.veryLightGrey,
+        child: Icon(Icons.error, color: ColorsManager.grey),
       ),
     );
   }
@@ -307,7 +334,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: ColorsManager.textSecondary,
           ),
         ),
         trailing: controller.isSelectionMode.value
@@ -351,11 +378,11 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
         break;
       case MediaType.links:
         icon = Icons.link;
-        color = Colors.blue;
+        color = ColorsManager.info;
         break;
       default:
         icon = Icons.file_present;
-        color = Colors.grey;
+        color = ColorsManager.grey;
     }
 
     return Container(
@@ -414,25 +441,25 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
   }
 
   Color _getFileColor(String? fileName) {
-    if (fileName == null) return Colors.grey;
+    if (fileName == null) return ColorsManager.grey;
     final ext = fileName.split('.').last.toLowerCase();
     switch (ext) {
       case 'pdf':
-        return Colors.red;
+        return ColorsManager.error;
       case 'doc':
       case 'docx':
-        return Colors.blue;
+        return ColorsManager.info;
       case 'xls':
       case 'xlsx':
-        return Colors.green;
+        return ColorsManager.success;
       case 'ppt':
       case 'pptx':
-        return Colors.orange;
+        return ColorsManager.warning;
       case 'zip':
       case 'rar':
-        return Colors.amber;
+        return ColorsManager.star;
       default:
-        return Colors.grey;
+        return ColorsManager.grey;
     }
   }
 
@@ -440,9 +467,9 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        decoration: BoxDecoration(
+          color: ColorsManager.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -460,12 +487,12 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
               title: const Text('Share'),
               onTap: () {
                 Get.back();
-                Get.snackbar('Info', 'Share coming soon');
+                controller.shareMedia(item, type);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              leading: Icon(Icons.delete, color: ColorsManager.error),
+              title: Text('Delete', style: TextStyle(color: ColorsManager.error)),
               onTap: () async {
                 Get.back();
                 controller.toggleSelection(item.messageId ?? '');
@@ -496,14 +523,14 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           Icon(
             _getIconForType(type),
             size: 64,
-            color: Colors.grey.shade300,
+            color: ColorsManager.veryLightGrey,
           ),
           const SizedBox(height: 16),
           Text(
             'No ${_getLabelForType(type).toLowerCase()} yet',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: ColorsManager.textSecondary,
             ),
           ),
         ],
@@ -516,12 +543,12 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+          Icon(Icons.error_outline, size: 64, color: ColorsManager.lightGrey),
           const SizedBox(height: 16),
           Obx(() => Text(
                 controller.errorMessage?.value ?? 'An error occurred',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(color: ColorsManager.textSecondary),
               )),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -538,10 +565,10 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: ColorsManager.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -563,8 +590,8 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
             ),
             TextButton.icon(
               onPressed: controller.deleteSelected,
-              icon: const Icon(Icons.delete, color: Colors.red),
-              label: const Text('Delete', style: TextStyle(color: Colors.red)),
+              icon: Icon(Icons.delete, color: ColorsManager.error),
+              label: Text('Delete', style: TextStyle(color: ColorsManager.error)),
             ),
           ],
         ),

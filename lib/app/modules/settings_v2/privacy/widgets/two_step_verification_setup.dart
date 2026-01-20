@@ -138,12 +138,13 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
     });
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
     if (_currentStep < _steps.length - 1) {
       HapticFeedback.lightImpact();
 
       // Validate current step before proceeding
-      if (!_validateCurrentStep()) return;
+      final isValid = await _validateCurrentStep();
+      if (!isValid) return;
 
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -155,7 +156,7 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
     }
   }
 
-  bool _validateCurrentStep() {
+  Future<bool> _validateCurrentStep() async {
     final step = _steps[_currentStep];
 
     switch (step.type) {
@@ -187,7 +188,15 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
           _showError('Please enter your PIN');
           return false;
         }
-        // TODO: Verify PIN with service
+        // Verify PIN with service
+        final service = Get.find<PrivacySettingsService>();
+        final isValid = await service.verifyTwoStepPin(_pin);
+        if (!isValid) {
+          HapticFeedback.heavyImpact();
+          _showError('Incorrect PIN. Please try again.');
+          setState(() => _pin = '');
+          return false;
+        }
         return true;
 
       default:
@@ -255,6 +264,97 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
       backgroundColor: Colors.red.withValues(alpha: 0.9),
       colorText: Colors.white,
     );
+  }
+
+  Future<void> _handleForgotPin() async {
+    final service = Get.find<PrivacySettingsService>();
+
+    // Check if recovery email is set
+    if (!service.hasRecoveryEmail) {
+      // Show hint if available
+      final hint = service.pinHint;
+      if (hint != null && hint.isNotEmpty) {
+        Get.dialog(
+          AlertDialog(
+            title: const Text('PIN Hint'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Your hint: $hint'),
+                const SizedBox(height: 16),
+                Text(
+                  'No recovery email was set. If you can\'t remember your PIN, you\'ll need to wait 7 days to reset it.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        Get.snackbar(
+          'No Recovery Email',
+          'No recovery email was set. You\'ll need to wait 7 days to reset your PIN.',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 5),
+        );
+      }
+      return;
+    }
+
+    // Show confirmation dialog
+    final shouldSend = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Reset PIN'),
+        content: const Text(
+          'We\'ll send a password reset link to your recovery email. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ColorsManager.primary,
+            ),
+            child: const Text('Send Email'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSend != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final success = await service.sendPinRecoveryEmail();
+
+      if (success) {
+        Get.snackbar(
+          'Email Sent',
+          'Check your recovery email to reset your PIN',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withValues(alpha: 0.9),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+      } else {
+        _showError('Failed to send recovery email. Please try again.');
+      }
+    } catch (e) {
+      _showError('An error occurred. Please try again.');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -949,14 +1049,7 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
           const SizedBox(height: 24),
 
           TextButton(
-            onPressed: () {
-              // TODO: Forgot PIN flow
-              Get.snackbar(
-                'Forgot PIN',
-                'Check your recovery email to reset your PIN',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
+            onPressed: _handleForgotPin,
             child: Text(
               'Forgot PIN?',
               style: StylesManager.medium(

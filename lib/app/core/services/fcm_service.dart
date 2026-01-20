@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
@@ -270,12 +271,16 @@ class FCMService {
 
     // Check notification settings before showing
     if (_notificationSettingsService != null && chatId != null && senderId != null) {
+      // Check contact and starred status for proper notification filtering
+      final isContact = await _isUserContact(senderId);
+      final isStarred = await _isUserStarred(senderId, chatId);
+
       final decision = _notificationSettingsService!.shouldDeliverNotification(
         senderId: senderId,
         chatId: chatId,
         category: isGroup ? NotificationCategory.group : NotificationCategory.message,
-        isContact: true, // TODO: Check if sender is a contact
-        isStarred: false, // TODO: Check if sender is starred
+        isContact: isContact,
+        isStarred: isStarred,
         isReaction: isReaction,
         isMention: isMention,
       );
@@ -367,16 +372,22 @@ class FCMService {
   Future<void> _handleNewStoryNotification(RemoteMessage message) async {
     final storyId = message.data['storyId'] as String?;
     final userId = message.data['userId'] as String?;
-    final isContact = message.data['isContact'] == 'true';
+    // Use payload isContact as fallback, but verify from Firestore
+    final payloadIsContact = message.data['isContact'] == 'true';
 
     // Check notification settings before showing
     if (_notificationSettingsService != null && userId != null) {
+      // Verify contact status from Firestore (more reliable than payload)
+      final isContact = payloadIsContact || await _isUserContact(userId);
+      // Check if user is starred (in allowed contacts or favorited)
+      final isStarred = await _isUserStarred(userId, null);
+
       final decision = _notificationSettingsService!.shouldDeliverNotification(
         senderId: userId,
         chatId: 'story_$userId',
         category: NotificationCategory.status,
         isContact: isContact,
-        isStarred: false,
+        isStarred: isStarred,
         isReaction: false,
         isMention: false,
       );
@@ -600,6 +611,82 @@ class FCMService {
 
   /// Check if initialized
   bool get isInitialized => _isInitialized;
+
+  // ============================================================================
+  // CONTACT & STARRED STATUS HELPERS
+  // ============================================================================
+
+  /// Check if a user is in the current user's contacts
+  Future<bool> _isUserContact(String senderId) async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) return false;
+
+      final contactDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('contacts')
+          .doc(senderId)
+          .get();
+      return contactDoc.exists;
+    } catch (e) {
+      developer.log(
+        'Error checking contact status for $senderId',
+        name: 'FCMService',
+        error: e,
+      );
+      return false;
+    }
+  }
+
+  /// Check if a user is "starred" (has a favorited chat room with current user)
+  /// This includes:
+  /// 1. Chat room with isFavorite = true
+  /// 2. User in globalAllowedContacts list (for DND bypass)
+  Future<bool> _isUserStarred(String senderId, String? chatId) async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) return false;
+
+      // Check if user is in global allowed contacts (DND bypass list)
+      if (_notificationSettingsService != null) {
+        final globalAllowed = _notificationSettingsService!
+            .settings.value.dnd.globalAllowedContacts;
+        if (globalAllowed.contains(senderId)) {
+          return true;
+        }
+      }
+
+      // Check if the chat room is favorited
+      if (chatId != null) {
+        final chatDoc = await FirebaseFirestore.instance
+            .collection('chat_rooms')
+            .doc(chatId)
+            .get();
+
+        if (chatDoc.exists) {
+          final data = chatDoc.data();
+          // Check per-user favorites (stored as map) or global isFavorite
+          final favorites = data?['favorites'] as Map<String, dynamic>?;
+          if (favorites != null && favorites[currentUserId] == true) {
+            return true;
+          }
+          if (data?['isFavorite'] == true) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (e) {
+      developer.log(
+        'Error checking starred status for $senderId',
+        name: 'FCMService',
+        error: e,
+      );
+      return false;
+    }
+  }
 }
 
 /// Background message handler (must be top-level function)

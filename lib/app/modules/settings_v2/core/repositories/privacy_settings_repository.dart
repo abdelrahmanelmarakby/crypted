@@ -49,6 +49,15 @@ abstract class PrivacySettingsRepository {
 
   /// Delete all settings for a user (used for reset).
   Future<void> deleteAllSettings(String userId);
+
+  /// Save a PIN recovery token.
+  Future<void> savePinRecoveryToken(String userId, String token, DateTime expiresAt);
+
+  /// Verify a PIN recovery token.
+  Future<bool> verifyPinRecoveryToken(String userId, String token);
+
+  /// Invalidate a PIN recovery token after use.
+  Future<void> invalidatePinRecoveryToken(String userId);
 }
 
 /// Firestore implementation of [PrivacySettingsRepository].
@@ -305,6 +314,51 @@ class FirestorePrivacySettingsRepository implements PrivacySettingsRepository {
       retryIf: RetryHelper.isRetryableException,
     );
   }
+
+  @override
+  Future<void> savePinRecoveryToken(String userId, String token, DateTime expiresAt) async {
+    return RetryHelper.withRetry(
+      () => _settingsRef(userId).update({
+        'pinRecoveryToken': token,
+        'pinRecoveryTokenExpiresAt': Timestamp.fromDate(expiresAt),
+      }),
+      maxAttempts: 3,
+      retryIf: RetryHelper.isRetryableException,
+    );
+  }
+
+  @override
+  Future<bool> verifyPinRecoveryToken(String userId, String token) async {
+    return RetryHelper.withRetry(
+      () async {
+        final doc = await _settingsRef(userId).get();
+        if (!doc.exists) return false;
+
+        final data = doc.data();
+        final storedToken = data?['pinRecoveryToken'] as String?;
+        final expiresAt = (data?['pinRecoveryTokenExpiresAt'] as Timestamp?)?.toDate();
+
+        if (storedToken == null || expiresAt == null) return false;
+        if (DateTime.now().isAfter(expiresAt)) return false;
+
+        return storedToken == token;
+      },
+      maxAttempts: 3,
+      retryIf: RetryHelper.isRetryableException,
+    );
+  }
+
+  @override
+  Future<void> invalidatePinRecoveryToken(String userId) async {
+    return RetryHelper.withRetry(
+      () => _settingsRef(userId).update({
+        'pinRecoveryToken': FieldValue.delete(),
+        'pinRecoveryTokenExpiresAt': FieldValue.delete(),
+      }),
+      maxAttempts: 3,
+      retryIf: RetryHelper.isRetryableException,
+    );
+  }
 }
 
 /// In-memory implementation for testing.
@@ -412,6 +466,36 @@ class InMemoryPrivacySettingsRepository implements PrivacySettingsRepository {
     _sessions[userId] ??= [];
     _sessions[userId]!.add(session);
     _notifySessionsChange(userId);
+  }
+
+  // PIN recovery token storage
+  final Map<String, Map<String, dynamic>> _pinRecoveryTokens = {};
+
+  @override
+  Future<void> savePinRecoveryToken(String userId, String token, DateTime expiresAt) async {
+    _pinRecoveryTokens[userId] = {
+      'token': token,
+      'expiresAt': expiresAt,
+    };
+  }
+
+  @override
+  Future<bool> verifyPinRecoveryToken(String userId, String token) async {
+    final stored = _pinRecoveryTokens[userId];
+    if (stored == null) return false;
+
+    final storedToken = stored['token'] as String?;
+    final expiresAt = stored['expiresAt'] as DateTime?;
+
+    if (storedToken == null || expiresAt == null) return false;
+    if (DateTime.now().isAfter(expiresAt)) return false;
+
+    return storedToken == token;
+  }
+
+  @override
+  Future<void> invalidatePinRecoveryToken(String userId) async {
+    _pinRecoveryTokens.remove(userId);
   }
 
   /// Clean up resources

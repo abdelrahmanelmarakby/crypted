@@ -56,8 +56,7 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
                     const SizedBox(height: 16),
 
                     // Description Section (if exists)
-                    if (state.description != null &&
-                        state.description!.isNotEmpty)
+                    if (state.description.isNotEmpty)
                       _buildDescriptionSection(state),
 
                     // Media Section
@@ -199,10 +198,7 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
           _buildQuickActionButton(
             icon: Icons.search,
             label: 'Search',
-            onTap: () {
-              // Navigate to search in chat
-              Get.snackbar('Info', 'Search in chat coming soon');
-            },
+            onTap: () => _openSearchInChat(),
           ),
         ],
       ),
@@ -289,7 +285,7 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
           ),
           const SizedBox(height: 8),
           Text(
-            state.description!,
+            state.description,
             style: TextStyle(
               fontSize: 15,
               color: Colors.grey.shade800,
@@ -308,25 +304,25 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
         UserInfoActionTile(
           icon: Icons.photo_library,
           title: 'Photos',
-          subtitle: '${state.mediaCounts?.photos ?? 0} photos',
+          subtitle: '${state.mediaCounts.photos} photos',
           onTap: controller.viewMedia,
         ),
         UserInfoActionTile(
           icon: Icons.videocam,
           title: 'Videos',
-          subtitle: '${state.mediaCounts?.videos ?? 0} videos',
+          subtitle: '${state.mediaCounts.videos} videos',
           onTap: controller.viewMedia,
         ),
         UserInfoActionTile(
           icon: Icons.insert_drive_file,
           title: 'Files',
-          subtitle: '${state.mediaCounts?.files ?? 0} files',
+          subtitle: '${state.mediaCounts.files} files',
           onTap: controller.viewMedia,
         ),
         UserInfoActionTile(
           icon: Icons.link,
           title: 'Links',
-          subtitle: '${state.mediaCounts?.links ?? 0} links',
+          subtitle: '${state.mediaCounts.links} links',
           onTap: controller.viewMedia,
           showDivider: false,
         ),
@@ -441,7 +437,7 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
   void _handleMenuAction(String action, GroupInfoState state) {
     switch (action) {
       case 'search':
-        Get.snackbar('Info', 'Search in chat coming soon');
+        _openSearchInChat();
         break;
       case 'mute':
         controller.toggleMute();
@@ -450,5 +446,11 @@ class GroupInfoView extends GetView<EnhancedGroupInfoController> {
         controller.reportGroup();
         break;
     }
+  }
+
+  /// Navigate back to chat and open search mode
+  void _openSearchInChat() {
+    // Pop back to chat screen and trigger search mode
+    Get.back(result: {'openSearch': true});
   }
 }

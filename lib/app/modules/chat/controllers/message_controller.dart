@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:crypted_app/app/core/exceptions/app_exceptions.dart';
+import 'package:crypted_app/app/core/pagination/message_pagination_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
@@ -55,6 +57,12 @@ class MessageController extends GetxController {
   final RxList<Message> searchResults = <Message>[].obs;
   final RxBool isSearching = false.obs;
 
+  // Pagination state
+  final Rx<PaginationState> paginationState = PaginationState().obs;
+  final RxBool isLoadingMore = false.obs;
+  late final MessagePaginationService _paginationService;
+  StreamSubscription<PaginatedMessages>? _messagesSubscription;
+
   // Services
   final _logger = LoggerService.instance;
   final _errorHandler = ErrorHandlerService.instance;
@@ -63,14 +71,115 @@ class MessageController extends GetxController {
   SocialMediaUser? get currentUser => UserService.currentUser.value;
   bool get isReplying => replyToMessage.value != null;
   Message? get replyingTo => replyToMessage.value;
+  bool get hasMoreMessages => paginationState.value.hasMoreMessages;
+  bool get canLoadMore => hasMoreMessages && !isLoadingMore.value;
 
   @override
   void onInit() {
     super.onInit();
+    _paginationService = MessagePaginationService();
+    _initializePaginatedMessages();
     _logger.info('MessageController initialized', context: 'MessageController', data: {
       'roomId': roomId,
       'memberCount': members.length,
     });
+  }
+
+  /// Initialize paginated message stream
+  void _initializePaginatedMessages() {
+    isLoadingMessages.value = true;
+
+    _messagesSubscription = _paginationService
+        .getInitialMessages(roomId: roomId, pageSize: 30)
+        .listen(
+      (paginatedResult) {
+        messages.value = paginatedResult.messages;
+        paginationState.value = paginatedResult.state;
+        isLoadingMessages.value = false;
+        _logger.debug('Initial messages loaded', context: 'MessageController', data: {
+          'count': paginatedResult.messages.length,
+          'hasMore': paginatedResult.state.hasMoreMessages,
+        });
+      },
+      onError: (error) {
+        _logger.error('Failed to load messages', context: 'MessageController', data: {
+          'error': error.toString(),
+        });
+        isLoadingMessages.value = false;
+        _errorHandler.handleError(
+          error,
+          context: 'MessageController._initializePaginatedMessages',
+          showToUser: true,
+        );
+      },
+    );
+  }
+
+  /// Load more older messages (pagination)
+  Future<void> loadMoreMessages() async {
+    if (!canLoadMore) {
+      return;
+    }
+
+    isLoadingMore.value = true;
+    _logger.debug('Loading more messages', context: 'MessageController', data: {
+      'currentCount': messages.length,
+    });
+
+    try {
+      final result = await _paginationService.loadMoreMessages(
+        roomId: roomId,
+        currentState: paginationState.value,
+      );
+
+      if (result.messages.isNotEmpty) {
+        // Append older messages to the end
+        messages.addAll(result.messages);
+        paginationState.value = result.state;
+        _logger.debug('More messages loaded', context: 'MessageController', data: {
+          'loaded': result.messages.length,
+          'totalCount': messages.length,
+          'hasMore': result.state.hasMoreMessages,
+        });
+      }
+    } catch (e, stackTrace) {
+      _errorHandler.handleError(
+        e,
+        stackTrace: stackTrace,
+        context: 'MessageController.loadMoreMessages',
+        showToUser: false,
+      );
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  /// Jump to a specific message by loading messages around its timestamp
+  Future<void> jumpToMessage(Message targetMessage) async {
+    isLoadingMessages.value = true;
+    _logger.debug('Jumping to message', context: 'MessageController', data: {
+      'messageId': targetMessage.id,
+    });
+
+    try {
+      final result = await _paginationService.loadMessagesAround(
+        roomId: roomId,
+        timestamp: targetMessage.timestamp,
+        pageSize: 50,
+      );
+
+      messages.value = result.messages;
+      paginationState.value = result.state;
+    } catch (e, stackTrace) {
+      _errorHandler.handleError(
+        e,
+        stackTrace: stackTrace,
+        context: 'MessageController.jumpToMessage',
+        showToUser: true,
+      );
+    } finally {
+      isLoadingMessages.value = false;
+    }
   }
 
   // ========== MESSAGE SENDING ==========
@@ -110,7 +219,6 @@ class MessageController extends GetxController {
       await _sendMessage(textMessage);
 
       _logger.info('Text message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('رسالة مرسلة / Message sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -157,7 +265,6 @@ class MessageController extends GetxController {
       await _sendMessage(imageMessage);
 
       _logger.info('Image message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('صورة مرسلة / Image sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -205,7 +312,6 @@ class MessageController extends GetxController {
       await _sendMessage(videoMessage);
 
       _logger.info('Video message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('فيديو مرسل / Video sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -256,7 +362,6 @@ class MessageController extends GetxController {
       await _sendMessage(audioMessage);
 
       _logger.info('Audio message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('رسالة صوتية مرسلة / Voice message sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -301,7 +406,6 @@ class MessageController extends GetxController {
       await _sendMessage(fileMessage);
 
       _logger.info('File message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('ملف مرسل / File sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -342,7 +446,6 @@ class MessageController extends GetxController {
       await _sendMessage(locationMessage);
 
       _logger.info('Location message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('موقع مرسل / Location sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -387,7 +490,6 @@ class MessageController extends GetxController {
       await _sendMessage(contactMessage);
 
       _logger.info('Contact message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('جهة اتصال مرسلة / Contact sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -439,7 +541,6 @@ class MessageController extends GetxController {
       await _sendMessage(pollMessage);
 
       _logger.info('Poll message sent successfully', context: 'MessageController');
-      _errorHandler.showSuccess('استطلاع مرسل / Poll sent');
 
       return true;
     } catch (e, stackTrace) {
@@ -673,6 +774,7 @@ class MessageController extends GetxController {
 
   @override
   void onClose() {
+    _messagesSubscription?.cancel();
     _logger.info('MessageController disposed', context: 'MessageController');
     super.onClose();
   }

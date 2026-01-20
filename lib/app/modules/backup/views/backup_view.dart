@@ -526,34 +526,6 @@ class BackupView extends GetView<BackupController> {
   }
 
   void _showRestoreDialog(BuildContext context) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: ColorsManager.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.restore, color: ColorsManager.primary),
-            ),
-            const SizedBox(width: 12),
-            const Text('Restore Backup'),
-          ],
-        ),
-        content: const Text(
-          'Restore feature is coming soon. This will allow you to restore your contacts, images, and files from a previous backup.',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    controller.showRestoreDialog();
   }
 }

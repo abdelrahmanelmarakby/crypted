@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -47,6 +48,22 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
   Duration duration = Duration.zero;
   Duration position = Duration.zero;
   double playbackSpeed = 1.0;
+
+  /// Check if this is a local file (optimistic/uploading state)
+  bool get _isLocalFile {
+    final url = widget.message.audioUrl;
+    return url.startsWith('/') ||
+        url.startsWith('file://') ||
+        url.contains('/data/') ||
+        url.contains('/cache/');
+  }
+
+  /// Check if local file exists
+  bool get _localFileExists {
+    if (!_isLocalFile) return false;
+    final path = widget.message.audioUrl.replaceFirst('file://', '');
+    return File(path).existsSync();
+  }
 
   @override
   void initState() {
@@ -260,6 +277,11 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    // If uploading, show uploading state
+    if (_isLocalFile) {
+      return _buildUploadingState();
+    }
+
     final displayDuration = duration.inMilliseconds > 0
         ? duration
         : (widget.message.duration != null
@@ -407,6 +429,160 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
       ),
     );
   }
+
+  /// Build uploading state widget
+  Widget _buildUploadingState() {
+    return Container(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.7,
+        minWidth: 240,
+      ),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: ColorsManager.primary.withValues(alpha: 0.4),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: ColorsManager.primary.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Animated upload button
+          AnimatedBuilder(
+            animation: _waveController,
+            builder: (context, child) {
+              final scale = 1.0 + (_waveController.value * 0.1);
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ColorsManager.primary,
+                        ColorsManager.primary.withValues(alpha: 0.8),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: ColorsManager.primary.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+
+          // Uploading info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated waveform placeholder
+                SizedBox(
+                  height: 32,
+                  child: AnimatedBuilder(
+                    animation: _waveController,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        painter: WaveformPainter(
+                          progress: _waveController.value,
+                          isPlaying: true,
+                          animationValue: _waveController.value,
+                          isUploading: true,
+                        ),
+                        size: const Size(double.infinity, 32),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Status text
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              ColorsManager.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Uploading voice...',
+                          style: StylesManager.medium(
+                            fontSize: FontSize.xSmall,
+                            color: ColorsManager.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Duration if available
+                    if (widget.message.duration != null)
+                      Text(
+                        widget.message.duration!,
+                        style: StylesManager.medium(
+                          fontSize: FontSize.xSmall,
+                          color: ColorsManager.grey,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Mic icon
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: ColorsManager.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Iconsax.microphone_2_copy,
+              color: ColorsManager.primary,
+              size: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // Waveform Painter
@@ -414,11 +590,13 @@ class WaveformPainter extends CustomPainter {
   final double progress;
   final bool isPlaying;
   final double animationValue;
+  final bool isUploading;
 
   WaveformPainter({
     required this.progress,
     required this.isPlaying,
     required this.animationValue,
+    this.isUploading = false,
   });
 
   @override
@@ -444,9 +622,11 @@ class WaveformPainter extends CustomPainter {
       final isActive = barProgress <= progress;
 
       final paint = Paint()
-        ..color = isActive
-            ? ColorsManager.primary
-            : ColorsManager.grey.withValues(alpha: 0.3)
+        ..color = isUploading
+            ? ColorsManager.primary.withValues(alpha: 0.5 + (animationValue * 0.3))
+            : (isActive
+                ? ColorsManager.primary
+                : ColorsManager.grey.withValues(alpha: 0.3))
         ..strokeWidth = barWidth
         ..strokeCap = StrokeCap.round;
 
@@ -465,6 +645,7 @@ class WaveformPainter extends CustomPainter {
   bool shouldRepaint(WaveformPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.isPlaying != isPlaying ||
-        oldDelegate.animationValue != animationValue;
+        oldDelegate.animationValue != animationValue ||
+        oldDelegate.isUploading != isUploading;
   }
 }

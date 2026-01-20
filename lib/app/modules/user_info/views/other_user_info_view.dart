@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:crypted_app/app/modules/user_info/controllers/other_user_info_controller.dart';
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_header.dart';
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_section.dart';
@@ -17,7 +18,7 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: ColorsManager.surfaceVariant,
       body: Obx(() {
         final state = controller.state.value;
 
@@ -146,8 +147,11 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                           icon: Iconsax.sms,
                           title: 'Email',
                           subtitle: state.email,
-                          onTap: () {
-                            // TODO: Open email
+                          onTap: () async {
+                            final uri = Uri.parse('mailto:${state.email}');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            }
                           },
                         ),
                       if (state.phone.isNotEmpty)
@@ -155,8 +159,11 @@ class OtherUserInfoView extends GetView<OtherUserInfoController> {
                           icon: Iconsax.call,
                           title: 'Phone',
                           subtitle: state.phone,
-                          onTap: () {
-                            // TODO: Open phone
+                          onTap: () async {
+                            final uri = Uri.parse('tel:${state.phone}');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            }
                           },
                         ),
                     ],

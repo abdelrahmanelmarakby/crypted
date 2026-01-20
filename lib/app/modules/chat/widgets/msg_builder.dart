@@ -269,66 +269,86 @@ class MessageBuilder extends GetView<ChatController> {
     }
 
     // Handle non-deleted messages normally
-    switch (msg) {
-      case AudioMessage():
-        return AudioMessageWidget(
-          key: ValueKey(msg.id),
-          message: msg,
-        );
-      case CallMessage():
-        return CallMessageWidget(
-          message: msg,
-        );
+    // DEBUG: Log message type for troubleshooting
+    debugPrint("🔍 Building message widget: type=${msg.runtimeType}, id=${msg.id}");
 
-      case FileMessage():
-        return FileMessageWidget(
-          message: msg,
-        );
+    try {
+      switch (msg) {
+        case AudioMessage():
+          return AudioMessageWidget(
+            key: ValueKey(msg.id),
+            message: msg,
+          );
+        case CallMessage():
+          return CallMessageWidget(
+            message: msg,
+          );
 
-      case LocationMessage():
-        return LocationMessageWidget(
-          message: msg,
-        );
+        case FileMessage():
+          return FileMessageWidget(
+            message: msg,
+          );
 
-      case TextMessage():
-        return TextMessageWidget(
-          message: msg,
-        );
+        case LocationMessage():
+          return LocationMessageWidget(
+            message: msg,
+          );
 
-      case image.PhotoMessage():
-        return ImageMessageWidget(
-          message: msg,
-        );
+        case TextMessage():
+          return TextMessageWidget(
+            message: msg,
+          );
 
-      case VideoMessage():
-        return VideoMessageWidget(
-          message: msg,
-        );
+        case image.PhotoMessage():
+          return ImageMessageWidget(
+            message: msg,
+          );
 
-      case ContactMessage():
-        return ContactMessageWidget(
-          message: msg,
-        );
+        case VideoMessage():
+          return VideoMessageWidget(
+            message: msg,
+          );
 
-      case PollMessage():
-        return PollMessageWidget(
-          message: msg,
-        );
+        case ContactMessage():
+          return ContactMessageWidget(
+            message: msg,
+          );
 
-      case EventMessage():
-        return EventMessageWidget(
-          eventMessage: msg,
-          isMe: msg.senderId == UserService.currentUser.value?.uid,
-        );
+        case PollMessage():
+          return PollMessageWidget(
+            message: msg,
+          );
 
-      case UploadingMessage():
-        return UploadingMessageWidget(
-          message: msg,
-          onCancel: () => controller.cancelUpload(msg.id),
-        );
+        case EventMessage():
+          return EventMessageWidget(
+            eventMessage: msg,
+            isMe: msg.senderId == UserService.currentUser.value?.uid,
+          );
 
-      default:
-        return const SizedBox();
+        case UploadingMessage():
+          return UploadingMessageWidget(
+            message: msg,
+            onCancel: () => controller.cancelUpload(msg.id),
+          );
+
+        default:
+          debugPrint("⚠️ Unknown message type: ${msg.runtimeType}");
+          return const SizedBox();
+      }
+    } catch (e, stack) {
+      debugPrint("❌ Error building message widget: $e");
+      debugPrint("❌ Stack trace: $stack");
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Error loading message: ${msg.runtimeType}',
+          style: const TextStyle(color: Colors.red),
+        ),
+      );
     }
   }
 }

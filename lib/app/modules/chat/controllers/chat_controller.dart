@@ -78,6 +78,7 @@ class ChatController extends GetxController
   final RxString chatDescription = ''.obs;
   final RxInt memberCount = 0.obs;
   final RxString groupImageUrl = ''.obs;
+  final RxList<String> adminIds = <String>[].obs;
 
   String? blockingUserId;
 
@@ -315,7 +316,7 @@ class ChatController extends GetxController
       description: chatDescription.value,
       imageUrl: groupImageUrl.value,
       membersList: members,
-      admins: [], // TODO: Load actual admins from Firestore
+      admins: adminIds.toList(),
     );
 
     // ARCH-008: Initialize call handler
@@ -453,6 +454,9 @@ class ChatController extends GetxController
       roomId: roomId,
       members: members,
     );
+    // BUGFIX: Manually call onInit() since MessageController is not registered via Get.put()
+    // GetxController lifecycle methods are only auto-called when registered with GetX
+    messageControllerService.onInit();
 
     // Mark chatDataSource as ready
     isChatDataSourceReady.value = true;
@@ -491,13 +495,32 @@ class ChatController extends GetxController
 
       if (chatRoomDoc.exists) {
         final data = chatRoomDoc.data();
-        if (data != null && data['groupImageUrl'] != null) {
-          groupImageUrl.value = data['groupImageUrl'] as String;
-          print('✅ Loaded group image URL: ${groupImageUrl.value}');
+        if (data != null) {
+          // Load group image URL
+          if (data['groupImageUrl'] != null) {
+            groupImageUrl.value = data['groupImageUrl'] as String;
+            print('✅ Loaded group image URL: ${groupImageUrl.value}');
+          }
+
+          // Load admin IDs
+          if (data['adminIds'] != null) {
+            adminIds.value = (data['adminIds'] as List<dynamic>)
+                .map((e) => e.toString())
+                .toList();
+            print('✅ Loaded ${adminIds.length} admin(s)');
+          } else if (data['createdBy'] != null) {
+            // Fallback: use creator as admin
+            adminIds.value = [data['createdBy'] as String];
+            print('✅ Using creator as admin: ${adminIds.first}');
+          } else if (data['membersIds'] != null && (data['membersIds'] as List).isNotEmpty) {
+            // Fallback: first member is admin
+            adminIds.value = [(data['membersIds'] as List).first.toString()];
+            print('✅ Using first member as admin: ${adminIds.first}');
+          }
         }
       }
     } catch (e) {
-      print('❌ Error loading group image URL: $e');
+      print('❌ Error loading group data: $e');
     }
   }
 

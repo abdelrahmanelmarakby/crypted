@@ -230,27 +230,33 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   Future<void> toggleFavorite(String roomId) async {
     final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
     final currentValue = doc.data()?['isFavorite'] ?? false;
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
       'isFavorite': !currentValue,
-    });
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
   Future<void> toggleArchive(String roomId) async {
     final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
     final currentValue = doc.data()?['isArchived'] ?? false;
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
       'isArchived': !currentValue,
-    });
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
   Future<void> toggleMute(String roomId) async {
     final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
     final currentValue = doc.data()?['isMuted'] ?? false;
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
       'isMuted': !currentValue,
-    });
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -315,10 +321,11 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
     String roomId,
     DisappearingDuration duration,
   ) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
       'disappearingDuration': duration.name,
       'disappearingDurationUpdatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -345,9 +352,10 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
 
   @override
   Future<void> updateChatWallpaper(String roomId, ChatWallpaper wallpaper) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
       'wallpaper': wallpaper.toMap(),
       'wallpaperUpdatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 }

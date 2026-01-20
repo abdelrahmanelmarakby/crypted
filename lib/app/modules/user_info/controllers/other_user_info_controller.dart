@@ -508,18 +508,25 @@ class OtherUserInfoController extends GetxController {
       return;
     }
 
-    // Get current notification override if exists
-    ChatNotificationOverride? currentOverride;
+    // Ensure NotificationSettingsController is registered
+    NotificationSettingsController notificationController;
     try {
-      final notificationController = Get.find<NotificationSettingsController>();
-      currentOverride = notificationController.getChatOverride(roomId);
+      if (!Get.isRegistered<NotificationSettingsController>()) {
+        Get.put<NotificationSettingsController>(NotificationSettingsController());
+      }
+      notificationController = Get.find<NotificationSettingsController>();
     } catch (e) {
-      // Controller not registered, proceed without override
       developer.log(
-        'NotificationSettingsController not found',
+        'Failed to initialize NotificationSettingsController',
         name: 'OtherUserInfoController',
+        error: e,
       );
+      _showError('Failed to load notification settings');
+      return;
     }
+
+    // Get current notification override if exists
+    final currentOverride = notificationController.getChatOverride(roomId);
 
     // Show contact notification override sheet
     await ContactNotificationOverride.show(
@@ -530,7 +537,6 @@ class OtherUserInfoController extends GetxController {
       currentOverride: currentOverride,
       onSave: (newOverride) async {
         try {
-          final notificationController = Get.find<NotificationSettingsController>();
           if (newOverride != null) {
             await notificationController.setChatOverride(newOverride);
             state.value = state.value.copyWith(hasCustomNotifications: true);

@@ -222,16 +222,6 @@ class AttachmentWidget extends GetView<ChatController> {
                                 print("✅ Audio message created, sending to chat...");
                                 await controller.sendMessage(audioMessage);
                                 print("✅ Audio message sent successfully");
-
-                                Get.snackbar(
-                                  "Success",
-                                  "Audio message sent",
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: ColorsManager.success.withValues(alpha: 0.9),
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 2),
-                                  margin: const EdgeInsets.all(16),
-                                );
                               } else {
                                 print("❌ Failed to upload audio to Firebase Storage");
                                 throw Exception("Failed to upload audio to Firebase Storage");
@@ -331,44 +321,64 @@ class AttachmentWidget extends GetView<ChatController> {
                         Constants.kPhotos.tr,
                         () async {
                           Get.back();
-                          final result = await FilePicker.platform
-                              .pickFiles(type: FileType.image);
-                          if (result == null || result.files.isEmpty) return;
-                          final path = result.files.single.path;
-                          if (path == null) return;
+                          debugPrint("📷 Photos picker starting...");
+                          try {
+                            final result = await FilePicker.platform
+                                .pickFiles(type: FileType.image);
+                            if (result == null || result.files.isEmpty) {
+                              debugPrint("📷 No file selected");
+                              return;
+                            }
+                            final path = result.files.single.path;
+                            if (path == null) {
+                              debugPrint("📷 File path is null");
+                              return;
+                            }
 
-                          // Get file info
-                          final file = File(path);
-                          final fileName = path.split(Platform.pathSeparator).last;
-                          final fileSize = await file.length();
-                          final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
+                            debugPrint("📷 File selected: $path");
 
-                          // Start upload tracking
-                          controller.startUpload(
-                            uploadId: uploadId,
-                            filePath: path,
-                            fileName: fileName,
-                            fileSize: fileSize,
-                            uploadType: 'image',
-                            thumbnailPath: path, // Use original image as thumbnail
-                          );
+                            // Get file info
+                            final file = File(path);
+                            final fileName = path.split(Platform.pathSeparator).last;
+                            final fileSize = await file.length();
+                            final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
 
-                          // Upload with progress tracking
-                          final photoMessage = await FirebaseUtils.uploadImage(
-                            path,
-                            controller.roomId,
-                            onProgress: (progress) {
-                              controller.updateUploadProgress(uploadId, progress);
-                            },
-                          );
+                            debugPrint("📷 Starting upload: $fileName (${fileSize} bytes)");
 
-                          if (photoMessage != null) {
-                            // Complete upload (replace uploading message with actual message)
-                            await controller.sendMessage(photoMessage);
-                            controller.completeUpload(uploadId, photoMessage);
-                          } else {
-                            // Upload failed, remove uploading message
-                            controller.cancelUpload(uploadId);
+                            // Start upload tracking
+                            controller.startUpload(
+                              uploadId: uploadId,
+                              filePath: path,
+                              fileName: fileName,
+                              fileSize: fileSize,
+                              uploadType: 'image',
+                              thumbnailPath: path, // Use original image as thumbnail
+                            );
+
+                            // Upload with progress tracking
+                            final photoMessage = await FirebaseUtils.uploadImage(
+                              path,
+                              controller.roomId,
+                              onProgress: (progress) {
+                                debugPrint("📷 Upload progress: ${(progress * 100).toStringAsFixed(0)}%");
+                                controller.updateUploadProgress(uploadId, progress);
+                              },
+                            );
+
+                            if (photoMessage != null) {
+                              debugPrint("📷 Upload complete, sending message...");
+                              // Complete upload (replace uploading message with actual message)
+                              await controller.sendMessage(photoMessage);
+                              controller.completeUpload(uploadId, photoMessage);
+                              debugPrint("📷 Photo message sent successfully!");
+                            } else {
+                              debugPrint("❌ Upload failed - photoMessage is null");
+                              // Upload failed, remove uploading message
+                              controller.cancelUpload(uploadId);
+                            }
+                          } catch (e, stackTrace) {
+                            debugPrint("❌ Error in photo upload: $e");
+                            debugPrint("❌ Stack trace: $stackTrace");
                           }
                         },
                       ),
@@ -379,41 +389,57 @@ class AttachmentWidget extends GetView<ChatController> {
                         Constants.kCamera.tr,
                         () async {
                           Get.back();
-                          final ImagePicker picker = ImagePicker();
-                          final XFile? photo = await picker.pickImage(
-                              source: ImageSource.camera);
-                          if (photo != null) {
-                            // Get file info
-                            final file = File(photo.path);
-                            final fileName = photo.path.split(Platform.pathSeparator).last;
-                            final fileSize = await file.length();
-                            final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
+                          debugPrint("📸 Camera picker starting...");
+                          try {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? photo = await picker.pickImage(
+                                source: ImageSource.camera);
+                            if (photo != null) {
+                              debugPrint("📸 Photo captured: ${photo.path}");
 
-                            // Start upload tracking
-                            controller.startUpload(
-                              uploadId: uploadId,
-                              filePath: photo.path,
-                              fileName: fileName,
-                              fileSize: fileSize,
-                              uploadType: 'image',
-                              thumbnailPath: photo.path,
-                            );
+                              // Get file info
+                              final file = File(photo.path);
+                              final fileName = photo.path.split(Platform.pathSeparator).last;
+                              final fileSize = await file.length();
+                              final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
 
-                            // Upload with progress tracking
-                            final photoMessage = await FirebaseUtils.uploadImage(
-                              photo.path,
-                              controller.roomId,
-                              onProgress: (progress) {
-                                controller.updateUploadProgress(uploadId, progress);
-                              },
-                            );
+                              debugPrint("📸 Starting upload: $fileName (${fileSize} bytes)");
 
-                            if (photoMessage != null) {
-                              await controller.sendMessage(photoMessage);
-                              controller.completeUpload(uploadId, photoMessage);
+                              // Start upload tracking
+                              controller.startUpload(
+                                uploadId: uploadId,
+                                filePath: photo.path,
+                                fileName: fileName,
+                                fileSize: fileSize,
+                                uploadType: 'image',
+                                thumbnailPath: photo.path,
+                              );
+
+                              // Upload with progress tracking
+                              final photoMessage = await FirebaseUtils.uploadImage(
+                                photo.path,
+                                controller.roomId,
+                                onProgress: (progress) {
+                                  debugPrint("📸 Upload progress: ${(progress * 100).toStringAsFixed(0)}%");
+                                  controller.updateUploadProgress(uploadId, progress);
+                                },
+                              );
+
+                              if (photoMessage != null) {
+                                debugPrint("📸 Upload complete, sending message...");
+                                await controller.sendMessage(photoMessage);
+                                controller.completeUpload(uploadId, photoMessage);
+                                debugPrint("📸 Camera photo sent successfully!");
+                              } else {
+                                debugPrint("❌ Camera upload failed - photoMessage is null");
+                                controller.cancelUpload(uploadId);
+                              }
                             } else {
-                              controller.cancelUpload(uploadId);
+                              debugPrint("📸 No photo captured");
                             }
+                          } catch (e, stackTrace) {
+                            debugPrint("❌ Error in camera upload: $e");
+                            debugPrint("❌ Stack trace: $stackTrace");
                           }
                         },
                       ),

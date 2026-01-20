@@ -17,6 +17,7 @@ import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:crypted_app/app/modules/media_gallery/views/video_player_view.dart';
 
 class ContactInfoController extends GetxController {
   // Contact data - can be either user or group
@@ -1094,23 +1095,55 @@ class ContactInfoController extends GetxController {
                     heroAttributes: PhotoViewHeroAttributes(tag: mediaUrl),
                   );
                 } else {
-                  // For videos, show a thumbnail with play button
+                  // For videos, show play button that opens video player
                   return PhotoViewGalleryPageOptions.customChild(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.play_circle_outline,
-                            size: 80,
-                            color: Colors.white,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Close the gallery and open video player
+                        Get.back();
+                        Get.to(
+                          () => VideoPlayerView(
+                            videoUrl: mediaUrl,
+                            title: 'Video',
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Video playback coming soon',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
+                          transition: Transition.fadeIn,
+                        );
+                      },
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.play_arrow_rounded,
+                                size: 50,
+                                color: ColorsManager.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Tap to play video',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     initialScale: PhotoViewComputedScale.contained,

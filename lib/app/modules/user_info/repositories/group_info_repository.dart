@@ -34,11 +34,11 @@ abstract class GroupInfoRepository {
   /// Leave group
   Future<void> leaveGroup(String roomId, String userId);
 
-  /// Toggle favorite status
-  Future<void> toggleFavorite(String roomId);
+  /// Set favorite status
+  Future<void> setFavorite(String roomId, bool isFavorite);
 
-  /// Toggle mute status
-  Future<void> toggleMute(String roomId);
+  /// Set mute status
+  Future<void> setMuted(String roomId, bool isMuted);
 
   /// Report group
   Future<void> reportGroup({
@@ -72,8 +72,10 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   Future<ChatRoom?> getGroupById(String roomId) async {
     try {
       final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
-      if (doc.exists) {
-        return ChatRoom.fromJson(doc.data()!);
+      if (doc.exists && doc.data() != null) {
+        // Include document ID in the data
+        final data = {...doc.data()!, 'id': doc.id};
+        return ChatRoom.fromJson(data);
       }
       return null;
     } catch (e) {
@@ -88,7 +90,14 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
         .collection('chat_rooms')
         .doc(roomId)
         .snapshots()
-        .map((doc) => doc.exists ? ChatRoom.fromJson(doc.data()!) : null);
+        .map((doc) {
+          if (doc.exists && doc.data() != null) {
+            // Include document ID in the data
+            final data = {...doc.data()!, 'id': doc.id};
+            return ChatRoom.fromJson(data);
+          }
+          return null;
+        });
   }
 
   @override
@@ -202,21 +211,21 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   }
 
   @override
-  Future<void> toggleFavorite(String roomId) async {
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
-    final currentValue = doc.data()?['isFavorite'] ?? false;
-    await _firestore.collection('chat_rooms').doc(roomId).update({
-      'isFavorite': !currentValue,
-    });
+  Future<void> setFavorite(String roomId, bool isFavorite) async {
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
+      'isFavorite': isFavorite,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
-  Future<void> toggleMute(String roomId) async {
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
-    final currentValue = doc.data()?['isMuted'] ?? false;
-    await _firestore.collection('chat_rooms').doc(roomId).update({
-      'isMuted': !currentValue,
-    });
+  Future<void> setMuted(String roomId, bool isMuted) async {
+    // Use set with merge to handle cases where the document may not exist
+    await _firestore.collection('chat_rooms').doc(roomId).set({
+      'isMuted': isMuted,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override

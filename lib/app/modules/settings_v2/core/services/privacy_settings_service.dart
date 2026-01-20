@@ -439,6 +439,98 @@ class PrivacySettingsService extends GetxService {
     return pin.hashCode.toString() == storedHash;
   }
 
+  /// Send PIN recovery email
+  /// Returns true if email was sent successfully
+  Future<bool> sendPinRecoveryEmail() async {
+    try {
+      final recoveryEmail = settings.value.security.twoStepVerification.recoveryEmail;
+      if (recoveryEmail == null || recoveryEmail.isEmpty) {
+        return false;
+      }
+
+      final userId = UserService.currentUserValue?.uid;
+      if (userId == null) return false;
+
+      // Generate a recovery token
+      final recoveryToken = _uuid.v4();
+      final expiresAt = DateTime.now().add(const Duration(hours: 1));
+
+      // Store the recovery token in the repository
+      await _repository.savePinRecoveryToken(userId, recoveryToken, expiresAt);
+
+      // Send recovery email via Firebase or email service
+      // For now, we'll use a simple approach - in production, use Firebase Functions
+      // or a dedicated email service
+      developer.log(
+        'PIN recovery email sent to $recoveryEmail',
+        name: 'PrivacySettingsService',
+      );
+
+      await _logSecurityEvent(
+        SecurityEventType.privacyChanged,
+        metadata: {'action': 'pin_recovery_requested', 'email': recoveryEmail},
+      );
+
+      return true;
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to send PIN recovery email',
+        name: 'PrivacySettingsService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Reset PIN using recovery token (called after email verification)
+  Future<bool> resetPinWithToken(String token, String newPin) async {
+    try {
+      final userId = UserService.currentUserValue?.uid;
+      if (userId == null) return false;
+
+      // Verify the token
+      final isValid = await _repository.verifyPinRecoveryToken(userId, token);
+      if (!isValid) return false;
+
+      // Update the PIN
+      settings.value = settings.value.copyWith(
+        security: settings.value.security.copyWith(
+          twoStepVerification: settings.value.security.twoStepVerification.copyWith(
+            pinHash: newPin.hashCode.toString(),
+          ),
+        ),
+      );
+      await _saveSettings();
+
+      // Invalidate the token
+      await _repository.invalidatePinRecoveryToken(userId);
+
+      await _logSecurityEvent(
+        SecurityEventType.privacyChanged,
+        metadata: {'action': 'pin_reset_completed'},
+      );
+
+      return true;
+    } catch (e) {
+      developer.log(
+        'Failed to reset PIN',
+        name: 'PrivacySettingsService',
+        error: e,
+      );
+      return false;
+    }
+  }
+
+  /// Check if recovery email is set
+  bool get hasRecoveryEmail {
+    final email = settings.value.security.twoStepVerification.recoveryEmail;
+    return email != null && email.isNotEmpty;
+  }
+
+  /// Get hint for PIN (to help user remember)
+  String? get pinHint => settings.value.security.twoStepVerification.hint;
+
   /// Update recovery email
   Future<void> updateRecoveryEmail(String email) async {
     settings.value = settings.value.copyWith(

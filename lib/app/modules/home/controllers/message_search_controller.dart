@@ -341,6 +341,86 @@ class MessageSearchController extends GetxController {
     _clearResults();
   }
 
+  /// Browse all messages of a specific type without requiring a search query.
+  /// Used for quick access from search suggestions.
+  void browseByType(MessageTypeFilter filter) {
+    _selectedFilter.value = filter;
+    _searchQuery.value = '*'; // Indicate we're browsing, not searching
+    _isSearching.value = true;
+
+    _chatDataSources.getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
+        .first.then((chatRooms) async {
+      List<Message> results = [];
+
+      // For each chat room, get messages of the selected type
+      for (var chatRoom in chatRooms) {
+        try {
+          // Get chat name for display
+          String chatName = await _getChatNameForSearch(chatRoom);
+
+          // Get recent messages from this chat room
+          final messages = await _chatDataSources.getLivePrivateMessage(chatRoom.id ?? "").first;
+
+          // Filter messages by type (no query match needed)
+          for (var message in messages) {
+            if (_messageMatchesType(message, filter)) {
+              final messageWithChatName = await _enhanceMessageWithChatInfo(message, chatName);
+              results.add(messageWithChatName);
+            }
+          }
+        } catch (e) {
+          print('Error browsing chat ${chatRoom.id}: $e');
+        }
+      }
+
+      // Sort by most recent first
+      results.sort((a, b) {
+        final aTime = a.timestamp ?? DateTime.now();
+        final bTime = b.timestamp ?? DateTime.now();
+        return bTime.compareTo(aTime);
+      });
+
+      // Limit results
+      if (results.length > 100) {
+        results = results.sublist(0, 100);
+      }
+
+      _allSearchResults.assignAll(results);
+      _searchResults.assignAll(results); // No additional filtering needed
+      _isSearching.value = false;
+      update();
+    }).catchError((e) {
+      print('Error browsing by type: $e');
+      _isSearching.value = false;
+    });
+  }
+
+  /// Check if a message matches the specified type filter
+  bool _messageMatchesType(Message message, MessageTypeFilter filter) {
+    switch (filter) {
+      case MessageTypeFilter.all:
+        return true;
+      case MessageTypeFilter.text:
+        return message is TextMessage;
+      case MessageTypeFilter.photo:
+        return message is PhotoMessage;
+      case MessageTypeFilter.video:
+        return message is VideoMessage;
+      case MessageTypeFilter.audio:
+        return message is AudioMessage;
+      case MessageTypeFilter.file:
+        return message is FileMessage;
+      case MessageTypeFilter.poll:
+        return message is PollMessage;
+      case MessageTypeFilter.call:
+        return message is CallMessage;
+      case MessageTypeFilter.contact:
+        return message is ContactMessage;
+      case MessageTypeFilter.location:
+        return message is LocationMessage;
+    }
+  }
+
   @override
   void onClose() {
     _searchResults.close();

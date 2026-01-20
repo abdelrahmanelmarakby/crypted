@@ -1,8 +1,39 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/app/modules/stories/widgets/google_places_location_picker.dart';
+
+/// Model for stored location
+class StoredLocation {
+  final double latitude;
+  final double longitude;
+  final String name;
+  final DateTime usedAt;
+
+  StoredLocation({
+    required this.latitude,
+    required this.longitude,
+    required this.name,
+    required this.usedAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'latitude': latitude,
+        'longitude': longitude,
+        'name': name,
+        'usedAt': usedAt.toIso8601String(),
+      };
+
+  factory StoredLocation.fromJson(Map<String, dynamic> json) => StoredLocation(
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+        name: json['name'] as String,
+        usedAt: DateTime.parse(json['usedAt'] as String),
+      );
+}
 
 /// Beautiful Location Picker for Stories
 class StoryLocationPicker extends StatefulWidget {
@@ -12,6 +43,45 @@ class StoryLocationPicker extends StatefulWidget {
     super.key,
     required this.onLocationSelected,
   });
+
+  /// Save a location to recent locations
+  static Future<void> saveRecentLocation(double lat, double lon, String name) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getStringList('recent_story_locations') ?? [];
+
+      // Create new location
+      final newLocation = StoredLocation(
+        latitude: lat,
+        longitude: lon,
+        name: name,
+        usedAt: DateTime.now(),
+      );
+
+      // Remove if same location exists (by name or coordinates)
+      stored.removeWhere((jsonStr) {
+        try {
+          final loc = StoredLocation.fromJson(jsonDecode(jsonStr));
+          return loc.name == name ||
+              (loc.latitude == lat && loc.longitude == lon);
+        } catch (_) {
+          return false;
+        }
+      });
+
+      // Add to beginning
+      stored.insert(0, jsonEncode(newLocation.toJson()));
+
+      // Keep only last 10 locations
+      if (stored.length > 10) {
+        stored.removeRange(10, stored.length);
+      }
+
+      await prefs.setStringList('recent_story_locations', stored);
+    } catch (e) {
+      debugPrint('Error saving recent location: $e');
+    }
+  }
 
   @override
   State<StoryLocationPicker> createState() => _StoryLocationPickerState();
@@ -23,13 +93,7 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
   Position? _currentPosition;
   bool _isLoading = true;
   bool _locationEnabled = true;
-
-  final List<Map<String, dynamic>> _recentLocations = [
-    {'name': 'Current Location', 'icon': Icons.my_location},
-    {'name': 'Home', 'icon': Icons.home},
-    {'name': 'Work', 'icon': Icons.work},
-    {'name': 'Custom Location', 'icon': Icons.edit_location},
-  ];
+  List<StoredLocation> _recentLocations = [];
 
   @override
   void initState() {
@@ -40,6 +104,31 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
     )..forward();
 
     _getCurrentLocation();
+    _loadRecentLocations();
+  }
+
+  Future<void> _loadRecentLocations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getStringList('recent_story_locations') ?? [];
+
+      final locations = stored.map((jsonStr) {
+        try {
+          return StoredLocation.fromJson(jsonDecode(jsonStr));
+        } catch (_) {
+          return null;
+        }
+      }).whereType<StoredLocation>().toList();
+
+      // Sort by most recently used
+      locations.sort((a, b) => b.usedAt.compareTo(a.usedAt));
+
+      setState(() {
+        _recentLocations = locations;
+      });
+    } catch (e) {
+      debugPrint('Error loading recent locations: $e');
+    }
   }
 
   @override
@@ -287,6 +376,13 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
             subtitle:
                 '${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}',
             onTap: () {
+              // Save to recent locations
+              StoryLocationPicker.saveRecentLocation(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+                'Current Location',
+              );
+
               widget.onLocationSelected(
                 _currentPosition!.latitude,
                 _currentPosition!.longitude,
@@ -299,36 +395,70 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
 
         const SizedBox(height: 24),
 
-        // Section title
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Text(
-            'Recent Locations',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+        // Recent locations section (only show if we have any)
+        if (_recentLocations.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recent Locations',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                if (_recentLocations.length > 3)
+                  TextButton(
+                    onPressed: () => _showAllRecentLocations(),
+                    child: Text(
+                      'See All (${_recentLocations.length})',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ColorsManager.primary,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
 
-        // Recent locations
-        ...List.generate(
-          3,
-          (index) => _buildLocationTile(
-            icon: Icons.location_on,
-            title: 'Recent Location ${index + 1}',
-            subtitle: 'Tap to select',
-            onTap: () {
-              // Implement recent location logic
-              Get.snackbar(
-                'Coming Soon',
-                'Recent locations feature will be available soon',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
+          // Show up to 3 recent locations
+          ...(_recentLocations.take(3).map(
+                (location) => _buildLocationTile(
+                  icon: Icons.history_rounded,
+                  title: location.name,
+                  subtitle: '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}',
+                  onTap: () => _selectRecentLocation(location),
+                ),
+              )),
+        ] else ...[
+          // No recent locations message
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Text(
+              'Recent Locations',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            child: Text(
+              'No recent locations yet. Your selected locations will appear here.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[500],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
 
         const SizedBox(height: 24),
 
@@ -463,6 +593,112 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
           ),
         ),
       ),
+    );
+  }
+
+  void _selectRecentLocation(StoredLocation location) {
+    // Update usage time by saving again
+    StoryLocationPicker.saveRecentLocation(
+      location.latitude,
+      location.longitude,
+      location.name,
+    );
+
+    widget.onLocationSelected(
+      location.latitude,
+      location.longitude,
+      location.name,
+    );
+    Get.back();
+  }
+
+  void _showAllRecentLocations() {
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.history_rounded, color: ColorsManager.primary),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'All Recent Locations',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // List
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _recentLocations.length,
+                itemBuilder: (context, index) {
+                  final location = _recentLocations[index];
+                  return ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.location_on,
+                        color: ColorsManager.primary,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      location.name,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    onTap: () {
+                      Get.back(); // Close "all locations" sheet
+                      _selectRecentLocation(location);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 }

@@ -62,6 +62,9 @@ mixin OfflineSupportMixin on GetxController {
       editMessage: _handleEditMessage,
       markAsRead: _handleMarkAsRead,
       toggleReaction: _handleToggleReaction,
+      updateChatRoom: _handleUpdateChatRoom,
+      addMember: _handleAddMember,
+      removeMember: _handleRemoveMember,
     );
   }
 
@@ -138,6 +141,52 @@ mixin OfflineSupportMixin on GetxController {
     );
   }
 
+  /// Queue a chat room update
+  Future<String> queueUpdateChatRoom(
+    String roomId, {
+    String? name,
+    String? description,
+    String? imageUrl,
+  }) async {
+    return await _offlineQueue.enqueue(
+      OperationType.updateChatRoom,
+      {
+        'roomId': roomId,
+        'name': name,
+        'description': description,
+        'imageUrl': imageUrl,
+      },
+    );
+  }
+
+  /// Queue adding a member to chat room
+  Future<String> queueAddMember(
+    String roomId,
+    Map<String, dynamic> memberData,
+  ) async {
+    return await _offlineQueue.enqueue(
+      OperationType.addMember,
+      {
+        'roomId': roomId,
+        'memberData': memberData,
+      },
+    );
+  }
+
+  /// Queue removing a member from chat room
+  Future<String> queueRemoveMember(
+    String roomId,
+    String memberId,
+  ) async {
+    return await _offlineQueue.enqueue(
+      OperationType.removeMember,
+      {
+        'roomId': roomId,
+        'memberId': memberId,
+      },
+    );
+  }
+
   /// Get pending operations for current room
   List<PendingOperation> getPendingOperations(String roomId) {
     return _offlineQueue.getOperationsForRoom(roomId);
@@ -172,6 +221,18 @@ mixin OfflineSupportMixin on GetxController {
 
   Future<void> _handleToggleReaction(Map<String, dynamic> data) async {
     throw UnimplementedError('Override _handleToggleReaction in your controller');
+  }
+
+  Future<void> _handleUpdateChatRoom(Map<String, dynamic> data) async {
+    throw UnimplementedError('Override _handleUpdateChatRoom in your controller');
+  }
+
+  Future<void> _handleAddMember(Map<String, dynamic> data) async {
+    throw UnimplementedError('Override _handleAddMember in your controller');
+  }
+
+  Future<void> _handleRemoveMember(Map<String, dynamic> data) async {
+    throw UnimplementedError('Override _handleRemoveMember in your controller');
   }
 
   /// Dispose offline support resources

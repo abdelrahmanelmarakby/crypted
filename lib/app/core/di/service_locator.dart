@@ -4,12 +4,14 @@
 
 import 'package:get/get.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
-import 'package:crypted_app/app/core/repositories/firebase_chat_repository.dart';
+import 'package:crypted_app/app/core/repositories/offline_chat_repository.dart';
 import 'package:crypted_app/app/core/repositories/message_repository.dart';
 import 'package:crypted_app/app/core/repositories/chat_room_repository.dart';
 import 'package:crypted_app/app/core/error_handling/error_handler.dart';
 import 'package:crypted_app/app/core/factories/message_factory.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
+import 'package:crypted_app/app/core/services/local_database_service.dart';
+import 'package:crypted_app/app/core/sync/sync_service.dart';
 import 'package:crypted_app/app/core/offline/offline_queue.dart';
 import 'package:crypted_app/app/core/security/input_sanitizer.dart';
 import 'package:crypted_app/app/core/services/typing_service.dart';
@@ -68,8 +70,21 @@ class ServiceLocator {
   /// Register lazy singletons (created when first accessed)
   void _registerLazySingletons() {
     // Chat Repository - lazy singleton (ARCH-003)
+    // Using OfflineChatRepository for offline-first architecture
     Get.lazyPut<IChatRepository>(
-      () => FirebaseChatRepository(),
+      () => OfflineChatRepository(),
+      fenix: true,
+    );
+
+    // Local Database Service - lazy singleton
+    Get.lazyPut<LocalDatabaseService>(
+      () => LocalDatabaseService(),
+      fenix: true,
+    );
+
+    // Sync Service - lazy singleton
+    Get.lazyPut<SyncService>(
+      () => SyncService(),
       fenix: true,
     );
 
@@ -142,6 +157,8 @@ class Services {
   static IChatRoomRepository get chatRoomRepository => ServiceLocator.get<IChatRoomRepository>();
   static InputSanitizer get inputSanitizer => ServiceLocator.get<InputSanitizer>();
   static OfflineQueue get offlineQueue => ServiceLocator.get<OfflineQueue>();
+  static LocalDatabaseService get localDatabase => ServiceLocator.get<LocalDatabaseService>();
+  static SyncService get syncService => ServiceLocator.get<SyncService>();
 }
 
 /// Mixin for easy service access in controllers
@@ -154,4 +171,6 @@ mixin ServiceLocatorMixin {
   IChatRoomRepository get chatRoomRepository => Services.chatRoomRepository;
   InputSanitizer get inputSanitizer => Services.inputSanitizer;
   OfflineQueue get offlineQueue => Services.offlineQueue;
+  LocalDatabaseService get localDatabase => Services.localDatabase;
+  SyncService get syncService => Services.syncService;
 }

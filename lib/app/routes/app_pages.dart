@@ -60,6 +60,7 @@ import '../modules/user_info/views/group_info_view.dart' as enhanced;
 // Media Gallery and Starred Messages imports
 import '../modules/media_gallery/bindings/media_gallery_binding.dart';
 import '../modules/media_gallery/views/media_gallery_view.dart';
+import '../modules/media_gallery/views/media_viewer_view.dart';
 import '../modules/starred_messages/bindings/starred_messages_binding.dart';
 import '../modules/starred_messages/views/starred_messages_view.dart';
 
@@ -223,6 +224,11 @@ class AppPages {
       name: _Paths.MEDIA_GALLERY,
       page: () => const MediaGalleryView(),
       binding: MediaGalleryBinding(),
+    ),
+    GetPage(
+      name: _Paths.MEDIA_VIEWER,
+      page: () => const MediaViewerView(),
+      // Uses parent MediaGalleryBinding - controller already registered
     ),
     GetPage(
       name: _Paths.STARRED_MESSAGES,

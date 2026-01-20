@@ -474,6 +474,193 @@ class BackupController extends GetxController {
       );
     }
   }
+
+  // =================== RESTORE FUNCTIONALITY ===================
+
+  // Restore states
+  final RxBool isRestoreRunning = false.obs;
+  final RxDouble restoreProgress = 0.0.obs;
+  final RxString restoreStatus = ''.obs;
+  final Rx<BackupData?> backupData = Rx<BackupData?>(null);
+
+  // Restore options
+  final RxBool restoreContacts = true.obs;
+  final RxBool restoreMedia = true.obs;
+
+  /// Load available backup data for restore
+  Future<void> loadBackupData() async {
+    try {
+      backupData.value = await _backupService.getBackupData();
+    } catch (e) {
+      log('Error loading backup data: $e');
+      backupData.value = null;
+    }
+  }
+
+  /// Start restore process
+  Future<void> startRestore() async {
+    if (isRestoreRunning.value) return;
+
+    final data = backupData.value;
+    if (data == null || !data.hasData) {
+      Get.snackbar(
+        'No Backup',
+        'No backup data available to restore',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      isRestoreRunning.value = true;
+      restoreProgress.value = 0.0;
+      restoreStatus.value = 'Starting restore...';
+
+      int contactsRestored = 0;
+      int mediaRestored = 0;
+
+      // Restore contacts if selected
+      if (restoreContacts.value && data.contacts.isNotEmpty) {
+        restoreStatus.value = 'Restoring contacts...';
+        contactsRestored = await _backupService.restoreContacts(data.contacts);
+      }
+
+      // Restore media if selected
+      if (restoreMedia.value && (data.images.isNotEmpty || data.files.isNotEmpty)) {
+        restoreStatus.value = 'Downloading media...';
+        mediaRestored = await _backupService.restoreMedia(
+          images: data.images,
+          files: data.files,
+        );
+      }
+
+      restoreProgress.value = 1.0;
+      restoreStatus.value = 'Restore completed!';
+
+      Get.back(); // Close dialog
+
+      Get.snackbar(
+        'Restore Complete',
+        'Restored $contactsRestored contacts and $mediaRestored files',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (e) {
+      log('Error during restore: $e');
+      restoreStatus.value = 'Restore failed: $e';
+
+      Get.snackbar(
+        'Error',
+        'Restore failed: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isRestoreRunning.value = false;
+    }
+  }
+
+  /// Show restore dialog with options
+  Future<void> showRestoreDialog() async {
+    // First load backup data
+    await loadBackupData();
+
+    final data = backupData.value;
+
+    if (data == null || !data.hasData) {
+      Get.dialog(
+        AlertDialog(
+          title: const Text('No Backup Found'),
+          content: const Text(
+            'No backup data available to restore. Please create a backup first.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    Get.dialog(
+      Obx(() => AlertDialog(
+        title: const Text('Restore Backup'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (data.lastBackupDate != null)
+              Text(
+                'Backup from: ${_formatDate(data.lastBackupDate!)}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            const SizedBox(height: 16),
+
+            // Contacts option
+            CheckboxListTile(
+              value: restoreContacts.value,
+              onChanged: isRestoreRunning.value
+                  ? null
+                  : (v) => restoreContacts.value = v ?? true,
+              title: const Text('Contacts'),
+              subtitle: Text('${data.contactsCount} contacts'),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+            ),
+
+            // Media option
+            CheckboxListTile(
+              value: restoreMedia.value,
+              onChanged: isRestoreRunning.value
+                  ? null
+                  : (v) => restoreMedia.value = v ?? true,
+              title: const Text('Media'),
+              subtitle: Text('${data.imagesCount} images, ${data.filesCount} files'),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+            ),
+
+            // Progress indicator when restoring
+            if (isRestoreRunning.value) ...[
+              const SizedBox(height: 16),
+              LinearProgressIndicator(value: restoreProgress.value),
+              const SizedBox(height: 8),
+              Text(
+                restoreStatus.value,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: isRestoreRunning.value ? null : () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: isRestoreRunning.value ? null : startRestore,
+            child: isRestoreRunning.value
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Restore'),
+          ),
+        ],
+      )),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
 }
 
 /// Backup history item model

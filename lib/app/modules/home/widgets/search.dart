@@ -267,7 +267,7 @@ class Search extends StatelessWidget {
           Expanded(
             child: Obx(() {
               if (controller.recentSearches.isEmpty) {
-                return _buildSearchSuggestions();
+                return _buildSearchSuggestions(controller);
               }
 
               return ListView.builder(
@@ -328,7 +328,7 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildSearchSuggestions() {
+  static Widget _buildSearchSuggestions(MessageSearchController controller) {
     return Container(
       padding: const EdgeInsets.all(Paddings.large),
       child: Column(
@@ -347,11 +347,36 @@ class Search extends StatelessWidget {
             child: ListView(
               physics: const BouncingScrollPhysics(),
               children: [
-                _buildSuggestionItem(Iconsax.message_text_1, 'Recent messages', 'Find your latest conversations'),
-                _buildSuggestionItem(Iconsax.gallery, 'Photos', 'Search through shared images'),
-                _buildSuggestionItem(Iconsax.video_play, 'Videos', 'Find video messages and clips'),
-                _buildSuggestionItem(Iconsax.document_text, 'Documents', 'Locate files and documents'),
-                _buildSuggestionItem(Iconsax.music, 'Audio', 'Find voice messages and audio files'),
+                _buildSuggestionItem(
+                  Iconsax.message_text_1,
+                  'Recent messages',
+                  'Find your latest conversations',
+                  onTap: () => controller.browseByType(MessageTypeFilter.text),
+                ),
+                _buildSuggestionItem(
+                  Iconsax.gallery,
+                  'Photos',
+                  'Search through shared images',
+                  onTap: () => controller.browseByType(MessageTypeFilter.photo),
+                ),
+                _buildSuggestionItem(
+                  Iconsax.video_play,
+                  'Videos',
+                  'Find video messages and clips',
+                  onTap: () => controller.browseByType(MessageTypeFilter.video),
+                ),
+                _buildSuggestionItem(
+                  Iconsax.document_text,
+                  'Documents',
+                  'Locate files and documents',
+                  onTap: () => controller.browseByType(MessageTypeFilter.file),
+                ),
+                _buildSuggestionItem(
+                  Iconsax.music,
+                  'Audio',
+                  'Find voice messages and audio files',
+                  onTap: () => controller.browseByType(MessageTypeFilter.audio),
+                ),
               ],
             ),
           ),
@@ -408,18 +433,7 @@ class Search extends StatelessWidget {
           color: ColorsManager.primary,
           size: 20,
         ),
-        onTap: onTap ??
-            () {
-              Get.snackbar(
-                'Feature Coming Soon',
-                'Search filtering by $title will be available soon!',
-                snackPosition: SnackPosition.BOTTOM,
-                duration: const Duration(seconds: 2),
-                backgroundColor: ColorsManager.primary,
-                colorText: Colors.white,
-                margin: const EdgeInsets.all(16),
-              );
-            },
+        onTap: onTap,
       ),
     );
   }

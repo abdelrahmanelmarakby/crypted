@@ -205,23 +205,41 @@ class OfflineQueue {
           print('[OfflineQueue] Synced: ${operation.type.name} - ${operation.id}');
         }
       } catch (e) {
-        // Mark as failed with retry count
-        final updatedIndex = _queue.indexWhere((op) => op.id == operation.id);
-        if (updatedIndex != -1) {
-          _queue[updatedIndex] = operation.copyWith(
-            status: OperationStatus.failed,
-            retryCount: operation.retryCount + 1,
-            error: e.toString(),
-          );
-        }
+        final errorString = e.toString();
 
-        if (kDebugMode) {
-          print('[OfflineQueue] Failed: ${operation.type.name} - ${operation.id}: $e');
-        }
+        // Check for permanent errors that shouldn't be retried
+        final isPermanentError = errorString.contains('not-found') ||
+            errorString.contains('permission-denied') ||
+            errorString.contains('invalid-argument') ||
+            errorString.contains('already-exists');
 
-        // If max retries exceeded, emit failure event
-        if (operation.retryCount + 1 >= _maxRetries) {
-          _emitFailureEvent(operation, e.toString());
+        if (isPermanentError) {
+          // Remove operation immediately - retrying won't help
+          if (kDebugMode) {
+            print('[OfflineQueue] Permanent error - removing: ${operation.type.name} - ${operation.id}: $e');
+          }
+          await remove(operation.id);
+          _emitFailureEvent(operation, errorString);
+        } else {
+          // Mark as failed with retry count for transient errors
+          final updatedIndex = _queue.indexWhere((op) => op.id == operation.id);
+          if (updatedIndex != -1) {
+            _queue[updatedIndex] = operation.copyWith(
+              status: OperationStatus.failed,
+              retryCount: operation.retryCount + 1,
+              error: errorString,
+            );
+          }
+
+          if (kDebugMode) {
+            print('[OfflineQueue] Failed: ${operation.type.name} - ${operation.id}: $e');
+          }
+
+          // If max retries exceeded, emit failure event and remove
+          if (operation.retryCount + 1 >= _maxRetries) {
+            _emitFailureEvent(operation, errorString);
+            await remove(operation.id);
+          }
         }
       }
     }

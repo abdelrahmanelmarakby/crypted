@@ -5,9 +5,13 @@ import 'package:crypted_app/app/core/di/service_locator.dart';
 import 'package:crypted_app/app/core/error_handling/error_handler.dart';
 import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/core/migration/chat_migration_service.dart';
+import 'package:crypted_app/app/core/migration/hive_migration_service.dart';
 import 'package:crypted_app/app/core/offline/offline_queue.dart';
+import 'package:crypted_app/app/core/services/offline_queue_service.dart';
+import 'package:crypted_app/app/core/services/local_database_service.dart';
+import 'package:crypted_app/app/core/sync/sync_service.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
-import 'package:crypted_app/app/core/repositories/firebase_chat_repository.dart';
+import 'package:crypted_app/app/core/repositories/offline_chat_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -61,26 +65,38 @@ class AppInitializer {
       await _initializeCoreServices();
       completedSteps.add('Core services');
 
-      // Step 2: Initialize offline support
+      // Step 2: Initialize local database (Hive)
+      onProgress?.call('Initializing local database...');
+      await _initializeLocalDatabase();
+      completedSteps.add('Local database (Hive)');
+
+      // Step 3: Initialize offline support
       onProgress?.call('Setting up offline support...');
       await _initializeOfflineSupport();
       completedSteps.add('Offline support');
 
-      // Step 3: Initialize event bus
+      // Step 4: Initialize event bus
       onProgress?.call('Setting up event bus...');
       _initializeEventBus();
       completedSteps.add('Event bus');
 
-      // Step 4: Run migrations if needed
+      // Step 5: Run Firestore migrations if needed
       if (runMigrations) {
         onProgress?.call('Checking for migrations...');
         final migrationResult = await _runMigrations(onProgress);
         if (migrationResult != null) {
-          completedSteps.add('Migrations: ${migrationResult}');
+          completedSteps.add('Firestore migrations: $migrationResult');
         }
       }
 
-      // Step 5: Initialize repositories
+      // Step 6: Run Hive migration for existing users
+      onProgress?.call('Checking for Hive migration...');
+      final hiveMigrationResult = await _runHiveMigration(onProgress);
+      if (hiveMigrationResult != null) {
+        completedSteps.add('Hive migration: $hiveMigrationResult');
+      }
+
+      // Step 7: Initialize repositories
       onProgress?.call('Initializing repositories...');
       await _initializeRepositories();
       completedSteps.add('Repositories');
@@ -131,13 +147,24 @@ class AppInitializer {
     }
   }
 
+  /// Initialize local database (Hive) for offline-first architecture
+  static Future<void> _initializeLocalDatabase() async {
+    final localDb = LocalDatabaseService();
+    await localDb.initialize();
+
+    if (kDebugMode) {
+      final stats = localDb.getStats();
+      print('[AppInitializer] Local database stats: $stats');
+    }
+  }
+
   /// Initialize offline support
   static Future<void> _initializeOfflineSupport() async {
-    final offlineQueue = OfflineQueue();
-    await offlineQueue.initialize();
+    // Initialize the offline queue service with all handlers registered
+    await OfflineQueueService().initialize();
 
     // Start connectivity monitoring
-    final monitor = ConnectivityMonitor(offlineQueue);
+    final monitor = ConnectivityMonitor(OfflineQueueService().queue);
     monitor.start();
   }
 
@@ -191,22 +218,77 @@ class AppInitializer {
     }
   }
 
+  /// Run Hive migration for existing users
+  static Future<String?> _runHiveMigration(
+    void Function(String step)? onProgress,
+  ) async {
+    try {
+      final hiveMigrationService = HiveMigrationService();
+      final needsMigration = await hiveMigrationService.isMigrationNeeded();
+
+      if (!needsMigration) {
+        if (kDebugMode) {
+          print('[AppInitializer] No Hive migration needed');
+        }
+        return null;
+      }
+
+      if (kDebugMode) {
+        print('[AppInitializer] Running Hive migration...');
+      }
+
+      final result = await hiveMigrationService.runMigration(
+        onProgress: (progress, message) {
+          onProgress?.call('Hive migration: $message');
+        },
+      );
+
+      if (result.hasErrors) {
+        if (kDebugMode) {
+          print('[AppInitializer] Hive migration completed with errors:');
+          for (final error in result.errors) {
+            print('  - $error');
+          }
+        }
+        return 'Completed with ${result.errors.length} errors';
+      }
+
+      return 'Migrated ${result.migratedRooms} rooms, ${result.migratedMessages} messages';
+    } catch (e) {
+      if (kDebugMode) {
+        print('[AppInitializer] Hive migration error: $e');
+      }
+      return 'Error: $e';
+    }
+  }
+
   /// Initialize repositories
   static Future<void> _initializeRepositories() async {
     // Register chat repository if not already registered
+    // Using OfflineChatRepository for offline-first architecture
     if (!Get.isRegistered<IChatRepository>()) {
-      final errorHandler = Get.find<ErrorHandler>();
       Get.put<IChatRepository>(
-        FirebaseChatRepository(),
+        OfflineChatRepository(),
         permanent: true,
       );
+
+      if (kDebugMode) {
+        print('[AppInitializer] Registered OfflineChatRepository');
+      }
+    }
+
+    // Register SyncService
+    if (!Get.isRegistered<SyncService>()) {
+      Get.put(SyncService(), permanent: true);
     }
   }
 
   /// Cleanup and dispose resources
   static void dispose() {
     EventBus().dispose();
-    OfflineQueue().dispose();
+    OfflineQueueService().dispose();
+    LocalDatabaseService().dispose();
+    SyncService().dispose();
     _isInitialized = false;
   }
 }

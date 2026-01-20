@@ -1,5 +1,6 @@
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
+import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
@@ -80,19 +81,39 @@ class PrivateChatScreen extends GetView<ChatController> {
         }
 
 
-        // ARCH-004: Replaced StreamProvider with StreamBuilder to consolidate state management
-        // Using pure Flutter StreamBuilder instead of mixing GetX with Provider
+        // ARCH-004: Using StreamBuilder with direct Firestore stream for reliable message loading
+        // This provides real-time updates directly from Firestore
         return StreamBuilder<List<Message>>(
           stream: controller.chatDataSource.getLivePrivateMessage(controller.roomId),
           initialData: const [],
           builder: (context, snapshot) {
-            // Handle errors gracefully
+            // DEBUG: Log stream state for troubleshooting
+            debugPrint("📨 StreamBuilder state: hasData=${snapshot.hasData}, hasError=${snapshot.hasError}, connectionState=${snapshot.connectionState}");
+
+            // Handle stream errors gracefully
             if (snapshot.hasError) {
-              debugPrint("Error loading messages: ${snapshot.error}");
+              debugPrint("❌ Error loading messages: ${snapshot.error}");
+              debugPrint("❌ Stack trace: ${snapshot.stackTrace}");
             }
 
-            final messages = snapshot.data ?? [];
-            return Obx(() => Scaffold(
+            // Get messages from Firestore stream
+            final firestoreMessages = snapshot.data ?? [];
+
+            debugPrint("📨 Firestore messages count: ${firestoreMessages.length}, roomId: ${controller.roomId}");
+
+            // OPTIMISTIC UI FIX: Use Obx to react to both Firestore stream AND local message changes
+            return Obx(() {
+              // Get uploading messages from local controller state (reactive via Obx)
+              final localUploadingMessages = controller.messages
+                  .where((msg) => msg is UploadingMessage)
+                  .toList();
+
+              // Combine: uploading messages first (they're newest), then Firestore messages
+              final messages = [...localUploadingMessages, ...firestoreMessages];
+
+              debugPrint("📨 Total messages: ${messages.length} (${localUploadingMessages.length} uploading + ${firestoreMessages.length} from Firestore)");
+
+              return Scaffold(
               backgroundColor: ColorsManager.navbarColor,
               extendBodyBehindAppBar: false,
               appBar: controller.isSearchMode.value
@@ -135,45 +156,57 @@ class PrivateChatScreen extends GetView<ChatController> {
                               borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(24),
                               ),
-                              // PERF-001: Added scroll-based pagination for better performance
-                              child: NotificationListener<ScrollNotification>(
-                                onNotification: (notification) {
-                                  if (notification is ScrollUpdateNotification) {
-                                    // Load more when scrolling near the top (bottom in reverse)
-                                    final maxScroll = notification.metrics.maxScrollExtent;
-                                    final currentScroll = notification.metrics.pixels;
-
-                                    if (maxScroll - currentScroll <= 200) {
-                                      // TODO: Implement pagination loading
-                                      // controller.loadMoreMessages();
-                                    }
-                                  }
-                                  return false;
-                                },
-                                child: ListView.builder(
-                                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                                  reverse: true,
-                                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                                  itemCount: messages.length,
-                                  // PERF-015: Added cache extent for smoother scrolling
-                                  cacheExtent: 500,
-                                  itemBuilder: (context, index) {
-                                    // Use RepaintBoundary for performance optimization
-                                    return RepaintBoundary(
-                                      key: ValueKey('msg_${messages[index].id}'),
-                                      child: _buildMessageItem(
-                                        messages,
-                                        index,
-                                        UserService.currentUser.value,
+                              child: messages.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.chat_bubble_outline,
+                                            size: 64,
+                                            color: ColorsManager.grey.withValues(alpha: 0.5),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No messages yet',
+                                            style: StylesManager.medium(
+                                              fontSize: FontSize.medium,
+                                              color: ColorsManager.grey,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Start a conversation!',
+                                            style: StylesManager.regular(
+                                              fontSize: FontSize.small,
+                                              color: ColorsManager.grey.withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    );
-                                  },
-                                ),
-                              ),
+                                    )
+                                  : ListView.builder(
+                                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                      reverse: true,
+                                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                                      itemCount: messages.length,
+                                      // PERF-015: Added cache extent for smoother scrolling
+                                      cacheExtent: 500,
+                                      itemBuilder: (context, index) {
+                                        // Use RepaintBoundary for performance optimization
+                                        return RepaintBoundary(
+                                          key: ValueKey('msg_${messages[index].id}'),
+                                          child: _buildMessageItem(
+                                            messages,
+                                            index,
+                                            UserService.currentUser.value,
+                                          ),
+                                        );
+                                      },
+                                    ),
                             ),
                           ),
                         ),
-                        
+
                         // Input area - shows blocked input bar if blocked
                         _buildInputArea(),
                       ],
@@ -181,7 +214,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                   ),
                 ),
               ),
-            ));
+            );
+            });
           },
         );
       },
@@ -233,11 +267,11 @@ class PrivateChatScreen extends GetView<ChatController> {
         ),
       ),
       title: GestureDetector(
-        onTap: () {
+        onTap: () async {
           HapticFeedback.lightImpact();
           if (controller.isGroupChat.value) {
             // Navigate to group info for group chats
-            Get.toNamed(
+            final result = await Get.toNamed(
               Routes.GROUP_INFO,
               arguments: {
                 "chatName": controller.chatName.value,
@@ -248,15 +282,23 @@ class PrivateChatScreen extends GetView<ChatController> {
                 "roomId": controller.roomId,
               },
             );
+            // Handle search request from group info
+            if (result is Map && result['openSearch'] == true) {
+              controller.openSearch();
+            }
           } else {
             // Navigate to contact info for individual chats
-            Get.toNamed(
+            final result = await Get.toNamed(
               Routes.CONTACT_INFO,
               arguments: {
                 "user": otherUser,
                 "roomId": controller.roomId,
               },
             );
+            // Handle search request from contact info
+            if (result is Map && result['openSearch'] == true) {
+              controller.openSearch();
+            }
           }
         },
         child: Container(

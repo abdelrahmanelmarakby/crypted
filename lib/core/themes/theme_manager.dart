@@ -5,148 +5,459 @@ import 'package:flutter/services.dart';
 import 'font_manager.dart';
 import 'styles_manager.dart';
 
+/// App theme configuration following Material 3 design guidelines
+/// with custom styling for the Crypted messaging app
 class ThemeManager {
+  // Private constructor to prevent instantiation
+  ThemeManager._();
+
+  /// Light theme configuration
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     visualDensity: VisualDensity.standard,
     fontFamily: "IBM Plex Sans Arabic",
-    //  primarySwatch:MaterialColor(),
-    colorScheme: ColorScheme.fromSwatch(
-      // primarySwatch: ColorsManager.primary.getMaterialColorFromColor(),
-      accentColor: ColorsManager.accent,
-      backgroundColor: ColorsManager.white,
-      brightness: Brightness.light,
-      cardColor: ColorsManager.white,
-      errorColor: ColorsManager.error,
+
+    // Color scheme
+    colorScheme: ColorScheme.light(
+      primary: ColorsManager.primary,
+      primaryContainer: ColorsManager.primarySurface,
+      secondary: ColorsManager.accent,
+      secondaryContainer: ColorsManager.accentLight.withValues(alpha: 0.2),
+      surface: ColorsManager.white,
+      error: ColorsManager.error,
+      onPrimary: ColorsManager.white,
+      onSecondary: ColorsManager.white,
+      onSurface: ColorsManager.textPrimary,
+      onError: ColorsManager.white,
+      outline: ColorsManager.border,
     ),
-    scaffoldBackgroundColor: ColorsManager.white,
+
+    scaffoldBackgroundColor: ColorsManager.scaffoldBackground,
     primaryColor: ColorsManager.primary,
-    // dialogBackgroundColor: Colors.white,
-    // primaryColorLight: ColorsManager.primary1000,
     disabledColor: ColorsManager.lightGrey,
-    // fontFamily: FontFamily.fontFamily,
+
+    // Divider theme
+    dividerTheme: const DividerThemeData(
+      color: ColorsManager.divider,
+      thickness: 1,
+      space: 1,
+    ),
+
+    // Card theme
     cardTheme: CardThemeData(
       color: ColorsManager.white,
-      shadowColor: ColorsManager.grey,
-      elevation: Sizes.size4,
+      shadowColor: ColorsManager.shadow.withValues(alpha: 0.1),
+      elevation: Elevations.sm,
       margin: const EdgeInsets.all(Margins.xSmall),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+
+    // Floating action button theme
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
       enableFeedback: true,
-      //  backgroundColor: ColorsManager.primary1000,
-      elevation: 8,
-      shape: CircleBorder(),
+      backgroundColor: ColorsManager.primary,
+      foregroundColor: ColorsManager.white,
+      elevation: Elevations.lg,
+      focusElevation: Elevations.xl,
+      hoverElevation: Elevations.lg,
+      shape: const CircleBorder(),
     ),
+
+    // App bar theme
     appBarTheme: AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 0,
-      iconTheme: const IconThemeData(color: ColorsManager.black),
+      iconTheme: const IconThemeData(
+        color: ColorsManager.black,
+        size: IconSizes.md,
+      ),
+      actionsIconTheme: const IconThemeData(
+        color: ColorsManager.black,
+        size: IconSizes.md,
+      ),
       backgroundColor: ColorsManager.white,
-      shadowColor: ColorsManager.black,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: ColorsManager.shadow.withValues(alpha: 0.05),
       centerTitle: true,
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarBrightness: Brightness.light,
-        systemNavigationBarIconBrightness: Brightness.light,
-        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.dark,
         statusBarColor: Colors.transparent,
       ),
-      titleTextStyle: StylesManager.regular(
+      titleTextStyle: StylesManager.semiBold(
         color: ColorsManager.black,
         fontSize: FontSize.large,
       ),
     ),
+
+    // Button themes
     buttonTheme: ButtonThemeData(
       buttonColor: ColorsManager.primary,
       disabledColor: ColorsManager.lightGrey,
-      splashColor: ColorsManager.white,
-      textTheme: ButtonTextTheme.normal,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      splashColor: ColorsManager.primaryLight,
+      textTheme: ButtonTextTheme.primary,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.button),
+      ),
     ),
+
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: ColorsManager.primary,
-        textStyle: StylesManager.bold(color: ColorsManager.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        foregroundColor: ColorsManager.white,
+        disabledBackgroundColor: ColorsManager.lightGrey,
+        disabledForegroundColor: ColorsManager.white,
+        elevation: Elevations.sm,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Paddings.xLarge,
+          vertical: Paddings.normal,
+        ),
+        textStyle: StylesManager.semiBold(fontSize: FontSize.medium),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+        ),
       ),
     ),
+
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: ColorsManager.primary,
+        side: const BorderSide(color: ColorsManager.primary, width: 1.5),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Paddings.xLarge,
+          vertical: Paddings.normal,
+        ),
+        textStyle: StylesManager.semiBold(fontSize: FontSize.medium),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+        ),
+      ),
+    ),
+
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: ColorsManager.primary,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Paddings.normal,
+          vertical: Paddings.xSmall,
+        ),
+        textStyle: StylesManager.medium(fontSize: FontSize.medium),
+      ),
+    ),
+
+    // Icon button theme
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: ColorsManager.textPrimary,
+        highlightColor: ColorsManager.primary.withValues(alpha: 0.1),
+      ),
+    ),
+
+    // Bottom navigation bar theme
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: ColorsManager.navbarColor,
       selectedItemColor: ColorsManager.primary,
-      showSelectedLabels: true,
       unselectedItemColor: ColorsManager.lightGrey,
-      selectedLabelStyle: StylesManager.regular(
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
+      type: BottomNavigationBarType.fixed,
+      elevation: Elevations.md,
+      selectedLabelStyle: StylesManager.medium(
         color: ColorsManager.primary,
         fontSize: FontSize.xXSmall,
       ),
       unselectedLabelStyle: StylesManager.regular(
         color: ColorsManager.lightGrey,
-        fontSize: FontSize.xSmall,
+        fontSize: FontSize.xXSmall,
       ),
     ),
+
+    // Text theme
     textTheme: TextTheme(
-      displayLarge: StylesManager.medium(
-        color: ColorsManager.primary,
+      // Display styles
+      displayLarge: StylesManager.bold(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size32,
+      ),
+      displayMedium: StylesManager.bold(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size26,
+      ),
+      displaySmall: StylesManager.bold(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size24,
+      ),
+
+      // Headline styles
+      headlineLarge: StylesManager.semiBold(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size24,
+      ),
+      headlineMedium: StylesManager.semiBold(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size20,
+      ),
+      headlineSmall: StylesManager.semiBold(
+        color: ColorsManager.textPrimary,
         fontSize: Sizes.size18,
       ),
-      labelSmall: StylesManager.medium(
-        color: ColorsManager.grey,
-        fontSize: Sizes.size14,
+
+      // Title styles
+      titleLarge: StylesManager.semiBold(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size18,
       ),
       titleMedium: StylesManager.medium(
-        color: ColorsManager.primary,
+        color: ColorsManager.textPrimary,
         fontSize: Sizes.size16,
       ),
       titleSmall: StylesManager.medium(
-        color: ColorsManager.primary,
+        color: ColorsManager.textPrimary,
         fontSize: Sizes.size14,
       ),
 
-      bodySmall: StylesManager.regular(color: ColorsManager.primary),
-      bodyLarge: StylesManager.regular(color: ColorsManager.primary),
-    ),
-    badgeTheme: const BadgeThemeData(backgroundColor: ColorsManager.red),
-    tabBarTheme: const TabBarThemeData(
-      indicatorColor: ColorsManager.primary,
-      labelColor: ColorsManager.navbarColor,
-      unselectedLabelColor: ColorsManager.black,
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      //border
-      border: UnderlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
-        borderSide: const BorderSide(color: ColorsManager.primary),
+      // Body styles
+      bodyLarge: StylesManager.regular(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size16,
       ),
-      //hint text style
-      hintStyle: StylesManager.regular(color: ColorsManager.primary),
-      //focused ERROR border
-      focusedBorder: UnderlineInputBorder(
-        borderSide: const BorderSide(color: ColorsManager.primary),
-        borderRadius: BorderRadius.circular(12.0),
+      bodyMedium: StylesManager.regular(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size14,
       ),
-      errorBorder: UnderlineInputBorder(
-        borderSide: const BorderSide(color: ColorsManager.red),
-        borderRadius: BorderRadius.circular(12.0),
+      bodySmall: StylesManager.regular(
+        color: ColorsManager.textSecondary,
+        fontSize: Sizes.size12,
       ),
-      enabledBorder: UnderlineInputBorder(
-        borderSide: const BorderSide(color: ColorsManager.navbarColor),
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      suffixStyle: StylesManager.medium(color: ColorsManager.grey),
-      focusColor: ColorsManager.success,
-      //focused ERROR hint text style
-      errorStyle: StylesManager.regular(color: ColorsManager.error),
-      //focused Label text style
-      labelStyle: StylesManager.medium(color: ColorsManager.primary),
-      filled: true,
-      fillColor: Colors.white,
 
-      ///fill COLOR
-      isDense: true,
+      // Label styles
+      labelLarge: StylesManager.medium(
+        color: ColorsManager.textPrimary,
+        fontSize: Sizes.size14,
+      ),
+      labelMedium: StylesManager.medium(
+        color: ColorsManager.textSecondary,
+        fontSize: Sizes.size12,
+      ),
+      labelSmall: StylesManager.regular(
+        color: ColorsManager.textSecondary,
+        fontSize: Sizes.size10,
+      ),
+    ),
+
+    // Badge theme
+    badgeTheme: const BadgeThemeData(
+      backgroundColor: ColorsManager.error,
+      textColor: ColorsManager.white,
+    ),
+
+    // Tab bar theme
+    tabBarTheme: TabBarThemeData(
+      indicatorColor: ColorsManager.primary,
+      indicatorSize: TabBarIndicatorSize.label,
+      labelColor: ColorsManager.primary,
+      unselectedLabelColor: ColorsManager.textSecondary,
+      labelStyle: StylesManager.semiBold(fontSize: FontSize.medium),
+      unselectedLabelStyle: StylesManager.regular(fontSize: FontSize.medium),
+      dividerColor: Colors.transparent,
+    ),
+
+    // Chip theme
+    chipTheme: ChipThemeData(
+      backgroundColor: ColorsManager.surfaceVariant,
+      selectedColor: ColorsManager.primarySurface,
+      disabledColor: ColorsManager.lightGrey.withValues(alpha: 0.3),
+      labelStyle: StylesManager.regular(fontSize: FontSize.small),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Paddings.normal,
+        vertical: Paddings.xSmall,
+      ),
+    ),
+
+    // Dialog theme
+    dialogTheme: DialogThemeData(
+      backgroundColor: ColorsManager.white,
+      elevation: Elevations.xl,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.dialog),
+      ),
+      titleTextStyle: StylesManager.semiBold(
+        color: ColorsManager.textPrimary,
+        fontSize: FontSize.large,
+      ),
+      contentTextStyle: StylesManager.regular(
+        color: ColorsManager.textSecondary,
+        fontSize: FontSize.medium,
+      ),
+    ),
+
+    // Bottom sheet theme
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: ColorsManager.white,
+      elevation: Elevations.lg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.bottomSheet),
+        ),
+      ),
+      showDragHandle: true,
+      dragHandleColor: ColorsManager.lightGrey,
+    ),
+
+    // Snackbar theme
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: ColorsManager.charcoal,
+      contentTextStyle: StylesManager.regular(
+        color: ColorsManager.white,
+        fontSize: FontSize.medium,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+
+    // Progress indicator theme
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: ColorsManager.primary,
+      circularTrackColor: ColorsManager.primarySurface,
+      linearTrackColor: ColorsManager.primarySurface,
+    ),
+
+    // Input decoration theme
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: ColorsManager.white,
       contentPadding: const EdgeInsets.symmetric(
-        vertical: Paddings.xLarge,
+        vertical: Paddings.large,
         horizontal: Paddings.large,
       ),
+      isDense: true,
+
+      // Borders
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: ColorsManager.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: ColorsManager.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: ColorsManager.primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: ColorsManager.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: ColorsManager.error, width: 1.5),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: BorderSide(color: ColorsManager.lightGrey.withValues(alpha: 0.5)),
+      ),
+
+      // Text styles
+      hintStyle: StylesManager.regular(
+        color: ColorsManager.textTertiary,
+        fontSize: FontSize.medium,
+      ),
+      labelStyle: StylesManager.medium(
+        color: ColorsManager.textSecondary,
+        fontSize: FontSize.medium,
+      ),
+      floatingLabelStyle: StylesManager.medium(
+        color: ColorsManager.primary,
+        fontSize: FontSize.small,
+      ),
+      errorStyle: StylesManager.regular(
+        color: ColorsManager.error,
+        fontSize: FontSize.small,
+      ),
+      suffixStyle: StylesManager.medium(color: ColorsManager.textSecondary),
+      prefixStyle: StylesManager.medium(color: ColorsManager.textSecondary),
+
+      focusColor: ColorsManager.primary,
+      hoverColor: ColorsManager.primarySurface,
+    ),
+
+    // List tile theme
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: Paddings.large,
+        vertical: Paddings.xSmall,
+      ),
+      titleTextStyle: StylesManager.medium(
+        color: ColorsManager.textPrimary,
+        fontSize: FontSize.medium,
+      ),
+      subtitleTextStyle: StylesManager.regular(
+        color: ColorsManager.textSecondary,
+        fontSize: FontSize.small,
+      ),
+      iconColor: ColorsManager.textSecondary,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+    ),
+
+    // Switch theme
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return ColorsManager.white;
+        }
+        return ColorsManager.white;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return ColorsManager.primary;
+        }
+        return ColorsManager.lightGrey;
+      }),
+      trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+    ),
+
+    // Checkbox theme
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return ColorsManager.primary;
+        }
+        return Colors.transparent;
+      }),
+      checkColor: WidgetStateProperty.all(ColorsManager.white),
+      side: const BorderSide(color: ColorsManager.checkBoxBorderColor, width: 1.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+      ),
+    ),
+
+    // Radio theme
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return ColorsManager.primary;
+        }
+        return ColorsManager.textSecondary;
+      }),
+    ),
+
+    // Slider theme
+    sliderTheme: SliderThemeData(
+      activeTrackColor: ColorsManager.primary,
+      inactiveTrackColor: ColorsManager.primarySurface,
+      thumbColor: ColorsManager.primary,
+      overlayColor: ColorsManager.primary.withValues(alpha: 0.2),
     ),
   );
 

@@ -1112,4 +1112,234 @@ class ReliableBackupService {
       rethrow;
     }
   }
+
+  // =================== RESTORE FUNCTIONALITY ===================
+
+  /// Get available backup data for restore
+  Future<BackupData?> getBackupData() async {
+    try {
+      final basePath = _getBasePath();
+      final doc = await _firestore.collection('backups').doc(basePath).get();
+
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+
+      final data = doc.data()!;
+      return BackupData(
+        lastBackupDate: (data['last_backup_completed_at'] as Timestamp?)?.toDate(),
+        contactsCount: data['contacts_count'] as int? ?? 0,
+        imagesCount: data['images_count'] as int? ?? 0,
+        filesCount: data['files_count'] as int? ?? 0,
+        contacts: List<Map<String, dynamic>>.from(data['contacts'] ?? []),
+        images: List<Map<String, dynamic>>.from(data['images'] ?? []),
+        files: List<Map<String, dynamic>>.from(data['files'] ?? []),
+      );
+    } catch (e) {
+      log('❌ Error getting backup data: $e');
+      return null;
+    }
+  }
+
+  /// Restore contacts from backup
+  Future<int> restoreContacts(List<Map<String, dynamic>> contacts) async {
+    int restoredCount = 0;
+
+    try {
+      // Check contacts permission
+      final permission = await FlutterContacts.requestPermission(readonly: false);
+      if (!permission) {
+        log('❌ Contacts permission denied');
+        return 0;
+      }
+
+      _updateProgress(0.0, 'Restoring contacts...');
+
+      for (int i = 0; i < contacts.length; i++) {
+        try {
+          final contactData = contacts[i];
+          final name = contactData['name'] as String? ?? '';
+
+          if (name.isEmpty) continue;
+
+          // Create new contact
+          final contact = Contact()
+            ..name.first = name.split(' ').first
+            ..name.last = name.split(' ').skip(1).join(' ');
+
+          // Add phones
+          final phones = contactData['phones'] as List<dynamic>?;
+          if (phones != null) {
+            contact.phones = phones
+                .map((p) => Phone(p.toString()))
+                .toList();
+          }
+
+          // Add emails
+          final emails = contactData['emails'] as List<dynamic>?;
+          if (emails != null) {
+            contact.emails = emails
+                .map((e) => Email(e.toString()))
+                .toList();
+          }
+
+          await contact.insert();
+          restoredCount++;
+
+          _updateProgress(
+            (i + 1) / contacts.length * 0.5,
+            'Restoring contact ${i + 1}/${contacts.length}',
+          );
+        } catch (e) {
+          log('⚠️ Failed to restore contact: $e');
+          continue;
+        }
+      }
+
+      _updateProgress(0.5, 'Restored $restoredCount contacts');
+      return restoredCount;
+    } catch (e) {
+      log('❌ Error restoring contacts: $e');
+      return restoredCount;
+    }
+  }
+
+  /// Download media files from backup
+  Future<int> restoreMedia({
+    required List<Map<String, dynamic>> images,
+    required List<Map<String, dynamic>> files,
+  }) async {
+    int downloadedCount = 0;
+    final totalItems = images.length + files.length;
+
+    try {
+      // Request storage permission
+      if (Platform.isAndroid) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          await Permission.manageExternalStorage.request();
+        }
+      }
+
+      final downloadDir = await _getDownloadDirectory();
+      if (downloadDir == null) {
+        log('❌ Could not access download directory');
+        return 0;
+      }
+
+      _updateProgress(0.5, 'Downloading media...');
+
+      // Download images
+      for (int i = 0; i < images.length; i++) {
+        try {
+          final imageData = images[i];
+          final url = imageData['storage_url'] as String?;
+          final filename = imageData['filename'] as String? ?? 'image_${i + 1}.jpg';
+
+          if (url != null && url.isNotEmpty) {
+            await _downloadFile(url, downloadDir, filename);
+            downloadedCount++;
+          }
+
+          _updateProgress(
+            0.5 + ((i + 1) / totalItems * 0.5),
+            'Downloading ${i + 1}/$totalItems',
+          );
+        } catch (e) {
+          log('⚠️ Failed to download image: $e');
+          continue;
+        }
+      }
+
+      // Download files
+      for (int i = 0; i < files.length; i++) {
+        try {
+          final fileData = files[i];
+          final url = fileData['storage_url'] as String?;
+          final filename = fileData['filename'] as String? ?? 'file_${i + 1}';
+
+          if (url != null && url.isNotEmpty) {
+            await _downloadFile(url, downloadDir, filename);
+            downloadedCount++;
+          }
+
+          _updateProgress(
+            0.5 + ((images.length + i + 1) / totalItems * 0.5),
+            'Downloading ${images.length + i + 1}/$totalItems',
+          );
+        } catch (e) {
+          log('⚠️ Failed to download file: $e');
+          continue;
+        }
+      }
+
+      _updateProgress(1.0, 'Downloaded $downloadedCount files');
+      return downloadedCount;
+    } catch (e) {
+      log('❌ Error restoring media: $e');
+      return downloadedCount;
+    }
+  }
+
+  /// Get download directory
+  Future<Directory?> _getDownloadDirectory() async {
+    try {
+      if (Platform.isAndroid) {
+        final dir = Directory('/storage/emulated/0/Download/CryptedBackup');
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        return dir;
+      } else if (Platform.isIOS) {
+        final dir = await getApplicationDocumentsDirectory();
+        final backupDir = Directory('${dir.path}/CryptedBackup');
+        if (!await backupDir.exists()) {
+          await backupDir.create(recursive: true);
+        }
+        return backupDir;
+      }
+      return await getDownloadsDirectory();
+    } catch (e) {
+      log('❌ Error getting download directory: $e');
+      return null;
+    }
+  }
+
+  /// Download a file from Firebase Storage URL
+  Future<void> _downloadFile(String url, Directory dir, String filename) async {
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(url);
+      final file = File('${dir.path}/$filename');
+      await ref.writeToFile(file);
+      log('✅ Downloaded: $filename');
+    } catch (e) {
+      log('⚠️ Download error for $filename: $e');
+      rethrow;
+    }
+  }
+}
+
+/// Model for backup data
+class BackupData {
+  final DateTime? lastBackupDate;
+  final int contactsCount;
+  final int imagesCount;
+  final int filesCount;
+  final List<Map<String, dynamic>> contacts;
+  final List<Map<String, dynamic>> images;
+  final List<Map<String, dynamic>> files;
+
+  BackupData({
+    this.lastBackupDate,
+    required this.contactsCount,
+    required this.imagesCount,
+    required this.filesCount,
+    required this.contacts,
+    required this.images,
+    required this.files,
+  });
+
+  int get totalItems => contactsCount + imagesCount + filesCount;
+
+  bool get hasData => totalItems > 0;
 }

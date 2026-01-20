@@ -83,8 +83,18 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _initializeCall() async {
     try {
-      // Get call model from arguments
-      callModel = Get.arguments as CallModel?;
+      // Get call model from arguments - handle both CallModel and Map types
+      final args = Get.arguments;
+      if (args is CallModel) {
+        callModel = args;
+      } else if (args is Map<String, dynamic>) {
+        callModel = CallModel.fromMap(args);
+      } else if (args is Map) {
+        // Handle Map<String, Object?> case
+        callModel = CallModel.fromMap(Map<String, dynamic>.from(args));
+      } else {
+        callModel = null;
+      }
 
       if (callModel == null) {
         _showErrorDialog('Invalid call parameters');

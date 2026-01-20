@@ -100,11 +100,11 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
         decoration: BoxDecoration(
           color: isSelected
               ? ColorsManager.primary.withValues(alpha: 0.1)
-              : Colors.white,
+              : ColorsManager.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: ColorsManager.black.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -138,7 +138,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
       decoration: BoxDecoration(
         color: isSelected
             ? ColorsManager.primary.withValues(alpha: 0.15)
-            : Colors.grey.shade50,
+            : ColorsManager.surfaceVariant,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: Row(
@@ -146,7 +146,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
           Icon(
             Icons.chat_bubble_outline,
             size: 16,
-            color: Colors.grey.shade600,
+            color: ColorsManager.textSecondary,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -155,7 +155,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
+                color: ColorsManager.darkGrey,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -164,7 +164,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
             _formatDate(item.message.timestamp),
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade500,
+              color: ColorsManager.textTertiary,
             ),
           ),
         ],
@@ -247,7 +247,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
           height: 150,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            color: ColorsManager.veryLightGrey,
             borderRadius: BorderRadius.circular(8),
           ),
           child: message.photoUrl != null
@@ -259,7 +259,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
                     errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
                   ),
                 )
-              : const Icon(Icons.photo, size: 48, color: Colors.grey),
+              : Icon(Icons.photo, size: 48, color: ColorsManager.lightGrey),
         ),
         if (message.text?.isNotEmpty ?? false) ...[
           const SizedBox(height: 8),
@@ -288,12 +288,10 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
           height: 150,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.grey.shade800,
+            color: ColorsManager.veryDarkGrey,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Center(
-            child: Icon(Icons.play_circle_fill, size: 48, color: Colors.white),
-          ),
+          child: Icon(Icons.play_circle_fill, size: 48, color: ColorsManager.white),
         ),
       ],
     );
@@ -322,7 +320,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               ),
               Text(
                 'Voice message ${message.audioDuration ?? ''}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 13, color: ColorsManager.textSecondary),
               ),
             ],
           ),
@@ -338,10 +336,10 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
+            color: ColorsManager.info.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.insert_drive_file, color: Colors.blue),
+          child: Icon(Icons.insert_drive_file, color: ColorsManager.info),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -355,7 +353,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               ),
               Text(
                 message.fileSize ?? 'Unknown size',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 12, color: ColorsManager.textSecondary),
               ),
             ],
           ),
@@ -368,7 +366,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Colors.grey.shade100),
+          top: BorderSide(color: ColorsManager.border),
         ),
       ),
       child: Row(
@@ -386,7 +384,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
           Container(
             width: 1,
             height: 32,
-            color: Colors.grey.shade200,
+            color: ColorsManager.divider,
           ),
           Expanded(
             child: TextButton.icon(
@@ -394,7 +392,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               icon: const Icon(Icons.star_border, size: 18),
               label: const Text('Unstar'),
               style: TextButton.styleFrom(
-                foregroundColor: Colors.grey.shade600,
+                foregroundColor: ColorsManager.textSecondary,
               ),
             ),
           ),
@@ -413,7 +411,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
             Icon(
               Icons.star_border,
               size: 80,
-              color: Colors.grey.shade300,
+              color: ColorsManager.veryLightGrey,
             ),
             const SizedBox(height: 24),
             Text(
@@ -421,7 +419,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
+                color: ColorsManager.darkGrey,
               ),
             ),
             const SizedBox(height: 8),
@@ -430,7 +428,7 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade500,
+                color: ColorsManager.textTertiary,
               ),
             ),
           ],
@@ -446,12 +444,12 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+            Icon(Icons.error_outline, size: 64, color: ColorsManager.lightGrey),
             const SizedBox(height: 16),
             Obx(() => Text(
                   controller.errorMessage.value,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: TextStyle(color: ColorsManager.textSecondary),
                 )),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -469,10 +467,10 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: ColorsManager.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),

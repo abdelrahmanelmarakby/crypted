@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/modules/user_info/repositories/group_info_repository.dart';
 import 'package:crypted_app/app/modules/user_info/models/group_info_state.dart';
@@ -60,15 +61,33 @@ class EnhancedGroupInfoController extends GetxController {
       }
 
       // Use passed members if available
-      if (args.members != null) {
+      if (args.members != null && args.members!.isNotEmpty) {
         state.value = state.value.copyWith(members: args.members);
       }
 
       // Set up real-time listener
       _setupGroupListener(roomId);
 
-      // Load group data
-      final group = await _repository.getGroupById(roomId);
+      // Load group data from Firestore
+      ChatRoom? group = await _repository.getGroupById(roomId);
+
+      // If group not found in Firestore, create a temporary one from arguments
+      if (group == null && (args.name != null || args.members != null)) {
+        developer.log(
+          'Group not found in Firestore, using arguments data',
+          name: 'EnhancedGroupInfoController',
+        );
+        group = ChatRoom(
+          id: roomId,
+          name: args.name ?? 'Group Chat',
+          description: args.description,
+          groupImageUrl: args.imageUrl,
+          membersIds: args.members?.map((m) => m.uid ?? '').where((id) => id.isNotEmpty).toList(),
+          members: args.members,
+          isGroupChat: true,
+        );
+      }
+
       if (group == null) {
         state.value = state.value.copyWith(
           isLoading: false,
@@ -83,10 +102,14 @@ class EnhancedGroupInfoController extends GetxController {
         isMuted: group.isMuted ?? false,
       );
 
-      // Load members if not provided
-      if (args.members == null && group.membersIds != null) {
-        final members = await _repository.getGroupMembers(group.membersIds!);
-        state.value = state.value.copyWith(members: members);
+      // Load members if not already set
+      if (state.value.members.isEmpty) {
+        if (args.members != null && args.members!.isNotEmpty) {
+          state.value = state.value.copyWith(members: args.members);
+        } else if (group.membersIds != null && group.membersIds!.isNotEmpty) {
+          final members = await _repository.getGroupMembers(group.membersIds!);
+          state.value = state.value.copyWith(members: members);
+        }
       }
 
       // Load admins
@@ -362,16 +385,24 @@ class EnhancedGroupInfoController extends GetxController {
       return;
     }
 
+    final newValue = !state.value.isFavorite;
+
     try {
-      state.value = state.value.copyWith(pendingAction: GroupInfoAction.togglingFavorite);
-      await _repository.toggleFavorite(roomId);
+      // Optimistically update UI first
       state.value = state.value.copyWith(
-        isFavorite: !state.value.isFavorite,
-        pendingAction: null,
+        isFavorite: newValue,
+        pendingAction: GroupInfoAction.togglingFavorite,
       );
+
+      await _repository.setFavorite(roomId, newValue);
+      state.value = state.value.copyWith(pendingAction: null);
     } catch (e) {
       developer.log('Error toggling favorite', name: 'EnhancedGroupInfoController', error: e);
-      state.value = state.value.copyWith(pendingAction: null);
+      // Revert on error
+      state.value = state.value.copyWith(
+        isFavorite: !newValue,
+        pendingAction: null,
+      );
       _showError('Failed to update favorite status');
     }
   }
@@ -384,16 +415,24 @@ class EnhancedGroupInfoController extends GetxController {
       return;
     }
 
+    final newValue = !state.value.isMuted;
+
     try {
-      state.value = state.value.copyWith(pendingAction: GroupInfoAction.togglingMute);
-      await _repository.toggleMute(roomId);
+      // Optimistically update UI first
       state.value = state.value.copyWith(
-        isMuted: !state.value.isMuted,
-        pendingAction: null,
+        isMuted: newValue,
+        pendingAction: GroupInfoAction.togglingMute,
       );
+
+      await _repository.setMuted(roomId, newValue);
+      state.value = state.value.copyWith(pendingAction: null);
     } catch (e) {
       developer.log('Error toggling mute', name: 'EnhancedGroupInfoController', error: e);
-      state.value = state.value.copyWith(pendingAction: null);
+      // Revert on error
+      state.value = state.value.copyWith(
+        isMuted: !newValue,
+        pendingAction: null,
+      );
       _showError('Failed to update mute status');
     }
   }
