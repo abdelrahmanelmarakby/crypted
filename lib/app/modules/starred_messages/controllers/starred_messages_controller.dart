@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/chat_picker_dialog.dart';
@@ -99,9 +100,9 @@ class StarredMessagesController extends GetxController {
   /// Load starred messages from a specific room
   Future<void> _loadRoomStarred(String roomId) async {
     final snapshot = await FirebaseFirestore.instance
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .where('isFavorite', isEqualTo: true)
         .orderBy('timestamp', descending: true)
         .get();
@@ -122,7 +123,7 @@ class StarredMessagesController extends GetxController {
 
     // Get all rooms user is a member of
     final roomsSnapshot = await FirebaseFirestore.instance
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .where('membersIds', arrayContains: userId)
         .get();
 
@@ -133,9 +134,9 @@ class StarredMessagesController extends GetxController {
       final roomName = roomData['name'] as String?;
 
       final messagesSnapshot = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomDoc.id)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('isFavorite', isEqualTo: true)
           .orderBy('timestamp', descending: true)
           .get();
@@ -185,9 +186,9 @@ class StarredMessagesController extends GetxController {
 
     try {
       await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(item.roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId)
           .update({'isFavorite': false});
 
@@ -228,9 +229,9 @@ class StarredMessagesController extends GetxController {
         );
         if (item != null) {
           await FirebaseFirestore.instance
-              .collection('chat_rooms')
+              .collection(FirebaseCollections.chats)
               .doc(item.roomId)
-              .collection('chat')
+              .collection(FirebaseCollections.chatMessages)
               .doc(id)
               .update({'isFavorite': false});
         }
@@ -386,14 +387,14 @@ class StarredMessagesController extends GetxController {
 
     // Add the message to the target chat room
     await FirebaseFirestore.instance
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(targetRoomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .add(forwardedMessageData);
 
     // Update last message in chat room
     await FirebaseFirestore.instance
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(targetRoomId)
         .set({
       'lastMessage': _getLastMessagePreview(originalMessage),

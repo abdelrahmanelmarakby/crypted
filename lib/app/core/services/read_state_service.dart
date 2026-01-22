@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:flutter/material.dart';
@@ -46,9 +47,9 @@ class ReadStateService extends GetxService {
     _readStates[roomId] = <String, List<String>>{}.obs;
 
     final subscription = _firestore
-        .collection('chats')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .snapshots()
         .listen(
       (snapshot) {
@@ -95,9 +96,9 @@ class ReadStateService extends GetxService {
 
     try {
       await _firestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId)
           .update({
         'readBy': FieldValue.arrayUnion([_currentUserId]),
@@ -124,9 +125,9 @@ class ReadStateService extends GetxService {
 
     for (final messageId in messageIds) {
       final docRef = _firestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       batch.update(docRef, {
@@ -155,9 +156,9 @@ class ReadStateService extends GetxService {
     try {
       // Get all unread messages
       final unreadMessages = await _firestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('senderId', isNotEqualTo: _currentUserId)
           .get();
 

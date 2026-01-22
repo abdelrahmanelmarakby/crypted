@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 
 class StoriesServices {
@@ -8,7 +9,7 @@ class StoriesServices {
 
   static Future addStory(StoryModel story, String uid) async {
     DocumentReference documentReference =
-        _firestore.collection("Stories").doc();
+        _firestore.collection(FirebaseCollections.stories).doc();
     return await FirebaseFirestore.instance.runTransaction((transaction) async {
       transaction.set(
         documentReference,
@@ -19,7 +20,7 @@ class StoriesServices {
 
   addStorytoUser({required String uid, required StoryModel story}) async {
     DocumentReference documentReference = _firestore
-        .collection("Stories")
+        .collection(FirebaseCollections.stories)
         .doc(uid);
     FirebaseFirestore.instance.runTransaction((transaction) async {
       transaction.update(
@@ -33,7 +34,7 @@ class StoriesServices {
 
   Stream<QuerySnapshot> getUserStory(String uid) {
     return _firestore
-        .collection("Stories")
+        .collection(FirebaseCollections.stories)
         .orderBy("createdAt", descending: true)
         .snapshots();
   }
@@ -42,7 +43,7 @@ class StoriesServices {
     List<String> uids,
   ) {
     return _firestore
-        .collection("Stories")
+        .collection(FirebaseCollections.stories)
         .orderBy("createdAt", descending: true)
         .where("uid", whereIn: uids)
         .snapshots();

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
@@ -78,7 +79,7 @@ class PresenceService {
 
       // Try to read our presence document to verify connection
       final doc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .get()
           .timeout(const Duration(seconds: 5));
@@ -112,9 +113,9 @@ class PresenceService {
 
       // Create presence document
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('presence')
+          .collection(FirebaseCollections.presence)
           .doc(_sessionId)
           .set({
         'status': 'online',
@@ -125,7 +126,7 @@ class PresenceService {
 
       // Update user's main document
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .update({
         'isOnline': true,
@@ -161,9 +162,9 @@ class PresenceService {
 
       // Update presence document
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('presence')
+          .collection(FirebaseCollections.presence)
           .doc(_sessionId)
           .update({
         'status': 'offline',
@@ -172,7 +173,7 @@ class PresenceService {
 
       // Update user's main document
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .update({
         'isOnline': false,
@@ -208,9 +209,9 @@ class PresenceService {
 
     try {
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('presence')
+          .collection(FirebaseCollections.presence)
           .doc(_sessionId)
           .update({
         'lastUpdate': FieldValue.serverTimestamp(),
@@ -256,7 +257,7 @@ class PresenceService {
   /// - User's privacy settings don't allow viewing online status
   Stream<bool> listenToUserOnlineStatus(String userId) {
     return FirebaseFirestore.instance
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .asyncMap((doc) async {
@@ -278,7 +279,7 @@ class PresenceService {
   /// - User's privacy settings don't allow viewing last seen
   Stream<DateTime?> listenToUserLastSeen(String userId) {
     return FirebaseFirestore.instance
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .asyncMap((doc) async {
@@ -298,7 +299,7 @@ class PresenceService {
   /// Privacy-aware online status stream with visibility info
   Stream<PresenceInfo> listenToUserPresence(String userId) {
     return FirebaseFirestore.instance
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .asyncMap((doc) async {
@@ -455,18 +456,18 @@ class PresenceService {
     // Check if current user blocked target
     try {
       final blockedDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(currentUserId)
-          .collection('blocked')
+          .collection(FirebaseCollections.blocked)
           .doc(targetUserId)
           .get();
       if (blockedDoc.exists) return true;
 
       // Check if target user blocked current user
       final blockedByDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(targetUserId)
-          .collection('blocked')
+          .collection(FirebaseCollections.blocked)
           .doc(currentUserId)
           .get();
       if (blockedByDoc.exists) return true;
@@ -487,9 +488,9 @@ class PresenceService {
 
     try {
       final contactDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(currentUserId)
-          .collection('contacts')
+          .collection(FirebaseCollections.contacts)
           .doc(targetUserId)
           .get();
       return contactDoc.exists;
@@ -502,9 +503,9 @@ class PresenceService {
   Future<EnhancedPrivacySettingsModel?> _getTargetUserPrivacySettings(String userId) async {
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('private')
+          .collection(FirebaseCollections.private)
           .doc('privacy')
           .get();
 
@@ -570,9 +571,9 @@ class PresenceService {
 
       // Delete all presence documents
       final presenceSnapshot = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('presence')
+          .collection(FirebaseCollections.presence)
           .get();
 
       final batch = FirebaseFirestore.instance.batch();

@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 
 /// Privacy settings data model
 class PrivacySettings {
@@ -92,7 +93,7 @@ class PrivacyDataSourceNew {
         name: 'PrivacyDataSource',
       );
 
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
 
       if (!doc.exists) {
         developer.log(
@@ -145,7 +146,7 @@ class PrivacyDataSourceNew {
         name: 'PrivacyDataSource',
       );
 
-      await _firestore.collection('users').doc(userId).set({
+      await _firestore.collection(FirebaseCollections.users).doc(userId).set({
         'privacySettings': settings.toMap(),
       }, SetOptions(merge: true));
 
@@ -170,7 +171,7 @@ class PrivacyDataSourceNew {
   /// Stream privacy settings changes
   Stream<PrivacySettings?> watchPrivacySettings(String userId) {
     return _firestore
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .map((snapshot) {
@@ -190,7 +191,7 @@ class PrivacyDataSourceNew {
   /// Get blocked users list
   Future<List<String>> getBlockedUsers(String userId) async {
     try {
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
 
       if (!doc.exists) return [];
 
@@ -213,7 +214,7 @@ class PrivacyDataSourceNew {
   /// Block a user
   Future<bool> blockUser(String userId, String userToBlock) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
+      await _firestore.collection(FirebaseCollections.users).doc(userId).update({
         'blockedUsers': FieldValue.arrayUnion([userToBlock]),
       });
 
@@ -238,7 +239,7 @@ class PrivacyDataSourceNew {
   /// Unblock a user
   Future<bool> unblockUser(String userId, String userToUnblock) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
+      await _firestore.collection(FirebaseCollections.users).doc(userId).update({
         'blockedUsers': FieldValue.arrayRemove([userToUnblock]),
       });
 

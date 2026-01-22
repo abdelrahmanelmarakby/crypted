@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:flutter/foundation.dart';
@@ -63,9 +64,10 @@ class MessagePaginationService {
 
   MessagePaginationService({
     FirebaseFirestore? firestore,
-    String collectionName = 'chat_rooms',
+    // Uses FirebaseCollections.chats to match ChatDataSources
+    String? collectionName,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _collectionName = collectionName;
+        _collectionName = collectionName ?? FirebaseCollections.chats;
 
   /// Get initial page of messages with live updates
   Stream<PaginatedMessages> getInitialMessages({
@@ -75,7 +77,7 @@ class MessagePaginationService {
     final query = _firestore
         .collection(_collectionName)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .orderBy('timestamp', descending: true)
         .limit(pageSize);
 
@@ -113,7 +115,7 @@ class MessagePaginationService {
       final query = _firestore
           .collection(_collectionName)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .startAfterDocument(currentState.lastDocument!)
           .limit(currentState.pageSize);
@@ -152,7 +154,7 @@ class MessagePaginationService {
       final beforeQuery = _firestore
           .collection(_collectionName)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(timestamp))
           .limit(pageSize ~/ 2);
@@ -161,7 +163,7 @@ class MessagePaginationService {
       final afterQuery = _firestore
           .collection(_collectionName)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: false)
           .where('timestamp', isGreaterThan: Timestamp.fromDate(timestamp))
           .limit(pageSize ~/ 2);
@@ -233,7 +235,7 @@ extension PaginatedChatDataSource on FirebaseFirestore {
     return this
         .collection(collection)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()

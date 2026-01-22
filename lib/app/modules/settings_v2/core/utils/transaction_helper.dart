@@ -5,6 +5,7 @@
 
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 
 /// Result of a transaction operation
 class TransactionResult<T> {
@@ -119,9 +120,9 @@ class SettingsTransactionHelper {
     return runWithRetry(
       transactionHandler: (transaction) async {
         final docRef = _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
-            .collection('settings')
+            .collection(FirebaseCollections.settings)
             .doc('notifications');
 
         final snapshot = await transaction.get(docRef);
@@ -169,9 +170,9 @@ class SettingsTransactionHelper {
     return runWithRetry(
       transactionHandler: (transaction) async {
         final docRef = _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
-            .collection('settings')
+            .collection(FirebaseCollections.settings)
             .doc('privacy');
 
         final snapshot = await transaction.get(docRef);
@@ -221,12 +222,12 @@ class SettingsTransactionHelper {
     return runWithRetry(
       transactionHandler: (transaction) async {
         final privacyDocRef = _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
-            .collection('settings')
+            .collection(FirebaseCollections.settings)
             .doc('privacy');
 
-        final userDocRef = _firestore.collection('users').doc(userId);
+        final userDocRef = _firestore.collection(FirebaseCollections.users).doc(userId);
 
         // Get both documents
         final privacySnapshot = await transaction.get(privacyDocRef);
@@ -292,9 +293,9 @@ class SettingsTransactionHelper {
     return runWithRetry(
       transactionHandler: (transaction) async {
         final overrideDocRef = _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
-            .collection('chatNotificationOverrides')
+            .collection(FirebaseCollections.chatNotificationOverrides)
             .doc(chatId);
 
         // Set the override
@@ -305,7 +306,7 @@ class SettingsTransactionHelper {
 
         // Optionally update chat metadata for UI indicators
         if (updateChatMetadata) {
-          final chatDocRef = _firestore.collection('chat_rooms').doc(chatId);
+          final chatDocRef = _firestore.collection(FirebaseCollections.chats).doc(chatId);
           final chatSnapshot = await transaction.get(chatDocRef);
 
           if (chatSnapshot.exists) {
@@ -332,15 +333,15 @@ class SettingsTransactionHelper {
     return runWithRetry(
       transactionHandler: (transaction) async {
         final sessionDocRef = _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
-            .collection('sessions')
+            .collection(FirebaseCollections.sessions)
             .doc(sessionId);
 
         final securityLogDocRef = _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
-            .collection('securityLog')
+            .collection(FirebaseCollections.securityLog)
             .doc(securityLogEntry['id'] as String);
 
         // Delete session

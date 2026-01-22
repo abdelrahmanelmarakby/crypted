@@ -2,6 +2,7 @@
 // This encapsulates all Firebase-specific code in one place
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
@@ -336,9 +337,9 @@ class FirebaseChatRepository implements IChatRepository {
       // and filter client-side. For better performance at scale,
       // consider using Algolia, Typesense, or ElasticSearch.
       final snapshot = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .limit(500) // Limit to recent messages for performance
           .get();

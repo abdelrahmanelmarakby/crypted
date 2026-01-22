@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:crypted_app/app/core/exceptions/app_exceptions.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
+import 'package:crypted_app/app/core/state/upload_state_manager.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
@@ -19,11 +20,12 @@ import 'package:path/path.dart' as path;
 ///
 /// Features:
 /// - Professional error handling
-/// - Progress tracking
+/// - Progress tracking with UploadStateManager integration
 /// - Automatic compression
 /// - File type validation
 /// - Size validation
-class MediaController extends GetxController {
+/// - Upload speed and ETA calculation
+class MediaController extends GetxController with UploadTrackingMixin {
   final String roomId;
 
   MediaController({required this.roomId});
@@ -293,13 +295,33 @@ class MediaController extends GetxController {
   // ========== INTERNAL METHODS ==========
 
   /// Internal upload method with progress tracking
+  /// Integrates with UploadStateManager for centralized state management
   Future<String> _uploadFile({
     required File file,
     required String storagePath,
+    String? uploadId,
   }) async {
     isUploading.value = true;
     uploadProgress.value = 0.0;
     uploadStatus.value = 'جاري الرفع... / Uploading...';
+
+    // Generate upload ID if not provided
+    final trackingId = uploadId ?? 'upload_${DateTime.now().millisecondsSinceEpoch}';
+    final fileName = path.basename(file.path);
+    final fileSize = await file.length();
+
+    // Determine upload type based on file extension
+    final ext = path.extension(file.path).toLowerCase();
+    final uploadType = _getUploadType(ext);
+
+    // Track upload using UploadStateManager
+    trackUpload(
+      id: trackingId,
+      fileName: fileName,
+      totalBytes: fileSize,
+      roomId: roomId,
+      type: uploadType,
+    );
 
     try {
       final ref = _storage.ref().child(storagePath);
@@ -312,8 +334,13 @@ class MediaController extends GetxController {
         uploadStatus.value =
             'رفع ${(progress * 100).toStringAsFixed(0)}% / Uploading ${(progress * 100).toStringAsFixed(0)}%';
 
+        // Update UploadStateManager with bytes transferred
+        updateUploadProgress(trackingId, snapshot.bytesTransferred);
+
         _logger.debug('Upload progress', context: 'MediaController', data: {
           'progress': '${(progress * 100).toStringAsFixed(1)}%',
+          'bytesTransferred': snapshot.bytesTransferred,
+          'totalBytes': snapshot.totalBytes,
         });
       });
 
@@ -330,9 +357,13 @@ class MediaController extends GetxController {
       uploadProgress.value = 1.0;
       uploadStatus.value = 'اكتمل! / Complete!';
 
+      // Mark upload as completed in UploadStateManager
+      completeUpload(trackingId, downloadUrl: downloadUrl);
+
       _logger.info('File uploaded successfully', context: 'MediaController', data: {
         'storagePath': storagePath,
         'url': downloadUrl,
+        'trackingId': trackingId,
       });
 
       _errorHandler.showSuccess('رفع ناجح / Upload successful');
@@ -340,6 +371,9 @@ class MediaController extends GetxController {
       return downloadUrl;
     } catch (e, stackTrace) {
       uploadStatus.value = 'فشل / Failed';
+
+      // Mark upload as failed in UploadStateManager
+      failUpload(trackingId, error: e.toString());
 
       _logger.logError(
         'Upload failed',
@@ -358,6 +392,34 @@ class MediaController extends GetxController {
         uploadProgress.value = 0.0;
         uploadStatus.value = '';
       });
+    }
+  }
+
+  /// Get upload type based on file extension
+  UploadType _getUploadType(String extension) {
+    switch (extension) {
+      case '.jpg':
+      case '.jpeg':
+      case '.png':
+      case '.gif':
+      case '.webp':
+      case '.mp4':
+      case '.mov':
+      case '.avi':
+        return UploadType.media;
+      case '.mp3':
+      case '.wav':
+      case '.aac':
+      case '.m4a':
+        return UploadType.audio;
+      case '.pdf':
+      case '.doc':
+      case '.docx':
+      case '.xls':
+      case '.xlsx':
+        return UploadType.document;
+      default:
+        return UploadType.other;
     }
   }
 

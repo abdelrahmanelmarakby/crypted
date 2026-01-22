@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -12,7 +13,7 @@ class HelpDataSource {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Collection reference for help messages
-  CollectionReference get _helpCollection => _firestore.collection('help_messages');
+  CollectionReference get _helpCollection => _firestore.collection(FirebaseCollections.helpMessages);
 
   /// Submit a new help message
   Future<bool> submitHelpMessage({

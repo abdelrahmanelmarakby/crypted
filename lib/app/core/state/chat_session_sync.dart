@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:get/get.dart';
@@ -46,7 +47,7 @@ class ChatSessionSync extends GetxService {
 
     // Subscribe to room document changes
     final subscription = _firestore
-        .collection('chats')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
         .snapshots()
         .listen(
@@ -156,7 +157,7 @@ class ChatSessionSync extends GetxService {
 
       if (updates.isEmpty) return true;
 
-      await _firestore.collection('chats').doc(roomId).update(updates);
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update(updates);
 
       _logger.info('Session updated to Firestore', context: 'ChatSessionSync', data: {
         'roomId': roomId,

@@ -95,8 +95,7 @@ class TabBarBody extends StatelessWidget {
               itemCount: myChats?.length ?? 0,
               itemBuilder: (context, index) {
                 ChatRoom? chatRoom = myChats?[index];
-                print("Chatrow members: ${chatRoom?.members}");
-                print("Chatrow $chatRoom");
+               
                 return ChatRow(
                   chatRoom: chatRoom,
                 );

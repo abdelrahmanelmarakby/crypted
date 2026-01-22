@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/notification_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
@@ -26,7 +27,7 @@ class NotificationDataSource {
 
       // Get user document
       DocumentSnapshot<Map<String, dynamic>> userDoc =
-          await firebaseFirestore.collection('users').doc(currentUserId).get();
+          await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).get();
 
       if (!userDoc.exists) {
         developer.log(
@@ -94,7 +95,7 @@ class NotificationDataSource {
       );
 
       // Update user document with notification settings
-      await firebaseFirestore.collection('users').doc(currentUserId).update({
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).update({
         'notificationSettings': notification.toMap(),
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -141,7 +142,7 @@ class NotificationDataSource {
         return false;
       }
 
-      await firebaseFirestore.collection('users').doc(currentUserId).update({
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).update({
         'notificationSettings.$field': value,
         'updatedAt': DateTime.now().toIso8601String(),
       });

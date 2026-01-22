@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -32,12 +33,12 @@ class UserService {
 
       // جرب مع collection 'users' أولاً (الأكثر شيوعاً)
       DocumentSnapshot<Map<String, dynamic>> doc =
-          await firebaseFirestore.collection('users').doc(uid).get();
+          await firebaseFirestore.collection(FirebaseCollections.users).doc(uid).get();
 
       // إذا لم يوجد، جرب مع 'Users'
       if (!doc.exists) {
         print("⚠️ User not found in 'users', trying 'Users'...");
-        doc = await firebaseFirestore.collection('Users').doc(uid).get();
+        doc = await firebaseFirestore.collection(FirebaseCollections.usersLegacy).doc(uid).get();
       }
 
       if (doc.data() == null) {
@@ -71,7 +72,7 @@ class UserService {
 
           // حفظ المستخدم في collection 'users'
           await firebaseFirestore
-              .collection('users')
+              .collection(FirebaseCollections.users)
               .doc(uid)
               .set(newUser.toMap());
           updateCurrentUser(newUser);
@@ -100,7 +101,7 @@ class UserService {
       print("🔄 Adding user: ${user.uid}");
 
       DocumentReference documentReference =
-          firebaseFirestore.collection("users").doc(user.uid);
+          firebaseFirestore.collection(FirebaseCollections.users).doc(user.uid);
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         transaction.set(documentReference, user.toMap());
@@ -121,7 +122,7 @@ class UserService {
 
       // محاولة التحديث في collection 'users' أولاً
       DocumentReference documentReference =
-          firebaseFirestore.collection("users").doc(user.uid);
+          firebaseFirestore.collection(FirebaseCollections.users).doc(user.uid);
 
       try {
         await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -142,7 +143,7 @@ class UserService {
         print("⚠️ Failed to update in 'users' collection, trying 'Users'...");
 
         // إذا فشل، جرب collection 'Users'
-        documentReference = firebaseFirestore.collection("Users").doc(user.uid);
+        documentReference = firebaseFirestore.collection(FirebaseCollections.usersLegacy).doc(user.uid);
 
         await FirebaseFirestore.instance.runTransaction((transaction) async {
           transaction.update(
@@ -173,7 +174,7 @@ class UserService {
     try {
       // Get the user document
       DocumentReference userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(userID);
+          FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(userID);
       DocumentSnapshot<Map<String, dynamic>> userData =
           await userDocRef.get() as DocumentSnapshot<Map<String, dynamic>>;
       // Get the current following list
@@ -215,7 +216,7 @@ class UserService {
     try {
       // Get the user document
       DocumentReference userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(userID);
+          FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(userID);
       DocumentSnapshot<Map<String, dynamic>> userData =
           await userDocRef.get() as DocumentSnapshot<Map<String, dynamic>>;
 
@@ -257,7 +258,7 @@ class UserService {
   ) async {
     try {
       final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .where('uid', whereIn: followingUIDs)
           .get();
 
@@ -278,7 +279,7 @@ class UserService {
   Future<List<SocialMediaUser>> getAllUsers({String? searchQuery}) async {
     try {
       final QuerySnapshot<Map<String, dynamic>> snapshot =
-          await FirebaseFirestore.instance.collection('users').get();
+          await FirebaseFirestore.instance.collection(FirebaseCollections.users).get();
 
       final List<SocialMediaUser> userList = snapshot.docs
           .map((doc) => SocialMediaUser.fromMap(doc.data()))
@@ -310,7 +311,7 @@ class UserService {
       final firebaseAuth = FirebaseAuth.instance;
 
       // Delete user data from Firestore
-      await firebaseFirestore.collection("users").doc(uid).delete();
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(uid).delete();
       print("✅ User data deleted from Firestore");
 
       // Delete user authentication
@@ -331,7 +332,7 @@ class UserService {
   Future<bool> blockUser(String blockedUserId, String chatRoomId) async {
     try {
       final currentUserDoc =
-          FirebaseFirestore.instance.collection('users').doc(myUser?.uid);
+          FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(myUser?.uid);
       await currentUserDoc.update({
         'blockedUser': FieldValue.arrayUnion([blockedUserId]),
       });
@@ -351,7 +352,7 @@ class UserService {
         DocumentReference<Map<String, dynamic>>? chatRoomDoc;
 
         chatRoomDoc =
-            FirebaseFirestore.instance.collection('Chats').doc(chatRoomId);
+            FirebaseFirestore.instance.collection(FirebaseCollections.chatsLegacyCapital).doc(chatRoomId);
         await chatRoomDoc.update({"blockingUserId": null});
       } on FirebaseException catch (e) {
         log(e.message.toString());
@@ -368,7 +369,7 @@ class UserService {
   Future<bool> unblockUser(String unblockedUserId, String chatRoomId) async {
     try {
       final currentUserDoc =
-          FirebaseFirestore.instance.collection('users').doc(myUser?.uid);
+          FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(myUser?.uid);
       await currentUserDoc.update({
         'blockedUser': FieldValue.arrayRemove([unblockedUserId]),
       });
@@ -387,7 +388,7 @@ class UserService {
       try {
         DocumentReference<Map<String, dynamic>>? chatRoomDoc;
         chatRoomDoc =
-            FirebaseFirestore.instance.collection('Chats').doc(chatRoomId);
+            FirebaseFirestore.instance.collection(FirebaseCollections.chatsLegacyCapital).doc(chatRoomId);
         await chatRoomDoc.update({"blockingUserId": null});
       } on FirebaseException catch (e) {
         log(e.message.toString());
@@ -405,7 +406,7 @@ class UserService {
   Future<bool> isUserBlocked(String targetUserId) async {
     try {
       final currentUserDoc =
-          FirebaseFirestore.instance.collection('users').doc(myUser?.uid);
+          FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(myUser?.uid);
       DocumentSnapshot currentUserSnapshot = await currentUserDoc.get();
       if (currentUserSnapshot.exists) {
         Map<String, dynamic>? userData =
@@ -434,7 +435,7 @@ class UserService {
       for (String userId in blockedUsers) {
         // Retrieve the user document from Firestore
         DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
             .get();
 
@@ -465,7 +466,7 @@ class UserService {
     try {
       log('🚫 Blocking user globally: $targetUserId by $currentUserId');
 
-      await firebaseFirestore.collection('users').doc(currentUserId).update({
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).update({
         'blockedUser': FieldValue.arrayUnion([targetUserId]),
       });
 
@@ -482,7 +483,7 @@ class UserService {
     try {
       log('✅ Unblocking user globally: $targetUserId by $currentUserId');
 
-      await firebaseFirestore.collection('users').doc(currentUserId).update({
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).update({
         'blockedUser': FieldValue.arrayRemove([targetUserId]),
       });
 
@@ -504,7 +505,7 @@ class UserService {
     try {
       log('🚨 Reporting user: $reportedUserId by $reporterId');
 
-      await firebaseFirestore.collection('reports').add({
+      await firebaseFirestore.collection(FirebaseCollections.reports).add({
         'reporterId': reporterId,
         'reportedUserId': reportedUserId,
         'reason': reason,
@@ -529,9 +530,9 @@ class UserService {
 
       // Get all messages in the chat
       final messagesRef = firebaseFirestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat');
+          .collection(FirebaseCollections.chatMessages);
 
       final messagesSnapshot = await messagesRef.get();
 
@@ -543,7 +544,7 @@ class UserService {
       await batch.commit();
 
       // Update last message
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'lastMsg': '',
         'lastSender': '',
         'lastChat': FieldValue.serverTimestamp(),
@@ -563,7 +564,7 @@ class UserService {
       log('🗑️ Deleting chat for user: $userId in room: $roomId');
 
       // Add user to deletedFor array
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'deletedFor': FieldValue.arrayUnion([userId]),
       });
 
@@ -582,7 +583,7 @@ class UserService {
     try {
       log('🚪 User $userId exiting group: $roomId');
 
-      final chatDoc = await firebaseFirestore.collection('chats').doc(roomId).get();
+      final chatDoc = await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).get();
       if (!chatDoc.exists) {
         throw Exception('Group not found');
       }
@@ -596,16 +597,16 @@ class UserService {
       membersList.removeWhere((m) => m['uid'] == userId);
 
       // Update group
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'membersIds': members,
         'members': membersList,
       });
 
       // Add system message
       await firebaseFirestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .add({
         'type': 'event',
         'eventType': 'userLeft',
@@ -631,7 +632,7 @@ class UserService {
     try {
       log('🚫 Admin $adminId removing member $memberId from group: $roomId');
 
-      final chatDoc = await firebaseFirestore.collection('chats').doc(roomId).get();
+      final chatDoc = await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).get();
       if (!chatDoc.exists) {
         throw Exception('Group not found');
       }
@@ -645,16 +646,16 @@ class UserService {
       membersList.removeWhere((m) => m['uid'] == memberId);
 
       // Update group
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'membersIds': members,
         'members': membersList,
       });
 
       // Add system message
       await firebaseFirestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .add({
         'type': 'event',
         'eventType': 'userRemoved',
@@ -682,7 +683,7 @@ class UserService {
     try {
       log('🚨 Reporting group: $groupId by $reporterId');
 
-      await firebaseFirestore.collection('reports').add({
+      await firebaseFirestore.collection(FirebaseCollections.reports).add({
         'reporterId': reporterId,
         'reportedGroupId': groupId,
         'reason': reason,
@@ -705,7 +706,7 @@ class UserService {
     try {
       log('🔇 ${mute ? "Muting" : "Unmuting"} chat: $roomId for user: $userId');
 
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'mutedBy': mute
             ? FieldValue.arrayUnion([userId])
             : FieldValue.arrayRemove([userId]),
@@ -724,7 +725,7 @@ class UserService {
     try {
       log('📌 ${pin ? "Pinning" : "Unpinning"} chat: $roomId');
 
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'isPinned': pin,
       });
 
@@ -741,7 +742,7 @@ class UserService {
     try {
       log('📦 ${archive ? "Archiving" : "Unarchiving"} chat: $roomId');
 
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'isArchived': archive,
       });
 
@@ -758,7 +759,7 @@ class UserService {
     try {
       log('👑 Adding admin $userId to group: $roomId');
 
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'admins': FieldValue.arrayUnion([userId]),
       });
 
@@ -775,7 +776,7 @@ class UserService {
     try {
       log('👑 Removing admin $userId from group: $roomId');
 
-      await firebaseFirestore.collection('chats').doc(roomId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'admins': FieldValue.arrayRemove([userId]),
       });
 

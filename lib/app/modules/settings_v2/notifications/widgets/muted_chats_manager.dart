@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/controllers/notification_settings_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -222,14 +223,14 @@ class _MutedChatTile extends StatelessWidget {
     try {
       // Try chat_rooms collection first
       var doc = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(chatId)
           .get();
 
       if (!doc.exists) {
-        // Try chats collection
+        // Try chats collection (legacy)
         doc = await FirebaseFirestore.instance
-            .collection('chats')
+            .collection(FirebaseCollections.chatsLegacyCapital)
             .doc(chatId)
             .get();
       }
@@ -263,7 +264,7 @@ class _MutedChatTile extends StatelessWidget {
       final otherUserId = membersIds.first;
 
       final userDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(otherUserId)
           .get();
 

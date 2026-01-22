@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
@@ -55,7 +56,7 @@ class OfflineChatRepository implements IChatRepository {
     // Then sync with Firestore and listen for updates
     if (ConnectivityService().isOnline) {
       yield* _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: userId)
           .snapshots()
           .asyncMap((snapshot) async {
@@ -100,7 +101,7 @@ class OfflineChatRepository implements IChatRepository {
     // Fall back to Firestore if online
     if (ConnectivityService().isOnline) {
       try {
-        final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+        final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
         if (doc.exists) {
           final data = doc.data()!;
           data['id'] = doc.id;
@@ -134,7 +135,7 @@ class OfflineChatRepository implements IChatRepository {
       try {
         final sortedIds = List<String>.from(memberIds)..sort();
         final query = await _firestore
-            .collection('chat_rooms')
+            .collection(FirebaseCollections.chats)
             .where('membersIds', arrayContains: sortedIds.first)
             .get();
 
@@ -208,7 +209,7 @@ class OfflineChatRepository implements IChatRepository {
     // Queue for Firestore sync
     if (ConnectivityService().isOnline) {
       try {
-        await _firestore.collection('chat_rooms').doc(id).set(room.toMap());
+        await _firestore.collection(FirebaseCollections.chats).doc(id).set(room.toMap());
         await _localDb.saveChatRoom(hiveRoom.copyWith(isSynced: true));
       } catch (e) {
         if (kDebugMode) print('[OfflineChatRepository] Error creating room: $e');
@@ -299,7 +300,7 @@ class OfflineChatRepository implements IChatRepository {
 
     if (ConnectivityService().isOnline) {
       try {
-        await _firestore.collection('chat_rooms').doc(roomId).delete();
+        await _firestore.collection(FirebaseCollections.chats).doc(roomId).delete();
       } catch (e) {
         if (kDebugMode) print('[OfflineChatRepository] Error deleting room: $e');
       }
@@ -345,9 +346,9 @@ class OfflineChatRepository implements IChatRepository {
     if (_firestoreSubscriptions.containsKey(roomId)) return;
 
     final subscription = _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .orderBy('timestamp', descending: false)
         .limit(100)
         .snapshots()
@@ -495,9 +496,9 @@ class OfflineChatRepository implements IChatRepository {
     if (ConnectivityService().isOnline) {
       try {
         await _firestore
-            .collection('chat_rooms')
+            .collection(FirebaseCollections.chats)
             .doc(roomId)
-            .collection('chat')
+            .collection(FirebaseCollections.chatMessages)
             .doc(messageId)
             .update(updates);
 
@@ -594,9 +595,9 @@ class OfflineChatRepository implements IChatRepository {
       try {
         await _firestore.runTransaction((transaction) async {
           final docRef = _firestore
-              .collection('chat_rooms')
+              .collection(FirebaseCollections.chats)
               .doc(roomId)
-              .collection('chat')
+              .collection(FirebaseCollections.chatMessages)
               .doc(messageId);
 
           final snapshot = await transaction.get(docRef);
@@ -667,7 +668,7 @@ class OfflineChatRepository implements IChatRepository {
 
         try {
           await _firestore
-              .collection('chat_rooms')
+              .collection(FirebaseCollections.chats)
               .doc(roomId)
               .update({property: value});
         } catch (e) {
@@ -697,7 +698,7 @@ class OfflineChatRepository implements IChatRepository {
   Future<void> blockUser(String roomId, String userId) async {
     if (ConnectivityService().isOnline) {
       try {
-        await _firestore.collection('chat_rooms').doc(roomId).update({
+        await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
           'blockedUsers': FieldValue.arrayUnion([userId]),
         });
       } catch (e) {
@@ -710,7 +711,7 @@ class OfflineChatRepository implements IChatRepository {
   Future<void> unblockUser(String roomId, String userId) async {
     if (ConnectivityService().isOnline) {
       try {
-        await _firestore.collection('chat_rooms').doc(roomId).update({
+        await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
           'blockedUsers': FieldValue.arrayRemove([userId]),
         });
       } catch (e) {

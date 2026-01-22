@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
@@ -110,9 +111,9 @@ class MediaGalleryController extends GetxController
       errorMessage?.value = '';
 
       final messagesRef = FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true);
 
       // Load all messages and filter by type
@@ -289,9 +290,9 @@ class MediaGalleryController extends GetxController
     try {
       final batch = FirebaseFirestore.instance.batch();
       final messagesRef = FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat');
+          .collection(FirebaseCollections.chatMessages);
 
       for (final id in selectedIds) {
         batch.delete(messagesRef.doc(id));

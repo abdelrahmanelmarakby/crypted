@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show VoidCallback;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
 import 'package:get/get.dart';
@@ -88,7 +89,7 @@ class ConnectionStateHandler extends GetxController {
     try {
       // Try to read from Firestore to verify connection
       await FirebaseFirestore.instance
-          .collection('_connection_check')
+          .collection(FirebaseCollections.connectionCheck)
           .doc('ping')
           .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 5));

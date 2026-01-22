@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/core/constant.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
@@ -9,7 +10,7 @@ import 'package:rxdart/rxdart.dart';
 
 class CallDataSources {
   CollectionReference<Map<String, dynamic>> callsCollection =
-      FirebaseFirestore.instance.collection('Calls');
+      FirebaseFirestore.instance.collection(FirebaseCollections.calls);
 
   Future<bool> storeCall(CallModel callModel) async {
     try {

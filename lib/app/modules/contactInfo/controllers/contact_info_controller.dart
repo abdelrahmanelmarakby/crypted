@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -325,9 +326,9 @@ class ContactInfoController extends GetxController {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('chat_rooms')
+                    .collection(FirebaseCollections.chats)
                     .doc(roomId)
-                    .collection('chat')
+                    .collection(FirebaseCollections.chatMessages)
                     .where('isFavorite', isEqualTo: true)
                     .orderBy('timestamp', descending: true)
                     .snapshots(),
@@ -436,9 +437,9 @@ class ContactInfoController extends GetxController {
                             onPressed: () async {
                               // Unstar message
                               await FirebaseFirestore.instance
-                                  .collection('chat_rooms')
+                                  .collection(FirebaseCollections.chats)
                                   .doc(roomId)
-                                  .collection('chat')
+                                  .collection(FirebaseCollections.chatMessages)
                                   .doc(messages[index].id)
                                   .update({'isFavorite': false});
                             },
@@ -579,9 +580,9 @@ class ContactInfoController extends GetxController {
   Widget _buildMediaGrid(String mediaType) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('type', isEqualTo: mediaType)
           .orderBy('timestamp', descending: true)
           .snapshots(),
@@ -802,9 +803,9 @@ class ContactInfoController extends GetxController {
 
       // Fetch all messages from the chat room
       final messagesSnapshot = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: false)
           .get();
 
@@ -1017,7 +1018,7 @@ class ContactInfoController extends GetxController {
     try {
       // Update bio in Firestore
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(currentUserId)
           .update({'bio': newBio});
 

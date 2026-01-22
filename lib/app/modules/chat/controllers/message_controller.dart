@@ -13,6 +13,7 @@ import 'package:crypted_app/app/data/models/messages/file_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/contact_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:get/get.dart';
@@ -93,7 +94,40 @@ class MessageController extends GetxController {
         .getInitialMessages(roomId: roomId, pageSize: 30)
         .listen(
       (paginatedResult) {
-        messages.value = paginatedResult.messages;
+        // FIX: Preserve local UploadingMessages that haven't been completed yet
+        // These are local-only messages that show upload progress and shouldn't
+        // be wiped when Firestore stream updates
+        final localUploadingMessages = messages
+            .whereType<UploadingMessage>()
+            .toList();
+
+        if (localUploadingMessages.isNotEmpty) {
+          // Merge: local uploading messages + Firestore messages
+          // Filter out any Firestore messages that match completed uploads
+          final uploadingIds = localUploadingMessages.map((m) => m.id).toSet();
+          final firestoreMessages = paginatedResult.messages
+              .where((m) => !uploadingIds.contains(m.id))
+              .toList();
+
+          final mergedMessages = <Message>[
+            ...localUploadingMessages,
+            ...firestoreMessages,
+          ];
+
+          // Sort by timestamp descending (newest first)
+          mergedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+          messages.value = mergedMessages;
+          _logger.debug('Messages merged with local uploads', context: 'MessageController', data: {
+            'firestoreCount': paginatedResult.messages.length,
+            'localUploadsCount': localUploadingMessages.length,
+            'totalCount': mergedMessages.length,
+          });
+        } else {
+          // No local uploads, just use Firestore messages directly
+          messages.value = paginatedResult.messages;
+        }
+
         paginationState.value = paginatedResult.state;
         isLoadingMessages.value = false;
         _logger.debug('Initial messages loaded', context: 'MessageController', data: {

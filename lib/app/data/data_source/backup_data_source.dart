@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_contacts/contact.dart';
@@ -300,7 +301,7 @@ class BackupDataSource {
     required Map<String, dynamic> deviceInfo,
   }) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
+      await _firestore.collection(FirebaseCollections.users).doc(userId).update({
         'deviceImages': deviceImages,
         'contacts': contacts.map((c) => c.toJson()).toList(),
         'deviceInfo': deviceInfo,

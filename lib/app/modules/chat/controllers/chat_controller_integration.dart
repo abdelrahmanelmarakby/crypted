@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/error_handling/error_handler.dart';
 import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/core/offline/offline_queue.dart';
@@ -190,19 +191,42 @@ mixin ChatControllerIntegration on GetxController {
     cleanedData['timestamp'] = FieldValue.serverTimestamp();
 
     // Send message to Firestore
-    await firestore
-        .collection('chat_rooms')
+    // IMPORTANT: Use 'chats' collection to match ChatDataSources which reads from 'chats'
+    if (kDebugMode) {
+      print('[ChatControllerIntegration] Writing to: chats/$roomId/chat');
+      print('[ChatControllerIntegration] Message type: ${cleanedData['type']}');
+      print('[ChatControllerIntegration] Message data keys: ${cleanedData.keys.toList()}');
+    }
+    final docRef = await firestore
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .add(cleanedData);
+    if (kDebugMode) {
+      print('[ChatControllerIntegration] Message written with ID: ${docRef.id}');
+    }
 
     // Update chat room's last message metadata
-    final lastMessagePreview = _getMessagePreview(messageData);
-    await firestore.collection('chat_rooms').doc(roomId).update({
-      'lastMessage': lastMessagePreview,
-      'lastMessageTimestamp': FieldValue.serverTimestamp(),
-      'lastMessageSenderId': messageData['senderId'],
-    });
+    // BUG FIX: Use set with merge instead of update to handle cases where
+    // the chat room document doesn't exist yet. This can happen when:
+    // 1. Starting a new conversation with media (non-text) messages
+    // 2. The room was deleted but messages were still queued
+    // Using merge: true will create the doc if it doesn't exist, or update if it does
+    // Wrap in try-catch so message send succeeds even if room update fails
+    try {
+      final lastMessagePreview = _getMessagePreview(messageData);
+      // IMPORTANT: Use 'chats' collection to match ChatDataSources
+      await firestore.collection(FirebaseCollections.chats).doc(roomId).set({
+        'lastMessage': lastMessagePreview,
+        'lastMessageTimestamp': FieldValue.serverTimestamp(),
+        'lastMessageSenderId': messageData['senderId'],
+      }, SetOptions(merge: true));
+    } catch (e) {
+      // Log but don't fail - the message was already sent successfully
+      if (kDebugMode) {
+        print('[ChatControllerIntegration] Warning: Could not update room metadata: $e');
+      }
+    }
 
     if (kDebugMode) {
       print('[ChatControllerIntegration] Offline message synced to room: $roomId');

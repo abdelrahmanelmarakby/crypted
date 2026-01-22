@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
 /// Production-grade Read Receipt Service for 1M+ users
@@ -58,7 +59,7 @@ class ReadReceiptService {
 
       // Check if message is from current user (don't mark own messages as read)
       final messageDoc = await FirebaseFirestore.instance
-          .collection('messages')
+          .collection(FirebaseCollections.messages)
           .doc(messageId)
           .get();
 
@@ -81,9 +82,9 @@ class ReadReceiptService {
 
       // Create read receipt
       await FirebaseFirestore.instance
-          .collection('messages')
+          .collection(FirebaseCollections.messages)
           .doc(messageId)
-          .collection('readReceipts')
+          .collection(FirebaseCollections.readReceipts)
           .doc(userId)
           .set({
         'readAt': FieldValue.serverTimestamp(),
@@ -109,9 +110,9 @@ class ReadReceiptService {
 
     try {
       final blockedDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(targetUserId)
-          .collection('blocked')
+          .collection(FirebaseCollections.blocked)
           .doc(currentUserId)
           .get();
       return blockedDoc.exists;
@@ -148,7 +149,7 @@ class ReadReceiptService {
       // Get message documents to check senders
       final messageDocs = await Future.wait(
         unreadMessages.map((id) =>
-            FirebaseFirestore.instance.collection('messages').doc(id).get()),
+            FirebaseFirestore.instance.collection(FirebaseCollections.messages).doc(id).get()),
       );
 
       // Cache blocked status to avoid repeated queries
@@ -183,9 +184,9 @@ class ReadReceiptService {
       final batch = FirebaseFirestore.instance.batch();
       for (final messageId in messagesToMark) {
         final readReceiptRef = FirebaseFirestore.instance
-            .collection('messages')
+            .collection(FirebaseCollections.messages)
             .doc(messageId)
-            .collection('readReceipts')
+            .collection(FirebaseCollections.readReceipts)
             .doc(userId);
 
         batch.set(readReceiptRef, {
@@ -209,9 +210,9 @@ class ReadReceiptService {
   /// Listen to read receipts for a message
   Stream<Map<String, DateTime>> listenToReadReceipts(String messageId) {
     return FirebaseFirestore.instance
-        .collection('messages')
+        .collection(FirebaseCollections.messages)
         .doc(messageId)
-        .collection('readReceipts')
+        .collection(FirebaseCollections.readReceipts)
         .snapshots()
         .map((snapshot) {
       final receipts = <String, DateTime>{};
@@ -229,7 +230,7 @@ class ReadReceiptService {
   Future<ReadReceiptStatus> getReadReceiptStatus(String messageId) async {
     try {
       final messageDoc = await FirebaseFirestore.instance
-          .collection('messages')
+          .collection(FirebaseCollections.messages)
           .doc(messageId)
           .get();
 
@@ -263,7 +264,7 @@ class ReadReceiptService {
   /// Listen to message status changes
   Stream<ReadReceiptStatus> listenToMessageStatus(String messageId) {
     return FirebaseFirestore.instance
-        .collection('messages')
+        .collection(FirebaseCollections.messages)
         .doc(messageId)
         .snapshots()
         .map((doc) {
@@ -289,9 +290,9 @@ class ReadReceiptService {
   Future<List<ReadByUser>> getReadByUsers(String messageId) async {
     try {
       final receiptsSnapshot = await FirebaseFirestore.instance
-          .collection('messages')
+          .collection(FirebaseCollections.messages)
           .doc(messageId)
-          .collection('readReceipts')
+          .collection(FirebaseCollections.readReceipts)
           .get();
 
       final readByUsers = <ReadByUser>[];
@@ -302,7 +303,7 @@ class ReadReceiptService {
 
         // Get user info
         final userDoc = await FirebaseFirestore.instance
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
             .get();
 

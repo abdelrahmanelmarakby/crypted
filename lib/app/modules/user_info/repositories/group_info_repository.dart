@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/modules/user_info/repositories/user_info_repository.dart';
@@ -71,7 +72,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   @override
   Future<ChatRoom?> getGroupById(String roomId) async {
     try {
-      final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+      final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
       if (doc.exists && doc.data() != null) {
         // Include document ID in the data
         final data = {...doc.data()!, 'id': doc.id};
@@ -87,7 +88,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   @override
   Stream<ChatRoom?> watchGroup(String roomId) {
     return _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
         .snapshots()
         .map((doc) {
@@ -115,7 +116,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
         );
 
         final snapshot = await _firestore
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .where(FieldPath.documentId, whereIn: batch)
             .get();
 
@@ -135,9 +136,9 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   Future<MediaCounts> getSharedMediaCounts(String roomId) async {
     try {
       final chatRef = _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat');
+          .collection(FirebaseCollections.chatMessages);
 
       final results = await Future.wait([
         chatRef.where('type', isEqualTo: 'photo').count().get(),
@@ -175,13 +176,13 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
 
     if (updates.isNotEmpty) {
       updates['updatedAt'] = FieldValue.serverTimestamp();
-      await _firestore.collection('chat_rooms').doc(roomId).update(updates);
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update(updates);
     }
   }
 
   @override
   Future<void> addMember(String roomId, SocialMediaUser member) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'membersIds': FieldValue.arrayUnion([member.uid]),
       'members': FieldValue.arrayUnion([member.toMap()]),
     });
@@ -190,7 +191,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   @override
   Future<void> removeMember(String roomId, String memberId) async {
     // First get the current members to find the full member object
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+    final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
     if (!doc.exists) return;
 
     final members = List<Map<String, dynamic>>.from(doc.data()?['members'] ?? []);
@@ -199,7 +200,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
       orElse: () => {},
     );
 
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'membersIds': FieldValue.arrayRemove([memberId]),
       if (memberToRemove.isNotEmpty) 'members': FieldValue.arrayRemove([memberToRemove]),
     });
@@ -213,7 +214,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   @override
   Future<void> setFavorite(String roomId, bool isFavorite) async {
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'isFavorite': isFavorite,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -222,7 +223,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   @override
   Future<void> setMuted(String roomId, bool isMuted) async {
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'isMuted': isMuted,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -235,7 +236,7 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
     required String reason,
     String? details,
   }) async {
-    await _firestore.collection('reports').add({
+    await _firestore.collection(FirebaseCollections.reports).add({
       'reportedGroupId': groupId,
       'reporterId': reporterId,
       'reason': reason,
@@ -250,9 +251,9 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
   Future<void> deleteGroup(String roomId) async {
     // Delete all messages first
     final messages = await _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .get();
 
     final batch = _firestore.batch();
@@ -262,26 +263,26 @@ class FirestoreGroupInfoRepository implements GroupInfoRepository {
     await batch.commit();
 
     // Delete the group document
-    await _firestore.collection('chat_rooms').doc(roomId).delete();
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).delete();
   }
 
   @override
   Future<void> makeAdmin(String roomId, String userId) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'admins': FieldValue.arrayUnion([userId]),
     });
   }
 
   @override
   Future<void> removeAdmin(String roomId, String userId) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'admins': FieldValue.arrayRemove([userId]),
     });
   }
 
   @override
   Future<List<String>> getGroupAdmins(String roomId) async {
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+    final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
     return List<String>.from(doc.data()?['admins'] ?? []);
   }
 }

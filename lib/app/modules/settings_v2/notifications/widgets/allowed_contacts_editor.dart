@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -73,7 +74,7 @@ class _AllowedContactsEditorState extends State<AllowedContactsEditor> {
 
       // Get user's contacts/chat rooms to find people they've chatted with
       final chatRoomsSnapshot = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: currentUserId)
           .get();
 
@@ -92,7 +93,7 @@ class _AllowedContactsEditorState extends State<AllowedContactsEditor> {
       final contacts = <_ContactInfo>[];
       for (final userId in userIds) {
         final userDoc = await FirebaseFirestore.instance
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(userId)
             .get();
 
@@ -587,7 +588,7 @@ class AllowedContactsChipRow extends StatelessWidget {
     for (final id in contactIds) {
       try {
         final doc = await FirebaseFirestore.instance
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(id)
             .get();
         if (doc.exists) {

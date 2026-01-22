@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -14,7 +15,7 @@ class AuthenticationService {
   static late RegisterModel _registerModel;
   Future<bool> isEmailInUse(String email) async {
     final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .where('email', isEqualTo: email)
         .get();
 
@@ -23,7 +24,7 @@ class AuthenticationService {
 
   Future<bool> isPhoneInUse(String phoneNumber) async {
     final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .where('phoneNumber', isEqualTo: phoneNumber)
         .get();
     return querySnapshot.docs.isNotEmpty;
@@ -138,7 +139,7 @@ class AuthenticationService {
   }
 
   static Future<List<SocialMediaUser>> getAllUsers() async {
-    final snapshot = await FirebaseFirestore.instance.collection('users').get();
+    final snapshot = await FirebaseFirestore.instance.collection(FirebaseCollections.users).get();
     return snapshot.docs
         .map((doc) => SocialMediaUser.fromMap(doc.data()))
         .toList();

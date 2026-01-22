@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
 /// Production-grade Typing Service for 1M+ users
@@ -105,9 +106,9 @@ class TypingService {
       if (isTyping) {
         // Create/update typing document
         await FirebaseFirestore.instance
-            .collection('chats')
+            .collection(FirebaseCollections.chats)
             .doc(chatId)
-            .collection('typing')
+            .collection(FirebaseCollections.typing)
             .doc(userId)
             .set({
           'isTyping': true,
@@ -121,9 +122,9 @@ class TypingService {
       } else {
         // Delete typing document
         await FirebaseFirestore.instance
-            .collection('chats')
+            .collection(FirebaseCollections.chats)
             .doc(chatId)
-            .collection('typing')
+            .collection(FirebaseCollections.typing)
             .doc(userId)
             .delete();
 
@@ -144,9 +145,9 @@ class TypingService {
     if (userId == null) return Stream.value([]);
 
     return FirebaseFirestore.instance
-        .collection('chats')
+        .collection(FirebaseCollections.chats)
         .doc(chatId)
-        .collection('typing')
+        .collection(FirebaseCollections.typing)
         .where('isTyping', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
@@ -172,7 +173,7 @@ class TypingService {
     try {
       final userDocs = await Future.wait(
         typingUserIds.map((userId) =>
-            FirebaseFirestore.instance.collection('users').doc(userId).get()),
+            FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(userId).get()),
       );
 
       return userDocs
@@ -223,11 +224,11 @@ class TypingService {
 
         // Query and delete all typing documents for this user
         final chatsSnapshot =
-            await FirebaseFirestore.instance.collection('chats').get();
+            await FirebaseFirestore.instance.collection(FirebaseCollections.chats).get();
 
         final batch = FirebaseFirestore.instance.batch();
         for (final chatDoc in chatsSnapshot.docs) {
-          final typingDoc = chatDoc.reference.collection('typing').doc(userId);
+          final typingDoc = chatDoc.reference.collection(FirebaseCollections.typing).doc(userId);
           batch.delete(typingDoc);
         }
         await batch.commit();

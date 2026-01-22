@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
+import 'package:crypted_app/app/core/services/att_service.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/fcm_service.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
@@ -33,6 +34,30 @@ import 'package:crypted_app/core/locale/constant.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// Check if user is in China region
+/// Used to disable CallKit as required by Chinese MIIT regulations
+bool _isUserInChina() {
+  try {
+    // Check device locale
+    final locale = Platform.localeName.toLowerCase();
+
+    // Check for Chinese locales (zh_CN, zh_Hans_CN, etc.)
+    if (locale.contains('_cn') || locale.contains('-cn')) {
+      return true;
+    }
+
+    // Also check the language code for simplified Chinese in mainland China context
+    if (locale.startsWith('zh_hans') && !locale.contains('_hk') && !locale.contains('_tw')) {
+      return true;
+    }
+
+    return false;
+  } catch (e) {
+    // If we can't determine, assume not in China
+    return false;
+  }
+}
 
 Future<void> main() async {
   
@@ -113,9 +138,20 @@ Future<void> main() async {
 
   ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
   ZegoUIKit().initLog().then((value) async {
-    ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI(
-      [ZegoUIKitSignalingPlugin()],
-    );
+    // Check if user is in China - CallKit must be disabled for China App Store
+    final isInChina = _isUserInChina();
+
+    if (!isInChina) {
+      // Enable system calling UI (CallKit) only for non-China regions
+      ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI(
+        [ZegoUIKitSignalingPlugin()],
+      );
+    } else {
+      LoggerService.instance.info(
+        'CallKit disabled for China region',
+        context: 'Zego',
+      );
+    }
 
     // محاولة جلب المستخدم الحالي من UserService.currentUser.value أو من FirebaseAuth
     String? userID;
@@ -173,9 +209,24 @@ class _CryptedAppState extends State<CryptedApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
+    // Request App Tracking Transparency permission on iOS
+    // This must be called BEFORE any tracking/analytics data collection
+    _requestTrackingPermission();
+
     // Set user online when app starts
     _setUserOnline();
+  }
+
+  /// Request ATT permission on iOS - required by Apple App Store
+  Future<void> _requestTrackingPermission() async {
+    if (Platform.isIOS) {
+      // Wait for the first frame to be rendered before showing ATT dialog
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final status = await ATTService().requestTrackingPermission();
+        LoggerService.instance.info('ATT permission status: $status', context: 'ATT');
+      });
+    }
   }
 
   @override

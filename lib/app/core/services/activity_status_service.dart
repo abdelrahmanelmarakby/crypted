@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 
 /// Activity types
 enum ActivityType {
@@ -137,9 +138,9 @@ class ActivityStatusService {
 
       // Delete activity document
       await FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(chatId)
-          .collection('activity')
+          .collection(FirebaseCollections.activity)
           .doc(userId)
           .delete();
 
@@ -161,9 +162,9 @@ class ActivityStatusService {
   ) async {
     try {
       await FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(chatId)
-          .collection('activity')
+          .collection(FirebaseCollections.activity)
           .doc(userId)
           .set({
         'userId': userId,
@@ -186,9 +187,9 @@ class ActivityStatusService {
       if (_currentActivity[chatId] == ActivityType.viewing) {
         try {
           await FirebaseFirestore.instance
-              .collection('chats')
+              .collection(FirebaseCollections.chats)
               .doc(chatId)
-              .collection('activity')
+              .collection(FirebaseCollections.activity)
               .doc(userId)
               .update({
             'lastUpdate': FieldValue.serverTimestamp(),
@@ -232,9 +233,9 @@ class ActivityStatusService {
     if (userId == null) return Stream.value([]);
 
     return FirebaseFirestore.instance
-        .collection('chats')
+        .collection(FirebaseCollections.chats)
         .doc(chatId)
-        .collection('activity')
+        .collection(FirebaseCollections.activity)
         .where('activityType', isEqualTo: 'viewing')
         .snapshots()
         .map((snapshot) {
@@ -260,9 +261,9 @@ class ActivityStatusService {
     if (userId == null) return Stream.value([]);
 
     return FirebaseFirestore.instance
-        .collection('chats')
+        .collection(FirebaseCollections.chats)
         .doc(chatId)
-        .collection('activity')
+        .collection(FirebaseCollections.activity)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
@@ -288,7 +289,7 @@ class ActivityStatusService {
     try {
       final userDocs = await Future.wait(
         viewerIds.map((userId) =>
-            FirebaseFirestore.instance.collection('users').doc(userId).get()),
+            FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(userId).get()),
       );
 
       return userDocs
@@ -355,11 +356,11 @@ class ActivityStatusService {
 
         // Batch delete all activity documents
         final chatsSnapshot =
-            await FirebaseFirestore.instance.collection('chats').get();
+            await FirebaseFirestore.instance.collection(FirebaseCollections.chats).get();
 
         final batch = FirebaseFirestore.instance.batch();
         for (final chatDoc in chatsSnapshot.docs) {
-          final activityDoc = chatDoc.reference.collection('activity').doc(userId);
+          final activityDoc = chatDoc.reference.collection(FirebaseCollections.activity).doc(userId);
           batch.delete(activityDoc);
         }
         await batch.commit();

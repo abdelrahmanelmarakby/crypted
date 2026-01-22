@@ -3,14 +3,15 @@
 // This service should be run once during app initialization for users with legacy data
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service to migrate chat data from legacy collection to new collection
 class ChatMigrationService {
   static const String _migrationKey = 'chat_migration_v1_completed';
-  static const String _legacyCollection = 'Chats';
-  static const String _newCollection = 'chat_rooms';
+  static const String _legacyCollection = FirebaseCollections.chatsLegacyCapital;
+  static const String _newCollection = FirebaseCollections.chats;
 
   final FirebaseFirestore _firestore;
 
@@ -173,7 +174,7 @@ class ChatMigrationService {
       final legacyMessages = await _firestore
           .collection(_legacyCollection)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .get();
 
       if (legacyMessages.docs.isEmpty) {
@@ -184,7 +185,7 @@ class ChatMigrationService {
       final newMessagesRef = _firestore
           .collection(_newCollection)
           .doc(roomId)
-          .collection('chat');
+          .collection(FirebaseCollections.chatMessages);
 
       // Batch write for efficiency
       WriteBatch batch = _firestore.batch();
@@ -304,14 +305,14 @@ MigrationResult:
 /// Use these constants instead of hardcoded strings
 class ChatCollections {
   /// The current/active chat rooms collection
-  static const String rooms = 'chat_rooms';
+  static const String rooms = FirebaseCollections.chats;
 
   /// Messages subcollection within a room
-  static const String messages = 'chat';
+  static const String messages = FirebaseCollections.chatMessages;
 
   /// Legacy collection (deprecated, use rooms instead)
   @Deprecated('Use ChatCollections.rooms instead')
-  static const String legacyRooms = 'Chats';
+  static const String legacyRooms = FirebaseCollections.chatsLegacyCapital;
 
   /// Get chat room reference
   static DocumentReference roomRef(String roomId) {

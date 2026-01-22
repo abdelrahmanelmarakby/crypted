@@ -1,0 +1,25 @@
+/* Permission strings for iOS - English */
+
+/* Camera permission */
+"NSCameraUsageDescription" = "Camera access is needed to make video calls and capture photos to share with your contacts";
+
+/* Contacts permission */
+"NSContactsUsageDescription" = "Contacts access is needed to help you find and connect with friends, and to backup your contacts securely";
+
+/* Local network permission */
+"NSLocalNetworkUsageDescription" = "Local network access is needed for voice and video calls";
+
+/* Location permissions */
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Location access is needed to share your location in chats, even when the app is in the background";
+"NSLocationAlwaysUsageDescription" = "Location access is needed to share your location in chats";
+"NSLocationWhenInUseUsageDescription" = "Location access is needed to share your location in chats";
+
+/* Microphone permission */
+"NSMicrophoneUsageDescription" = "Microphone access is needed to make voice and video calls";
+
+/* Photo library permissions */
+"NSPhotoLibraryAddUsageDescription" = "Photo library access is needed to save photos and videos shared in chats";
+"NSPhotoLibraryUsageDescription" = "Photo library access is needed to share photos and videos with your contacts, and to backup your media";
+
+/* App Tracking Transparency */
+"NSUserTrackingUsageDescription" = "We use analytics data to improve your app experience and provide personalized features";

@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
@@ -89,7 +90,7 @@ class RegisterController extends GetxController {
 
       // حفظ بيانات المستخدم في Firestore
       await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(uid)
           .set(SocialMediaUser(
             uid: uid,

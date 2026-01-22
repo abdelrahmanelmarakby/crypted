@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
@@ -46,9 +47,9 @@ class ChatPrivacyHelper {
 
     try {
       final blockedDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('blocked')
+          .collection(FirebaseCollections.blocked)
           .doc(currentUserId)
           .get();
       return blockedDoc.exists;
@@ -310,9 +311,9 @@ class ChatPrivacyHelper {
   Future<EnhancedPrivacySettingsModel?> _getPrivacySettings(String userId) async {
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('private')
+          .collection(FirebaseCollections.private)
           .doc('privacy')
           .get();
 
@@ -333,9 +334,9 @@ class ChatPrivacyHelper {
 
     try {
       final contactDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(currentUserId)
-          .collection('contacts')
+          .collection(FirebaseCollections.contacts)
           .doc(targetUserId)
           .get();
       return contactDoc.exists;
@@ -347,9 +348,9 @@ class ChatPrivacyHelper {
   Future<bool> _isContactOfUser(String userId, String contactId) async {
     try {
       final contactDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('contacts')
+          .collection(FirebaseCollections.contacts)
           .doc(contactId)
           .get();
       return contactDoc.exists;

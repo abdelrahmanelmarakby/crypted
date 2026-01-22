@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
@@ -200,7 +201,7 @@ class FCMService {
       if (userId == null) return;
 
       await FirebaseFirestore.instance
-          .collection('fcmTokens')
+          .collection(FirebaseCollections.fcmTokens)
           .doc(token)
           .set({
         'uid': userId,
@@ -589,7 +590,7 @@ class FCMService {
     try {
       if (_currentToken != null) {
         await FirebaseFirestore.instance
-            .collection('fcmTokens')
+            .collection(FirebaseCollections.fcmTokens)
             .doc(_currentToken)
             .delete();
       }
@@ -623,9 +624,9 @@ class FCMService {
       if (currentUserId == null) return false;
 
       final contactDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(currentUserId)
-          .collection('contacts')
+          .collection(FirebaseCollections.contacts)
           .doc(senderId)
           .get();
       return contactDoc.exists;
@@ -660,7 +661,7 @@ class FCMService {
       // Check if the chat room is favorited
       if (chatId != null) {
         final chatDoc = await FirebaseFirestore.instance
-            .collection('chat_rooms')
+            .collection(FirebaseCollections.chats)
             .doc(chatId)
             .get();
 

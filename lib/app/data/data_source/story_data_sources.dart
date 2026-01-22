@@ -2,13 +2,14 @@ import 'dart:io';
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 
 class StoryDataSources {
   final CollectionReference<Map<String, dynamic>> storiesCollection =
-      FirebaseFirestore.instance.collection('Stories');
+      FirebaseFirestore.instance.collection(FirebaseCollections.stories);
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // رفع story جديدة (صورة أو فيديو)
@@ -274,7 +275,7 @@ class StoryDataSources {
       log('💬 Sending reply to story $storyId from ${currentUser!.uid}');
 
       // إنشاء مرجع لمجموعة الردود تحت الـ story
-      final repliesRef = storiesCollection.doc(storyId).collection('replies');
+      final repliesRef = storiesCollection.doc(storyId).collection(FirebaseCollections.storyReplies);
 
       final replyData = {
         'uid': currentUser.uid,
@@ -323,7 +324,7 @@ class StoryDataSources {
 
       // إنشاء مرجع لمجموعة التفاعلات تحت الـ story
       final reactionsRef =
-          storiesCollection.doc(storyId).collection('reactions');
+          storiesCollection.doc(storyId).collection(FirebaseCollections.storyReactions);
 
       // التحقق من وجود تفاعل سابق لنفس المستخدم
       final existingReaction = await reactionsRef
@@ -375,7 +376,7 @@ class StoryDataSources {
   Stream<List<Map<String, dynamic>>> getStoryReplies(String storyId) {
     return storiesCollection
         .doc(storyId)
-        .collection('replies')
+        .collection(FirebaseCollections.storyReplies)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
@@ -386,7 +387,7 @@ class StoryDataSources {
   Stream<List<Map<String, dynamic>>> getStoryReactions(String storyId) {
     return storiesCollection
         .doc(storyId)
-        .collection('reactions')
+        .collection(FirebaseCollections.storyReactions)
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snapshot) =>
@@ -398,7 +399,7 @@ class StoryDataSources {
     try {
       await storiesCollection
           .doc(storyId)
-          .collection('replies')
+          .collection(FirebaseCollections.storyReplies)
           .doc(replyId)
           .delete();
       log('✅ Reply deleted successfully: $replyId');
@@ -414,7 +415,7 @@ class StoryDataSources {
     try {
       await storiesCollection
           .doc(storyId)
-          .collection('reactions')
+          .collection(FirebaseCollections.storyReactions)
           .doc(reactionId)
           .delete();
       log('✅ Reaction deleted successfully: $reactionId');
@@ -458,7 +459,7 @@ class StoryDataSources {
 
       // Add to notifications collection
       await FirebaseFirestore.instance
-          .collection('notifications')
+          .collection(FirebaseCollections.userNotifications)
           .add(notificationData);
 
       log('✅ Notification sent to story owner: $storyOwnerId');

@@ -18,6 +18,7 @@ import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/core/rate_limiting/rate_limiter.dart';
 import 'package:crypted_app/app/core/utils/debouncer.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
+import 'package:crypted_app/app/core/state/upload_state_manager.dart';
 import 'package:crypted_app/app/core/call/chat_call_handler.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
@@ -50,6 +51,8 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
+import 'package:crypted_app/app/core/services/search_history_service.dart';
 
 /// Main Chat Controller with new architecture integration
 /// Uses ChatControllerIntegration mixin for event bus, offline support, and state management
@@ -140,6 +143,8 @@ class ChatController extends GetxController
   @override
   void onInit() {
     super.onInit();
+    // Initialize scroll controller for search navigation
+    messageScrollController = ScrollController();
     _initializeApp();
     _setupSessionListeners();
   }
@@ -489,7 +494,7 @@ class ChatController extends GetxController
   Future<void> _loadGroupImageUrl() async {
     try {
       final chatRoomDoc = await FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .get();
 
@@ -583,11 +588,40 @@ class ChatController extends GetxController
   final RxInt currentSearchIndex = 0.obs;
 
   /// Scroll controller for navigating to search results
-  ScrollController? _messageScrollController;
+  /// Created and managed by the controller for proper lifecycle management
+  late final ScrollController messageScrollController;
 
-  /// Set scroll controller from the view
+  /// GlobalKeys for message items - used for precise scrolling
+  /// Keys are registered when messages are built in the view
+  final Map<String, GlobalKey> messageKeys = {};
+
+  /// Register a GlobalKey for a message (called by the view)
+  void registerMessageKey(String messageId, GlobalKey key) {
+    messageKeys[messageId] = key;
+  }
+
+  /// Unregister a GlobalKey when message is disposed
+  void unregisterMessageKey(String messageId) {
+    messageKeys.remove(messageId);
+  }
+
+  /// Search history service for recent queries
+  final SearchHistoryService _searchHistoryService = SearchHistoryService();
+
+  /// Get recent search history
+  Future<List<String>> getSearchHistory() => _searchHistoryService.getHistory();
+
+  /// Remove item from search history
+  Future<void> removeFromSearchHistory(String query) =>
+      _searchHistoryService.removeFromHistory(query);
+
+  /// Clear all search history
+  Future<void> clearSearchHistory() => _searchHistoryService.clearHistory();
+
+  /// Set scroll controller from the view (kept for backwards compatibility)
+  @Deprecated('Use messageScrollController getter instead - controller now owns the ScrollController')
   void setScrollController(ScrollController controller) {
-    _messageScrollController = controller;
+    // No-op - controller now manages its own ScrollController
   }
 
   /// Toggle search mode
@@ -651,6 +685,11 @@ class ChatController extends GetxController
     // Reset to first result
     currentSearchIndex.value = searchResults.isNotEmpty ? 0 : -1;
 
+    // Save to search history if we found results
+    if (searchResults.isNotEmpty) {
+      _searchHistoryService.addToHistory(query);
+    }
+
     _logger.debug('Search found ${searchResults.length} results for "$query"',
                   context: 'ChatController');
   }
@@ -681,28 +720,62 @@ class ChatController extends GetxController
     scrollToCurrentSearchResult();
   }
 
-  /// Scroll to a specific message
+  /// Scroll to a specific message using GlobalKey for precision
   void scrollToMessage(Message message) {
+    final messageId = message.id;
+
+    // Try to use GlobalKey for precise scrolling
+    final key = messageKeys[messageId];
+    if (key?.currentContext != null) {
+      _scrollToWidgetWithKey(key!);
+      return;
+    }
+
+    // Fallback to estimated scroll, then refine with ensureVisible
     final index = messages.indexOf(message);
     if (index != -1) {
-      scrollToMessageIndex(index);
+      _scrollToIndexWithRefinement(index, messageId);
     }
   }
 
-  /// Scroll to message at specific index
-  void scrollToMessageIndex(int index) {
-    if (_messageScrollController == null) return;
+  /// Scroll to widget using its GlobalKey (precise)
+  void _scrollToWidgetWithKey(GlobalKey key) {
+    if (key.currentContext == null) return;
 
-    // Estimate scroll position (messages are in reverse order)
-    // Average message height is approximately 80 pixels
+    Scrollable.ensureVisible(
+      key.currentContext!,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      alignment: 0.3, // Position message 30% from top for visibility
+    );
+  }
+
+  /// Scroll to index with post-frame refinement using GlobalKey
+  void _scrollToIndexWithRefinement(int index, String messageId) {
+    // First, estimate scroll position to bring message into view
     const estimatedMessageHeight = 80.0;
     final targetOffset = index * estimatedMessageHeight;
 
-    _messageScrollController!.animateTo(
+    messageScrollController.animateTo(
       targetOffset,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    ).then((_) {
+      // After scroll completes, try to refine with GlobalKey
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final key = messageKeys[messageId];
+        if (key?.currentContext != null) {
+          _scrollToWidgetWithKey(key!);
+        }
+      });
+    });
+  }
+
+  /// Scroll to message at specific index (legacy method)
+  void scrollToMessageIndex(int index) {
+    if (index < 0 || index >= messages.length) return;
+    final message = messages[index];
+    scrollToMessage(message);
   }
 
   /// Scroll to current search result
@@ -1630,7 +1703,7 @@ class ChatController extends GetxController
       
       // Check if chat room already exists
       final existingRooms = await FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', isEqualTo: memberIds)
           .where('isGroupChat', isEqualTo: false)
           .limit(1)
@@ -1642,7 +1715,7 @@ class ChatController extends GetxController
       }
       
       // Create new chat room
-      final newRoomRef = FirebaseFirestore.instance.collection('chats').doc();
+      final newRoomRef = FirebaseFirestore.instance.collection(FirebaseCollections.chats).doc();
       final roomId = newRoomRef.id;
       
       await newRoomRef.set({
@@ -1667,7 +1740,7 @@ class ChatController extends GetxController
   Future<SocialMediaUser?> _getUserById(String userId) async {
     try {
       final userDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .get();
       
@@ -1687,7 +1760,7 @@ class ChatController extends GetxController
     try {
       // Get user's contacts from Firestore
       final contactsQuery = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .where('uid', isNotEqualTo: currentUser?.uid) // Exclude current user
           .limit(20) // Limit to 20 contacts for performance
           .get();
@@ -1764,7 +1837,7 @@ class ChatController extends GetxController
   Future<void> _reportMessageToServer(Message message) async {
     try {
       // Implement actual reporting to backend API
-      await FirebaseFirestore.instance.collection('reports').add({
+      await FirebaseFirestore.instance.collection(FirebaseCollections.reports).add({
         'messageId': message.id,
         'roomId': roomId,
         'reporterId': currentUser?.uid ?? '',
@@ -1965,7 +2038,7 @@ class ChatController extends GetxController
 
       // Update Firestore
       await FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .update({'groupImageUrl': downloadUrl});
 
@@ -2000,7 +2073,7 @@ class ChatController extends GetxController
 
       // Update Firestore
       await FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .update({'groupImageUrl': FieldValue.delete()});
 
@@ -2050,7 +2123,38 @@ class ChatController extends GetxController
     messages.insert(0, uploadingMessage);
     update();
 
+    // Track in UploadStateManager for speed/ETA calculation
+    try {
+      final manager = Get.find<UploadStateManager>();
+      final type = _getUploadType(uploadType);
+      manager.startUpload(
+        id: uploadId,
+        fileName: fileName,
+        totalBytes: fileSize,
+        roomId: roomId,
+        type: type,
+      );
+    } catch (e) {
+      // UploadStateManager might not be registered
+      print('⚠️ UploadStateManager not available: $e');
+    }
+
     print('📤 Started upload tracking: $uploadId ($fileName)');
+  }
+
+  /// Map upload type string to UploadType enum
+  UploadType _getUploadType(String type) {
+    switch (type) {
+      case 'image':
+      case 'video':
+        return UploadType.media;
+      case 'audio':
+        return UploadType.audio;
+      case 'file':
+        return UploadType.document;
+      default:
+        return UploadType.other;
+    }
   }
 
   /// Update upload progress
@@ -2058,23 +2162,63 @@ class ChatController extends GetxController
     final index = messages.indexWhere((msg) => msg.id == uploadId);
     if (index != -1 && messages[index] is UploadingMessage) {
       final uploadingMessage = messages[index] as UploadingMessage;
+      final fileSize = uploadingMessage.fileSize;
+      final bytesTransferred = (progress * fileSize).toInt();
+
       messages[index] = uploadingMessage.copyWith(progress: progress);
       update();
+
+      // Update UploadStateManager with bytes transferred for speed/ETA
+      try {
+        final manager = Get.find<UploadStateManager>();
+        manager.updateProgress(uploadId, bytesTransferred);
+      } catch (e) {
+        // UploadStateManager might not be available
+      }
     }
   }
 
   /// Complete upload by replacing uploading message with actual message
   void completeUpload(String uploadId, Message actualMessage) {
-    final index = messages.indexWhere((msg) => msg.id == uploadId);
-    if (index != -1) {
-      messages[index] = actualMessage;
+    // FIX: First remove any duplicate message from Firestore stream
+    // The stream might have already added the actual message before this is called
+    final duplicateIndex = messages.indexWhere(
+      (msg) => msg.id == actualMessage.id && msg is! UploadingMessage
+    );
+    if (duplicateIndex != -1) {
+      messages.removeAt(duplicateIndex);
+      print('🔄 Removed duplicate message from stream: ${actualMessage.id}');
+    }
+
+    // Now replace the UploadingMessage with the actual message
+    final uploadIndex = messages.indexWhere((msg) => msg.id == uploadId);
+    if (uploadIndex != -1) {
+      messages[uploadIndex] = actualMessage;
       update();
+      print('✅ Replaced uploading message with actual message');
+    } else {
+      // UploadingMessage not found - might have been removed by stream
+      // Add the actual message if not already present
+      if (!messages.any((msg) => msg.id == actualMessage.id)) {
+        messages.insert(0, actualMessage);
+        messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        update();
+        print('✅ Added actual message (upload message was missing)');
+      }
     }
 
     // Remove from active uploads
     _activeUploads.remove(uploadId);
 
-    print('✅ Upload completed: $uploadId');
+    // Mark as completed in UploadStateManager
+    try {
+      final manager = Get.find<UploadStateManager>();
+      manager.completeUpload(uploadId, downloadUrl: '');
+    } catch (e) {
+      // UploadStateManager might not be available
+    }
+
+    print('✅ Upload completed: $uploadId → ${actualMessage.id}');
   }
 
   /// Cancel an ongoing upload
@@ -2088,8 +2232,58 @@ class ChatController extends GetxController
     messages.removeWhere((msg) => msg.id == uploadId);
     update();
 
+    // Mark as cancelled in UploadStateManager
+    try {
+      final manager = Get.find<UploadStateManager>();
+      manager.cancelUpload(uploadId);
+    } catch (e) {
+      // UploadStateManager might not be available
+    }
+
     print('🚫 Upload cancelled: $uploadId');
     _showToast('Upload cancelled');
+  }
+
+  /// Retry a failed upload
+  void retryUpload(String uploadId) {
+    // Find the uploading message
+    UploadingMessage? uploadingMessage;
+    for (final msg in messages) {
+      if (msg is UploadingMessage && msg.id == uploadId) {
+        uploadingMessage = msg;
+        break;
+      }
+    }
+
+    if (uploadingMessage == null) {
+      _showToast('Cannot retry - upload not found');
+      return;
+    }
+
+    // Reset the upload state in UploadStateManager
+    try {
+      final manager = Get.find<UploadStateManager>();
+      manager.retryUpload(uploadId);
+    } catch (e) {
+      // Manager might not be available
+    }
+
+    // Check if file still exists
+    final file = File(uploadingMessage.filePath);
+    if (!file.existsSync()) {
+      _showToast('Cannot retry - file no longer exists');
+      messages.removeWhere((msg) => msg.id == uploadId);
+      update();
+      return;
+    }
+
+    // Remove old upload message and show toast
+    // User needs to re-select the file to retry (the original file path is no longer accessible)
+    messages.removeWhere((msg) => msg.id == uploadId);
+    update();
+
+    print('🔄 Retry requested for: $uploadId');
+    _showToast('Please re-select the file to send again');
   }
 
   @override
@@ -2115,6 +2309,9 @@ class ChatController extends GetxController
 
     // Stop all real-time indicators
     _cleanupRealtimeServices();
+
+    // Dispose scroll controller for search
+    messageScrollController.dispose();
 
     // Cancel all stream subscriptions to prevent memory leaks
     for (final subscription in _streamSubscriptions) {

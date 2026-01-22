@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
@@ -106,7 +107,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Future<SocialMediaUser?> getUserById(String userId) async {
     try {
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
       if (doc.exists) {
         return SocialMediaUser.fromQuery(doc);
       }
@@ -120,7 +121,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Stream<SocialMediaUser?> watchUser(String userId) {
     return _firestore
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .map((doc) => doc.exists ? SocialMediaUser.fromQuery(doc) : null);
@@ -129,7 +130,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Future<ChatRoom?> getChatRoomById(String roomId) async {
     try {
-      final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+      final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
       if (doc.exists) {
         return ChatRoom.fromJson(doc.data()!);
       }
@@ -143,7 +144,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Stream<ChatRoom?> watchChatRoom(String roomId) {
     return _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
         .snapshots()
         .map((doc) => doc.exists ? ChatRoom.fromJson(doc.data()!) : null);
@@ -153,9 +154,9 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   Future<MediaCounts> getSharedMediaCounts(String roomId) async {
     try {
       final chatRef = _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat');
+          .collection(FirebaseCollections.chatMessages);
 
       // Run all queries in parallel
       final results = await Future.wait([
@@ -183,8 +184,8 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   Future<List<SocialMediaUser>> getMutualContacts(String userId1, String userId2) async {
     try {
       // Get both users' contacts
-      final user1Doc = await _firestore.collection('users').doc(userId1).get();
-      final user2Doc = await _firestore.collection('users').doc(userId2).get();
+      final user1Doc = await _firestore.collection(FirebaseCollections.users).doc(userId1).get();
+      final user2Doc = await _firestore.collection(FirebaseCollections.users).doc(userId2).get();
 
       if (!user1Doc.exists || !user2Doc.exists) return [];
 
@@ -199,7 +200,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
       // Fetch mutual contact details
       final mutualUsers = <SocialMediaUser>[];
       for (final contactId in mutualIds.take(10)) {
-        final contactDoc = await _firestore.collection('users').doc(contactId).get();
+        final contactDoc = await _firestore.collection(FirebaseCollections.users).doc(contactId).get();
         if (contactDoc.exists) {
           mutualUsers.add(SocialMediaUser.fromQuery(contactDoc));
         }
@@ -214,24 +215,24 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
 
   @override
   Future<void> blockUser(String roomId, String userId) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'blockedUsers': FieldValue.arrayUnion([userId]),
     });
   }
 
   @override
   Future<void> unblockUser(String roomId, String userId) async {
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'blockedUsers': FieldValue.arrayRemove([userId]),
     });
   }
 
   @override
   Future<void> toggleFavorite(String roomId) async {
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+    final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
     final currentValue = doc.data()?['isFavorite'] ?? false;
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'isFavorite': !currentValue,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -239,10 +240,10 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
 
   @override
   Future<void> toggleArchive(String roomId) async {
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+    final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
     final currentValue = doc.data()?['isArchived'] ?? false;
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'isArchived': !currentValue,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -250,10 +251,10 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
 
   @override
   Future<void> toggleMute(String roomId) async {
-    final doc = await _firestore.collection('chat_rooms').doc(roomId).get();
+    final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
     final currentValue = doc.data()?['isMuted'] ?? false;
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'isMuted': !currentValue,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -263,9 +264,9 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   Future<void> clearChat(String roomId) async {
     final batch = _firestore.batch();
     final messages = await _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .get();
 
     for (final doc in messages.docs) {
@@ -282,7 +283,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
     required String reason,
     String? details,
   }) async {
-    await _firestore.collection('reports').add({
+    await _firestore.collection(FirebaseCollections.reports).add({
       'reportedUserId': reportedUserId,
       'reporterId': reporterId,
       'reason': reason,
@@ -296,7 +297,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Stream<bool> watchOnlineStatus(String userId) {
     return _firestore
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .map((doc) => doc.data()?['isOnline'] ?? false);
@@ -305,7 +306,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Future<DateTime?> getLastSeen(String userId) async {
     try {
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
       final lastSeen = doc.data()?['lastSeen'];
       if (lastSeen is Timestamp) {
         return lastSeen.toDate();
@@ -322,7 +323,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
     DisappearingDuration duration,
   ) async {
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'disappearingDuration': duration.name,
       'disappearingDurationUpdatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -332,9 +333,9 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   Future<List<Message>> getChatMessages(String roomId) async {
     try {
       final snapshot = await _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: false)
           .get();
 
@@ -353,7 +354,7 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
   @override
   Future<void> updateChatWallpaper(String roomId, ChatWallpaper wallpaper) async {
     // Use set with merge to handle cases where the document may not exist
-    await _firestore.collection('chat_rooms').doc(roomId).set({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).set({
       'wallpaper': wallpaper.toMap(),
       'wallpaperUpdatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 
@@ -66,7 +67,7 @@ class MemberDataHandler {
   /// Sync member data in a chat room document
   Future<bool> syncMembersInRoom(String roomId) async {
     try {
-      final roomDoc = await _firestore.collection('chats').doc(roomId).get();
+      final roomDoc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
       if (!roomDoc.exists) return false;
 
       final data = roomDoc.data()!;
@@ -76,7 +77,7 @@ class MemberDataHandler {
       final freshMembers = await getMembers(roomId, memberIds, forceRefresh: true);
 
       // Update the room document
-      await _firestore.collection('chats').doc(roomId).update({
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'members': freshMembers.map((m) => m.toMap()).toList(),
         'membersUpdatedAt': FieldValue.serverTimestamp(),
       });
@@ -99,7 +100,7 @@ class MemberDataHandler {
     if (_userSubscriptions.containsKey(userId)) return;
 
     final subscription = _firestore
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .listen(
@@ -131,7 +132,7 @@ class MemberDataHandler {
     try {
       // Find all rooms containing this user
       final roomsQuery = await _firestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: userId)
           .get();
 
@@ -182,7 +183,7 @@ class MemberDataHandler {
   /// Fetch member from Firestore
   Future<SocialMediaUser?> _fetchMember(String userId) async {
     try {
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
       if (doc.exists) {
         return SocialMediaUser.fromMap(doc.data()!);
       }

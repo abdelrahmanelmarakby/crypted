@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 
 /// Notification settings data model
 class NotificationSettings {
@@ -109,7 +110,7 @@ class NotificationDataSourceNew {
         name: 'NotificationDataSource',
       );
 
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
 
       if (!doc.exists) {
         developer.log(
@@ -162,7 +163,7 @@ class NotificationDataSourceNew {
         name: 'NotificationDataSource',
       );
 
-      await _firestore.collection('users').doc(userId).set({
+      await _firestore.collection(FirebaseCollections.users).doc(userId).set({
         'notificationSettings': settings.toMap(),
       }, SetOptions(merge: true));
 
@@ -187,7 +188,7 @@ class NotificationDataSourceNew {
   /// Stream notification settings changes
   Stream<NotificationSettings?> watchNotificationSettings(String userId) {
     return _firestore
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(userId)
         .snapshots()
         .map((snapshot) {
@@ -213,7 +214,7 @@ class NotificationDataSourceNew {
       );
 
       final defaultSettings = NotificationSettings();
-      await _firestore.collection('users').doc(userId).set({
+      await _firestore.collection(FirebaseCollections.users).doc(userId).set({
         'notificationSettings': defaultSettings.toMap(),
       }, SetOptions(merge: true));
 
@@ -238,7 +239,7 @@ class NotificationDataSourceNew {
   /// Update FCM token for notifications
   Future<bool> updateFCMToken(String userId, String token) async {
     try {
-      await _firestore.collection('fcmTokens').doc(token).set({
+      await _firestore.collection(FirebaseCollections.fcmTokens).doc(token).set({
         'uid': userId,
         'token': token,
         'platform': 'flutter',
@@ -266,7 +267,7 @@ class NotificationDataSourceNew {
   /// Remove FCM token
   Future<bool> removeFCMToken(String token) async {
     try {
-      await _firestore.collection('fcmTokens').doc(token).delete();
+      await _firestore.collection(FirebaseCollections.fcmTokens).doc(token).delete();
 
       developer.log(
         'FCM token removed successfully',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -88,7 +89,7 @@ class _ChatPickerDialogState extends State<ChatPickerDialog> {
       }
 
       final snapshot = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: userId)
           .orderBy('lastMessageTimestamp', descending: true)
           .get();

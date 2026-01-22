@@ -265,6 +265,12 @@ class HomeController extends GetxController {
       return;
     }
 
+    // Require group name - don't auto-generate from participant names
+    if (groupName.value.trim().isEmpty) {
+      _showErrorToast('Please enter a group name.');
+      return;
+    }
+
     isCreatingChat.value = true;
 
     try {
@@ -324,7 +330,7 @@ class HomeController extends GetxController {
       // Step 2: Start group chat session using ChatSessionManager
       final sessionStarted = ChatSessionManager.instance.startGroupChatSession(
         participants: allMembers,
-        groupName: groupName.value.isNotEmpty ? groupName.value : _generateGroupName(selectedUsersList),
+        groupName: groupName.value.trim(),
         groupDescription: 'Group chat with ${selectedUsersList.length + 1} members',
       );
 
@@ -339,7 +345,7 @@ class HomeController extends GetxController {
       final chatRoom = await ChatService.instance.createChatRoom(
         members: allMembers,
         isGroupChat: true,
-        groupName: groupName.value.isNotEmpty ? groupName.value : _generateGroupName(selectedUsersList),
+        groupName: groupName.value.trim(),
         groupDescription: ChatSessionManager.instance.chatDescription,
         customRoomId: ChatSessionManager.instance.roomId,
       );

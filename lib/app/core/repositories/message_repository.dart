@@ -2,6 +2,7 @@
 // Separates message operations from ChatRepository for better SRP
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/factories/message_factory.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:flutter/foundation.dart';
@@ -91,7 +92,7 @@ class FirebaseMessageRepository implements IMessageRepository {
         _messageFactory = messageFactory ?? MessageFactory();
 
   CollectionReference<Map<String, dynamic>> _messagesCollection(String roomId) {
-    return _firestore.collection('chats').doc(roomId).collection('chat');
+    return _firestore.collection(FirebaseCollections.chats).doc(roomId).collection(FirebaseCollections.chatMessages);
   }
 
   @override

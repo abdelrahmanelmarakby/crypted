@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
@@ -35,7 +36,7 @@ enum MessageType {
 class ChatDataSources {
   // =================== PROPERTIES ===================
   final ChatConfiguration? chatConfiguration;
-  final CollectionReference chatCollection = FirebaseFirestore.instance.collection('chats');
+  final CollectionReference chatCollection = FirebaseFirestore.instance.collection(FirebaseCollections.chats);
   final String userId = UserService.currentUser.value?.uid.toString() ?? 
                        FirebaseAuth.instance.currentUser?.uid.toString() ?? '';
   
@@ -64,13 +65,7 @@ class ChatDataSources {
 
     final querySnapshotStream = query.snapshots().map(ChatRoom().fromQuery);
 
-    if (kDebugMode) {
-      querySnapshotStream.listen((querySnapshot) {
-        for (var doc in querySnapshot) {
-          print('Chat members: ${doc.membersIds}');
-        }
-      });
-    }
+    
     
     return querySnapshotStream;
   }
@@ -99,9 +94,6 @@ class ChatDataSources {
         .where('membersIds', isEqualTo: chatConfiguration!.members.map((e) => e.uid).toList())
         .get();
     
-    if (kDebugMode) {
-      print("✅ Chat room exists: ${querySnapshot.docs.isNotEmpty}");
-    }
     return querySnapshot.docs.isNotEmpty;
   }
 
@@ -163,7 +155,7 @@ class ChatDataSources {
 
       // Check if current user has blocked any members
       final currentUserDoc = FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(currentUserId);
       var userSnapshot = await currentUserDoc.get();
 
@@ -180,7 +172,7 @@ class ChatDataSources {
       if (memberUids.isNotEmpty && currentUserId != null) {
         for (final memberUid in memberUids) {
           final memberDoc = await FirebaseFirestore.instance
-              .collection('users')
+              .collection(FirebaseCollections.users)
               .doc(memberUid)
               .get();
 
@@ -453,7 +445,7 @@ class ChatDataSources {
     try {
       await chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId)
           .update(updates);
 
@@ -485,7 +477,7 @@ class ChatDataSources {
     try {
       final messageRef = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       // BUG-012 FIX: Use transaction with server timestamp for accurate time comparison
@@ -564,7 +556,7 @@ class ChatDataSources {
     try {
       final messageRef = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -618,7 +610,7 @@ class ChatDataSources {
     try {
       final messageRef = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -665,7 +657,7 @@ class ChatDataSources {
 
       final messageRef = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -751,7 +743,7 @@ class ChatDataSources {
     try {
       final messageRef = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -800,7 +792,7 @@ class ChatDataSources {
   Stream<List<Message>> getLivePrivateMessage(String roomId) {
     return chatCollection
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -878,7 +870,7 @@ class ChatDataSources {
 
     // Check if current user has blocked any members
     final currentUserDoc = FirebaseFirestore.instance
-        .collection('users')
+        .collection(FirebaseCollections.users)
         .doc(currentUserId);
     var userSnapshot = await currentUserDoc.get();
 
@@ -895,7 +887,7 @@ class ChatDataSources {
     if (memberUids.isNotEmpty && currentUserId != null) {
       for (final memberUid in memberUids) {
         final memberDoc = await FirebaseFirestore.instance
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(memberUid)
             .get();
 
@@ -935,7 +927,7 @@ class ChatDataSources {
   Future<void> postMessageToChat(Message? privateMessage, String roomId) async {
     final newPrivateMessage = chatCollection
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .doc();
     
     await newPrivateMessage.set(
@@ -1239,7 +1231,7 @@ class ChatDataSources {
     try {
       await chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId)
           .delete();
 
@@ -1259,7 +1251,7 @@ class ChatDataSources {
     try {
       // Delete messages from 'chats' collection
       try {
-        final messagesQuery = await chatCollection.doc(roomId).collection('chat').get();
+        final messagesQuery = await chatCollection.doc(roomId).collection(FirebaseCollections.chatMessages).get();
         await _deleteMessageFiles(messagesQuery.docs);
         
         for (var doc in messagesQuery.docs) {
@@ -1274,9 +1266,9 @@ class ChatDataSources {
       // Delete messages from 'Chats' collection (legacy support)
       try {
         final messagesQuery2 = await FirebaseFirestore.instance
-            .collection('Chats')
+            .collection(FirebaseCollections.chatsLegacyCapital)
             .doc(roomId)
-            .collection('chat')
+            .collection(FirebaseCollections.chatMessages)
             .get();
         
         await _deleteMessageFiles(messagesQuery2.docs);
@@ -1296,7 +1288,7 @@ class ChatDataSources {
       // Delete from legacy 'Chats' collection
       try {
         await FirebaseFirestore.instance
-            .collection('Chats')
+            .collection(FirebaseCollections.chatsLegacyCapital)
             .doc(roomId)
             .delete();
       } catch (e) {
@@ -1408,7 +1400,7 @@ class ChatDataSources {
   /// Clear all messages in a chat (but keep the room)
   Future<void> clearChat(String roomId) async {
     try {
-      final messagesQuery = await chatCollection.doc(roomId).collection('chat').get();
+      final messagesQuery = await chatCollection.doc(roomId).collection(FirebaseCollections.chatMessages).get();
 
       // Delete all message files
       await _deleteMessageFiles(messagesQuery.docs);
@@ -1497,7 +1489,7 @@ class ChatDataSources {
         'status': 'pending', // pending, reviewed, resolved
       };
 
-      await FirebaseFirestore.instance.collection('reports').add(reportData);
+      await FirebaseFirestore.instance.collection(FirebaseCollections.reports).add(reportData);
 
       if (kDebugMode) {
         print('✅ Content reported: $contentType - $contentId');
@@ -1515,7 +1507,7 @@ class ChatDataSources {
     try {
       final messagesQuery = await chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('isFavorite', isEqualTo: true)
           .orderBy('timestamp', descending: true)
           .limit(100)
@@ -1535,7 +1527,7 @@ class ChatDataSources {
     try {
       Query query = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .limit(100);
 
@@ -1609,7 +1601,7 @@ class ChatDataSources {
   /// Toggle pin status for a message
   Future<void> togglePinMessage(String roomId, String messageId) async {
     try {
-      final messageRef = chatCollection.doc(roomId).collection('chat').doc(messageId);
+      final messageRef = chatCollection.doc(roomId).collection(FirebaseCollections.chatMessages).doc(messageId);
       final messageDoc = await messageRef.get();
 
       if (!messageDoc.exists) {
@@ -1653,7 +1645,7 @@ class ChatDataSources {
   /// Toggle favorite status for a message
   Future<void> toggleFavoriteMessage(String roomId, String messageId) async {
     try {
-      final messageRef = chatCollection.doc(roomId).collection('chat').doc(messageId);
+      final messageRef = chatCollection.doc(roomId).collection(FirebaseCollections.chatMessages).doc(messageId);
       final messageDoc = await messageRef.get();
 
       if (!messageDoc.exists) {
@@ -1697,7 +1689,7 @@ class ChatDataSources {
     try {
       final query = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('isPinned', isEqualTo: true)
           .orderBy('pinnedAt', descending: true);
 
@@ -1718,7 +1710,7 @@ class ChatDataSources {
     try {
       final query = chatCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('favoritedBy', arrayContains: userId);
 
       final messagesQuery = await query.get();

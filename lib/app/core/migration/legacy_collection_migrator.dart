@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -14,8 +15,8 @@ class LegacyCollectionMigrator {
   final _logger = LoggerService.instance;
 
   // Collection names
-  static const String legacyCollection = 'Chats';
-  static const String currentCollection = 'chats';
+  static const String legacyCollection = FirebaseCollections.chatsLegacyCapital;
+  static const String currentCollection = FirebaseCollections.chats;
 
   /// Check if there are any documents in the legacy collection
   Future<bool> hasLegacyData() async {
@@ -124,11 +125,11 @@ class LegacyCollectionMigrator {
     await currentRoomRef.set(roomData);
 
     // Migrate messages subcollection
-    final legacyMessages = await legacyRoomRef.collection('chat').get();
+    final legacyMessages = await legacyRoomRef.collection(FirebaseCollections.chatMessages).get();
 
     final batch = _firestore.batch();
     for (final messageDoc in legacyMessages.docs) {
-      final newMessageRef = currentRoomRef.collection('chat').doc(messageDoc.id);
+      final newMessageRef = currentRoomRef.collection(FirebaseCollections.chatMessages).doc(messageDoc.id);
       batch.set(newMessageRef, messageDoc.data());
     }
 
@@ -162,7 +163,7 @@ class LegacyCollectionMigrator {
         final messages = await _firestore
             .collection(legacyCollection)
             .doc(doc.id)
-            .collection('chat')
+            .collection(FirebaseCollections.chatMessages)
             .get();
 
         for (final messageDoc in messages.docs) {
@@ -283,14 +284,14 @@ class UnifiedChatCollection {
       return _firestore
           .collection(LegacyCollectionMigrator.currentCollection)
           .doc(roomId)
-          .collection('chat');
+          .collection(FirebaseCollections.chatMessages);
     }
 
     // Fall back to legacy collection
     return _firestore
         .collection(LegacyCollectionMigrator.legacyCollection)
         .doc(roomId)
-        .collection('chat');
+        .collection(FirebaseCollections.chatMessages);
   }
 
   /// Get chat room document reference

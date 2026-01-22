@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,7 +96,7 @@ class HiveMigrationService {
       onProgress?.call(0.1, 'Fetching chat rooms...');
 
       final roomsSnapshot = await _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: userId)
           .get();
 
@@ -134,9 +135,9 @@ class HiveMigrationService {
 
           // Migrate messages for this room
           final messagesSnapshot = await _firestore
-              .collection('chat_rooms')
+              .collection(FirebaseCollections.chats)
               .doc(doc.id)
-              .collection('chat')
+              .collection(FirebaseCollections.chatMessages)
               .orderBy('timestamp', descending: true)
               .limit(messagesPerRoomLimit)
               .get();

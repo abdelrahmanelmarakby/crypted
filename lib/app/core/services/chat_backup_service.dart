@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -116,7 +117,7 @@ class ChatBackupService {
 
       // Get chat rooms from Firebase
       final querySnapshot = await _firestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: userId)
           .orderBy('lastChat', descending: true)
           .get();
@@ -143,9 +144,9 @@ class ChatBackupService {
       log('💬 Getting messages for room: $roomId');
 
       Query query = _firestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('messages')
+          .collection(FirebaseCollections.messages)
           .orderBy('timestamp', descending: true)
           .limit(limit);
 
@@ -230,7 +231,7 @@ class ChatBackupService {
             }
           } else {
             // Get other users' info from Firebase
-            final userDoc = await _firestore.collection('users').doc(userId).get();
+            final userDoc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
             if (userDoc.exists) {
               participants[userId] = SocialMediaUser.fromMap(userDoc.data()!);
             }
@@ -483,9 +484,9 @@ class ChatBackupService {
       for (final chatRoom in chatRooms) {
         try {
           var queryRef = _firestore
-              .collection('chats')
+              .collection(FirebaseCollections.chats)
               .doc(chatRoom.id)
-              .collection('messages')
+              .collection(FirebaseCollections.messages)
               .orderBy('timestamp', descending: true)
               .limit(limit);
 
@@ -553,9 +554,9 @@ class ChatBackupService {
       for (final chatRoom in chatRooms) {
         try {
           final querySnapshot = await _firestore
-              .collection('chats')
+              .collection(FirebaseCollections.chats)
               .doc(chatRoom.id)
-              .collection('messages')
+              .collection(FirebaseCollections.messages)
               .where('timestamp', isGreaterThanOrEqualTo: startDate.toIso8601String())
               .where('timestamp', isLessThanOrEqualTo: endDate.toIso8601String())
               .orderBy('timestamp', descending: true)

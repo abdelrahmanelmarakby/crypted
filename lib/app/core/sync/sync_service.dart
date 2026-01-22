@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:flutter/foundation.dart';
 import 'package:crypted_app/app/core/services/local_database_service.dart';
 import 'package:crypted_app/app/core/sync/conflict_resolver.dart';
@@ -74,9 +75,9 @@ class SyncService {
 
     try {
       Query query = _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .limit(limit);
 
@@ -138,7 +139,7 @@ class SyncService {
 
     try {
       final snapshot = await _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .where('membersIds', arrayContains: userId)
           .get();
 
@@ -190,9 +191,9 @@ class SyncService {
           // Use the offline queue to ensure proper handling
           final data = message.toDataMap();
           await _firestore
-              .collection('chat_rooms')
+              .collection(FirebaseCollections.chats)
               .doc(message.roomId)
-              .collection('chat')
+              .collection(FirebaseCollections.chatMessages)
               .doc(message.id)
               .set(data, SetOptions(merge: true));
 
@@ -256,9 +257,9 @@ class SyncService {
         try {
           // Check if message exists remotely
           final remoteDoc = await _firestore
-              .collection('chat_rooms')
+              .collection(FirebaseCollections.chats)
               .doc(roomId)
-              .collection('chat')
+              .collection(FirebaseCollections.chatMessages)
               .doc(message.id)
               .get();
 
@@ -275,9 +276,9 @@ class SyncService {
             // Push new message
             final data = message.toDataMap();
             await _firestore
-                .collection('chat_rooms')
+                .collection(FirebaseCollections.chats)
                 .doc(roomId)
-                .collection('chat')
+                .collection(FirebaseCollections.chatMessages)
                 .doc(message.id)
                 .set(data);
 
@@ -382,9 +383,9 @@ class SyncService {
     }
 
     final subscription = _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .orderBy('timestamp', descending: true)
         .limit(50)
         .snapshots()

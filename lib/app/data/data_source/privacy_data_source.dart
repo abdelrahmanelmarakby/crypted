@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 
@@ -16,7 +17,7 @@ class PrivacyDataSource {
 
       // Get user document
       DocumentSnapshot<Map<String, dynamic>> userDoc =
-          await firebaseFirestore.collection('users').doc(currentUserId).get();
+          await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).get();
 
       if (!userDoc.exists) {
         print('❌ User document not found');
@@ -53,7 +54,7 @@ class PrivacyDataSource {
       }
 
       // Update user document with privacy settings
-      await firebaseFirestore.collection('users').doc(currentUserId).update({
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).update({
         'privacySettings': privacy.toMap(),
       });
 
@@ -74,7 +75,7 @@ class PrivacyDataSource {
         return false;
       }
 
-      await firebaseFirestore.collection('users').doc(currentUserId).update({
+      await firebaseFirestore.collection(FirebaseCollections.users).doc(currentUserId).update({
         'privacySettings.$field': value,
       });
 
@@ -96,7 +97,7 @@ class PrivacyDataSource {
 
       // Query chats where current user is sharing live location
       QuerySnapshot chatSnapshot = await firebaseFirestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .where('liveLocationUsers', arrayContains: currentUserId)
           .get();
 
@@ -117,15 +118,15 @@ class PrivacyDataSource {
       }
 
       // Remove current user from liveLocationUsers array in chat document
-      await firebaseFirestore.collection('chats').doc(chatId).update({
+      await firebaseFirestore.collection(FirebaseCollections.chats).doc(chatId).update({
         'liveLocationUsers': FieldValue.arrayRemove([currentUserId]),
       });
 
       // Delete any active location messages for this user in this chat
       final locationMessages = await firebaseFirestore
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(chatId)
-          .collection('messages')
+          .collection(FirebaseCollections.chatMessages)
           .where('senderId', isEqualTo: currentUserId)
           .where('type', isEqualTo: 'location')
           .where('isLiveLocation', isEqualTo: true)

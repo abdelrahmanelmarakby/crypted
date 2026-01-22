@@ -2,6 +2,7 @@
 // Provides concrete implementations for offline operation handlers
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/offline/offline_queue.dart';
 import 'package:flutter/foundation.dart';
 
@@ -64,14 +65,14 @@ class OfflineQueueService {
     cleanedData['timestamp'] = FieldValue.serverTimestamp();
 
     await _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .add(cleanedData);
 
     // Update last message in chat room
     final lastMessagePreview = _getMessagePreview(messageData);
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'lastMessage': lastMessagePreview,
       'lastMessageTimestamp': FieldValue.serverTimestamp(),
       'lastMessageSenderId': messageData['senderId'],
@@ -92,9 +93,9 @@ class OfflineQueueService {
     }
 
     await _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .doc(messageId)
         .delete();
 
@@ -114,9 +115,9 @@ class OfflineQueueService {
     }
 
     await _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .doc(messageId)
         .update({
       'text': newText,
@@ -144,9 +145,9 @@ class OfflineQueueService {
 
     for (final messageId in messageIds) {
       final docRef = _firestore
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .doc(messageId);
 
       batch.update(docRef, {
@@ -173,9 +174,9 @@ class OfflineQueueService {
     }
 
     final docRef = _firestore
-        .collection('chat_rooms')
+        .collection(FirebaseCollections.chats)
         .doc(roomId)
-        .collection('chat')
+        .collection(FirebaseCollections.chatMessages)
         .doc(messageId);
 
     // Use transaction to safely toggle reaction
@@ -239,7 +240,7 @@ class OfflineQueueService {
 
     updates['updatedAt'] = FieldValue.serverTimestamp();
 
-    await _firestore.collection('chat_rooms').doc(roomId).update(updates);
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update(updates);
 
     if (kDebugMode) {
       print('[OfflineQueueService] Updated chat room: $roomId with ${updates.keys}');
@@ -260,7 +261,7 @@ class OfflineQueueService {
       throw ArgumentError('Member data missing uid');
     }
 
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'members': FieldValue.arrayUnion([memberData]),
       'membersIds': FieldValue.arrayUnion([memberId]),
     });
@@ -280,7 +281,7 @@ class OfflineQueueService {
     }
 
     // Need to get current member data to remove the full object
-    final roomDoc = await _firestore.collection('chat_rooms').doc(roomId).get();
+    final roomDoc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
     if (!roomDoc.exists) return;
 
     final roomData = roomDoc.data() ?? {};
@@ -297,7 +298,7 @@ class OfflineQueueService {
       return;
     }
 
-    await _firestore.collection('chat_rooms').doc(roomId).update({
+    await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
       'members': FieldValue.arrayRemove([memberToRemove]),
       'membersIds': FieldValue.arrayRemove([memberId]),
     });

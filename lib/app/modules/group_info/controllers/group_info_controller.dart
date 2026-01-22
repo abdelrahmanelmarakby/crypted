@@ -6,6 +6,7 @@ import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/app/core/utils/file_download_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -134,7 +135,7 @@ class GroupInfoController extends GetxController {
 
       // Load permissions from Firestore directly
       final roomDoc = await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .get();
 
@@ -159,7 +160,7 @@ class GroupInfoController extends GetxController {
     if (roomId == null) return;
     try {
       await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .update({
         'adminIds': [adminId],
@@ -660,9 +661,9 @@ class GroupInfoController extends GetxController {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('chats')
+                    .collection(FirebaseCollections.chats)
                     .doc(roomId)
-                    .collection('chat')
+                    .collection(FirebaseCollections.chatMessages)
                     .where('isFavorite', isEqualTo: true)
                     .orderBy('timestamp', descending: true)
                     .snapshots(),
@@ -783,9 +784,9 @@ class GroupInfoController extends GetxController {
                             onPressed: () async {
                               // Unstar message
                               await FirebaseFirestore.instance
-                                  .collection('chats')
+                                  .collection(FirebaseCollections.chats)
                                   .doc(roomId)
-                                  .collection('chat')
+                                  .collection(FirebaseCollections.chatMessages)
                                   .doc(messages[index].id)
                                   .update({'isFavorite': false});
                             },
@@ -925,9 +926,9 @@ class GroupInfoController extends GetxController {
   Widget _buildMediaGrid(MediaType mediaType) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('chats')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('type', isEqualTo: mediaType.name)
           .orderBy('timestamp', descending: true)
           .snapshots(),
@@ -1241,9 +1242,9 @@ class GroupInfoController extends GetxController {
   Widget _buildMediaTab(MediaType mediaType) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .where('type', isEqualTo: mediaType.name)
           .orderBy('timestamp', descending: true)
           .snapshots(),
@@ -1402,7 +1403,7 @@ class GroupInfoController extends GetxController {
 
       // Update Firestore
       await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .update({
         'adminIds': FieldValue.arrayUnion([userId]),
@@ -1491,7 +1492,7 @@ class GroupInfoController extends GetxController {
 
       // Update Firestore
       await FirebaseFirestore.instance
-          .collection('chat_rooms')
+          .collection(FirebaseCollections.chats)
           .doc(roomId)
           .update({
         'adminIds': FieldValue.arrayRemove([userId]),
@@ -1604,7 +1605,7 @@ class GroupInfoController extends GetxController {
 
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collection('group_invite_links')
+          .collection(FirebaseCollections.groupInviteLinks)
           .where('groupId', isEqualTo: roomId)
           .where('isRevoked', isEqualTo: false)
           .orderBy('createdAt', descending: true)

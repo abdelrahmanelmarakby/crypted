@@ -185,6 +185,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                                       ),
                                     )
                                   : ListView.builder(
+                                      // FIX: Attach ScrollController for search navigation
+                                      controller: controller.messageScrollController,
                                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                                       reverse: true,
                                       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -192,9 +194,13 @@ class PrivateChatScreen extends GetView<ChatController> {
                                       // PERF-015: Added cache extent for smoother scrolling
                                       cacheExtent: 500,
                                       itemBuilder: (context, index) {
+                                        final message = messages[index];
+                                        // Register GlobalKey for precise scrolling
+                                        final messageKey = _getOrCreateMessageKey(message.id);
+
                                         // Use RepaintBoundary for performance optimization
                                         return RepaintBoundary(
-                                          key: ValueKey('msg_${messages[index].id}'),
+                                          key: messageKey,
                                           child: _buildMessageItem(
                                             messages,
                                             index,
@@ -522,6 +528,18 @@ class PrivateChatScreen extends GetView<ChatController> {
     );
   }
 
+  /// Get or create a GlobalKey for a message (for precise scroll-to functionality)
+  GlobalKey _getOrCreateMessageKey(String messageId) {
+    // Check if controller already has a key for this message
+    if (controller.messageKeys.containsKey(messageId)) {
+      return controller.messageKeys[messageId]!;
+    }
+    // Create and register a new key
+    final key = GlobalKey(debugLabel: 'msg_$messageId');
+    controller.registerMessageKey(messageId, key);
+    return key;
+  }
+
   Widget _buildMessageItem(List<Message> messages, int index, dynamic otherUser) {
     final Message? previousMsg = index != messages.length - 1 ? messages[index + 1] : null;
     final Message currentMsg = messages[index];
@@ -626,6 +644,8 @@ class PrivateChatScreen extends GetView<ChatController> {
         onPrevious: controller.previousSearchResult,
         resultCount: controller.searchResults.length,
         currentIndex: controller.currentSearchIndex.value,
+        onGetHistory: controller.getSearchHistory,
+        onRemoveFromHistory: controller.removeFromSearchHistory,
       );
     });
   }

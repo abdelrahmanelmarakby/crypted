@@ -2,6 +2,7 @@
 // Separates room management from message operations
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:flutter/foundation.dart';
@@ -86,7 +87,7 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
         _currentUserId = currentUserId;
 
   CollectionReference<Map<String, dynamic>> get _chatsCollection =>
-      _firestore.collection('chats');
+      _firestore.collection(FirebaseCollections.chats);
 
   @override
   Stream<List<ChatRoom>> getChatRooms({
@@ -233,7 +234,7 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
       // Delete all messages in the room first
       final messagesSnapshot = await _chatsCollection
           .doc(roomId)
-          .collection('chat')
+          .collection(FirebaseCollections.chatMessages)
           .get();
 
       final batch = _firestore.batch();

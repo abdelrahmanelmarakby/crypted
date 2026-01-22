@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/notification_model.dart';
 
 class NotificationService {
   static final CollectionReference notificationCollection =
-      FirebaseFirestore.instance.collection('Notifications');
+      FirebaseFirestore.instance.collection(FirebaseCollections.notifications);
 
   static Future sendNotification(NotificationModel notification) {
     DocumentReference docRef = notificationCollection.doc();

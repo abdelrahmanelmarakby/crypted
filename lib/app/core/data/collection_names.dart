@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 
 /// DATA-002: Collection Name Standardization
@@ -14,31 +15,31 @@ class CollectionNames {
   // ============================================================================
 
   /// Chat rooms collection
-  static const String chats = 'chats';
+  static const String chats = FirebaseCollections.chats;
 
   /// Messages subcollection within chat rooms
-  static const String messages = 'chat';
+  static const String messages = FirebaseCollections.chatMessages;
 
   /// Users collection
-  static const String users = 'users';
+  static const String users = FirebaseCollections.users;
 
   /// Stories collection
-  static const String stories = 'Stories'; // Legacy name, kept for compatibility
+  static const String stories = FirebaseCollections.stories; // Legacy name, kept for compatibility
 
   /// Calls collection
-  static const String calls = 'calls';
+  static const String calls = FirebaseCollections.calls;
 
   /// Reports collection
-  static const String reports = 'reports';
+  static const String reports = FirebaseCollections.reports;
 
   /// Notifications collection
-  static const String notifications = 'notifications';
+  static const String notifications = FirebaseCollections.userNotifications;
 
   /// Presence/online status collection
-  static const String presence = 'presence';
+  static const String presence = FirebaseCollections.presence;
 
   /// Typing indicators collection (or subcollection)
-  static const String typing = 'typing';
+  static const String typing = FirebaseCollections.typing;
 
   /// File metadata collection
   static const String files = 'files';
@@ -49,11 +50,11 @@ class CollectionNames {
 
   /// Legacy chat rooms collection (uppercase)
   @Deprecated('Use CollectionNames.chats instead')
-  static const String legacyChats = 'Chats';
+  static const String legacyChats = FirebaseCollections.chatsLegacyCapital;
 
   /// Legacy messages subcollection
   @Deprecated('Use CollectionNames.messages instead')
-  static const String legacyMessages = 'messages';
+  static const String legacyMessages = FirebaseCollections.messages;
 
   // ============================================================================
   // HELPER METHODS
@@ -277,7 +278,7 @@ class CollectionMigrator {
       // ignore: deprecated_member_use_from_same_package
       final legacyMessages = await _provider.legacyChats
           .doc(roomId)
-          .collection('messages')
+          .collection(FirebaseCollections.messages)
           .get();
 
       if (legacyMessages.docs.isEmpty) {
@@ -400,7 +401,7 @@ class CollectionMigrator {
         if (standardExists) {
           if (!dryRun) {
             // Delete legacy messages first
-            final messages = await doc.reference.collection('messages').get();
+            final messages = await doc.reference.collection(FirebaseCollections.messages).get();
             for (final msg in messages.docs) {
               await msg.reference.delete();
             }

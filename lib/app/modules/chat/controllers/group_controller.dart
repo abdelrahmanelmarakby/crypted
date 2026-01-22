@@ -8,6 +8,7 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 
 /// Group Controller - Handles all group chat operations
 ///
@@ -229,7 +230,7 @@ class GroupController extends GetxController {
     try {
       adminIds.add(userId);
 
-      await _firestore.collection('chats').doc(roomId).update({
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'adminIds': adminIds.toList(),
       });
 
@@ -276,7 +277,7 @@ class GroupController extends GetxController {
     try {
       adminIds.remove(userId);
 
-      await _firestore.collection('chats').doc(roomId).update({
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'adminIds': adminIds.toList(),
       });
 
@@ -330,7 +331,7 @@ class GroupController extends GetxController {
       }
 
       // Update Firestore
-      await _firestore.collection('chats').doc(roomId).update({
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'groupName': name,
       });
 
@@ -373,7 +374,7 @@ class GroupController extends GetxController {
       }
 
       // Update Firestore
-      await _firestore.collection('chats').doc(roomId).update({
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'groupDescription': description,
       });
 
@@ -414,7 +415,7 @@ class GroupController extends GetxController {
       final downloadUrl = await ref.getDownloadURL();
 
       // Update Firestore
-      await _firestore.collection('chats').doc(roomId).update({
+      await _firestore.collection(FirebaseCollections.chats).doc(roomId).update({
         'groupImageUrl': downloadUrl,
       });
 
@@ -492,7 +493,7 @@ class GroupController extends GetxController {
     try {
       _logger.debug('Loading group info', context: 'GroupController');
 
-      final doc = await _firestore.collection('chats').doc(roomId).get();
+      final doc = await _firestore.collection(FirebaseCollections.chats).doc(roomId).get();
 
       if (doc.exists) {
         final data = doc.data();

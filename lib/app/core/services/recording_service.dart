@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 
 /// Production-grade Recording Service for voice message indicators
 /// Manages recording status indicators with auto-stop and debouncing
@@ -116,9 +117,9 @@ class RecordingService {
       if (isRecording) {
         // Create/update recording document
         await FirebaseFirestore.instance
-            .collection('chats')
+            .collection(FirebaseCollections.chats)
             .doc(chatId)
-            .collection('recording')
+            .collection(FirebaseCollections.recording)
             .doc(userId)
             .set({
           'isRecording': true,
@@ -132,9 +133,9 @@ class RecordingService {
       } else {
         // Delete recording document
         await FirebaseFirestore.instance
-            .collection('chats')
+            .collection(FirebaseCollections.chats)
             .doc(chatId)
-            .collection('recording')
+            .collection(FirebaseCollections.recording)
             .doc(userId)
             .delete();
 
@@ -155,9 +156,9 @@ class RecordingService {
     if (userId == null) return Stream.value([]);
 
     return FirebaseFirestore.instance
-        .collection('chats')
+        .collection(FirebaseCollections.chats)
         .doc(chatId)
-        .collection('recording')
+        .collection(FirebaseCollections.recording)
         .where('isRecording', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
@@ -191,7 +192,7 @@ class RecordingService {
     try {
       final userDocs = await Future.wait(
         recordingUserIds.map((userId) =>
-            FirebaseFirestore.instance.collection('users').doc(userId).get()),
+            FirebaseFirestore.instance.collection(FirebaseCollections.users).doc(userId).get()),
       );
 
       return userDocs
@@ -244,11 +245,11 @@ class RecordingService {
 
         // Query and delete all recording documents for this user
         final chatsSnapshot =
-            await FirebaseFirestore.instance.collection('chats').get();
+            await FirebaseFirestore.instance.collection(FirebaseCollections.chats).get();
 
         final batch = FirebaseFirestore.instance.batch();
         for (final chatDoc in chatsSnapshot.docs) {
-          final recordingDoc = chatDoc.reference.collection('recording').doc(userId);
+          final recordingDoc = chatDoc.reference.collection(FirebaseCollections.recording).doc(userId);
           batch.delete(recordingDoc);
         }
         await batch.commit();

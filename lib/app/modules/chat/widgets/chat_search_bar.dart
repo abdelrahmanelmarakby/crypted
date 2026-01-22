@@ -14,6 +14,7 @@ import 'package:crypted_app/core/themes/styles_manager.dart';
 /// - Navigation controls (up/down arrows)
 /// - Result counter showing current/total
 /// - Smooth animations
+/// - Search history dropdown
 class ChatSearchBar extends StatefulWidget {
   final Function(String query) onSearch;
   final VoidCallback onClose;
@@ -21,6 +22,8 @@ class ChatSearchBar extends StatefulWidget {
   final VoidCallback? onPrevious;
   final int resultCount;
   final int currentIndex;
+  final Future<List<String>> Function()? onGetHistory;
+  final Function(String query)? onRemoveFromHistory;
 
   const ChatSearchBar({
     super.key,
@@ -30,6 +33,8 @@ class ChatSearchBar extends StatefulWidget {
     this.onPrevious,
     this.resultCount = 0,
     this.currentIndex = 0,
+    this.onGetHistory,
+    this.onRemoveFromHistory,
   });
 
   @override
@@ -43,6 +48,11 @@ class _ChatSearchBarState extends State<ChatSearchBar>
   Timer? _debounceTimer;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  // Search history state
+  List<String> _searchHistory = [];
+  bool _showHistory = false;
+  bool _hasFocus = false;
 
   @override
   void initState() {
@@ -65,6 +75,55 @@ class _ChatSearchBarState extends State<ChatSearchBar>
 
     // Listen for text changes
     _controller.addListener(_onTextChanged);
+
+    // Listen for focus changes
+    _focusNode.addListener(_onFocusChanged);
+
+    // Load search history
+    _loadSearchHistory();
+  }
+
+  void _onFocusChanged() {
+    _hasFocus = _focusNode.hasFocus;
+    _updateHistoryVisibility();
+  }
+
+  void _updateHistoryVisibility() {
+    final shouldShow = _hasFocus &&
+        _controller.text.isEmpty &&
+        _searchHistory.isNotEmpty;
+    if (shouldShow != _showHistory) {
+      setState(() {
+        _showHistory = shouldShow;
+      });
+    }
+  }
+
+  Future<void> _loadSearchHistory() async {
+    if (widget.onGetHistory != null) {
+      final history = await widget.onGetHistory!();
+      setState(() {
+        _searchHistory = history;
+        _updateHistoryVisibility();
+      });
+    }
+  }
+
+  void _selectHistoryItem(String query) {
+    _controller.text = query;
+    _controller.selection = TextSelection.collapsed(offset: query.length);
+    widget.onSearch(query);
+    setState(() {
+      _showHistory = false;
+    });
+  }
+
+  void _removeHistoryItem(String query) {
+    widget.onRemoveFromHistory?.call(query);
+    setState(() {
+      _searchHistory.removeWhere((item) => item.toLowerCase() == query.toLowerCase());
+      _updateHistoryVisibility();
+    });
   }
 
   @override
@@ -72,6 +131,7 @@ class _ChatSearchBarState extends State<ChatSearchBar>
     _debounceTimer?.cancel();
     _animationController.dispose();
     _controller.removeListener(_onTextChanged);
+    _focusNode.removeListener(_onFocusChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -79,6 +139,7 @@ class _ChatSearchBarState extends State<ChatSearchBar>
 
   void _onTextChanged() {
     setState(() {});
+    _updateHistoryVisibility();
 
     // Debounce search - wait for user to stop typing
     _debounceTimer?.cancel();
@@ -100,22 +161,25 @@ class _ChatSearchBarState extends State<ChatSearchBar>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: Paddings.small,
-          vertical: Paddings.small,
-        ),
-        decoration: BoxDecoration(
-          color: Get.isDarkMode ? Colors.grey[900] : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: Paddings.small,
+              vertical: Paddings.small,
             ),
-          ],
-        ),
-        child: SafeArea(
+            decoration: BoxDecoration(
+              color: Get.isDarkMode ? Colors.grey[900] : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: SafeArea(
           bottom: false,
           child: Row(
             children: [
@@ -259,6 +323,124 @@ class _ChatSearchBarState extends State<ChatSearchBar>
             ],
           ),
         ),
+          ),
+
+          // Search history dropdown
+          if (_showHistory) _buildHistoryDropdown(),
+        ],
+      ),
+    );
+  }
+
+  /// Build the search history dropdown
+  Widget _buildHistoryDropdown() {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: 200,
+      ),
+      decoration: BoxDecoration(
+        color: Get.isDarkMode ? Colors.grey[850] : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: Paddings.normal,
+              vertical: Paddings.small,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Iconsax.clock,
+                  size: 14,
+                  color: ColorsManager.grey,
+                ),
+                SizedBox(width: Paddings.xSmall),
+                Text(
+                  'Recent searches',
+                  style: StylesManager.regular(
+                    fontSize: FontSize.small,
+                    color: ColorsManager.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1),
+          // History items
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: _searchHistory.length,
+              itemBuilder: (context, index) {
+                final query = _searchHistory[index];
+                return Dismissible(
+                  key: ValueKey(query),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => _removeHistoryItem(query),
+                  background: Container(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(right: Paddings.normal),
+                    child: Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: () => _selectHistoryItem(query),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Paddings.normal,
+                        vertical: Paddings.small,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.search_normal,
+                            size: 16,
+                            color: ColorsManager.grey.withValues(alpha: 0.6),
+                          ),
+                          SizedBox(width: Paddings.small),
+                          Expanded(
+                            child: Text(
+                              query,
+                              style: StylesManager.regular(
+                                fontSize: FontSize.medium,
+                                color: Get.isDarkMode
+                                    ? Colors.white
+                                    : ColorsManager.black,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.north_west,
+                            size: 14,
+                            color: ColorsManager.grey.withValues(alpha: 0.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

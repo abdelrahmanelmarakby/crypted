@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -73,9 +74,9 @@ class _PrivacyExceptionListEditorState
 
       // Load contacts from Firestore
       final contactsSnapshot = await FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
-          .collection('contacts')
+          .collection(FirebaseCollections.contacts)
           .limit(100)
           .get();
 
@@ -85,7 +86,7 @@ class _PrivacyExceptionListEditorState
       for (final doc in contactsSnapshot.docs) {
         final contactUserId = doc.id;
         final userDoc = await FirebaseFirestore.instance
-            .collection('users')
+            .collection(FirebaseCollections.users)
             .doc(contactUserId)
             .get();
 

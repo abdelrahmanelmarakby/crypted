@@ -78,9 +78,6 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    print("Audio Url:${widget.message.audioUrl}");
-    print("   Initial volume: ${_audioPlayer.volume}");
-
     // Listen to duration and position changes
     _audioPlayer.durationStream.listen((d) {
       if (d != null && mounted) {
@@ -121,11 +118,6 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
     });
 
     try {
-      print("🎵 ========== AUDIO PLAYBACK DEBUG ==========");
-      print("🎵 Loading audio from URL: ${widget.message.audioUrl}");
-      print("   Message ID: ${widget.message.id}");
-      print("   Expected duration: ${widget.message.duration}");
-
       if (widget.message.audioUrl.isEmpty) {
         throw Exception('Audio URL is empty');
       }
@@ -135,32 +127,19 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
 
       // Log URL details
       final uri = Uri.parse(widget.message.audioUrl);
-      print("   URL host: ${uri.host}");
-      print("   URL path: ${uri.path}");
 
       // Detect MIME type from URL or use default
       final mimeType = _getAudioMimeType(widget.message.audioUrl);
-      print("   Detected MIME type: $mimeType");
-
-      // Load audio using simple setUrl
-      print("   Loading audio...");
+     
       await _audioPlayer.setUrl(widget.message.audioUrl);
 
-      // Log player state after loading
-      print("   Player duration: ${_audioPlayer.duration}");
-      print("   Player state: ${_audioPlayer.processingState}");
 
       // If duration is not available from the file, fallback to message.duration
       if (_audioPlayer.duration == null && widget.message.duration != null) {
         duration = _parseDuration(widget.message.duration!);
       }
 
-      print("✅ Audio loaded successfully. Duration: ${_audioPlayer.duration ?? duration}");
-      print("🎵 ==========================================");
     } catch (e, stackTrace) {
-      print("❌ Failed to load audio: $e");
-      print("Audio URL: ${widget.message.audioUrl}");
-      print("Stack trace: $stackTrace");
 
       if (mounted) {
         Get.snackbar(
@@ -210,39 +189,27 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
         androidWillPauseWhenDucked: true,
       ));
       await session.setActive(true);
-      print("✅ Audio session configured successfully");
     } catch (e) {
-      print("⚠️ Failed to configure audio session: $e");
+      Get.snackbar("Error", "Cannot play audio message: ${e.toString()}");
     }
   }
 
   void _togglePlayPause() async {
-    print("🎵 Toggle play/pause pressed");
-    print("   isLoading: $isLoading");
-    print("   processingState: ${_audioPlayer.processingState}");
-    print("   isPlaying: ${_audioPlayer.playing}");
+    
+   
 
     if (isLoading) {
-      print("   ⏳ Still loading, ignoring tap");
       return;
     }
     if (_audioPlayer.processingState == ProcessingState.idle) {
-      print("   ⏳ Player idle, loading audio...");
       await _loadAudio();
     }
     if (_audioPlayer.playing) {
-      print("   ⏸️ Pausing...");
       await _audioPlayer.pause();
     } else {
       try {
-        print("   ▶️ Playing...");
-        print("   Volume: ${_audioPlayer.volume}");
-        print("   Speed: ${_audioPlayer.speed}");
         await _audioPlayer.play();
-        print("   ✅ Play started");
       } catch (e, stackTrace) {
-        print("   ❌ Play failed: $e");
-        print("   Stack: $stackTrace");
         Get.snackbar("Error", "Cannot play audio message: ${e.toString()}");
       }
     }

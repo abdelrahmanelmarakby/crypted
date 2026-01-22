@@ -108,28 +108,56 @@ class MessageBuilder extends GetView<ChatController> {
                     style: StylesManager.regular(fontSize: FontSize.xSmall),
                   ),
                 const SizedBox(height: Sizes.size4),
-                GestureDetector(
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    controller.handleMessageLongPress(messageModel);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: senderType == true
-                          ? ColorsManager.messFriendColor
-                          : ColorsManager.navbarColor,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(Sizes.size16),
-                        topRight: Radius.circular(Sizes.size16),
-                        bottomLeft: senderType == false
-                            ? Radius.circular(Sizes.size16)
-                            : Radius.circular(0),
-                        bottomRight: senderType == false
-                            ? Radius.circular(0)
-                            : Radius.circular(Sizes.size16),
+                Obx(() {
+                  // Search result highlighting
+                  final isCurrentResult = controller.isCurrentSearchResult(messageModel);
+                  final isAnyResult = controller.isSearchResult(messageModel);
+
+                  return GestureDetector(
+                    onLongPress: () {
+                      HapticFeedback.mediumImpact();
+                      controller.handleMessageLongPress(messageModel);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                        color: senderType == true
+                            ? ColorsManager.messFriendColor
+                            : ColorsManager.navbarColor,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(Sizes.size16),
+                          topRight: Radius.circular(Sizes.size16),
+                          bottomLeft: senderType == false
+                              ? Radius.circular(Sizes.size16)
+                              : Radius.circular(0),
+                          bottomRight: senderType == false
+                              ? Radius.circular(0)
+                              : Radius.circular(Sizes.size16),
+                        ),
+                        // Search result highlighting
+                        border: isCurrentResult
+                            ? Border.all(
+                                color: ColorsManager.primary,
+                                width: 2.0,
+                              )
+                            : isAnyResult
+                                ? Border.all(
+                                    color: ColorsManager.primary.withValues(alpha: 0.4),
+                                    width: 1.5,
+                                  )
+                                : null,
+                        // Add subtle glow for current search result
+                        boxShadow: isCurrentResult
+                            ? [
+                                BoxShadow(
+                                  color: ColorsManager.primary.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
                       ),
-                    ),
-                    padding: const EdgeInsets.all(Sizes.size12),
+                      padding: const EdgeInsets.all(Sizes.size12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -195,7 +223,8 @@ class MessageBuilder extends GetView<ChatController> {
                       ],
                     ),
                   ),
-                ),
+                );
+                }),
               ],
             ),
           ),
@@ -329,6 +358,7 @@ class MessageBuilder extends GetView<ChatController> {
           return UploadingMessageWidget(
             message: msg,
             onCancel: () => controller.cancelUpload(msg.id),
+            onRetry: () => controller.retryUpload(msg.id),
           );
 
         default:

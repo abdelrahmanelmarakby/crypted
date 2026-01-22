@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 
 class PinManager {
@@ -8,7 +9,7 @@ class PinManager {
   static Future<bool> pinChat(String chatId, String userId) async {
     try {
       final pinnedChatRef = FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .collection(_pinnedChatsCollection)
           .doc(chatId);
@@ -31,7 +32,7 @@ class PinManager {
   static Future<bool> unpinChat(String chatId, String userId) async {
     try {
       final pinnedChatRef = FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .collection(_pinnedChatsCollection)
           .doc(chatId);
@@ -50,7 +51,7 @@ class PinManager {
   static Future<bool> isChatPinned(String chatId, String userId) async {
     try {
       final pinnedChatRef = FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .collection(_pinnedChatsCollection)
           .doc(chatId);
@@ -67,7 +68,7 @@ class PinManager {
   static Future<List<String>> getPinnedChatIds(String userId) async {
     try {
       final pinnedChatsRef = FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .collection(_pinnedChatsCollection);
 
@@ -100,7 +101,7 @@ class PinManager {
     try {
       // Update the chat room document to reflect pin status
       // This helps with real-time updates in the UI
-      final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(chatId);
+      final chatRoomRef = FirebaseFirestore.instance.collection(FirebaseCollections.chatRooms).doc(chatId);
 
       await chatRoomRef.update({
         'isPinned': isPinned,
@@ -123,7 +124,7 @@ class PinManager {
       }
 
       // Get chat room data for pinned chats
-      final chatRoomsRef = FirebaseFirestore.instance.collection('chatRooms');
+      final chatRoomsRef = FirebaseFirestore.instance.collection(FirebaseCollections.chatRooms);
       final chatRoomsSnapshot = await chatRoomsRef.where(FieldPath.documentId, whereIn: pinnedChatIds).get();
 
       return chatRoomsSnapshot.docs.map((doc) {
@@ -140,7 +141,7 @@ class PinManager {
   static Stream<List<String>> listenToPinnedChatIds(String userId) {
     try {
       final pinnedChatsRef = FirebaseFirestore.instance
-          .collection('users')
+          .collection(FirebaseCollections.users)
           .doc(userId)
           .collection(_pinnedChatsCollection);
 

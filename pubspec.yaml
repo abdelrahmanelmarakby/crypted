@@ -97,6 +97,7 @@ dependencies:
   # map_location_picker: ^1.3.4
   network_info_plus: ^6.1.3
   permission_handler: ^11.4.0
+  app_tracking_transparency: ^2.0.6
   # photo_gallery: 
   #   git:
   #     url: https://github.com/ABWABDIGITAL/photo_gallery.git  
