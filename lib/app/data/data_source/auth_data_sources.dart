@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
+import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -115,6 +116,16 @@ class AuthenticationService {
   }
 
   Future<void> logout() async {
+    try {
+      // FIX: Cleanup Zego before signing out to prevent memory leaks
+      // and ensure call tokens are invalidated
+      CallDataSources().onUserLogout();
+      log('✅ Zego cleanup completed');
+    } catch (e) {
+      log('⚠️ Error during Zego cleanup: $e');
+      // Continue with logout even if Zego cleanup fails
+    }
+
     await auth.signOut();
   }
 

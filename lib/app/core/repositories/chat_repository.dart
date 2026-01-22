@@ -65,7 +65,8 @@ abstract class IChatRepository {
   Stream<List<Message>> getMessages(String roomId);
 
   /// Send a message
-  Future<void> sendMessage({
+  /// Returns the Firestore document ID of the created message
+  Future<String> sendMessage({
     required Message message,
     required String roomId,
     required List<SocialMediaUser> members,

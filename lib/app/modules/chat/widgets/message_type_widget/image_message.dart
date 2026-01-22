@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:crypted_app/app/data/models/messages/image_message_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -16,7 +17,6 @@ class ImageMessageWidget extends StatefulWidget {
 
 class _ImageMessageWidgetState extends State<ImageMessageWidget>
     with SingleTickerProviderStateMixin {
-  bool _isLoading = true;
   bool _hasError = false;
   late AnimationController _pulseController;
 
@@ -95,30 +95,17 @@ class _ImageMessageWidgetState extends State<ImageMessageWidget>
       );
     }
 
-    // Network image with loading states
-    return Image.network(
-      widget.message.imageUrl,
+    // Network image with caching and loading states
+    return CachedNetworkImage(
+      imageUrl: widget.message.imageUrl,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          // Image loaded
-          if (_isLoading) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _isLoading = false);
-            });
-          }
-          return child;
-        }
-
-        // Loading progress
-        final progress = loadingProgress.expectedTotalBytes != null
-            ? loadingProgress.cumulativeBytesLoaded /
-                loadingProgress.expectedTotalBytes!
-            : null;
-
-        return _buildLoadingPlaceholder(progress);
+      memCacheWidth: 400, // Optimize memory by limiting cache size
+      memCacheHeight: 400,
+      placeholder: (context, url) => _buildLoadingPlaceholder(null),
+      progressIndicatorBuilder: (context, url, downloadProgress) {
+        return _buildLoadingPlaceholder(downloadProgress.progress);
       },
-      errorBuilder: (context, error, stackTrace) {
+      errorWidget: (context, url, error) {
         if (!_hasError) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _hasError = true);
@@ -257,9 +244,9 @@ class _ImageMessageWidgetState extends State<ImageMessageWidget>
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () {
+                // Clear cache and retry - CachedNetworkImage will reload automatically
                 setState(() {
                   _hasError = false;
-                  _isLoading = true;
                 });
               },
               child: Container(
@@ -319,28 +306,31 @@ class _ImageMessageWidgetState extends State<ImageMessageWidget>
               onTap: () => Navigator.of(context).pop(),
               child: Container(color: Colors.black.withValues(alpha: 0.9)),
             ),
-            // Image viewer
+            // Image viewer with caching
             Center(
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
                 child: localFile != null
                     ? Image.file(localFile, fit: BoxFit.contain)
-                    : Image.network(
-                        widget.message.imageUrl,
+                    : CachedNetworkImage(
+                        imageUrl: widget.message.imageUrl,
                         fit: BoxFit.contain,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
+                        progressIndicatorBuilder: (context, url, progress) {
                           return Center(
                             child: CircularProgressIndicator(
-                              value: progress.expectedTotalBytes != null
-                                  ? progress.cumulativeBytesLoaded /
-                                      progress.expectedTotalBytes!
-                                  : null,
+                              value: progress.progress,
                               color: Colors.white,
                             ),
                           );
                         },
+                        errorWidget: (context, url, error) => const Center(
+                          child: Icon(
+                            Icons.error_outline,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                        ),
                       ),
               ),
             ),

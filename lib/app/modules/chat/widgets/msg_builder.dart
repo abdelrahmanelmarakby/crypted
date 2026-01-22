@@ -161,6 +161,9 @@ class MessageBuilder extends GetView<ChatController> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Reply context indicator
+                        if (messageModel.replyTo != null)
+                          _buildReplyContextWidget(context, messageModel.replyTo!),
                         // Forwarded message indicator
                         if (messageModel.isForwarded)
                           Padding(
@@ -296,75 +299,23 @@ class MessageBuilder extends GetView<ChatController> {
         ),
       );
     }
-
-    // Handle non-deleted messages normally
-    // DEBUG: Log message type for troubleshooting
-    debugPrint("🔍 Building message widget: type=${msg.runtimeType}, id=${msg.id}");
-
     try {
-      switch (msg) {
-        case AudioMessage():
-          return AudioMessageWidget(
-            key: ValueKey(msg.id),
-            message: msg,
+      // Wrap in AnimatedSwitcher for smooth transitions (upload -> actual message)
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+              child: child,
+            ),
           );
-        case CallMessage():
-          return CallMessageWidget(
-            message: msg,
-          );
-
-        case FileMessage():
-          return FileMessageWidget(
-            message: msg,
-          );
-
-        case LocationMessage():
-          return LocationMessageWidget(
-            message: msg,
-          );
-
-        case TextMessage():
-          return TextMessageWidget(
-            message: msg,
-          );
-
-        case image.PhotoMessage():
-          return ImageMessageWidget(
-            message: msg,
-          );
-
-        case VideoMessage():
-          return VideoMessageWidget(
-            message: msg,
-          );
-
-        case ContactMessage():
-          return ContactMessageWidget(
-            message: msg,
-          );
-
-        case PollMessage():
-          return PollMessageWidget(
-            message: msg,
-          );
-
-        case EventMessage():
-          return EventMessageWidget(
-            eventMessage: msg,
-            isMe: msg.senderId == UserService.currentUser.value?.uid,
-          );
-
-        case UploadingMessage():
-          return UploadingMessageWidget(
-            message: msg,
-            onCancel: () => controller.cancelUpload(msg.id),
-            onRetry: () => controller.retryUpload(msg.id),
-          );
-
-        default:
-          debugPrint("⚠️ Unknown message type: ${msg.runtimeType}");
-          return const SizedBox();
-      }
+        },
+        child: _buildMessageWidget(msg),
+      );
     } catch (e, stack) {
       debugPrint("❌ Error building message widget: $e");
       debugPrint("❌ Stack trace: $stack");
@@ -380,5 +331,144 @@ class MessageBuilder extends GetView<ChatController> {
         ),
       );
     }
+  }
+
+  /// Build the actual message widget based on type
+  Widget _buildMessageWidget(Message msg) {
+    // Use a consistent key based on message type to trigger animation
+    // when message transforms from UploadingMessage to actual message
+    final key = ValueKey('${msg.runtimeType}_${msg.id}');
+
+    switch (msg) {
+      case AudioMessage():
+        return AudioMessageWidget(
+          key: key,
+          message: msg,
+        );
+      case CallMessage():
+        return CallMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case FileMessage():
+        return FileMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case LocationMessage():
+        return LocationMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case TextMessage():
+        return TextMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case image.PhotoMessage():
+        return ImageMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case VideoMessage():
+        return VideoMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case ContactMessage():
+        return ContactMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case PollMessage():
+        return PollMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case EventMessage():
+        return EventMessageWidget(
+          key: key,
+          eventMessage: msg,
+          isMe: msg.senderId == UserService.currentUser.value?.uid,
+        );
+
+      case UploadingMessage():
+        return UploadingMessageWidget(
+          key: key,
+          message: msg,
+          onCancel: () => controller.cancelUpload(msg.id),
+          onRetry: () => controller.retryUpload(msg.id),
+        );
+
+      default:
+        debugPrint("⚠️ Unknown message type: ${msg.runtimeType}");
+        return SizedBox(key: key);
+    }
+  }
+
+  /// Build reply context widget to show what message is being replied to
+  Widget _buildReplyContextWidget(BuildContext context, ReplyToMessage replyTo) {
+    return GestureDetector(
+      onTap: () {
+        // Scroll to the original message when reply is tapped
+        controller.scrollToMessageById(replyTo.id);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: Sizes.size8),
+        padding: const EdgeInsets.all(Sizes.size8),
+        decoration: BoxDecoration(
+          color: ColorsManager.primary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(Sizes.size8),
+          border: Border(
+            left: BorderSide(
+              color: ColorsManager.primary,
+              width: 3,
+            ),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.reply_rounded,
+                  size: Sizes.size14,
+                  color: ColorsManager.primary,
+                ),
+                const SizedBox(width: Sizes.size4),
+                Text(
+                  'Reply',
+                  style: StylesManager.medium(
+                    fontSize: FontSize.xSmall,
+                    color: ColorsManager.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Sizes.size4),
+            Text(
+              replyTo.previewText,
+              style: StylesManager.regular(
+                fontSize: FontSize.small,
+                color: ColorsManager.darkGrey,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

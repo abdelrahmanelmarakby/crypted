@@ -388,7 +388,7 @@ class OfflineChatRepository implements IChatRepository {
   }
 
   @override
-  Future<void> sendMessage({
+  Future<String> sendMessage({
     required Message message,
     required String roomId,
     required List<SocialMediaUser> members,
@@ -423,6 +423,8 @@ class OfflineChatRepository implements IChatRepository {
       OperationType.sendMessage,
       {'roomId': roomId, 'message': messageData},
     );
+
+    return localId;
   }
 
   @override

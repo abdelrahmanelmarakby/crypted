@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:crypted_app/app/data/data_source/story_data_sources.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:crypted_app/app/services/story_clustering_service.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -37,6 +39,13 @@ class StoriesController extends GetxController {
   RxList<SocialMediaUser> allUsers = <SocialMediaUser>[].obs;
   RxMap<String, SocialMediaUser> usersMap = <String, SocialMediaUser>{}.obs;
 
+  // FIX: Stream subscriptions for proper cleanup and error recovery
+  StreamSubscription? _allStoriesSubscription;
+  StreamSubscription? _userStoriesSubscription;
+  int _allStoriesRetryCount = 0;
+  int _userStoriesRetryCount = 0;
+  static const int _maxRetries = 5;
+
   // متغيرات للـ story viewer
   RxInt currentStoryIndex = 0.obs;
   RxInt currentUserIndex = 0.obs;
@@ -53,6 +62,9 @@ class StoriesController extends GetxController {
 
   @override
   void onClose() {
+    // FIX: Cancel stream subscriptions to prevent memory leaks
+    _allStoriesSubscription?.cancel();
+    _userStoriesSubscription?.cancel();
     videoController?.dispose();
     super.onClose();
   }
@@ -60,9 +72,26 @@ class StoriesController extends GetxController {
   // تهيئة الستوريز
   void _initializeStories() {
     print('📱 Initializing stories...');
+
+    // FIX: Clean up expired stories on initialization
+    // This prevents Firestore from growing indefinitely with expired stories
+    _cleanupExpiredStories();
+
     fetchAllStories();
     fetchUserStories();
     fetchAllUsers();
+  }
+
+  /// FIX: Cleanup expired stories from Firestore
+  /// Called on initialization to prevent database bloat
+  Future<void> _cleanupExpiredStories() async {
+    try {
+      print('🧹 Cleaning up expired stories...');
+      await _storyDataSources.deleteExpiredStories();
+    } catch (e) {
+      print('⚠️ Error cleaning up expired stories: $e');
+      // Don't block initialization if cleanup fails
+    }
   }
 
   // جلب جميع المستخدمين
@@ -87,33 +116,93 @@ class StoriesController extends GetxController {
   }
 
   // جلب جميع الـ stories
+  // FIX: Added retry logic with exponential backoff for stream errors
   void fetchAllStories() {
     print('📱 Setting up stories stream...');
-    _storyDataSources.getAllStories().listen((stories) {
-      print('📱 Fetched ${stories.length} stories');
-      allStories.value = stories;
-      _groupStoriesByUser(stories);
-      update();
-    }, onError: (error) {
-      print('❌ Error in stories stream: $error');
+
+    // Cancel existing subscription if any
+    _allStoriesSubscription?.cancel();
+
+    _allStoriesSubscription = _storyDataSources.getAllStories().listen(
+      (stories) {
+        print('📱 Fetched ${stories.length} stories');
+        _allStoriesRetryCount = 0; // Reset retry count on success
+        allStories.value = stories;
+        _groupStoriesByUser(stories);
+        // FIX: Clear clustering cache when stories update so map view gets fresh clusters
+        StoryClusteringService.clearCache();
+        update();
+      },
+      onError: (error) {
+        print('❌ Error in stories stream: $error');
+        _handleAllStoriesError(error);
+      },
+      cancelOnError: false, // Don't cancel on error, we'll handle retry
+    );
+  }
+
+  /// FIX: Error recovery with exponential backoff for all stories stream
+  void _handleAllStoriesError(dynamic error) {
+    if (_allStoriesRetryCount >= _maxRetries) {
+      print('❌ Max retries reached for stories stream. Giving up.');
+      return;
+    }
+
+    _allStoriesRetryCount++;
+    final backoffMs = 1000 * (1 << (_allStoriesRetryCount - 1)); // Exponential: 1s, 2s, 4s, 8s, 16s
+    print('🔄 Retrying stories stream in ${backoffMs}ms (attempt $_allStoriesRetryCount/$_maxRetries)');
+
+    Future.delayed(Duration(milliseconds: backoffMs), () {
+      if (!isClosed) {
+        fetchAllStories();
+      }
     });
   }
 
   // جلب stories المستخدم الحالي
+  // FIX: Added retry logic with exponential backoff for stream errors
   void fetchUserStories() {
     final userId = UserService.currentUser.value?.uid;
     if (userId != null) {
       print('👤 Fetching stories for current user: $userId');
-      _storyDataSources.getUserStories(userId).listen((stories) {
-        print('👤 Fetched ${stories.length} user stories for $userId');
-        userStories.value = stories;
-        update();
-      }, onError: (error) {
-        print('❌ Error in user stories stream: $error');
-      });
+
+      // Cancel existing subscription if any
+      _userStoriesSubscription?.cancel();
+
+      _userStoriesSubscription = _storyDataSources.getUserStories(userId).listen(
+        (stories) {
+          print('👤 Fetched ${stories.length} user stories for $userId');
+          _userStoriesRetryCount = 0; // Reset retry count on success
+          userStories.value = stories;
+          update();
+        },
+        onError: (error) {
+          print('❌ Error in user stories stream: $error');
+          _handleUserStoriesError(error);
+        },
+        cancelOnError: false, // Don't cancel on error, we'll handle retry
+      );
     } else {
       print('❌ Current user ID is null');
     }
+  }
+
+  /// FIX: Error recovery with exponential backoff for user stories stream
+  void _handleUserStoriesError(dynamic error) {
+    if (_userStoriesRetryCount >= _maxRetries) {
+      print('❌ Max retries reached for user stories stream. Giving up.');
+      return;
+    }
+
+    _userStoriesRetryCount++;
+    final backoffMs = 1000 * (1 << (_userStoriesRetryCount - 1)); // Exponential: 1s, 2s, 4s, 8s, 16s
+    print('🔄 Retrying user stories stream in ${backoffMs}ms (attempt $_userStoriesRetryCount/$_maxRetries)');
+
+    Future.delayed(Duration(milliseconds: backoffMs), () {
+      if (!isClosed) {
+        fetchUserStories();
+      }
+    });
   }
 
   // تجميع الـ stories حسب المستخدم مع معلومات المستخدم

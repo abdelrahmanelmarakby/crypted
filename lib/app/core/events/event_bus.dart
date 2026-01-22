@@ -28,9 +28,6 @@ class EventBus {
   void emit(AppEvent event) {
     if (!_controller.isClosed) {
       _controller.add(event);
-      if (kDebugMode) {
-        print('[EventBus] Emitted: ${event.runtimeType}');
-      }
     }
   }
 

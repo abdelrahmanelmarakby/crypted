@@ -58,6 +58,14 @@ class MessageController extends GetxController {
   final RxList<Message> searchResults = <Message>[].obs;
   final RxBool isSearching = false.obs;
 
+  // Pending uploads - tracks uploads waiting for Firestore sync
+  // Maps uploadId (temp ID) -> actualMessageId (Firestore ID)
+  final Map<String, String> _pendingUploads = {};
+
+  // Pending sent messages - tracks regular messages waiting for Firestore sync
+  // Maps tempId -> actualMessageId (Firestore ID)
+  final Map<String, String> _pendingSentMessages = {};
+
   // Pagination state
   final Rx<PaginationState> paginationState = PaginationState().obs;
   final RxBool isLoadingMore = false.obs;
@@ -74,6 +82,52 @@ class MessageController extends GetxController {
   Message? get replyingTo => replyToMessage.value;
   bool get hasMoreMessages => paginationState.value.hasMoreMessages;
   bool get canLoadMore => hasMoreMessages && !isLoadingMore.value;
+
+  /// Register a pending upload that's waiting for Firestore sync
+  /// Called when upload completes but before Firestore stream delivers the message
+  void registerPendingUpload(String uploadId, String actualMessageId) {
+    _pendingUploads[uploadId] = actualMessageId;
+    _logger.debug('Registered pending upload', context: 'MessageController', data: {
+      'uploadId': uploadId,
+      'actualMessageId': actualMessageId,
+      'pendingCount': _pendingUploads.length,
+    });
+  }
+
+  /// Clear a pending upload (called when Firestore delivers the message)
+  void _clearPendingUpload(String uploadId) {
+    _pendingUploads.remove(uploadId);
+  }
+
+  /// Register a pending sent message waiting for Firestore sync
+  /// Called after message is added locally but before Firestore confirms
+  void registerPendingSentMessage(String tempId, String actualMessageId) {
+    _pendingSentMessages[tempId] = actualMessageId;
+    _logger.debug('Registered pending sent message', context: 'MessageController', data: {
+      'tempId': tempId,
+      'actualMessageId': actualMessageId,
+      'pendingCount': _pendingSentMessages.length,
+    });
+  }
+
+  /// Clear a pending sent message (called when Firestore delivers the message)
+  void _clearPendingSentMessage(String tempId) {
+    _pendingSentMessages.remove(tempId);
+  }
+
+  /// Remove a local message by temp ID (for send failure rollback)
+  void removeLocalMessage(String tempId) {
+    final index = messages.indexWhere((m) => m.id == tempId);
+    if (index != -1) {
+      messages.removeAt(index);
+      messages.refresh();
+      _logger.debug('Removed local message', context: 'MessageController', data: {
+        'tempId': tempId,
+      });
+    }
+    // Also clear from pending if registered
+    _pendingSentMessages.remove(tempId);
+  }
 
   @override
   void onInit() {
@@ -94,23 +148,83 @@ class MessageController extends GetxController {
         .getInitialMessages(roomId: roomId, pageSize: 30)
         .listen(
       (paginatedResult) {
-        // FIX: Preserve local UploadingMessages that haven't been completed yet
-        // These are local-only messages that show upload progress and shouldn't
-        // be wiped when Firestore stream updates
+        // Get all local UploadingMessages
         final localUploadingMessages = messages
             .whereType<UploadingMessage>()
             .toList();
 
-        if (localUploadingMessages.isNotEmpty) {
-          // Merge: local uploading messages + Firestore messages
-          // Filter out any Firestore messages that match completed uploads
-          final uploadingIds = localUploadingMessages.map((m) => m.id).toSet();
+        // Get all local pending sent messages (messages with temp IDs starting with 'pending_')
+        final localPendingSentMessages = messages
+            .where((m) => m.id.startsWith('pending_') && m is! UploadingMessage)
+            .toList();
+
+        final hasPendingItems = localUploadingMessages.isNotEmpty ||
+            _pendingUploads.isNotEmpty ||
+            localPendingSentMessages.isNotEmpty ||
+            _pendingSentMessages.isNotEmpty;
+
+        if (!hasPendingItems) {
+          // No local uploads or pending messages - use Firestore messages directly
+          messages.value = paginatedResult.messages;
+        } else {
+          // SMART MERGE: Handle upload/sent -> Firestore transition
+          //
+          // _pendingUploads maps: uploadId (temp) -> actualMessageId (Firestore)
+          // _pendingSentMessages maps: tempId -> actualMessageId (Firestore)
+          // When Firestore delivers a message with ID matching actualMessageId,
+          // we should remove the local message and use the Firestore message
+
+          // Build reverse lookup: actualMessageId -> tempId (for both uploads and sent messages)
+          final actualIdToTempId = <String, String>{};
+          for (final entry in _pendingUploads.entries) {
+            actualIdToTempId[entry.value] = entry.key;
+          }
+          for (final entry in _pendingSentMessages.entries) {
+            actualIdToTempId[entry.value] = entry.key;
+          }
+
+          // Find which local messages should be replaced by Firestore messages
+          final tempIdsToRemove = <String>{};
+          for (final firestoreMsg in paginatedResult.messages) {
+            final tempId = actualIdToTempId[firestoreMsg.id];
+            if (tempId != null) {
+              // This Firestore message replaces a local message
+              tempIdsToRemove.add(tempId);
+              _clearPendingUpload(tempId);
+              _clearPendingSentMessage(tempId);
+              _logger.debug('Firestore message arrived, replacing local', context: 'MessageController', data: {
+                'tempId': tempId,
+                'actualMessageId': firestoreMsg.id,
+                'messageType': firestoreMsg.runtimeType.toString(),
+              });
+            }
+          }
+
+          // Keep UploadingMessages that are STILL uploading (not yet synced)
+          final uploadsToKeep = localUploadingMessages
+              .where((upload) => !tempIdsToRemove.contains(upload.id))
+              .toList();
+
+          // Keep pending sent messages that haven't synced yet
+          final pendingSentToKeep = localPendingSentMessages
+              .where((msg) => !tempIdsToRemove.contains(msg.id))
+              .toList();
+
+          // Get IDs of local messages to keep (for filtering Firestore duplicates)
+          final localIdsToKeep = <String>{
+            ...uploadsToKeep.map((m) => m.id),
+            ...pendingSentToKeep.map((m) => m.id),
+          };
+
+          // Build merged list: active uploads + pending sent + Firestore messages
+          // Filter out Firestore messages that have the same ID as active local messages
           final firestoreMessages = paginatedResult.messages
-              .where((m) => !uploadingIds.contains(m.id))
+              .where((m) => !localIdsToKeep.contains(m.id))
               .toList();
 
           final mergedMessages = <Message>[
-            ...localUploadingMessages,
+            ...uploadsToKeep,
+            ...pendingSentToKeep,
             ...firestoreMessages,
           ];
 
@@ -118,14 +232,13 @@ class MessageController extends GetxController {
           mergedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
           messages.value = mergedMessages;
-          _logger.debug('Messages merged with local uploads', context: 'MessageController', data: {
+          _logger.debug('Messages merged with smart handling', context: 'MessageController', data: {
             'firestoreCount': paginatedResult.messages.length,
-            'localUploadsCount': localUploadingMessages.length,
+            'uploadsKept': uploadsToKeep.length,
+            'pendingSentKept': pendingSentToKeep.length,
+            'localReplaced': tempIdsToRemove.length,
             'totalCount': mergedMessages.length,
           });
-        } else {
-          // No local uploads, just use Firestore messages directly
-          messages.value = paginatedResult.messages;
         }
 
         paginationState.value = paginatedResult.state;
@@ -216,6 +329,24 @@ class MessageController extends GetxController {
     }
   }
 
+  // ========== LOCAL MESSAGE HANDLING ==========
+
+  /// Add a message to the local UI optimistically (for offline support)
+  /// This message will be synced to Firestore when connectivity is restored
+  void addLocalMessage(Message message) {
+    _logger.debug('Adding local message', context: 'MessageController', data: {
+      'messageId': message.id,
+      'type': message.runtimeType.toString(),
+    });
+
+    // Add to the beginning of the list (newest first) or end depending on sort order
+    // Messages are typically sorted newest-first, so insert at index 0
+    messages.insert(0, message);
+
+    // Refresh the observable list
+    messages.refresh();
+  }
+
   // ========== MESSAGE SENDING ==========
 
   /// Send text message
@@ -242,12 +373,27 @@ class MessageController extends GetxController {
     try {
       isSendingMessage.value = true;
 
+      // FIX: Build reply context if replying to a message
+      ReplyToMessage? replyContext;
+      if (isReplying && replyingTo != null) {
+        replyContext = ReplyToMessage(
+          id: replyingTo!.id,
+          senderId: replyingTo!.senderId,
+          previewText: replyToText.value,
+        );
+        _logger.debug('Reply context attached', context: 'MessageController', data: {
+          'replyToMessageId': replyingTo!.id,
+          'previewText': replyToText.value,
+        });
+      }
+
       final textMessage = TextMessage(
         id: '',
         roomId: roomId,
         senderId: currentUser!.uid!,
         timestamp: DateTime.now(),
         text: text.trim(),
+        replyTo: replyContext,
       );
 
       await _sendMessage(textMessage);
@@ -591,6 +737,7 @@ class MessageController extends GetxController {
   }
 
   /// Internal method to send message via data source
+  /// FIX: Added optimistic update - message appears immediately before Firestore confirms
   Future<void> _sendMessage(Message message) async {
     // Verify sender is current user
     if (message.senderId != currentUser?.uid) {
@@ -600,11 +747,34 @@ class MessageController extends GetxController {
       );
     }
 
-    await chatDataSource.sendMessage(
-      privateMessage: message,
-      roomId: roomId,
-      members: members,
-    );
+    // Generate temp ID for optimistic update
+    final tempId = 'pending_${DateTime.now().millisecondsSinceEpoch}';
+    final localMessage = message.copyWith(id: tempId) as Message;
+
+    // OPTIMISTIC UPDATE: Add message to local UI immediately
+    addLocalMessage(localMessage);
+
+    try {
+      // Send to Firestore and get the actual message ID
+      final actualMessageId = await chatDataSource.sendMessage(
+        privateMessage: message,
+        roomId: roomId,
+        members: members,
+      );
+
+      // Register mapping for deduplication when Firestore stream delivers
+      registerPendingSentMessage(tempId, actualMessageId);
+
+      _logger.debug('Message sent with optimistic update', context: 'MessageController', data: {
+        'tempId': tempId,
+        'actualId': actualMessageId,
+      });
+    } catch (e) {
+      // ROLLBACK: Remove the optimistic message on failure
+      removeLocalMessage(tempId);
+      _logger.logError('Message send failed, rolled back optimistic update', error: e);
+      rethrow;
+    }
 
     // Clear reply state after sending
     clearReply();

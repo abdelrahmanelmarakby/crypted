@@ -26,6 +26,8 @@ class _CallScreenState extends State<CallScreen> {
   int _callDuration = 0;
   int _retryCount = 0;
   static const int _maxRetries = 2;
+  // FIX: Store generated call ID to ensure it's consistent across init and build
+  String? _generatedCallId;
 
   @override
   void initState() {
@@ -101,9 +103,11 @@ class _CallScreenState extends State<CallScreen> {
         return;
       }
 
-      // Generate unique call ID if not provided
-      final String callID = callModel!.callId ??
+      // FIX: Generate unique call ID ONCE if not provided, and store it
+      // This prevents the bug where build() generates a different ID
+      _generatedCallId = callModel!.callId ??
           '${callModel!.callerId}_${callModel!.calleeId}_${DateTime.now().millisecondsSinceEpoch}';
+      final String callID = _generatedCallId!;
 
       // Check internet connectivity first
       final connectivityResult = await Connectivity().checkConnectivity();
@@ -159,14 +163,17 @@ class _CallScreenState extends State<CallScreen> {
       }
 
       // Skip permission checks - let Zego UIKit handle permissions internally
-      setState(() {
-        _isCallStarted = true;
-        _isInitializing = false;
-      });
+      // FIX: Check mounted before setState to prevent crash if user navigates away
+      if (mounted) {
+        setState(() {
+          _isCallStarted = true;
+          _isInitializing = false;
+        });
 
-      // Start call duration timer for actual calls
-      if (callModel != null) {
-        _startCallTimer();
+        // Start call duration timer for actual calls
+        if (callModel != null) {
+          _startCallTimer();
+        }
       }
 
     } catch (e) {
@@ -236,9 +243,9 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
 
-    // Call ID is already generated in _initializeCall()
-    final String callID = callModel!.callId ??
-        '${callModel!.callerId}_${callModel!.calleeId}_${DateTime.now().millisecondsSinceEpoch}';
+    // FIX: Use the call ID that was generated once in _initializeCall()
+    // instead of regenerating with a new timestamp
+    final String callID = _generatedCallId ?? callModel!.callId ?? '';
 
     return WillPopScope(
       onWillPop: () async {

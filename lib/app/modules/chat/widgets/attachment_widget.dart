@@ -73,6 +73,11 @@ class AttachmentWidget extends GetView<ChatController> {
             color: ColorsManager.white,
           ),
           child: Column(children: [
+            // FIX: Reply Preview UI
+            Obx(() {
+              if (!controller.isReplying) return const SizedBox.shrink();
+              return _buildReplyPreview(controller);
+            }),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -273,6 +278,69 @@ class AttachmentWidget extends GetView<ChatController> {
           ]),
         );
       },
+    );
+  }
+
+  /// Build reply preview widget
+  Widget _buildReplyPreview(ChatController controller) {
+    final replyingTo = controller.replyingTo;
+    if (replyingTo == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: Paddings.small),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Paddings.medium,
+        vertical: Paddings.small,
+      ),
+      decoration: BoxDecoration(
+        color: ColorsManager.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(Radiuss.small),
+        border: Border(
+          left: BorderSide(
+            color: ColorsManager.primary,
+            width: 3,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Replying',
+                  style: StylesManager.medium(
+                    fontSize: FontSize.xSmall,
+                    color: ColorsManager.primary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  controller.replyToText.value,
+                  style: StylesManager.regular(
+                    fontSize: FontSize.small,
+                    color: ColorsManager.darkGrey,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => controller.clearReply(),
+            icon: Icon(
+              Icons.close,
+              color: ColorsManager.grey,
+              size: Sizes.size20,
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
     );
   }
 

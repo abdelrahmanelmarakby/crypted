@@ -691,11 +691,222 @@ class FCMService {
 }
 
 /// Background message handler (must be top-level function)
+/// FIX: Implement actual handling for call and message notifications
+/// Note: This runs in a separate isolate - cannot use GetX navigation
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
     print('📨 Background message received: ${message.messageId}');
+    print('📨 Message data: ${message.data}');
   }
-  // Handle background message
-  // Note: Cannot use Get.toNamed here as app might not be running
+
+  // Initialize local notifications for background handling
+  final FlutterLocalNotificationsPlugin localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const iosSettings = DarwinInitializationSettings(
+    requestAlertPermission: false,
+    requestBadgePermission: false,
+    requestSoundPermission: false,
+  );
+  const initSettings = InitializationSettings(
+    android: androidSettings,
+    iOS: iosSettings,
+  );
+  await localNotifications.initialize(initSettings);
+
+  final messageType = message.data['type'] as String?;
+
+  try {
+    switch (messageType) {
+      case 'incoming_call':
+        // Show high-priority call notification
+        await _showBackgroundCallNotification(localNotifications, message);
+        break;
+
+      case 'chat_message':
+        // Show chat message notification
+        await _showBackgroundChatNotification(localNotifications, message);
+        break;
+
+      case 'story_reply':
+      case 'story_reaction':
+        // Show story notification
+        await _showBackgroundStoryNotification(localNotifications, message);
+        break;
+
+      default:
+        // Show generic notification
+        await _showBackgroundGenericNotification(localNotifications, message);
+        break;
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Error handling background message: $e');
+    }
+  }
+}
+
+/// Show call notification in background
+Future<void> _showBackgroundCallNotification(
+  FlutterLocalNotificationsPlugin localNotifications,
+  RemoteMessage message,
+) async {
+  final callerName = message.data['callerName'] as String? ?? 'Unknown';
+  final callType = message.data['callType'] as String? ?? 'voice';
+  final callId = message.data['callId'] as String? ?? '';
+
+  // High priority notification channel for calls
+  const androidDetails = AndroidNotificationDetails(
+    'incoming_calls',
+    'Incoming Calls',
+    channelDescription: 'Notifications for incoming voice and video calls',
+    importance: Importance.max,
+    priority: Priority.max,
+    category: AndroidNotificationCategory.call,
+    fullScreenIntent: true,
+    ongoing: true,
+    autoCancel: false,
+    playSound: true,
+    enableVibration: true,
+    visibility: NotificationVisibility.public,
+  );
+
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+    interruptionLevel: InterruptionLevel.timeSensitive,
+  );
+
+  const details = NotificationDetails(
+    android: androidDetails,
+    iOS: iosDetails,
+  );
+
+  final callTypeEmoji = callType == 'video' ? '📹' : '📞';
+
+  await localNotifications.show(
+    callId.hashCode,
+    '$callTypeEmoji Incoming ${callType == 'video' ? 'Video' : 'Voice'} Call',
+    '$callerName is calling...',
+    details,
+    payload: 'call:$callId',
+  );
+}
+
+/// Show chat notification in background
+Future<void> _showBackgroundChatNotification(
+  FlutterLocalNotificationsPlugin localNotifications,
+  RemoteMessage message,
+) async {
+  final senderName = message.data['senderName'] as String? ?? 'Someone';
+  final messageText = message.data['message'] as String? ?? 'New message';
+  final chatId = message.data['chatId'] as String? ?? '';
+
+  const androidDetails = AndroidNotificationDetails(
+    'messages',
+    'Messages',
+    channelDescription: 'Chat message notifications',
+    importance: Importance.high,
+    priority: Priority.high,
+    category: AndroidNotificationCategory.message,
+  );
+
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
+  const details = NotificationDetails(
+    android: androidDetails,
+    iOS: iosDetails,
+  );
+
+  await localNotifications.show(
+    chatId.hashCode,
+    senderName,
+    messageText,
+    details,
+    payload: 'chat:$chatId',
+  );
+}
+
+/// Show story notification in background
+Future<void> _showBackgroundStoryNotification(
+  FlutterLocalNotificationsPlugin localNotifications,
+  RemoteMessage message,
+) async {
+  final senderName = message.data['senderName'] as String? ?? 'Someone';
+  final type = message.data['type'] as String?;
+  final storyId = message.data['storyId'] as String? ?? '';
+
+  final title = type == 'story_reaction' ? 'Story Reaction' : 'Story Reply';
+  final body = type == 'story_reaction'
+      ? '$senderName reacted to your story'
+      : '$senderName replied to your story';
+
+  const androidDetails = AndroidNotificationDetails(
+    'stories',
+    'Stories',
+    channelDescription: 'Story notifications',
+    importance: Importance.defaultImportance,
+    priority: Priority.defaultPriority,
+  );
+
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
+  const details = NotificationDetails(
+    android: androidDetails,
+    iOS: iosDetails,
+  );
+
+  await localNotifications.show(
+    storyId.hashCode,
+    title,
+    body,
+    details,
+    payload: 'story:$storyId',
+  );
+}
+
+/// Show generic notification in background
+Future<void> _showBackgroundGenericNotification(
+  FlutterLocalNotificationsPlugin localNotifications,
+  RemoteMessage message,
+) async {
+  final title = message.notification?.title ?? 'Crypted';
+  final body = message.notification?.body ?? 'You have a new notification';
+
+  const androidDetails = AndroidNotificationDetails(
+    'general',
+    'General',
+    channelDescription: 'General notifications',
+    importance: Importance.defaultImportance,
+    priority: Priority.defaultPriority,
+  );
+
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
+  const details = NotificationDetails(
+    android: androidDetails,
+    iOS: iosDetails,
+  );
+
+  await localNotifications.show(
+    DateTime.now().millisecondsSinceEpoch.remainder(100000),
+    title,
+    body,
+    details,
+  );
 }

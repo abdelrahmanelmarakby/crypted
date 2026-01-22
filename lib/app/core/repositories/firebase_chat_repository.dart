@@ -167,17 +167,18 @@ class FirebaseChatRepository implements IChatRepository {
   }
 
   @override
-  Future<void> sendMessage({
+  Future<String> sendMessage({
     required Message message,
     required String roomId,
     required List<SocialMediaUser> members,
   }) async {
     updateMembers(members);
-    await _dataSource.sendMessage(
+    final messageId = await _dataSource.sendMessage(
       privateMessage: message,
       roomId: roomId,
       members: members,
     );
+    return messageId;
   }
 
   @override

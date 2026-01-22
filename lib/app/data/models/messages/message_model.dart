@@ -68,9 +68,14 @@ abstract class Message {
     }
   }
 
+  /// FIX: Updated to use safe parsing that filters out invalid reactions
   static List<Reaction> parseReactions(List<dynamic>? list) {
     if (list == null) return [];
-    return list.map((r) => Reaction.fromMap(r)).toList();
+    return list
+        .map((r) => Reaction.fromMapSafe(r as Map<String, dynamic>?))
+        .where((r) => r != null)
+        .cast<Reaction>()
+        .toList();
   }
 
   static ReplyToMessage? parseReplyTo(dynamic data) {
@@ -195,10 +200,37 @@ class Reaction {
         'userId': userId,
       };
 
+  /// FIX: Added null safety handling for Reaction.fromMap()
+  /// Returns null if required fields are missing
+  static Reaction? fromMapSafe(Map<String, dynamic>? map) {
+    if (map == null) return null;
+
+    final emoji = map['emoji'] as String?;
+    final userId = map['userId'] as String?;
+
+    // Skip invalid reactions with missing fields
+    if (emoji == null || emoji.isEmpty || userId == null || userId.isEmpty) {
+      return null;
+    }
+
+    return Reaction(emoji: emoji, userId: userId);
+  }
+
+  /// Legacy factory - kept for backwards compatibility but with null handling
   factory Reaction.fromMap(Map<String, dynamic> map) => Reaction(
-        emoji: map['emoji'],
-        userId: map['userId'],
+        emoji: map['emoji'] ?? '',
+        userId: map['userId'] ?? '',
       );
+
+  /// Parse a list of reactions from Firestore data with null safety
+  static List<Reaction> fromMapList(List<dynamic>? list) {
+    if (list == null) return [];
+    return list
+        .map((item) => Reaction.fromMapSafe(item as Map<String, dynamic>?))
+        .where((r) => r != null && r.emoji.isNotEmpty && r.userId.isNotEmpty)
+        .cast<Reaction>()
+        .toList();
+  }
 }
 
 class ReplyToMessage {
@@ -218,11 +250,25 @@ class ReplyToMessage {
         'previewText': previewText,
       };
 
+  /// FIX: Added null safety handling
   factory ReplyToMessage.fromMap(Map<String, dynamic> map) => ReplyToMessage(
-        id: map['id'],
-        senderId: map['senderId'],
-        previewText: map['previewText'],
+        id: map['id'] ?? '',
+        senderId: map['senderId'] ?? '',
+        previewText: map['previewText'] ?? '',
       );
+
+  /// Safe parsing that returns null if required fields are missing
+  static ReplyToMessage? fromMapSafe(Map<String, dynamic>? map) {
+    if (map == null) return null;
+    final id = map['id'] as String?;
+    final senderId = map['senderId'] as String?;
+    if (id == null || senderId == null) return null;
+    return ReplyToMessage(
+      id: id,
+      senderId: senderId,
+      previewText: map['previewText'] ?? '',
+    );
+  }
 }
 
 /// MessageModel - A simplified model for media gallery and other UI components

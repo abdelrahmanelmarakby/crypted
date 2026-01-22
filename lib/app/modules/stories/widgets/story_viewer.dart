@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -44,6 +45,9 @@ class _StoryViewerState extends State<StoryViewer>
   String? _selectedReaction;
   final List<String> _reactionEmojis = ['❤️', '😂', '😮', '😢', '👏', '🔥'];
 
+  // FIX: Track video listener to prevent memory leak
+  VoidCallback? _videoListener;
+
   @override
   void initState() {
     super.initState();
@@ -56,8 +60,67 @@ class _StoryViewerState extends State<StoryViewer>
     _longPressTimer?.cancel();
     _replyController.dispose();
     _replyFocusNode.dispose();
+
+    // FIX: Remove video listener before disposing to prevent memory leak
+    if (_videoListener != null && _videoController != null) {
+      _videoController!.removeListener(_videoListener!);
+      _videoListener = null;
+    }
     _videoController?.dispose();
+
     super.dispose();
+  }
+
+  /// FIX: Preload next story media to eliminate loading delays
+  void _preloadNextStory() {
+    // Get the next story index
+    final nextIndex = _currentStoryIndex + 1;
+
+    // Check if there's a next story in the current user's stories
+    if (nextIndex < _currentUserStories.length) {
+      final nextStory = _currentUserStories[nextIndex];
+      _preloadStoryMedia(nextStory);
+    } else if (_currentUserIndex + 1 < _usersWithStories.length) {
+      // Preload first story of next user
+      final controller = Get.find<StoriesController>();
+      final nextUser = _usersWithStories[_currentUserIndex + 1];
+      final nextUserStories = controller.getStoriesForUser(nextUser.uid!);
+      if (nextUserStories.isNotEmpty) {
+        // Sort by creation time (oldest first)
+        nextUserStories.sort((a, b) =>
+            (a.createdAt ?? DateTime.now()).compareTo(b.createdAt ?? DateTime.now()));
+        _preloadStoryMedia(nextUserStories.first);
+      }
+    }
+  }
+
+  /// Preload media for a specific story
+  void _preloadStoryMedia(StoryModel story) {
+    if (story.storyFileUrl == null || story.storyFileUrl!.isEmpty) return;
+
+    switch (story.storyType) {
+      case StoryType.image:
+        // Preload image using CachedNetworkImageProvider
+        if (mounted) {
+          precacheImage(
+            CachedNetworkImageProvider(story.storyFileUrl!),
+            context,
+          ).then((_) {
+            print('✅ Preloaded image: ${story.storyFileUrl}');
+          }).catchError((e) {
+            print('⚠️ Failed to preload image: $e');
+          });
+        }
+        break;
+      case StoryType.video:
+        // For videos, we don't preload the full video to save memory/bandwidth
+        // The video will load when displayed
+        print('📹 Next story is video - will load on display');
+        break;
+      default:
+        // Text stories don't need preloading
+        break;
+    }
   }
 
   void _initializeStoryViewer() {
@@ -158,6 +221,9 @@ class _StoryViewerState extends State<StoryViewer>
     if (story.id != null) {
       controller.markStoryAsViewed(story.id!);
     }
+
+    // FIX: Preload next story media while current one is playing
+    _preloadNextStory();
 
     // بدء التشغيل مع الاستماع للأحداث
     _progressController.forward().then((_) {
@@ -294,6 +360,10 @@ class _StoryViewerState extends State<StoryViewer>
 
     if (_isPaused) {
       _progressController.stop();
+      // FIX: Also pause video if playing
+      if (_videoController != null && _videoController!.value.isPlaying) {
+        _videoController!.pause();
+      }
     } else {
       _progressController.forward().then((_) {
         // التأكد من أن الستوري اكتمل
@@ -304,6 +374,12 @@ class _StoryViewerState extends State<StoryViewer>
       }).catchError((error) {
         print('❌ Error resuming story after pause: $error');
       });
+      // FIX: Also resume video if it was paused
+      if (_videoController != null &&
+          _videoController!.value.isInitialized &&
+          !_videoController!.value.isPlaying) {
+        _videoController!.play();
+      }
     }
   }
 
@@ -318,6 +394,10 @@ class _StoryViewerState extends State<StoryViewer>
       // إيقاف التشغيل عند الضغط الطويل
       if (_progressController.isAnimating) {
         _progressController.stop();
+      }
+      // FIX: Also pause video during long press
+      if (_videoController != null && _videoController!.value.isPlaying) {
+        _videoController!.pause();
       }
 
       print('⏸️ Long press started - Story paused, reactions shown');
@@ -343,6 +423,12 @@ class _StoryViewerState extends State<StoryViewer>
         }).catchError((error) {
           print('❌ Error resuming story: $error');
         });
+        // FIX: Resume video playback after long press
+        if (_videoController != null &&
+            _videoController!.value.isInitialized &&
+            !_videoController!.value.isPlaying) {
+          _videoController!.play();
+        }
       }
 
       print('▶️ Long press ended - Story resumed, reactions hidden');
@@ -819,25 +905,22 @@ class _StoryViewerState extends State<StoryViewer>
       );
     }
 
+    // FIX: Use CachedNetworkImage to benefit from preloading
     return SizedBox(
       width: double.infinity,
       height: double.infinity,
-      child: Image.network(
-        story.storyFileUrl!,
+      child: CachedNetworkImage(
+        imageUrl: story.storyFileUrl!,
         fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
+        progressIndicatorBuilder: (context, url, downloadProgress) {
           return Center(
             child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
+              value: downloadProgress.progress,
               color: Colors.white,
             ),
           );
         },
-        errorBuilder: (context, error, stackTrace) {
+        errorWidget: (context, url, error) {
           return const Center(
             child: Text(
               'Failed to load image',
@@ -901,6 +984,12 @@ class _StoryViewerState extends State<StoryViewer>
 
   Future<void> _initializeVideoPlayer(String videoUrl) async {
     try {
+      // FIX: Remove previous listener before disposing controller
+      if (_videoListener != null && _videoController != null) {
+        _videoController!.removeListener(_videoListener!);
+        _videoListener = null;
+      }
+
       // Dispose previous controller if exists
       await _videoController?.dispose();
 
@@ -909,12 +998,16 @@ class _StoryViewerState extends State<StoryViewer>
       await _videoController!.setLooping(false);
       await _videoController!.play();
 
-      // Listen for video completion
-      _videoController!.addListener(() {
-        if (_videoController!.value.position >= _videoController!.value.duration) {
+      // FIX: Create a tracked listener that can be removed later
+      _videoListener = () {
+        if (_videoController != null &&
+            _videoController!.value.isInitialized &&
+            _videoController!.value.position >= _videoController!.value.duration &&
+            _videoController!.value.duration > Duration.zero) {
           _nextStory();
         }
-      });
+      };
+      _videoController!.addListener(_videoListener!);
     } catch (e) {
       print('Error initializing video player: $e');
     }

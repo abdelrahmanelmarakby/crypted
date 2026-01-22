@@ -814,7 +814,8 @@ class ChatDataSources {
 
   /// Send a message to a chat room
   /// BUG-006 FIX: Use transaction to prevent race condition in chat room creation
-  Future<void> sendMessage({
+  /// Returns the Firestore document ID of the created message
+  Future<String> sendMessage({
     Message? privateMessage,
     required String roomId,
     required List<SocialMediaUser>? members,
@@ -844,7 +845,8 @@ class ChatDataSources {
         print("✅ Chat room exists or was created, posting message");
       }
 
-      await postMessageToChat(privateMessage, roomId);
+      final messageId = await postMessageToChat(privateMessage, roomId);
+      return messageId;
     } catch (error) {
       if (kDebugMode) {
         print('Message data: ${privateMessage?.toMap().toString()}');
@@ -924,19 +926,22 @@ class ChatDataSources {
   }
 
   /// Post message to chat collection
-  Future<void> postMessageToChat(Message? privateMessage, String roomId) async {
+  /// Returns the Firestore document ID of the created message
+  Future<String> postMessageToChat(Message? privateMessage, String roomId) async {
     final newPrivateMessage = chatCollection
         .doc(roomId)
         .collection(FirebaseCollections.chatMessages)
         .doc();
-    
+
     await newPrivateMessage.set(
       privateMessage!
           .copyWith(id: newPrivateMessage.id)
           .toMap(),
     );
-    
+
     await updateChatRoomWithMessage(privateMessage, roomId);
+
+    return newPrivateMessage.id;
   }
 
   /// Update chat room with latest message info

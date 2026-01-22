@@ -15,7 +15,9 @@ class TextMessageWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          message.text ?? '',
+          message.text,
+          maxLines: 50,
+          overflow: TextOverflow.ellipsis,
           style: StylesManager.medium(
             fontSize: FontSize.small,
             color: ColorsManager.black,

@@ -107,14 +107,20 @@ class StoryDataSources {
   }
 
   // جلب جميع الـ stories (مبسط)
+  // FIX: Server-side filtering for expired stories to reduce bandwidth
+  // NOTE: Requires composite index on (expiresAt, createdAt) in Firebase Console
   Stream<List<StoryModel>> getAllStories() {
-    log('📱 Fetching all stories...');
+    log('📱 Fetching all active stories...');
+
+    final now = DateTime.now();
 
     return storiesCollection
+        .where('expiresAt', isGreaterThan: Timestamp.fromDate(now))
+        .orderBy('expiresAt') // Required for the inequality filter
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      log('📱 Raw stories count: ${snapshot.docs.length}');
+      log('📱 Active stories count from server: ${snapshot.docs.length}');
 
       final stories = snapshot.docs
           .map((doc) {
@@ -133,31 +139,35 @@ class StoryDataSources {
           .cast<StoryModel>()
           .toList();
 
-      // فلترة الستوريز المنتهية الصلاحية
-      final now = DateTime.now();
+      // Client-side filter as backup for stories with null expiresAt
       final activeStories = stories.where((story) {
         if (story.expiresAt == null) {
           log('📱 Story ${story.id} has no expiresAt, keeping it');
           return true;
         }
-        final isActive = story.expiresAt!.isAfter(now);
-        log('📱 Story ${story.id} expiresAt: ${story.expiresAt}, isActive: $isActive');
-        return isActive;
+        return story.expiresAt!.isAfter(now);
       }).toList();
 
-      log('📱 Found ${activeStories.length} active stories out of ${stories.length} total');
+      log('📱 Final active stories count: ${activeStories.length}');
       return activeStories;
     });
   }
 
   // جلب stories مستخدم محدد (مبسط)
+  // FIX: Server-side filtering for expired stories
+  // NOTE: Requires composite index on (uid, expiresAt) in Firebase Console
   Stream<List<StoryModel>> getUserStories(String userId) {
-    log('👤 Fetching stories for user: $userId');
+    log('👤 Fetching active stories for user: $userId');
+
+    final now = DateTime.now();
+
     return storiesCollection
         .where('uid', isEqualTo: userId)
+        .where('expiresAt', isGreaterThan: Timestamp.fromDate(now))
+        .orderBy('expiresAt')
         .snapshots()
         .map((snapshot) {
-      log('👤 Raw stories count for user $userId: ${snapshot.docs.length}');
+      log('👤 Active stories count for user $userId from server: ${snapshot.docs.length}');
 
       final stories = snapshot.docs
           .map((doc) {
@@ -178,16 +188,13 @@ class StoryDataSources {
         ..sort((a, b) => (a.createdAt ?? DateTime.now())
             .compareTo(b.createdAt ?? DateTime.now()));
 
-      // فلترة الستوريز المنتهية الصلاحية
-      final now = DateTime.now();
+      // Client-side filter as backup for stories with null expiresAt
       final activeStories = stories.where((story) {
         if (story.expiresAt == null) {
           log('👤 Story ${story.id} has no expiresAt, keeping it');
           return true;
         }
-        final isActive = story.expiresAt!.isAfter(now);
-        log('👤 Story ${story.id} expiresAt: ${story.expiresAt}, isActive: $isActive');
-        return isActive;
+        return story.expiresAt!.isAfter(now);
       }).toList();
 
       log('👤 Found ${activeStories.length} active stories for user $userId');

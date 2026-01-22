@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/story_cluster.dart';
 
@@ -10,12 +12,44 @@ class StoryClusteringService {
   // Minimum stories required to form a cluster
   static const int minClusterSize = 1;
 
+  // FIX: Cache cluster results to avoid recalculating on every rebuild
+  static List<StoryCluster>? _cachedClusters;
+  static String? _cachedStoriesHash;
+  static double? _cachedRadius;
+
+  /// Clear the cache (call when stories update)
+  static void clearCache() {
+    _cachedClusters = null;
+    _cachedStoriesHash = null;
+    _cachedRadius = null;
+  }
+
+  /// Generate a hash for the stories list to detect changes
+  static String _generateStoriesHash(List<StoryModel> stories) {
+    final ids = stories
+        .where((s) => s.hasLocation && (s.isLocationPublic ?? true))
+        .map((s) => s.id ?? '')
+        .toList()
+      ..sort();
+    return ids.join(',');
+  }
+
   /// Cluster stories by location
   /// Returns list of clusters containing grouped stories
+  /// FIX: Now uses caching to avoid O(n²) on every call
   static List<StoryCluster> clusterStories(
     List<StoryModel> stories, {
     double clusterRadiusKm = defaultClusterRadius,
   }) {
+    // Check cache validity
+    final currentHash = _generateStoriesHash(stories);
+    if (_cachedClusters != null &&
+        _cachedStoriesHash == currentHash &&
+        _cachedRadius == clusterRadiusKm) {
+      print('📦 Using cached clusters (${_cachedClusters!.length} clusters)');
+      return _cachedClusters!;
+    }
+
     print('🗺️ Clustering ${stories.length} stories with radius ${clusterRadiusKm}km');
 
     // Filter stories with valid location data
@@ -98,6 +132,11 @@ class StoryClusteringService {
       print('   Cluster: ${cluster.size} stories at ${cluster.locationString}');
     }
 
+    // FIX: Cache the results
+    _cachedClusters = result;
+    _cachedStoriesHash = currentHash;
+    _cachedRadius = clusterRadiusKm;
+
     return result;
   }
 
@@ -151,7 +190,8 @@ class StoryClusteringService {
     return (nearbyCount / maxCount).clamp(0.0, 1.0);
   }
 
-  /// Calculate distance between two coordinates
+  /// Calculate distance between two coordinates using Haversine formula
+  /// FIX: Replaced custom Taylor series approximations with accurate dart:math functions
   static double _calculateDistance(
     double lat1,
     double lon1,
@@ -162,41 +202,18 @@ class StoryClusteringService {
     final dLat = _toRadians(lat2 - lat1);
     final dLon = _toRadians(lon2 - lon1);
 
-    final a = _sin(dLat / 2) * _sin(dLat / 2) +
-        _cos(_toRadians(lat1)) *
-            _cos(_toRadians(lat2)) *
-            _sin(dLon / 2) *
-            _sin(dLon / 2);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
 
-    final c = 2 * _atan2(_sqrt(a), _sqrt(1 - a));
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
   }
 
-  static double _toRadians(double degree) =>
-      degree * 3.141592653589793 / 180;
-  static double _sin(double x) =>
-      x - (x * x * x) / 6 + (x * x * x * x * x) / 120;
-  static double _cos(double x) => 1 - (x * x) / 2 + (x * x * x * x) / 24;
-  static double _sqrt(double x) {
-    if (x == 0) return 0;
-    double guess = x / 2;
-    for (int i = 0; i < 10; i++) {
-      guess = (guess + x / guess) / 2;
-    }
-    return guess;
-  }
-
-  static double _atan2(double y, double x) {
-    if (x > 0) return _atan(y / x);
-    if (x < 0 && y >= 0) return _atan(y / x) + 3.141592653589793;
-    if (x < 0 && y < 0) return _atan(y / x) - 3.141592653589793;
-    if (x == 0 && y > 0) return 3.141592653589793 / 2;
-    if (x == 0 && y < 0) return -3.141592653589793 / 2;
-    return 0;
-  }
-
-  static double _atan(double x) =>
-      x - (x * x * x) / 3 + (x * x * x * x * x) / 5;
+  /// Convert degrees to radians
+  static double _toRadians(double degree) => degree * math.pi / 180;
 
   /// Adaptive clustering - adjust radius based on zoom level
   static double getAdaptiveRadius(double zoomLevel) {

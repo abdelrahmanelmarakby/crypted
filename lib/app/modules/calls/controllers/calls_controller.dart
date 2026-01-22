@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
@@ -24,6 +26,15 @@ class CallsController extends GetxController {
 
   late Stream<List<CallModel>> calls;
   late Stream<List<CallModel>> callsFromChat;
+
+  // FIX: Track stream subscriptions to prevent memory leaks
+  final List<StreamSubscription> _subscriptions = [];
+
+  // FIX: Pagination support
+  static const int _pageSize = 20;
+  final RxList<CallModel> allLoadedCalls = <CallModel>[].obs;
+  final RxBool isLoadingMore = false.obs;
+  final RxBool hasMoreCalls = true.obs;
 
   // متغير للبحث
   final RxString searchQuery = ''.obs;
@@ -53,12 +64,24 @@ class CallsController extends GetxController {
     super.onInit();
   }
 
+  /// FIX: Refactored to use asyncMap and properly await message queries
+  /// instead of creating orphan listeners that cause memory leaks
   Stream<List<CallModel>> _getCallsFromChat(String userId) {
-    return chatDataSource.getChats(getGroupChatOnly: false, getPrivateChatOnly: false).map((chatRooms) {
+    return chatDataSource
+        .getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
+        .asyncMap((chatRooms) async {
       List<CallModel> callModels = [];
-      for (var chatRoom in chatRooms) {
-        // هذا الجزء يحتاج إلى إعادة تقييم لأن getLivePrivateMessage مصمم لغرفة شات محددة
-        chatDataSource.getLivePrivateMessage(chatRoom.id??"").listen((messages) {
+
+      // Use Future.wait to query all chat rooms concurrently
+      // instead of creating persistent listeners
+      await Future.wait(chatRooms.map((chatRoom) async {
+        try {
+          // Get messages once (snapshot) instead of creating a persistent listener
+          final messages = await chatDataSource
+              .getLivePrivateMessage(chatRoom.id ?? "")
+              .first
+              .timeout(const Duration(seconds: 5));
+
           for (var message in messages) {
             if (message is CallMessage) {
               CallModel callModel = CallModel(
@@ -78,8 +101,11 @@ class CallsController extends GetxController {
               callModels.add(callModel);
             }
           }
-        });
-      }
+        } catch (e) {
+          print('⚠️ Error fetching messages for room ${chatRoom.id}: $e');
+        }
+      }));
+
       return callModels;
     }).shareReplay(maxSize: 1);
   }
@@ -137,6 +163,49 @@ class CallsController extends GetxController {
     print('🔍 Search cleared');
   }
 
+  /// FIX: Load more calls for pagination
+  Future<void> loadMoreCalls() async {
+    if (isLoadingMore.value || !hasMoreCalls.value) return;
+
+    final userId =
+        UserService.currentUser.value?.uid ?? CacheHelper.getUserId ?? '';
+    if (userId.isEmpty) return;
+
+    isLoadingMore.value = true;
+
+    try {
+      // Get the last call's time for cursor
+      DateTime? lastCallTime;
+      if (allLoadedCalls.isNotEmpty) {
+        lastCallTime = allLoadedCalls.last.time;
+      }
+
+      final moreCalls = await callDataSource.loadMoreCalls(
+        userId,
+        lastCallTime,
+        pageSize: _pageSize,
+      );
+
+      if (moreCalls.isEmpty) {
+        hasMoreCalls.value = false;
+        print('📞 No more calls to load');
+      } else {
+        allLoadedCalls.addAll(moreCalls);
+        print('📞 Loaded ${moreCalls.length} more calls, total: ${allLoadedCalls.length}');
+      }
+    } catch (e) {
+      print('❌ Error loading more calls: $e');
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  /// Reset pagination state
+  void resetPagination() {
+    allLoadedCalls.clear();
+    hasMoreCalls.value = true;
+  }
+
   // دالة للحصول على المكالمات المفلترة حسب البحث والحالة
   Stream<List<CallModel>> getFilteredCalls(CallStatus callStatus) {
     return calls.map((allCalls) {
@@ -186,5 +255,16 @@ class CallsController extends GetxController {
 
       return statusFiltered;
     }).shareReplay(maxSize: 1);
+  }
+
+  @override
+  void onClose() {
+    // FIX: Cancel all subscriptions to prevent memory leaks
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    print('🧹 CallsController: Cleaned up ${_subscriptions.length} subscriptions');
+    super.onClose();
   }
 }

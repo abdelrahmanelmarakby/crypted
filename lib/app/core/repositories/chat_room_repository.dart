@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/domain/entities/chat_entity.dart';
+import 'package:crypted_app/app/domain/mappers/chat_mapper.dart';
 import 'package:flutter/foundation.dart';
 
 /// Abstract interface for chat room operations
@@ -73,6 +75,21 @@ abstract class IChatRoomRepository {
     required DateTime timestamp,
     required String senderId,
   });
+
+  // ========== DOMAIN LAYER METHODS (ChatEntity) ==========
+
+  /// Get all chat rooms as domain entities
+  Stream<List<ChatEntity>> getChatEntities({
+    bool groupOnly = false,
+    bool privateOnly = false,
+    bool archivedOnly = false,
+  });
+
+  /// Get a specific chat room as domain entity
+  Future<ChatEntity?> getChatEntityById(String roomId);
+
+  /// Find existing chat room as domain entity
+  Future<ChatEntity?> findExistingChatEntity(List<String> memberIds);
 }
 
 /// Firebase implementation of IChatRoomRepository
@@ -389,5 +406,34 @@ class FirebaseChatRoomRepository implements IChatRoomRepository {
     if (kDebugMode) {
       print('FirebaseChatRoomRepository.$operation error: $error');
     }
+  }
+
+  // ========== DOMAIN LAYER METHODS (ChatEntity) ==========
+
+  @override
+  Stream<List<ChatEntity>> getChatEntities({
+    bool groupOnly = false,
+    bool privateOnly = false,
+    bool archivedOnly = false,
+  }) {
+    return getChatRooms(
+      groupOnly: groupOnly,
+      privateOnly: privateOnly,
+      archivedOnly: archivedOnly,
+    ).map((rooms) => ChatMapper.toEntityList(rooms));
+  }
+
+  @override
+  Future<ChatEntity?> getChatEntityById(String roomId) async {
+    final room = await getChatRoomById(roomId);
+    if (room == null) return null;
+    return ChatMapper.toEntity(room);
+  }
+
+  @override
+  Future<ChatEntity?> findExistingChatEntity(List<String> memberIds) async {
+    final room = await findExistingChatRoom(memberIds);
+    if (room == null) return null;
+    return ChatMapper.toEntity(room);
   }
 }

@@ -18,12 +18,16 @@ import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/core/rate_limiting/rate_limiter.dart';
 import 'package:crypted_app/app/core/utils/debouncer.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
+import 'package:crypted_app/app/core/offline/offline_queue.dart';
+import 'package:crypted_app/app/core/services/offline_queue_service.dart';
 import 'package:crypted_app/app/core/state/upload_state_manager.dart';
 import 'package:crypted_app/app/core/call/chat_call_handler.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_services_parameters.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
+import 'package:crypted_app/app/domain/entities/chat_entity.dart';
+import 'package:crypted_app/app/domain/mappers/chat_mapper.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_actions_bottom_sheet.dart';
@@ -92,6 +96,38 @@ class ChatController extends GetxController
     blockedByThem: false,
     message: '',
   ).obs;
+
+  // INTEGRATION: Domain layer entity for chat room
+  // Provides a clean, Firebase-independent representation of chat state
+  final Rx<ChatEntity?> chatEntity = Rx<ChatEntity?>(null);
+
+  /// Build ChatEntity from current controller state
+  /// Useful for passing chat state to other components without Firebase dependencies
+  ChatEntity buildChatEntity() {
+    return ChatEntity(
+      id: roomId,
+      name: chatName.value,
+      description: chatDescription.value.isEmpty ? null : chatDescription.value,
+      imageUrl: groupImageUrl.value.isEmpty ? null : groupImageUrl.value,
+      isGroupChat: isGroupChat.value,
+      members: members.map((m) => MemberMapper.toEntity(m, adminIds, null)).toList(),
+      memberIds: members.map((m) => m.uid ?? '').where((id) => id.isNotEmpty).toList(),
+      isRead: true,
+      isMuted: false,
+      isPinned: false,
+      isArchived: false,
+      isFavorite: false,
+      blockedUserIds: blockedChatInfo.value.blockedByThem ? [blockingUserId ?? ''] : [],
+      adminIds: adminIds.toList(),
+      blockingUserId: blockingUserId,
+      createdBy: null,
+    );
+  }
+
+  /// Update chatEntity from current state
+  void _updateChatEntity() {
+    chatEntity.value = buildChatEntity();
+  }
 
   // Reply functionality (delegated to MessageController)
   Rx<Message?> get replyToMessage => messageControllerService.replyToMessage;
@@ -488,6 +524,9 @@ class ChatController extends GetxController
     if (isGroupChat.value) {
       _loadGroupImageUrl();
     }
+
+    // INTEGRATION: Update domain entity when chat info changes
+    _updateChatEntity();
   }
 
   /// Load group image URL from Firestore
@@ -643,7 +682,7 @@ class ChatController extends GetxController
     clearSearch();
   }
 
-  /// Search messages with the given query
+  /// Search messages with the given query (debounced to prevent excessive filtering)
   void searchMessages(String query) {
     searchQuery.value = query;
 
@@ -653,6 +692,12 @@ class ChatController extends GetxController
       return;
     }
 
+    // FIX: Debounce search to prevent excessive filtering on every keystroke
+    getDebouncer('message_search', const Duration(milliseconds: 300)).run(() => _performSearch(query));
+  }
+
+  /// Internal search implementation (called after debounce)
+  void _performSearch(String query) {
     final lowerQuery = query.toLowerCase();
 
     // Filter messages that match the query
@@ -778,6 +823,14 @@ class ChatController extends GetxController
     scrollToMessage(message);
   }
 
+  /// Scroll to message by ID (for reply context tapping)
+  void scrollToMessageById(String messageId) {
+    final index = messages.indexWhere((m) => m.id == messageId);
+    if (index != -1) {
+      scrollToMessage(messages[index]);
+    }
+  }
+
   /// Scroll to current search result
   void scrollToCurrentSearchResult() {
     if (searchResults.isEmpty || currentSearchIndex.value < 0) return;
@@ -868,11 +921,33 @@ class ChatController extends GetxController
 
     // PERF-008 FIX: Check connectivity before sending
     if (!ConnectivityService().isOnline) {
-      // Queue message for offline sending
+      // FIX: Queue message for offline sending
       _logger.info('Offline - queueing message for later', context: 'ChatController');
-      // For now, show a warning - offline queue handles actual queueing
+
+      // Queue the message to offline queue for later delivery
+      final messageData = message.toMap();
+      messageData['isLocal'] = true;
+      messageData['localId'] = message.id;
+
+      await OfflineQueueService().queue.enqueue(
+        OperationType.sendMessage,
+        {
+          'roomId': roomId,
+          'message': messageData,
+        },
+      );
+
+      // Add message to local UI optimistically
+      messageControllerService.addLocalMessage(message);
+
       _showToast('You are offline. Message will be sent when connected.');
+      _clearMessageInput();
+      return; // Don't try to send - it's queued for later
     }
+
+    // Generate temp ID for optimistic update
+    final tempId = 'pending_${DateTime.now().millisecondsSinceEpoch}';
+    final localMessage = message.copyWith(id: tempId);
 
     try {
       // Stop typing indicator before sending
@@ -886,35 +961,45 @@ class ChatController extends GetxController
         throw Exception('Message sender is not current user');
       }
 
+      // OPTIMISTIC UPDATE: Add message to local UI immediately
+      messageControllerService.addLocalMessage(localMessage);
+      _clearMessageInput();
+
       // ARCH-003: Use repository when available, fallback to data source
+      String actualMessageId;
       if (hasRepository) {
-        await repository.sendMessage(
+        actualMessageId = await repository.sendMessage(
           message: message,
           roomId: roomId,
           members: members,
         );
       } else {
-        await chatDataSource.sendMessage(
+        actualMessageId = await chatDataSource.sendMessage(
           privateMessage: message,
           roomId: roomId,
           members: members
         );
       }
 
+      // Register mapping for deduplication when Firestore stream delivers
+      messageControllerService.registerPendingSentMessage(tempId, actualMessageId);
+
       // Emit message sent event through event bus
       eventBus.emit(MessageSentEvent(
         roomId: roomId,
-        messageId: message.id,
-        localId: message.id,
+        messageId: actualMessageId,
+        localId: tempId,
       ));
 
-      _clearMessageInput();
-      print("✅ Message sent successfully");
+      print("✅ Message sent successfully (tempId: $tempId -> actualId: $actualMessageId)");
     } catch (e) {
+      // ROLLBACK: Remove the optimistic message on failure
+      messageControllerService.removeLocalMessage(tempId);
+
       // Emit message send failed event
       eventBus.emit(MessageSendFailedEvent(
         roomId: roomId,
-        localId: message.id,
+        localId: tempId,
         error: e.toString(),
       ));
 
@@ -963,19 +1048,35 @@ class ChatController extends GetxController
     }
   }
 
-  /// Make audio call - enhanced for group chats
+  /// Make audio call - FIX: Use CallHandlerMixin for proper Zego integration
   Future<void> makeAudioCall(CallModel call) async {
     _showLoading();
     try {
       // For group chats, ensure all members are included
       if (isGroupChat.value && members.length > 2) {
         print("📞 Initiating group audio call with ${members.length} members");
-        // You might need to modify CallModel to support multiple participants
-      }
-      
-      final success = await CallDataSources().storeCall(call);
-      if (success) {
-        log('Audio call initiated');
+        // Group calls: store call and let Zego handle it
+        final success = await CallDataSources().storeCall(call);
+        if (success) {
+          log('Group audio call initiated');
+        }
+      } else {
+        // Private call: Use CallHandlerMixin for proper Zego invitation
+        final otherUser = _getOtherUser();
+        if (otherUser != null) {
+          final result = await startAudioCall(otherUser);
+          if (!result.success) {
+            _showErrorToast(result.error ?? 'Failed to initiate audio call');
+          } else {
+            log('Audio call initiated via CallHandler');
+          }
+        } else {
+          // Fallback to direct storage if no other user found
+          final success = await CallDataSources().storeCall(call);
+          if (success) {
+            log('Audio call initiated (fallback)');
+          }
+        }
       }
     } catch (e) {
       _showErrorToast('Failed to initiate audio call');
@@ -984,28 +1085,60 @@ class ChatController extends GetxController
     }
   }
 
-  /// Make video call - enhanced for group chats
+  /// Make video call - FIX: Use CallHandlerMixin for proper Zego integration
   Future<bool> makeVideoCall(CallModel call) async {
     _showLoading();
     try {
       // For group chats, ensure all members are included
       if (isGroupChat.value && members.length > 2) {
         print("📹 Initiating group video call with ${members.length} members");
-        // You might need to modify CallModel to support multiple participants
+        // Group calls: store call and let Zego handle it
+        final success = await CallDataSources().storeCall(call);
+        if (success) {
+          log('Group video call initiated');
+          return true;
+        }
+        return false;
+      } else {
+        // Private call: Use CallHandlerMixin for proper Zego invitation
+        final otherUser = _getOtherUser();
+        if (otherUser != null) {
+          final result = await startVideoCall(otherUser);
+          if (!result.success) {
+            _showErrorToast(result.error ?? 'Failed to initiate video call');
+            return false;
+          }
+          log('Video call initiated via CallHandler');
+          return true;
+        } else {
+          // Fallback to direct storage if no other user found
+          final success = await CallDataSources().storeCall(call);
+          if (success) {
+            log('Video call initiated (fallback)');
+            return true;
+          }
+          return false;
+        }
       }
-      
-      final success = await CallDataSources().storeCall(call);
-      if (success) {
-        log('Video call initiated');
-        return true;
-      }
-      return false;
     } catch (e) {
       _showErrorToast('Failed to initiate video call');
       return false;
     } finally {
       _hideLoading();
     }
+  }
+
+  /// Helper to get the other user in a private chat
+  SocialMediaUser? _getOtherUser() {
+    final currentUserId = UserService.currentUser.value?.uid;
+    if (currentUserId == null || members.length < 2) return null;
+
+    for (final member in members) {
+      if (member.uid != currentUserId) {
+        return member;
+      }
+    }
+    return null;
   }
 
   /// Group management methods
@@ -1431,25 +1564,41 @@ class ChatController extends GetxController
 
   /// Toggle a reaction on a message
   /// ARCH-003: Uses IChatRepository when available
+  /// FIX: Throttled to prevent rapid fire Firestore writes
   Future<void> toggleReaction(Message message, String emoji) async {
-    try {
-      final currentUserId = UserService.currentUser.value?.uid;
-      if (currentUserId == null) return;
+    final currentUserId = UserService.currentUser.value?.uid;
+    if (currentUserId == null) return;
 
+    // FIX: Throttle reactions to prevent multiple rapid Firestore writes
+    // Uses a unique key per message+emoji combination
+    final throttleKey = 'reaction_${message.id}_$emoji';
+    getThrottler(throttleKey, const Duration(milliseconds: 500)).run(() => _performReactionToggle(message, emoji, currentUserId));
+  }
+
+  /// Internal reaction toggle implementation (called after throttle)
+  Future<void> _performReactionToggle(Message message, String emoji, String userId) async {
+    // FIX: Prevent reacting to local/pending messages that don't exist in Firestore yet
+    if (message.id.isEmpty || message.id.startsWith('pending_')) {
+      _logger.warning('Cannot react to pending message: ${message.id}');
+      _showToast('Message is still sending. Please wait.');
+      return;
+    }
+
+    try {
       // ARCH-003: Use repository when available, fallback to data source
       if (hasRepository) {
         await repository.toggleReaction(
           roomId: roomId,
           messageId: message.id,
           emoji: emoji,
-          userId: currentUserId,
+          userId: userId,
         );
       } else {
         await chatDataSource.toggleReaction(
           roomId: roomId,
           messageId: message.id,
           emoji: emoji,
-          userId: currentUserId,
+          userId: userId,
         );
       }
 
@@ -1758,18 +1907,43 @@ class ChatController extends GetxController
   /// Get contacts for forwarding
   Future<List<SocialMediaUser>> _getContactsForForwarding() async {
     try {
+      // Get current user's blocked list
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(currentUser?.uid)
+          .get();
+
+      final blockedByMe = List<String>.from(
+        currentUserDoc.data()?['blockedUser'] ?? [],
+      );
+
       // Get user's contacts from Firestore
       final contactsQuery = await FirebaseFirestore.instance
           .collection(FirebaseCollections.users)
           .where('uid', isNotEqualTo: currentUser?.uid) // Exclude current user
-          .limit(20) // Limit to 20 contacts for performance
+          .limit(50) // Fetch more to account for filtering
           .get();
 
-      final contacts = contactsQuery.docs
-          .map((doc) => SocialMediaUser.fromMap(doc.data()))
-          .toList();
+      // Filter out blocked users (bidirectional)
+      final contacts = <SocialMediaUser>[];
+      for (final doc in contactsQuery.docs) {
+        final user = SocialMediaUser.fromMap(doc.data());
+        final userId = user.uid ?? '';
 
-      print('📞 Fetched ${contacts.length} contacts for forwarding');
+        // Skip if I blocked them
+        if (blockedByMe.contains(userId)) continue;
+
+        // Skip if they blocked me
+        final theirBlockedList = List<String>.from(doc.data()['blockedUser'] ?? []);
+        if (theirBlockedList.contains(currentUser?.uid)) continue;
+
+        contacts.add(user);
+
+        // Limit to 20 after filtering
+        if (contacts.length >= 20) break;
+      }
+
+      print('📞 Fetched ${contacts.length} contacts for forwarding (after block filtering)');
       return contacts;
     } catch (e) {
       print('❌ Error fetching contacts: $e');
@@ -2178,33 +2352,22 @@ class ChatController extends GetxController
     }
   }
 
-  /// Complete upload by replacing uploading message with actual message
+  /// Complete upload - register with MessageController for smart merge
+  /// The actual message will arrive via Firestore stream after sync
   void completeUpload(String uploadId, Message actualMessage) {
-    // FIX: First remove any duplicate message from Firestore stream
-    // The stream might have already added the actual message before this is called
-    final duplicateIndex = messages.indexWhere(
-      (msg) => msg.id == actualMessage.id && msg is! UploadingMessage
-    );
-    if (duplicateIndex != -1) {
-      messages.removeAt(duplicateIndex);
-      print('🔄 Removed duplicate message from stream: ${actualMessage.id}');
-    }
+    // Register the pending upload with MessageController
+    // This allows the smart merge to know when to swap UploadingMessage for actual message
+    messageControllerService.registerPendingUpload(uploadId, actualMessage.id);
 
-    // Now replace the UploadingMessage with the actual message
+    // Mark the UploadingMessage as complete (100% progress) but keep it visible
+    // until the Firestore stream delivers the actual message
     final uploadIndex = messages.indexWhere((msg) => msg.id == uploadId);
-    if (uploadIndex != -1) {
-      messages[uploadIndex] = actualMessage;
+    if (uploadIndex != -1 && messages[uploadIndex] is UploadingMessage) {
+      final uploadingMsg = messages[uploadIndex] as UploadingMessage;
+      // Mark as completed with 100% progress - will be replaced when Firestore syncs
+      messages[uploadIndex] = uploadingMsg.copyWith(progress: 1.0);
       update();
-      print('✅ Replaced uploading message with actual message');
-    } else {
-      // UploadingMessage not found - might have been removed by stream
-      // Add the actual message if not already present
-      if (!messages.any((msg) => msg.id == actualMessage.id)) {
-        messages.insert(0, actualMessage);
-        messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        update();
-        print('✅ Added actual message (upload message was missing)');
-      }
+      print('✅ Marked upload as complete, waiting for Firestore sync');
     }
 
     // Remove from active uploads

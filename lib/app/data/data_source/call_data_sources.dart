@@ -59,12 +59,18 @@ class CallDataSources {
     }
   }
 
-  Stream<List<CallModel>> getMyCalls(String userId) {
-    log('🔍 Getting calls for user: $userId');
+  /// FIX: Added pagination support to prevent loading all calls at once
+  /// Default page size is 20 calls
+  static const int _defaultPageSize = 20;
 
-    // جلب المكالمات الصادرة (حيث المستخدم هو caller)
+  Stream<List<CallModel>> getMyCalls(String userId, {int pageSize = _defaultPageSize}) {
+    log('🔍 Getting calls for user: $userId (pageSize: $pageSize)');
+
+    // جلب المكالمات الصادرة (حيث المستخدم هو caller) with limit
     Stream<List<CallModel>> outgoingCalls = callsCollection
         .where('callerId', isEqualTo: userId)
+        .orderBy('time', descending: true)
+        .limit(pageSize)
         .snapshots()
         .map((snapshot) {
       log('📤 Found ${snapshot.docs.length} outgoing calls');
@@ -75,9 +81,11 @@ class CallDataSources {
       }).toList();
     });
 
-    // جلب المكالمات الواردة (حيث المستخدم هو callee)
+    // جلب المكالمات الواردة (حيث المستخدم هو callee) with limit
     Stream<List<CallModel>> incomingCalls = callsCollection
         .where('calleeId', isEqualTo: userId)
+        .orderBy('time', descending: true)
+        .limit(pageSize)
         .snapshots()
         .map((snapshot) {
       log('📥 Found ${snapshot.docs.length} incoming calls');
@@ -97,10 +105,62 @@ class CallDataSources {
         // ترتيب المكالمات حسب الوقت (الأحدث أولاً)
         allCalls.sort((a, b) =>
             (b.time ?? DateTime.now()).compareTo(a.time ?? DateTime.now()));
+        // Take only pageSize items after merging (since we got pageSize from each query)
+        if (allCalls.length > pageSize) {
+          allCalls = allCalls.take(pageSize).toList();
+        }
         log('📞 Total calls found: ${allCalls.length}');
         return allCalls;
       },
     ).shareReplay(maxSize: 1);
+  }
+
+  /// Load more calls for pagination (one-time fetch, not stream)
+  Future<List<CallModel>> loadMoreCalls(String userId, DateTime? lastCallTime, {int pageSize = _defaultPageSize}) async {
+    log('🔍 Loading more calls for user: $userId after $lastCallTime');
+
+    List<CallModel> allCalls = [];
+
+    // Fetch outgoing calls after the last call time
+    Query<Map<String, dynamic>> outgoingQuery = callsCollection
+        .where('callerId', isEqualTo: userId)
+        .orderBy('time', descending: true)
+        .limit(pageSize);
+
+    if (lastCallTime != null) {
+      outgoingQuery = outgoingQuery.startAfter([Timestamp.fromDate(lastCallTime)]);
+    }
+
+    final outgoingSnapshot = await outgoingQuery.get();
+    for (var doc in outgoingSnapshot.docs) {
+      allCalls.add(CallModel.fromMap(doc.data()));
+    }
+
+    // Fetch incoming calls after the last call time
+    Query<Map<String, dynamic>> incomingQuery = callsCollection
+        .where('calleeId', isEqualTo: userId)
+        .orderBy('time', descending: true)
+        .limit(pageSize);
+
+    if (lastCallTime != null) {
+      incomingQuery = incomingQuery.startAfter([Timestamp.fromDate(lastCallTime)]);
+    }
+
+    final incomingSnapshot = await incomingQuery.get();
+    for (var doc in incomingSnapshot.docs) {
+      allCalls.add(CallModel.fromMap(doc.data()));
+    }
+
+    // Sort by time and take only pageSize
+    allCalls.sort((a, b) =>
+        (b.time ?? DateTime.now()).compareTo(a.time ?? DateTime.now()));
+
+    if (allCalls.length > pageSize) {
+      allCalls = allCalls.take(pageSize).toList();
+    }
+
+    log('📞 Loaded ${allCalls.length} more calls');
+    return allCalls;
   }
 
   /// on App's user login
@@ -137,6 +197,11 @@ class CallDataSources {
       );
 
       log('✅ Zego UIKit initialized successfully for user: $userID');
+
+      // FIX: Clean up any stale calls from previous sessions
+      // This prevents users from appearing "in call" indefinitely after crashes
+      await cleanupStaleCalls(userID);
+      log('🧹 Cleaned up stale calls for user: $userID');
     } catch (e) {
       log('❌ Error initializing Zego UIKit for user $userID: $e');
       rethrow;
@@ -363,11 +428,12 @@ class CallDataSources {
       log('❌ Error initializing Zego for user $userID: $e');
       rethrow;
     }
+  }
+
   /// on App's user logout
   void onUserLogout() {
     /// 1.2.2. de-initialization ZegoUIKitPrebuiltCallInvitationService
     /// when app's user is logged out
     ZegoUIKitPrebuiltCallInvitationService().uninit();
   }
-}
 }

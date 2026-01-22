@@ -187,7 +187,6 @@ class CachedChatRoomService {
 
   /// Cache keys
   String _roomKey(String roomId) => 'room:$roomId';
-  String _membersKey(String roomId) => 'members:$roomId';
   String _userKey(String oderId) => 'user:$oderId';
 
   /// Get or fetch chat room
