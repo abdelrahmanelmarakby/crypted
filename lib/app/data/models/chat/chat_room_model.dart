@@ -178,13 +178,37 @@ class ChatRoom {
 
   // Helper method to safely get string values
   String? _safeGet(Map<String, dynamic> data, String key) {
-    return data.containsKey(key) ? data[key] as String? : null;
+    if (!data.containsKey(key) || data[key] == null) return null;
+    final value = data[key];
+    // Handle Timestamp fields that should be converted to ISO string
+    if (value is Timestamp) {
+      return value.toDate().toIso8601String();
+    }
+    if (value is DateTime) {
+      return value.toIso8601String();
+    }
+    return value as String?;
   }
 
   // Helper method to safely get string lists
   List<String>? _safeGetStringList(Map<String, dynamic> data, String key) {
     if (!data.containsKey(key) || data[key] == null) return null;
     return (data[key] as List<dynamic>?)?.map((e) => e.toString()).toList();
+  }
+
+  // Static helper to parse lastChat which can be Timestamp, DateTime, or String
+  static String? _parseLastChat(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) {
+      return value.toDate().toIso8601String();
+    }
+    if (value is DateTime) {
+      return value.toIso8601String();
+    }
+    if (value is String) {
+      return value;
+    }
+    return value.toString();
   }
 
   factory ChatRoom.fromMap(Map<String, dynamic> map) {
@@ -202,7 +226,7 @@ class ChatRoom {
           : null,
       lastMsg: map['lastMsg'] as String?,
       lastSender: map['lastSender'] as String?,
-      lastChat: map['lastChat'] as String?,
+      lastChat: _parseLastChat(map['lastChat']),
       keywords: map['keywords'] != null
           ? (map['keywords'] as List<dynamic>).map((e) => e.toString()).toList()
           : null,

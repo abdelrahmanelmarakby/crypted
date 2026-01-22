@@ -180,27 +180,25 @@ class OfflineQueueService {
         .doc(messageId);
 
     // Use transaction to safely toggle reaction
+    // Reactions are stored as a List of {emoji, userId} maps
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(docRef);
       if (!snapshot.exists) return;
 
       final currentData = snapshot.data() ?? {};
-      final reactions = Map<String, List<dynamic>>.from(
-        currentData['reactions'] ?? {},
+      final reactions = List<dynamic>.from(currentData['reactions'] ?? []);
+
+      // Check if user already reacted with this emoji
+      final existingIndex = reactions.indexWhere(
+        (r) => r is Map && r['emoji'] == emoji && r['userId'] == userId,
       );
 
-      final emojiReactions = List<String>.from(reactions[emoji] ?? []);
-
-      if (emojiReactions.contains(userId)) {
-        emojiReactions.remove(userId);
-        if (emojiReactions.isEmpty) {
-          reactions.remove(emoji);
-        } else {
-          reactions[emoji] = emojiReactions;
-        }
+      if (existingIndex != -1) {
+        // Remove existing reaction
+        reactions.removeAt(existingIndex);
       } else {
-        emojiReactions.add(userId);
-        reactions[emoji] = emojiReactions;
+        // Add new reaction
+        reactions.add({'emoji': emoji, 'userId': userId});
       }
 
       transaction.update(docRef, {'reactions': reactions});

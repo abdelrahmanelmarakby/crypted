@@ -117,7 +117,7 @@ class _MoreEmojisButton extends StatelessWidget {
   }
 }
 
-/// Full emoji picker dialog for extended emoji selection
+/// Full emoji picker bottom sheet for extended emoji selection
 class EmojiPickerDialog extends StatelessWidget {
   final Function(String emoji) onEmojiSelected;
 
@@ -152,83 +152,103 @@ class EmojiPickerDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Container(
-        height: 500,
-        padding: EdgeInsets.all(Paddings.large),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select Emoji',
-              style: TextStyle(
-                fontSize: FontSize.large,
-                fontWeight: FontWeight.bold,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 8),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            SizedBox(height: Paddings.normal),
-            Expanded(
-              child: DefaultTabController(
-                length: emojiCategories.length,
-                child: Column(
-                  children: [
-                    TabBar(
-                      isScrollable: true,
-                      indicatorColor: ColorsManager.primary,
-                      labelColor: ColorsManager.primary,
-                      unselectedLabelColor: Colors.grey,
-                      tabs: emojiCategories.keys
-                          .map((category) => Tab(text: category))
-                          .toList(),
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        children: emojiCategories.values.map((emojis) {
-                          return GridView.builder(
-                            padding: EdgeInsets.all(Paddings.normal),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 6,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
-                            ),
-                            itemCount: emojis.length,
-                            itemBuilder: (context, index) {
-                              final emoji = emojis[index];
-                              return InkWell(
-                                onTap: () {
-                                  onEmojiSelected(emoji);
-                                  Get.back();
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    emoji,
-                                    style: const TextStyle(fontSize: 28),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: Paddings.large),
+            child: Row(
+              children: [
+                Text(
+                  'Select Emoji',
+                  style: TextStyle(
+                    fontSize: FontSize.large,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          SizedBox(height: Paddings.normal),
+          SizedBox(
+            height: 400,
+            child: DefaultTabController(
+              length: emojiCategories.length,
+              child: Column(
+                children: [
+                  TabBar(
+                    isScrollable: true,
+                    indicatorColor: ColorsManager.primary,
+                    labelColor: ColorsManager.primary,
+                    unselectedLabelColor: Colors.grey,
+                    tabs: emojiCategories.keys
+                        .map((category) => Tab(text: category))
+                        .toList(),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: emojiCategories.values.map((emojis) {
+                        return GridView.builder(
+                          padding: EdgeInsets.all(Paddings.normal),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 7,
+                            crossAxisSpacing: 6,
+                            mainAxisSpacing: 6,
+                          ),
+                          itemCount: emojis.length,
+                          itemBuilder: (context, index) {
+                            final emoji = emojis[index];
+                            return InkWell(
+                              onTap: () {
+                                onEmojiSelected(emoji);
+                                Navigator.of(context).pop();
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  emoji,
+                                  style: const TextStyle(fontSize: 26),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+        ],
       ),
     );
   }
 
   static void show(BuildContext context, Function(String) onEmojiSelected) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => EmojiPickerDialog(onEmojiSelected: onEmojiSelected),
     );
   }

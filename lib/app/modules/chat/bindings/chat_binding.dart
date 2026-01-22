@@ -1,6 +1,7 @@
 // ARCH-016 FIX: Updated Chat Binding with Architecture Support
 // Properly registers all chat-related controllers and dependencies
 
+import 'package:crypted_app/app/core/di/chat_architecture_bindings.dart';
 import 'package:crypted_app/app/core/di/service_locator.dart';
 import 'package:crypted_app/app/core/error_handling/error_handler.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
@@ -19,6 +20,10 @@ class ChatBinding extends Bindings {
 
     // Register core dependencies if not already registered
     _registerCoreDependencies();
+
+    // ARCH-009: Register new architecture bindings
+    // This includes EventBus, QueryCache, UserProfileCache, and all use cases
+    NewArchitectureBindings().dependencies();
 
     // Register specialized controllers
     _registerControllers();

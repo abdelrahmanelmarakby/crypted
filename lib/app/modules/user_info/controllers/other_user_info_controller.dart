@@ -9,6 +9,7 @@ import 'package:crypted_app/app/modules/user_info/models/user_info_state.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/controllers/notification_settings_controller.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
@@ -508,9 +509,12 @@ class OtherUserInfoController extends GetxController {
       return;
     }
 
-    // Ensure NotificationSettingsController is registered
+    // Ensure NotificationSettingsService and Controller are registered
     NotificationSettingsController notificationController;
     try {
+      if (!Get.isRegistered<NotificationSettingsService>()) {
+        Get.put<NotificationSettingsService>(NotificationSettingsService());
+      }
       if (!Get.isRegistered<NotificationSettingsController>()) {
         Get.put<NotificationSettingsController>(NotificationSettingsController());
       }

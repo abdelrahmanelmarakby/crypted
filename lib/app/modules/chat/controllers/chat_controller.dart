@@ -46,7 +46,16 @@ import 'package:crypted_app/app/data/models/messages/uploading_message_model.dar
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller_integration.dart';
+import 'package:crypted_app/app/modules/chat/controllers/new_architecture_mixin.dart';
+import 'package:crypted_app/app/modules/chat/controllers/forward_architecture_mixin.dart';
+import 'package:crypted_app/app/modules/chat/controllers/group_architecture_mixin.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
+import 'package:crypted_app/app/modules/chat/widgets/confirmation_bottom_sheet.dart';
 import 'package:crypted_app/app/modules/chat/widgets/edit_message_sheet.dart';
+import 'package:crypted_app/app/modules/chat/widgets/forward_bottom_sheet.dart';
+import 'package:crypted_app/app/modules/chat/widgets/group_management_bottom_sheet.dart';
+import 'package:crypted_app/app/modules/chat/widgets/member_actions_bottom_sheet.dart';
+import 'package:crypted_app/app/domain/repositories/i_group_repository.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,8 +71,9 @@ import 'package:crypted_app/app/core/services/search_history_service.dart';
 /// Uses ChatControllerIntegration mixin for event bus, offline support, and state management
 /// Includes rate limiting and debouncing for performance
 /// ARCH-008: Uses CallHandlerMixin to move call logic from view to controller
+/// ARCH-009: Uses NewArchitectureMixin for clean architecture message operations
 class ChatController extends GetxController
-    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin, CallHandlerMixin {
+    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin, CallHandlerMixin, NewArchitectureMixin, ForwardArchitectureMixin, GroupArchitectureMixin {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
@@ -86,6 +96,7 @@ class ChatController extends GetxController
   final RxInt memberCount = 0.obs;
   final RxString groupImageUrl = ''.obs;
   final RxList<String> adminIds = <String>[].obs;
+  final Rx<ChatWallpaper> chatWallpaper = ChatWallpaper.none.obs;
 
   String? blockingUserId;
 
@@ -343,6 +354,22 @@ class ChatController extends GetxController
       messages: messages,
     );
 
+    // ARCH-009: Initialize new clean architecture mixin
+    // This provides the orchestration service, use cases, and optimistic updates
+    initializeNewArchitectureMixin(roomId, messages);
+
+    // ARCH-010: Initialize forward architecture mixin
+    // Provides forward operations via ForwardOrchestrationService
+    if (currentUser?.uid != null) {
+      initializeForwardMixin(roomId, currentUser!.uid!);
+    }
+
+    // ARCH-011: Initialize group architecture mixin (only for group chats)
+    // Provides member management, admin operations, and group info updates
+    if (isGroupChat.value && currentUser?.uid != null) {
+      initializeGroupMixin(roomId, currentUser!.uid!);
+    }
+
     // Sync state with state manager
     stateManager.roomId.value = roomId;
     stateManager.isGroupChat.value = isGroupChat.value;
@@ -371,6 +398,9 @@ class ChatController extends GetxController
       'hasEventBus': true,
       'hasOfflineQueue': true,
       'hasCallHandler': true,
+      'hasNewArchMixin': isNewArchitectureEnabled,
+      'hasForwardArchMixin': isForwardArchitectureEnabled,
+      'hasGroupArchMixin': isGroupArchitectureEnabled,
     });
   }
 
@@ -525,6 +555,9 @@ class ChatController extends GetxController
       _loadGroupImageUrl();
     }
 
+    // Load wallpaper for all chat types
+    _loadChatWallpaper();
+
     // INTEGRATION: Update domain entity when chat info changes
     _updateChatEntity();
   }
@@ -561,11 +594,44 @@ class ChatController extends GetxController
             adminIds.value = [(data['membersIds'] as List).first.toString()];
             print('✅ Using first member as admin: ${adminIds.first}');
           }
+
+          // Load chat wallpaper
+          if (data['wallpaper'] != null && data['wallpaper'] is Map) {
+            chatWallpaper.value = ChatWallpaper.fromMap(
+              Map<String, dynamic>.from(data['wallpaper'] as Map),
+            );
+          }
         }
       }
     } catch (e) {
       print('❌ Error loading group data: $e');
     }
+  }
+
+  /// Listen for chat wallpaper changes from Firestore (works for all chat types)
+  void _loadChatWallpaper() {
+    if (roomId.isEmpty) return;
+
+    _streamSubscriptions.add(
+      FirebaseFirestore.instance
+          .collection(FirebaseCollections.chats)
+          .doc(roomId)
+          .snapshots()
+          .listen((snapshot) {
+        if (snapshot.exists) {
+          final data = snapshot.data();
+          if (data != null && data['wallpaper'] != null && data['wallpaper'] is Map) {
+            chatWallpaper.value = ChatWallpaper.fromMap(
+              Map<String, dynamic>.from(data['wallpaper'] as Map),
+            );
+          } else {
+            chatWallpaper.value = ChatWallpaper.none;
+          }
+        }
+      }, onError: (e) {
+        print('❌ Error listening to chat wallpaper: $e');
+      }),
+    );
   }
 
   void _logChatInfo() {
@@ -911,6 +977,7 @@ class ChatController extends GetxController
 
   /// Send a message with proper validation and rate limiting
   /// ARCH-003: Uses IChatRepository when available for better abstraction
+  /// ARCH-009: Uses new architecture MessageOrchestrationService when enabled
   Future<void> sendMessage(Message message) async {
     // SEC-004 FIX: Check rate limit before sending
     final rateLimitResult = recordMessageSend(roomId);
@@ -919,6 +986,43 @@ class ChatController extends GetxController
       return;
     }
 
+    // Verify that message sender is current user
+    if (message.senderId != currentUser?.uid) {
+      print("❌ ERROR: Message sender is not current user!");
+      print("   Expected: ${currentUser?.uid}");
+      print("   Actual: ${message.senderId}");
+      _showErrorToast('Message sender is not current user');
+      return;
+    }
+
+    // Stop typing indicator before sending
+    await typingService.stopTyping(roomId);
+
+    // ARCH-009: Use new architecture with fallback to legacy
+    await sendMessageWithNewArchitecture(
+      message: message,
+      members: members,
+      onOptimisticUpdate: () {
+        _clearMessageInput();
+      },
+      onSuccess: (messageId) {
+        print("✅ Message sent successfully: $messageId");
+        // Emit message sent event through event bus
+        eventBus.emit(MessageSentEvent(
+          roomId: roomId,
+          messageId: messageId,
+          localId: null, // New architecture handles ID mapping internally
+        ));
+      },
+      onError: (error) {
+        _showErrorToast('Failed to send message: $error');
+      },
+      legacyPath: () => _sendMessageLegacy(message),
+    );
+  }
+
+  /// Legacy message sending path (used when new architecture is disabled)
+  Future<String> _sendMessageLegacy(Message message) async {
     // PERF-008 FIX: Check connectivity before sending
     if (!ConnectivityService().isOnline) {
       // FIX: Queue message for offline sending
@@ -942,7 +1046,7 @@ class ChatController extends GetxController
 
       _showToast('You are offline. Message will be sent when connected.');
       _clearMessageInput();
-      return; // Don't try to send - it's queued for later
+      return message.id; // Return local ID for offline messages
     }
 
     // Generate temp ID for optimistic update
@@ -950,17 +1054,6 @@ class ChatController extends GetxController
     final localMessage = message.copyWith(id: tempId);
 
     try {
-      // Stop typing indicator before sending
-      await typingService.stopTyping(roomId);
-
-      // Verify that message sender is current user
-      if (message.senderId != currentUser?.uid) {
-        print("❌ ERROR: Message sender is not current user!");
-        print("   Expected: ${currentUser?.uid}");
-        print("   Actual: ${message.senderId}");
-        throw Exception('Message sender is not current user');
-      }
-
       // OPTIMISTIC UPDATE: Add message to local UI immediately
       messageControllerService.addLocalMessage(localMessage);
       _clearMessageInput();
@@ -991,7 +1084,8 @@ class ChatController extends GetxController
         localId: tempId,
       ));
 
-      print("✅ Message sent successfully (tempId: $tempId -> actualId: $actualMessageId)");
+      print("✅ Message sent via legacy path (tempId: $tempId -> actualId: $actualMessageId)");
+      return actualMessageId;
     } catch (e) {
       // ROLLBACK: Remove the optimistic message on failure
       messageControllerService.removeLocalMessage(tempId);
@@ -1003,8 +1097,7 @@ class ChatController extends GetxController
         error: e.toString(),
       ));
 
-      print("❌ Failed to send message: $e");
-      _showErrorToast('Failed to send message: ${e.toString()}');
+      print("❌ Failed to send message (legacy): $e");
       rethrow;
     }
   }
@@ -1334,40 +1427,71 @@ class ChatController extends GetxController
 
   /// Delete a message
   /// ARCH-003: Uses IChatRepository when available
+  /// ARCH-009: Uses new architecture when enabled
   Future<void> deleteMessage(Message message) async {
+    final currentUserId = UserService.currentUser.value?.uid;
+    if (currentUserId == null) {
+      _showErrorToast('User not logged in');
+      return;
+    }
+
+    _showLoading();
+
     try {
-      _showLoading();
-
-      // ARCH-003: Use repository when available, fallback to data source
-      if (hasRepository) {
-        await repository.updateMessage(
-          roomId: roomId,
-          messageId: message.id,
-          updates: {'isDeleted': true},
-        );
-      } else {
-        await chatDataSource.updateMessage(
-          roomId: roomId,
-          messageId: message.id,
-          updates: {'isDeleted': true},
-        );
-      }
-
-      // BUG-005 FIX: Safely try to update local state, Firestore stream will sync regardless
-      final updatedMessage = _safeCopyMessage(message, isDeleted: true);
-      if (updatedMessage != null) {
-        final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
-        if (messageIndex != -1) {
-          messages[messageIndex] = updatedMessage;
-          update();
-        }
-      }
-
-      _showToast('Message deleted');
+      // ARCH-009: Use new architecture with fallback
+      await deleteMessageWithNewArchitecture(
+        messageId: message.id,
+        userId: currentUserId,
+        permanent: false, // Soft delete by default
+        onSuccess: () {
+          // BUG-005 FIX: Safely try to update local state, Firestore stream will sync regardless
+          final updatedMessage = _safeCopyMessage(message, isDeleted: true);
+          if (updatedMessage != null) {
+            final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+            if (messageIndex != -1) {
+              messages[messageIndex] = updatedMessage;
+              update();
+            }
+          }
+          _showToast('Message deleted');
+        },
+        onError: (error) {
+          _showErrorToast('Failed to delete message: $error');
+        },
+        legacyPath: () => _deleteMessageLegacy(message),
+      );
     } catch (e) {
       _showErrorToast('Failed to delete message: ${e.toString()}');
     } finally {
       _hideLoading();
+    }
+  }
+
+  /// Legacy delete message path (used when new architecture is disabled)
+  Future<void> _deleteMessageLegacy(Message message) async {
+    // ARCH-003: Use repository when available, fallback to data source
+    if (hasRepository) {
+      await repository.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {'isDeleted': true},
+      );
+    } else {
+      await chatDataSource.updateMessage(
+        roomId: roomId,
+        messageId: message.id,
+        updates: {'isDeleted': true},
+      );
+    }
+
+    // BUG-005 FIX: Safely try to update local state
+    final updatedMessage = _safeCopyMessage(message, isDeleted: true);
+    if (updatedMessage != null) {
+      final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+      if (messageIndex != -1) {
+        messages[messageIndex] = updatedMessage;
+        update();
+      }
     }
   }
 
@@ -1494,42 +1618,56 @@ class ChatController extends GetxController
   // =================== MESSAGE EDITING ===================
 
   /// Edit a text message
+  /// ARCH-009: Uses new architecture when enabled
   Future<void> editMessage(TextMessage message, String newText) async {
+    final currentUserId = UserService.currentUser.value?.uid;
+    if (currentUserId == null) {
+      _showErrorToast('User not logged in');
+      return;
+    }
+
+    if (message.senderId != currentUserId) {
+      _showErrorToast('You can only edit your own messages');
+      return;
+    }
+
+    // Check edit time limit (15 minutes)
+    final difference = DateTime.now().difference(message.timestamp);
+    if (difference.inMinutes > 15) {
+      _showErrorToast('Messages can only be edited within 15 minutes');
+      return;
+    }
+
+    _showLoading();
+
     try {
-      final currentUserId = UserService.currentUser.value?.uid;
-      if (currentUserId == null) {
-        _showErrorToast('User not logged in');
-        return;
-      }
-
-      if (message.senderId != currentUserId) {
-        _showErrorToast('You can only edit your own messages');
-        return;
-      }
-
-      // Check edit time limit (15 minutes)
-      final difference = DateTime.now().difference(message.timestamp);
-      if (difference.inMinutes > 15) {
-        _showErrorToast('Messages can only be edited within 15 minutes');
-        return;
-      }
-
-      _showLoading();
-
-      await chatDataSource.editMessage(
-        roomId: roomId,
+      // ARCH-009: Use new architecture with fallback
+      await editMessageWithNewArchitecture(
         messageId: message.id,
         newText: newText,
-        senderId: currentUserId,
+        userId: currentUserId,
+        originalTimestamp: message.timestamp,
+        onSuccess: () {
+          _logger.info('Message edited successfully: ${message.id}');
+          _showToast('Message edited');
+        },
+        onError: (error) {
+          _errorHandler.handleError(
+            Exception(error),
+            showToUser: true,
+          );
+        },
+        legacyPath: () => chatDataSource.editMessage(
+          roomId: roomId,
+          messageId: message.id,
+          newText: newText,
+          senderId: currentUserId,
+        ),
       );
-
-      _logger.info('Message edited successfully: ${message.id}');
-      _showToast('Message edited');
     } catch (e) {
       _logger.logError('Failed to edit message', error: e);
       _errorHandler.handleError(
         e,
-        // fallbackMessage: 'Failed to edit message',
         showToUser: true,
       );
     } finally {
@@ -1564,6 +1702,7 @@ class ChatController extends GetxController
 
   /// Toggle a reaction on a message
   /// ARCH-003: Uses IChatRepository when available
+  /// ARCH-009: Uses new architecture when enabled
   /// FIX: Throttled to prevent rapid fire Firestore writes
   Future<void> toggleReaction(Message message, String emoji) async {
     final currentUserId = UserService.currentUser.value?.uid;
@@ -1576,6 +1715,7 @@ class ChatController extends GetxController
   }
 
   /// Internal reaction toggle implementation (called after throttle)
+  /// ARCH-009: Uses new architecture with fallback to legacy
   Future<void> _performReactionToggle(Message message, String emoji, String userId) async {
     // FIX: Prevent reacting to local/pending messages that don't exist in Firestore yet
     if (message.id.isEmpty || message.id.startsWith('pending_')) {
@@ -1584,32 +1724,48 @@ class ChatController extends GetxController
       return;
     }
 
+    // ARCH-009: Use new architecture with fallback
+    await toggleReactionWithNewArchitecture(
+      messageId: message.id,
+      emoji: emoji,
+      userId: userId,
+      onSuccess: (result) {
+        _logger.info('Toggled reaction $emoji on message ${message.id} (added: ${result.wasAdded})');
+      },
+      onError: (error) {
+        _errorHandler.handleError(
+          Exception(error),
+          showToUser: true,
+        );
+      },
+      legacyPath: () => _toggleReactionLegacy(message.id, emoji, userId),
+    );
+  }
+
+  /// Legacy reaction toggle path (used when new architecture is disabled)
+  Future<void> _toggleReactionLegacy(String messageId, String emoji, String userId) async {
     try {
       // ARCH-003: Use repository when available, fallback to data source
       if (hasRepository) {
         await repository.toggleReaction(
           roomId: roomId,
-          messageId: message.id,
+          messageId: messageId,
           emoji: emoji,
           userId: userId,
         );
       } else {
         await chatDataSource.toggleReaction(
           roomId: roomId,
-          messageId: message.id,
+          messageId: messageId,
           emoji: emoji,
           userId: userId,
         );
       }
 
-      _logger.info('Toggled reaction $emoji on message ${message.id}');
+      _logger.info('Toggled reaction $emoji on message $messageId (legacy)');
     } catch (e) {
-      _logger.logError('Failed to toggle reaction', error: e);
-      _errorHandler.handleError(
-        e,
-        // fallbackMessage: 'Failed to add reaction',
-        showToUser: true,
-      );
+      _logger.logError('Failed to toggle reaction (legacy)', error: e);
+      rethrow;
     }
   }
 
@@ -1636,83 +1792,501 @@ class ChatController extends GetxController
     }
   }
 
+  // =================== FORWARD METHODS ===================
+
+  /// Show forward bottom sheet for a message
+  /// ARCH-010: Uses ForwardArchitectureMixin with clean UX bottom sheet
+  void showForwardSheet(BuildContext context, Message message) {
+    // Build forward targets from available data
+    final recentChats = _buildRecentChatTargets();
+    final allContacts = _buildContactTargets();
+
+    ForwardBottomSheet.show(
+      context,
+      message: message,
+      recentChats: recentChats,
+      allContacts: allContacts,
+      onForward: (target) async {
+        await _performForward(message, target);
+      },
+      onForwardMultiple: (targets) async {
+        await _performForwardMultiple(message, targets);
+      },
+    );
+  }
+
+  /// Build recent chat targets from conversation list
+  List<ForwardTarget> _buildRecentChatTargets() {
+    // TODO: Implement fetching from conversations data source
+    // For now, return members as targets
+    return members.map((m) => ForwardTarget(
+      id: m.uid ?? '',
+      name: m.fullName ?? 'Unknown',
+      imageUrl: m.imageUrl,
+      type: ForwardTargetType.user,
+      isGroup: false,
+    )).toList();
+  }
+
+  /// Build contact targets from user's contacts
+  List<ForwardTarget> _buildContactTargets() {
+    // TODO: Implement fetching from contacts
+    return [];
+  }
+
+  /// Perform single forward operation
+  Future<void> _performForward(Message message, ForwardTarget target) async {
+    if (!isForwardArchitectureEnabled) {
+      _showToast('Forward feature not available');
+      return;
+    }
+
+    final result = await forwardMessageWithNewArchitecture(
+      message: message,
+      targetRoomId: target.id,
+      onSuccess: (forwardResult) {
+        _showToast('Message forwarded');
+        _logger.info('Message forwarded to ${target.name}: ${forwardResult.messageId}');
+      },
+      onError: (error) {
+        _showToast('Failed to forward: $error');
+      },
+    );
+
+    if (result == null) {
+      _logger.warning('Forward returned null result');
+    }
+  }
+
+  /// Perform multiple forward operation
+  Future<void> _performForwardMultiple(Message message, List<ForwardTarget> targets) async {
+    if (!isForwardArchitectureEnabled) {
+      _showToast('Forward feature not available');
+      return;
+    }
+
+    final results = await forwardToMultipleWithNewArchitecture(
+      message: message,
+      targetRoomIds: targets.map((t) => t.id).toList(),
+      onComplete: (batchResult) {
+        final successCount = batchResult.successful.length;
+        final failedCount = batchResult.failed.length;
+        if (failedCount > 0) {
+          _showToast('Forwarded to $successCount chats, $failedCount failed');
+        } else {
+          _showToast('Forwarded to $successCount chats');
+        }
+      },
+    );
+
+    if (results != null) {
+      _logger.info('Message forwarded to ${results.successful.length} targets');
+    }
+  }
+
+  // =================== GROUP MANAGEMENT METHODS ===================
+
+  /// Show group management bottom sheet
+  /// ARCH-011: Uses GroupArchitectureMixin with clean UX bottom sheet
+  void showGroupManagementSheet(BuildContext context) {
+    if (!isGroupChat.value) return;
+
+    final groupInfo = currentGroupInfo.value;
+    if (groupInfo == null) {
+      // Build from controller state if not loaded from service
+      _showGroupManagementFromState(context);
+      return;
+    }
+
+    final isAdmin = adminIds.contains(currentUser?.uid);
+    final isCreator = groupInfo.isUserCreator(currentUser?.uid ?? '');
+
+    GroupManagementBottomSheet.show(
+      context,
+      groupInfo: groupInfo,
+      isAdmin: isAdmin,
+      isCreator: isCreator,
+      onEditName: (newName) => _updateGroupName(newName),
+      onEditDescription: (newDescription) => _updateGroupDescription(newDescription),
+      onEditImage: () => _pickAndUpdateGroupImage(context),
+      onLeaveGroup: () => _confirmAndLeaveGroup(context),
+      onEditPermissions: () => _showPermissionsSheet(context),
+      onTransferOwnership: () => _showTransferOwnershipSheet(context),
+      onViewMembers: () => _showMembersSheet(context),
+      onAddMembers: () => _showAddMembersSheet(context),
+    );
+  }
+
+  /// Build group info from controller state
+  void _showGroupManagementFromState(BuildContext context) {
+    // Build GroupMember list from SocialMediaUser members
+    final groupMembers = members.map((m) {
+      final userId = m.uid ?? '';
+      final isAdmin = adminIds.contains(userId);
+      return GroupMember(
+        id: userId,
+        name: m.fullName ?? 'Unknown',
+        avatarUrl: m.imageUrl,
+        role: isAdmin ? GroupRole.admin : GroupRole.member,
+        joinedAt: null,
+      );
+    }).toList();
+
+    final groupInfo = GroupInfo(
+      id: roomId,
+      name: chatName.value,
+      description: chatDescription.value.isEmpty ? null : chatDescription.value,
+      imageUrl: groupImageUrl.value.isEmpty ? null : groupImageUrl.value,
+      members: groupMembers,
+      createdBy: currentUser?.uid ?? '', // Assume current user if unknown
+      createdAt: DateTime.now(),
+      permissions: GroupPermissions.defaultPermissions,
+    );
+
+    final isAdmin = adminIds.contains(currentUser?.uid);
+
+    GroupManagementBottomSheet.show(
+      context,
+      groupInfo: groupInfo,
+      isAdmin: isAdmin,
+      isCreator: false,
+      onEditName: (newName) => _updateGroupName(newName),
+      onEditDescription: (newDescription) => _updateGroupDescription(newDescription),
+      onEditImage: () => _pickAndUpdateGroupImage(context),
+      onLeaveGroup: () => _confirmAndLeaveGroup(context),
+      onEditPermissions: () => _showPermissionsSheet(context),
+      onTransferOwnership: () {}, // No-op for non-creator
+      onViewMembers: () => _showMembersSheet(context),
+      onAddMembers: () => _showAddMembersSheet(context),
+    );
+  }
+
+  /// Show transfer ownership sheet
+  void _showTransferOwnershipSheet(BuildContext context) {
+    // TODO: Implement transfer ownership UI
+    _showToast('Transfer ownership coming soon');
+  }
+
+  /// Show members list sheet
+  void _showMembersSheet(BuildContext context) {
+    // TODO: Implement members list UI
+    _showToast('Members list coming soon');
+  }
+
+  /// Update group name using new architecture
+  Future<void> _updateGroupName(String newName) async {
+    if (isGroupArchitectureEnabled) {
+      await updateGroupNameWithNewArchitecture(
+        newName: newName,
+        onSuccess: () {
+          chatName.value = newName;
+          _showToast('Group name updated');
+        },
+        onError: (error) => _showToast('Failed to update name: $error'),
+      );
+    } else {
+      // Legacy path - direct Firestore update
+      try {
+        await FirebaseFirestore.instance
+            .collection(FirebaseCollections.chatRooms)
+            .doc(roomId)
+            .update({'name': newName});
+        chatName.value = newName;
+        _showToast('Group name updated');
+      } catch (e) {
+        _showToast('Failed to update name');
+      }
+    }
+  }
+
+  /// Update group description using new architecture
+  Future<void> _updateGroupDescription(String newDescription) async {
+    if (isGroupArchitectureEnabled) {
+      await updateGroupDescriptionWithNewArchitecture(
+        newDescription: newDescription,
+        onSuccess: () {
+          chatDescription.value = newDescription;
+          _showToast('Group description updated');
+        },
+        onError: (error) => _showToast('Failed to update description: $error'),
+      );
+    } else {
+      // Legacy path - direct Firestore update
+      try {
+        await FirebaseFirestore.instance
+            .collection(FirebaseCollections.chatRooms)
+            .doc(roomId)
+            .update({'description': newDescription});
+        chatDescription.value = newDescription;
+        _showToast('Group description updated');
+      } catch (e) {
+        _showToast('Failed to update description');
+      }
+    }
+  }
+
+  /// Pick and update group image
+  Future<void> _pickAndUpdateGroupImage(BuildContext context) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    if (isGroupArchitectureEnabled) {
+      await updateGroupImageWithNewArchitecture(
+        imagePath: image.path,
+        onSuccess: (newUrl) {
+          groupImageUrl.value = newUrl;
+          _showToast('Group image updated');
+        },
+        onError: (error) => _showToast('Failed to update image: $error'),
+      );
+    } else {
+      // Legacy path - upload to Firebase Storage and update Firestore
+      try {
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('group_images')
+            .child('$roomId.jpg');
+        await ref.putFile(File(image.path));
+        final url = await ref.getDownloadURL();
+        await FirebaseFirestore.instance
+            .collection(FirebaseCollections.chatRooms)
+            .doc(roomId)
+            .update({'imageUrl': url});
+        groupImageUrl.value = url;
+        _showToast('Group image updated');
+      } catch (e) {
+        _showToast('Failed to update image');
+      }
+    }
+  }
+
+  /// Confirm and leave group
+  Future<void> _confirmAndLeaveGroup(BuildContext context) async {
+    final confirmed = await ConfirmationBottomSheet.show(
+      context,
+      title: 'Leave Group',
+      description: 'Are you sure you want to leave this group? You will no longer receive messages from this conversation.',
+      confirmLabel: 'Leave',
+      icon: Icons.exit_to_app_rounded,
+      isDestructive: true,
+    );
+
+    if (confirmed != true) return;
+
+    if (isGroupArchitectureEnabled) {
+      await leaveGroupWithNewArchitecture(
+        onSuccess: () {
+          _showToast('Left group');
+          Get.back(); // Navigate away from chat
+        },
+        onError: (error) => _showToast('Failed to leave group: $error'),
+      );
+    } else {
+      // Legacy path - direct Firestore update
+      try {
+        await FirebaseFirestore.instance
+            .collection(FirebaseCollections.chatRooms)
+            .doc(roomId)
+            .update({
+          'members': FieldValue.arrayRemove([currentUser!.uid!]),
+          'admins': FieldValue.arrayRemove([currentUser!.uid!]),
+        });
+        _showToast('Left group');
+        Get.back();
+      } catch (e) {
+        _showToast('Failed to leave group');
+      }
+    }
+  }
+
+  /// Show permissions editing sheet
+  void _showPermissionsSheet(BuildContext context) {
+    // TODO: Implement permissions editing sheet
+    _showToast('Permissions editing coming soon');
+  }
+
+  /// Show add members sheet
+  void _showAddMembersSheet(BuildContext context) {
+    // TODO: Implement add members sheet with contact selection
+    _showToast('Add members coming soon');
+  }
+
+  /// Show member actions bottom sheet
+  /// ARCH-011: Uses GroupArchitectureMixin for member operations
+  void showMemberActionsSheet(BuildContext context, SocialMediaUser member) {
+    if (!isGroupChat.value) return;
+
+    final isSelf = member.uid == currentUser?.uid;
+    final creatorId = currentGroupInfo.value?.createdBy;
+    final isCreator = member.uid == creatorId;
+    final isMemberAdmin = adminIds.contains(member.uid);
+    final memberRole = isCreator
+        ? GroupRole.creator
+        : (isMemberAdmin ? GroupRole.admin : GroupRole.member);
+
+    final groupMember = GroupMember(
+      id: member.uid ?? '',
+      name: member.fullName ?? 'Unknown',
+      avatarUrl: member.imageUrl,
+      role: memberRole,
+      joinedAt: null,
+    );
+
+    final isCurrentUserAnAdmin = adminIds.contains(currentUser?.uid);
+    final isCurrentUserTheCreator = currentUser?.uid == creatorId;
+
+    MemberActionsBottomSheet.show(
+      context,
+      member: groupMember,
+      isCurrentUserAdmin: isCurrentUserAnAdmin,
+      isCurrentUserCreator: isCurrentUserTheCreator,
+      isSelf: isSelf,
+      onViewProfile: () => _viewMemberProfile(member),
+      onSendMessage: () => _startPrivateChat(member),
+      onMakeAdmin: memberRole == GroupRole.member && isCurrentUserAnAdmin
+          ? () => _makeAdmin(member)
+          : null,
+      onRemoveAdmin: memberRole == GroupRole.admin && isCurrentUserTheCreator
+          ? () => _removeAdmin(member)
+          : null,
+      onRemoveMember: !isSelf && isCurrentUserAnAdmin && memberRole != GroupRole.creator
+          ? () => _removeMember(member)
+          : null,
+      onTransferOwnership: isCurrentUserTheCreator && !isSelf
+          ? () => _transferOwnership(context, member)
+          : null,
+    );
+  }
+
+  /// View member profile
+  void _viewMemberProfile(SocialMediaUser member) {
+    Get.toNamed('/profile', arguments: {'userId': member.uid});
+  }
+
+  /// Start private chat with member
+  void _startPrivateChat(SocialMediaUser member) {
+    Get.toNamed('/chat', arguments: {'userId': member.uid});
+  }
+
+  /// Make member an admin
+  Future<void> _makeAdmin(SocialMediaUser member) async {
+    final memberName = member.fullName ?? 'User';
+    if (isGroupArchitectureEnabled) {
+      await makeAdminWithNewArchitecture(
+        memberId: member.uid!,
+        onSuccess: () {
+          adminIds.add(member.uid!);
+          _showToast('$memberName is now an admin');
+        },
+        onError: (error) => _showToast('Failed: $error'),
+      );
+    } else {
+      // Legacy path - no method available, show message
+      _showToast('Admin management requires new architecture');
+    }
+  }
+
+  /// Remove admin privileges
+  Future<void> _removeAdmin(SocialMediaUser member) async {
+    final memberName = member.fullName ?? 'User';
+    if (isGroupArchitectureEnabled) {
+      await removeAdminWithNewArchitecture(
+        memberId: member.uid!,
+        onSuccess: () {
+          adminIds.remove(member.uid!);
+          _showToast('$memberName is no longer an admin');
+        },
+        onError: (error) => _showToast('Failed: $error'),
+      );
+    } else {
+      // Legacy path - no method available, show message
+      _showToast('Admin management requires new architecture');
+    }
+  }
+
+  /// Remove member from group
+  Future<void> _removeMember(SocialMediaUser member) async {
+    final memberName = member.fullName ?? 'User';
+    if (isGroupArchitectureEnabled) {
+      await removeMemberWithNewArchitecture(
+        memberId: member.uid!,
+        onSuccess: () {
+          members.removeWhere((m) => m.uid == member.uid);
+          memberCount.value--;
+          _showToast('$memberName removed from group');
+        },
+        onError: (error) => _showToast('Failed: $error'),
+      );
+    } else {
+      // Legacy path - no method available, show message
+      _showToast('Member removal requires new architecture');
+    }
+  }
+
+  /// Transfer group ownership
+  Future<void> _transferOwnership(BuildContext context, SocialMediaUser member) async {
+    final memberName = member.fullName ?? 'User';
+    final confirmed = await ConfirmationBottomSheet.show(
+      context,
+      title: 'Transfer Ownership',
+      description: 'Transfer group ownership to $memberName? You will become a regular admin.',
+      confirmLabel: 'Transfer',
+      icon: Icons.swap_horiz_rounded,
+      iconColor: ColorsManager.primary,
+    );
+
+    if (confirmed != true) return;
+
+    if (isGroupArchitectureEnabled) {
+      await transferOwnershipWithNewArchitecture(
+        newOwnerId: member.uid!,
+        onSuccess: () {
+          _showToast('Ownership transferred to $memberName');
+        },
+        onError: (error) => _showToast('Failed: $error'),
+      );
+    } else {
+      _showToast('Ownership transfer requires new architecture');
+    }
+  }
+
   /// Show reaction picker for a message
   void showReactionPicker(BuildContext context, Message message) {
     // This will be implemented in the UI layer
     // The method is here as a placeholder for UI integration
   }
 
-  /// Forward a message with complete contact selection
+  /// Forward a message with contact selection bottom sheet
   Future<void> forwardMessage(Message message) async {
     try {
-      // Show contact selection dialog
-      final result = await Get.dialog<SocialMediaUser>(
-        AlertDialog(
-          title: const Text('Forward Message'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: FutureBuilder<List<SocialMediaUser>>(
-              future: _getContactsForForwarding(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator.adaptive());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                final contacts = snapshot.data ?? [];
-                return ListView.builder(
-                  itemCount: contacts.length,
-                  itemBuilder: (context, index) {
-                    final contact = contacts[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
-                        child: Text(
-                          contact.fullName?.isNotEmpty == true
-                              ? contact.fullName![0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            color: ColorsManager.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      title: Text(contact.fullName ?? 'Unknown Contact'),
-                      subtitle: Text(contact.email ?? ''),
-                      onTap: () => Get.back(result: contact),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancel'),
-            ),
-          ],
+      final context = Get.context;
+      if (context == null) return;
+
+      // Show contact selection bottom sheet
+      final result = await showModalBottomSheet<SocialMediaUser>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (ctx) => _ForwardContactSheet(
+          getContacts: _getContactsForForwarding,
         ),
       );
 
       if (result != null) {
-        // Create a forwarded message
-        final forwardedMessage = message.copyWith(
-          id: '', // Generate new ID for forwarded message
-          roomId: '', // This would be the new chat room ID
-          senderId: currentUser?.uid ?? '',
-          timestamp: DateTime.now(),
-          isForwarded: true,
-          forwardedFrom: message.senderId,
-        ) as Message;
-
-        // Forward message to selected chat
+        // Forward message to selected contact
         try {
+          final forwardedMessage = message.copyWith(
+            id: '',
+            roomId: '',
+            senderId: currentUser?.uid ?? '',
+            timestamp: DateTime.now(),
+            isForwarded: true,
+            forwardedFrom: message.senderId,
+          ) as Message;
+
           await _forwardMessageToChat(forwardedMessage, result.uid!);
           _showToast('Message forwarded to ${result.fullName}');
-          print('📤 Message forwarded to: ${result.fullName} (${result.uid})');
         } catch (e) {
           _showErrorToast('Failed to forward message: ${e.toString()}');
         }
@@ -1975,22 +2549,17 @@ class ChatController extends GetxController
   /// Report a message
   Future<void> reportMessage(Message message) async {
     try {
-      // Show report confirmation dialog
-      final confirmResult = await Get.dialog<bool>(
-        AlertDialog(
-          title: const Text('Report Message'),
-          content: Text('Report this message for violating community guidelines?'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(result: false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Get.back(result: true),
-              child: const Text('Report', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        ),
+      final context = Get.context;
+      if (context == null) return;
+
+      // Show report confirmation bottom sheet
+      final confirmResult = await ConfirmationBottomSheet.show(
+        context,
+        title: 'Report Message',
+        description: 'Report this message for violating community guidelines? Our team will review it.',
+        confirmLabel: 'Report',
+        icon: Icons.flag_rounded,
+        isDestructive: true,
       );
 
       if (confirmResult == true) {
@@ -2459,6 +3028,15 @@ class ChatController extends GetxController
     // Dispose new architecture resources (event bus subscriptions, etc.)
     disposeArchitecture();
 
+    // ARCH-009: Dispose new architecture mixin
+    disposeNewArchitectureMixin();
+
+    // ARCH-010: Dispose forward architecture mixin
+    disposeForwardMixin();
+
+    // ARCH-011: Dispose group architecture mixin
+    disposeGroupMixin();
+
     // ARCH-008: Dispose call handler
     disposeCallHandler();
 
@@ -2528,5 +3106,184 @@ class ChatController extends GetxController
     } catch (e) {
       _logger.warning('Error cleaning up read receipt service', context: 'ChatController', data: {'error': e.toString()});
     }
+  }
+}
+
+/// iOS-style contact selection bottom sheet for forwarding messages
+class _ForwardContactSheet extends StatelessWidget {
+  final Future<List<SocialMediaUser>> Function() getContacts;
+
+  const _ForwardContactSheet({required this.getContacts});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 8),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.forward_to_inbox_rounded,
+                    color: ColorsManager.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Forward To',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: Colors.grey[200]),
+          // Contact list
+          Flexible(
+            child: FutureBuilder<List<SocialMediaUser>>(
+              future: getContacts(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.grey[400], size: 48),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Failed to load contacts',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final contacts = snapshot.data ?? [];
+                if (contacts.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.people_outline, color: Colors.grey[400], size: 48),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No contacts available',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: contacts.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    indent: 72,
+                    color: Colors.grey[100],
+                  ),
+                  itemBuilder: (context, index) {
+                    final contact = contacts[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      leading: CircleAvatar(
+                        backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
+                        backgroundImage: contact.imageUrl?.isNotEmpty == true
+                            ? NetworkImage(contact.imageUrl!)
+                            : null,
+                        child: contact.imageUrl?.isNotEmpty != true
+                            ? Text(
+                                contact.fullName?.isNotEmpty == true
+                                    ? contact.fullName![0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  color: ColorsManager.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        contact.fullName ?? 'Unknown Contact',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: contact.email?.isNotEmpty == true
+                          ? Text(
+                              contact.email!,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
+                              ),
+                            )
+                          : null,
+                      trailing: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: Colors.grey[400],
+                      ),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.of(context).pop(contact);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+        ],
+      ),
+    );
   }
 }

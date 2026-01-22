@@ -101,7 +101,6 @@ class _ImageMessageWidgetState extends State<ImageMessageWidget>
       fit: BoxFit.cover,
       memCacheWidth: 400, // Optimize memory by limiting cache size
       memCacheHeight: 400,
-      placeholder: (context, url) => _buildLoadingPlaceholder(null),
       progressIndicatorBuilder: (context, url, downloadProgress) {
         return _buildLoadingPlaceholder(downloadProgress.progress);
       },

@@ -394,3 +394,158 @@ class RoomSyncStatusEvent extends AppEvent {
     this.message,
   });
 }
+
+// =================== FORWARD EVENTS ===================
+
+/// Message forwarded successfully
+class MessageForwardedEvent extends ChatEvent {
+  /// Original message ID
+  final String originalMessageId;
+
+  /// New forwarded message ID
+  final String forwardedMessageId;
+
+  /// Target room where message was forwarded to
+  final String targetRoomId;
+
+  /// User who forwarded the message
+  final String forwardedByUserId;
+
+  MessageForwardedEvent({
+    required super.roomId,
+    required this.originalMessageId,
+    required this.forwardedMessageId,
+    required this.targetRoomId,
+    required this.forwardedByUserId,
+  });
+}
+
+/// Batch forward completed
+class BatchForwardCompletedEvent extends AppEvent {
+  /// Source room ID
+  final String sourceRoomId;
+
+  /// Number of successful forwards
+  final int successCount;
+
+  /// Number of failed forwards
+  final int failedCount;
+
+  /// Target room IDs
+  final List<String> targetRoomIds;
+
+  BatchForwardCompletedEvent({
+    required this.sourceRoomId,
+    required this.successCount,
+    required this.failedCount,
+    required this.targetRoomIds,
+  });
+}
+
+// =================== GROUP EVENTS ===================
+
+/// Group member added
+class GroupMemberAddedEvent extends ChatEvent {
+  final String memberId;
+  final String memberName;
+  final String addedByUserId;
+  final String? systemMessageId;
+
+  GroupMemberAddedEvent({
+    required super.roomId,
+    required this.memberId,
+    required this.memberName,
+    required this.addedByUserId,
+    this.systemMessageId,
+  });
+}
+
+/// Group member removed
+class GroupMemberRemovedEvent extends ChatEvent {
+  final String memberId;
+  final String memberName;
+  final String removedByUserId;
+  final String? systemMessageId;
+
+  GroupMemberRemovedEvent({
+    required super.roomId,
+    required this.memberId,
+    required this.memberName,
+    required this.removedByUserId,
+    this.systemMessageId,
+  });
+}
+
+/// Member left group
+class GroupMemberLeftEvent extends ChatEvent {
+  final String memberId;
+  final String memberName;
+  final String? systemMessageId;
+
+  GroupMemberLeftEvent({
+    required super.roomId,
+    required this.memberId,
+    required this.memberName,
+    this.systemMessageId,
+  });
+}
+
+/// Admin role changed
+class GroupAdminChangedEvent extends ChatEvent {
+  final String memberId;
+  final String memberName;
+  final bool isNowAdmin;
+  final String changedByUserId;
+  final String? systemMessageId;
+
+  GroupAdminChangedEvent({
+    required super.roomId,
+    required this.memberId,
+    required this.memberName,
+    required this.isNowAdmin,
+    required this.changedByUserId,
+    this.systemMessageId,
+  });
+}
+
+/// Group info updated (name, description, image)
+class GroupInfoUpdatedEvent extends ChatEvent {
+  final Map<String, dynamic> updatedFields;
+  final String updatedByUserId;
+  final String? systemMessageId;
+
+  GroupInfoUpdatedEvent({
+    required super.roomId,
+    required this.updatedFields,
+    required this.updatedByUserId,
+    this.systemMessageId,
+  });
+}
+
+/// Group permissions updated
+class GroupPermissionsUpdatedEvent extends ChatEvent {
+  final Map<String, dynamic> newPermissions;
+  final String updatedByUserId;
+
+  GroupPermissionsUpdatedEvent({
+    required super.roomId,
+    required this.newPermissions,
+    required this.updatedByUserId,
+  });
+}
+
+/// Group ownership transferred
+class GroupOwnershipTransferredEvent extends ChatEvent {
+  final String previousOwnerId;
+  final String newOwnerId;
+  final String newOwnerName;
+  final String? systemMessageId;
+
+  GroupOwnershipTransferredEvent({
+    required super.roomId,
+    required this.previousOwnerId,
+    required this.newOwnerId,
+    required this.newOwnerName,
+    this.systemMessageId,
+  });
+}

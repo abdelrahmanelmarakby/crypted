@@ -229,8 +229,10 @@ class BlockedUserDialog extends StatelessWidget {
     required String userName,
     required bool blockedByMe,
   }) {
-    return showDialog<bool>(
+    return showModalBottomSheet<bool>(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => BlockedUserDialog(
         userName: userName,
         blockedByMe: blockedByMe,
@@ -242,51 +244,108 @@ class BlockedUserDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      title: Row(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.block,
-            color: Colors.red.shade600,
+          // Handle bar
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              blockedByMe ? 'Contact Blocked' : 'Cannot Contact',
-              style: const TextStyle(fontSize: 18),
+          const SizedBox(height: 24),
+
+          // Icon
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.block,
+              color: Colors.red.shade600,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Title
+          Text(
+            blockedByMe ? 'Contact Blocked' : 'Cannot Contact',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Description
+          Text(
+            blockedByMe
+                ? 'You have blocked $userName. Would you like to unblock them to continue this conversation?'
+                : 'You cannot contact $userName at this time.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Buttons
+          if (blockedByMe && onUnblock != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: onUnblock,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorsManager.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Unblock',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: TextButton(
+              onPressed: onCancel ?? () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                blockedByMe ? 'Keep Blocked' : 'OK',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
             ),
           ),
         ],
       ),
-      content: Text(
-        blockedByMe
-            ? 'You have blocked $userName. Would you like to unblock them to continue this conversation?'
-            : 'You cannot contact $userName at this time.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: onCancel ?? () => Navigator.of(context).pop(false),
-          child: Text(
-            blockedByMe ? 'Keep Blocked' : 'OK',
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-        ),
-        if (blockedByMe && onUnblock != null)
-          ElevatedButton(
-            onPressed: onUnblock,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorsManager.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Unblock'),
-          ),
-      ],
     );
   }
 }

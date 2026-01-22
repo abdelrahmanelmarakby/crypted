@@ -5,6 +5,7 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
 import 'package:crypted_app/app/modules/chat/widgets/blocked_chat_banner.dart';
+import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_search_bar.dart';
 import 'package:crypted_app/app/core/services/chat_privacy_helper.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
@@ -144,18 +145,41 @@ class PrivateChatScreen extends GetView<ChatController> {
                         _buildBlockedChatBanner(),
                         // Messages area
                         Expanded(
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(24),
+                          child: Obx(() {
+                            final wallpaper = controller.chatWallpaper.value;
+                            final hasGradient = wallpaper.type == WallpaperType.gradient &&
+                                wallpaper.gradientColors != null &&
+                                wallpaper.gradientColors!.length >= 2;
+                            final imageProvider = wallpaper.toImageProvider();
+                            return Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              decoration: BoxDecoration(
+                                color: hasGradient || imageProvider != null
+                                    ? null
+                                    : (wallpaper.type == WallpaperType.color
+                                        ? wallpaper.solidColor
+                                        : Colors.white),
+                                gradient: hasGradient
+                                    ? LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: wallpaper.gradientColors!,
+                                      )
+                                    : null,
+                                image: imageProvider != null
+                                    ? DecorationImage(
+                                        image: imageProvider,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
                               ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(24),
-                              ),
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
                               child: messages.isEmpty
                                   ? Center(
                                       child: Column(
@@ -210,7 +234,8 @@ class PrivateChatScreen extends GetView<ChatController> {
                                       },
                                     ),
                             ),
-                          ),
+                          );
+                          }),
                         ),
 
                         // Input area - shows blocked input bar if blocked
@@ -396,12 +421,12 @@ class PrivateChatScreen extends GetView<ChatController> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: ColorsManager.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Iconsax.search_normal,
-              color: Colors.black,
+              color: ColorsManager.primary,
               size: 20,
             ),
           ),
@@ -416,12 +441,12 @@ class PrivateChatScreen extends GetView<ChatController> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: ColorsManager.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.more_vert,
-                color: Colors.black,
+                color: ColorsManager.primary,
                 size: 20,
               ),
             ),
@@ -441,14 +466,13 @@ class PrivateChatScreen extends GetView<ChatController> {
                 // Audio call button with green accent
                 // ARCH-008: Now uses controller's call handler
                 _buildCallButton(
-                  icon: SvgPicture.asset(
-                    'assets/icons/call-calling.svg',
-                    color: ColorsManager.success,
-                    height: 20,
-                    width: 20,
+                  icon: const Icon(
+                    Iconsax.call_add,
+                    color: ColorsManager.primary,
+                    size: 20,
                   ),
                   onPressed: () => controller.startAudioCall(otherUser as SocialMediaUser),
-                  isVideoCall: false,
+                 
                   otherUser: otherUser,
                 ),
 
@@ -458,12 +482,12 @@ class PrivateChatScreen extends GetView<ChatController> {
                 // ARCH-008: Now uses controller's call handler
                 _buildCallButton(
                   icon: const Icon(
-                    Iconsax.video_copy,
+                    Iconsax.video,
                     color: ColorsManager.primary,
                     size: 20,
                   ),
                   onPressed: () => controller.startVideoCall(otherUser as SocialMediaUser),
-                  isVideoCall: true,
+                 
                   otherUser: otherUser,
                 ),
               ],
@@ -485,47 +509,19 @@ class PrivateChatScreen extends GetView<ChatController> {
   Widget _buildCallButton({
     required Widget icon,
     required VoidCallback onPressed,
-    required bool isVideoCall,
     required dynamic otherUser,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            width: 44,
-            height: 44,
+    return  IconButton(
+          onPressed: onPressed,
+          icon: Container(
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isVideoCall
-                ? ColorsManager.primary.withValues(alpha: 0.1)
-                : ColorsManager.success.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isVideoCall
-                  ? ColorsManager.primary.withValues(alpha: 0.3)
-                  : ColorsManager.success.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
+              color: ColorsManager.primary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isVideoCall
-                  ? ColorsManager.primary.withValues(alpha: 0.15)
-                  : ColorsManager.success.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(10),
-              child: icon,
-            ),
+            child: icon,
           ),
-        ),
-      ),
-    );
+        );
   }
 
   /// Get or create a GlobalKey for a message (for precise scroll-to functionality)
@@ -836,46 +832,92 @@ class PrivateChatScreen extends GetView<ChatController> {
     Get.toNamed(Routes.HOME, arguments: {'showUserSelection': true});
   }
 
-  /// Show list of current group members
+  /// Show list of current group members as bottom sheet
   void _showMembersList() {
-    // Navigate to a members list view or show in a dialog
-    Get.dialog(
-      Dialog(
-        child: Container(
-          width: double.maxFinite,
-          height: 400,
-          padding: const EdgeInsets.all(20),
+    showModalBottomSheet(
+      context: Get.context!,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
           child: Column(
             children: [
-              Text(
-                "Group Members",
-                style: StylesManager.bold(fontSize: FontSize.large),
+              // Handle bar
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-              const SizedBox(height: 20),
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Text(
+                      "Group Members",
+                      style: StylesManager.bold(fontSize: FontSize.large),
+                    ),
+                    const Spacer(),
+                    Text(
+                      "${controller.members.length} members",
+                      style: TextStyle(color: Colors.grey[600], fontSize: FontSize.small),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Members list
               Expanded(
                 child: ListView.builder(
+                  controller: scrollController,
                   itemCount: controller.members.length,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   itemBuilder: (context, index) {
                     final member = controller.members[index];
+                    final isCurrentUser = member.uid == UserService.currentUser.value?.uid;
+                    final isAdmin = controller.adminIds.contains(member.uid);
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundImage: member.imageUrl != null && member.imageUrl!.isNotEmpty
                             ? NetworkImage(member.imageUrl!)
                             : null,
+                        backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
                         child: member.imageUrl == null || member.imageUrl!.isEmpty
-                            ? Text(member.fullName?.substring(0, 1).toUpperCase() ?? '?')
+                            ? Text(
+                                member.fullName?.substring(0, 1).toUpperCase() ?? '?',
+                                style: TextStyle(color: ColorsManager.primary, fontWeight: FontWeight.w600),
+                              )
                             : null,
                       ),
-                      title: Text(member.fullName ?? 'Unknown'),
-                      subtitle: Text(member.uid == UserService.currentUser.value?.uid ? 'You' : 'Member'),
-                      trailing: member.uid != UserService.currentUser.value?.uid
-                          ? IconButton(
-                              icon: const Icon(Icons.remove_circle, color: ColorsManager.error),
-                              onPressed: () {
-                                _removeMember(member.uid!);
-                                Get.back();
-                              },
-                            )
+                      title: Text(
+                        member.fullName ?? 'Unknown',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        isCurrentUser ? 'You' : (isAdmin ? 'Admin' : 'Member'),
+                        style: TextStyle(
+                          color: isAdmin ? ColorsManager.primary : Colors.grey[600],
+                          fontSize: FontSize.xSmall,
+                        ),
+                      ),
+                      onTap: !isCurrentUser
+                          ? () {
+                              Navigator.pop(context);
+                              controller.showMemberActionsSheet(context, member);
+                            }
                           : null,
                     );
                   },
@@ -888,121 +930,52 @@ class PrivateChatScreen extends GetView<ChatController> {
     );
   }
 
-  /// Show group settings dialog
+  /// Show group settings as bottom sheet
   void _showGroupSettings() {
-    Get.dialog(
-      Dialog(
-        child: Container(
-          width: double.maxFinite,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Group Settings",
-                style: StylesManager.bold(fontSize: FontSize.large),
-              ),
-              const SizedBox(height: 20),
-
-              // Group name setting
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: Text("Edit Group Name"),
-                subtitle: Text(controller.chatName.value),
-                onTap: () {
-                  Get.back();
-                  _showEditGroupNameDialog();
-                },
-              ),
-
-              // Group description setting
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: Text("Edit Description"),
-                subtitle: Text(controller.chatDescription.value.isEmpty ? "No description" : controller.chatDescription.value),
-                onTap: () {
-                  Get.back();
-                  _showEditGroupDescriptionDialog();
-                },
-              ),
-
-              // Change group photo
-              ListTile(
-                leading: const Icon(Icons.photo),
-                title: Text("Change Group Photo"),
-                onTap: () {
-                  Get.back();
-                  _showChangeGroupPhotoDialog();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    controller.showGroupManagementSheet(Get.context!);
   }
 
-  /// Show dialog to edit group name
+  /// Show bottom sheet to edit group name
   void _showEditGroupNameDialog() {
-    final TextEditingController nameController = TextEditingController(text: controller.chatName.value);
-
-    Get.dialog(
-      AlertDialog(
-        title: Text("Edit Group Name"),
-        content: TextField(
-          controller: nameController,
-          decoration: InputDecoration(
-            hintText: "Enter group name",
-            border: OutlineInputBorder(),
-          ),
+    showModalBottomSheet(
+      context: Get.context!,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: _EditFieldSheet(
+          title: "Edit Group Name",
+          initialValue: controller.chatName.value,
+          hint: "Enter group name",
+          maxLength: 50,
+          onSave: (value) {
+            controller.updateGroupInfo(name: value);
+            Navigator.pop(context);
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              if (nameController.text.trim().isNotEmpty) {
-                controller.updateGroupInfo(name: nameController.text.trim());
-                Get.back();
-              }
-            },
-            child: Text("Save"),
-          ),
-        ],
       ),
     );
   }
 
-  /// Show dialog to edit group description
+  /// Show bottom sheet to edit group description
   void _showEditGroupDescriptionDialog() {
-    final TextEditingController descController = TextEditingController(text: controller.chatDescription.value);
-
-    Get.dialog(
-      AlertDialog(
-        title: Text("Edit Group Description"),
-        content: TextField(
-          controller: descController,
-          decoration: InputDecoration(
-            hintText: "Enter group description",
-            border: OutlineInputBorder(),
-          ),
+    showModalBottomSheet(
+      context: Get.context!,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: _EditFieldSheet(
+          title: "Edit Description",
+          initialValue: controller.chatDescription.value,
+          hint: "Enter group description",
           maxLines: 3,
+          maxLength: 200,
+          onSave: (value) {
+            controller.updateGroupInfo(description: value);
+            Navigator.pop(context);
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              controller.updateGroupInfo(description: descController.text.trim());
-              Get.back();
-            },
-            child: Text("Save"),
-          ),
-        ],
       ),
     );
   }
@@ -1172,5 +1145,167 @@ class PrivateChatScreen extends GetView<ChatController> {
     if (confirmed == true) {
       await controller.unblockUser();
     }
+  }
+}
+
+/// Private iOS-style edit field bottom sheet for inline group editing
+class _EditFieldSheet extends StatefulWidget {
+  final String title;
+  final String initialValue;
+  final String? hint;
+  final int? maxLength;
+  final int maxLines;
+  final void Function(String value) onSave;
+
+  const _EditFieldSheet({
+    required this.title,
+    required this.initialValue,
+    required this.onSave,
+    this.hint,
+    this.maxLength,
+    this.maxLines = 1,
+  });
+
+  @override
+  State<_EditFieldSheet> createState() => _EditFieldSheetState();
+}
+
+class _EditFieldSheetState extends State<_EditFieldSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleSave() {
+    final value = _controller.text.trim();
+    if (value.isEmpty) return;
+    HapticFeedback.lightImpact();
+    widget.onSave(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Title
+          Text(
+            widget.title,
+            style: TextStyle(
+              fontSize: FontSize.large,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Text field
+          TextField(
+            controller: _controller,
+            maxLength: widget.maxLength,
+            maxLines: widget.maxLines,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: ColorsManager.primary, width: 1.5),
+              ),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () => _controller.clear(),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            onSubmitted: (_) => _handleSave(),
+          ),
+          const SizedBox(height: 20),
+
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey[600],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _handleSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ColorsManager.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

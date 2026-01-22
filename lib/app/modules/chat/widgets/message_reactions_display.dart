@@ -302,49 +302,68 @@ class AllReactionsDialog extends StatelessWidget {
       groupedReactions.putIfAbsent(reaction.emoji, () => []).add(reaction);
     }
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 500),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Container(
-        padding: EdgeInsets.all(Paddings.large),
-        constraints: const BoxConstraints(maxHeight: 500),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: Paddings.large),
+            child: Text(
               'All Reactions',
               style: TextStyle(
                 fontSize: FontSize.large,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: Paddings.normal),
+          ),
+          SizedBox(height: Paddings.normal),
 
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: groupedReactions.length,
-                separatorBuilder: (context, index) => Divider(height: Paddings.large),
-                itemBuilder: (context, index) {
-                  final entry = groupedReactions.entries.elementAt(index);
-                  return _ReactionGroup(
-                    emoji: entry.key,
-                    reactions: entry.value,
-                  );
-                },
-              ),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.symmetric(horizontal: Paddings.large),
+              itemCount: groupedReactions.length,
+              separatorBuilder: (context, index) => Divider(height: Paddings.large),
+              itemBuilder: (context, index) {
+                final entry = groupedReactions.entries.elementAt(index);
+                return _ReactionGroup(
+                  emoji: entry.key,
+                  reactions: entry.value,
+                );
+              },
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+        ],
       ),
     );
   }
 
   static void show(BuildContext context, List<Reaction> reactions) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => AllReactionsDialog(reactions: reactions),
     );
   }

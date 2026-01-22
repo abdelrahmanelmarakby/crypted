@@ -133,7 +133,7 @@ class TabBarBody extends StatelessWidget {
             );
           }
         } else if (snapshot.hasError) {
-          log("Error fetching chats: ${snapshot.error}");
+          log("Error fetching chats: ${snapshot.error.toString() + snapshot.stackTrace.toString()}");
           return const Center(
             child: Text(
               "‼️ Ooooh no! Could not fetch chats ‼️",
