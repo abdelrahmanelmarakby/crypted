@@ -14,6 +14,7 @@ import Chats from '@/pages/Chats';
 import Stories from '@/pages/Stories';
 import Reports from '@/pages/Reports';
 import Analytics from '@/pages/Analytics';
+import AdvancedAnalytics from '@/pages/AdvancedAnalytics';
 import Settings from '@/pages/Settings';
 import Logs from '@/pages/Logs';
 import Calls from '@/pages/Calls';
@@ -50,7 +51,8 @@ function App() {
               <Route path="calls" element={<Calls />} />
               <Route path="help-messages" element={<HelpMessages />} />
               <Route path="backups" element={<Backups />} />
-              <Route path="analytics" element={<Analytics />} />
+              <Route path="analytics" element={<AdvancedAnalytics />} />
+              <Route path="analytics-old" element={<Analytics />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<Settings />} />
               <Route path="logs" element={<Logs />} />

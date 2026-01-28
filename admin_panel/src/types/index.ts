@@ -178,7 +178,10 @@ export interface ChatRoom {
 
   // Computed fields
   lastMessageTime?: Date;
+  lastTime?: Date | Timestamp;
   unreadCount?: number;
+  messageCount?: number;
+  lastMsgType?: string;
 }
 
 export interface Message {
@@ -387,3 +390,318 @@ export interface SearchParams {
 export type UserStatus = 'active' | 'suspended' | 'banned' | 'deleted';
 export type ReportStatus = 'pending' | 'reviewed' | 'action_taken' | 'dismissed';
 export type ChatRoomType = 'individual' | 'group';
+
+// ============================================
+// ADVANCED ANALYTICS TYPES (Meta/Google-level)
+// ============================================
+
+// Event Tracking
+export interface AnalyticsEvent {
+  id?: string;
+  event_name: string;
+  user_id: string;
+  session_id?: string;
+  timestamp: Timestamp | Date;
+  local_timestamp?: string;
+  properties?: Record<string, any>;
+  platform?: 'android' | 'ios' | 'web';
+  app_version?: string;
+}
+
+// User Session Analytics
+export interface UserSession {
+  id: string;
+  session_id: string;
+  user_id: string;
+  start_time: Timestamp | Date;
+  end_time?: Timestamp | Date;
+  duration_seconds?: number;
+  events_count?: number;
+  platform?: string;
+  device_info?: Record<string, any>;
+}
+
+// Daily Metrics (Pre-aggregated)
+export interface DailyMetrics {
+  date: string;
+  user_id: string;
+  timestamp: Timestamp | Date;
+
+  // Activity metrics
+  sessions_count?: number;
+  total_session_duration?: number;
+  messages_sent?: number;
+  messages_received?: number;
+  stories_created?: number;
+  stories_viewed?: number;
+  calls_made?: number;
+  calls_received?: number;
+}
+
+// User Cohort
+export interface UserCohort {
+  cohort_name: string;
+  cohort_date: string; // YYYY-MM-DD or YYYY-WW format
+  user_ids: string[];
+  size: number;
+  created_at: Timestamp | Date;
+}
+
+// Retention Data
+export interface RetentionData {
+  cohort_date: string;
+  cohort_size: number;
+  day_0: number; // Always 100%
+  day_1?: number;
+  day_7?: number;
+  day_14?: number;
+  day_30?: number;
+  day_60?: number;
+  day_90?: number;
+}
+
+// Funnel Analytics
+export interface FunnelStep {
+  step_name: string;
+  step_order: number;
+  users_count: number;
+  conversion_rate?: number; // Percentage from previous step
+  drop_off_rate?: number;
+  avg_time_to_next_step?: number; // seconds
+}
+
+export interface Funnel {
+  id: string;
+  funnel_name: string;
+  description?: string;
+  steps: FunnelStep[];
+  total_entries: number;
+  total_completions: number;
+  overall_conversion_rate: number;
+  created_at: Timestamp | Date;
+  updated_at?: Timestamp | Date;
+}
+
+// Feature Usage
+export interface FeatureUsage {
+  feature_name: string;
+  date: string;
+  total_users: number;
+  total_usages: number;
+  unique_users: number;
+  avg_usage_per_user: number;
+}
+
+// Advanced Dashboard Stats
+export interface AdvancedDashboardStats extends DashboardStats {
+  // Engagement metrics
+  dau?: number; // Daily Active Users
+  wau?: number; // Weekly Active Users
+  mau?: number; // Monthly Active Users
+  stickiness?: number; // DAU/MAU ratio
+
+  // Retention metrics
+  day1_retention?: number;
+  day7_retention?: number;
+  day30_retention?: number;
+
+  // Revenue/Conversion metrics (for future)
+  avg_session_duration?: number;
+  avg_sessions_per_user?: number;
+
+  // Content metrics
+  avg_messages_per_user?: number;
+  avg_stories_per_user?: number;
+  avg_calls_per_user?: number;
+
+  // Growth metrics
+  user_growth_rate?: number; // Percentage
+  message_growth_rate?: number;
+  story_growth_rate?: number;
+}
+
+// User Behavior Analytics
+export interface UserBehaviorMetrics {
+  user_id: string;
+
+  // Activity metrics
+  total_sessions: number;
+  avg_session_duration: number;
+  last_active: Timestamp | Date;
+  first_seen: Timestamp | Date;
+  days_since_signup: number;
+
+  // Engagement metrics
+  messages_sent: number;
+  messages_received: number;
+  stories_created: number;
+  stories_viewed: number;
+  calls_made: number;
+  calls_received: number;
+
+  // Social metrics
+  followers_count: number;
+  following_count: number;
+  chat_rooms_count: number;
+
+  // Computed scores
+  engagement_score?: number; // 0-100
+  activity_score?: number; // 0-100
+  social_score?: number; // 0-100
+  overall_score?: number; // 0-100
+
+  // Segmentation
+  user_segment?: 'power_user' | 'active' | 'casual' | 'at_risk' | 'dormant';
+
+  // Cohort
+  signup_cohort?: string;
+}
+
+// Geographic Analytics
+export interface GeoAnalytics {
+  country?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  users_count: number;
+  stories_count?: number;
+  messages_count?: number;
+  calls_count?: number;
+}
+
+// Real-time Metrics
+export interface RealTimeMetrics {
+  timestamp: Timestamp | Date;
+  active_users_now: number;
+  active_sessions: number;
+  messages_per_minute: number;
+  stories_per_hour: number;
+  calls_in_progress: number;
+
+  // Peak metrics
+  peak_concurrent_users?: number;
+  peak_messages_per_minute?: number;
+}
+
+// User Segment
+export interface UserSegment {
+  segment_id: string;
+  segment_name: string;
+  description?: string;
+  criteria: Record<string, any>; // Filtering criteria
+  user_count: number;
+  created_at: Timestamp | Date;
+  updated_at?: Timestamp | Date;
+}
+
+// Time Series Data (for charts)
+export interface TimeSeriesDataPoint {
+  date: string;
+  value: number;
+  label?: string;
+}
+
+export interface MultiSeriesDataPoint {
+  date: string;
+  [key: string]: string | number; // Multiple series
+}
+
+// Event Analytics (aggregated)
+export interface EventAnalytics {
+  event_name: string;
+  total_count: number;
+  unique_users: number;
+  avg_per_user: number;
+  trend?: 'up' | 'down' | 'stable';
+  growth_rate?: number; // Percentage change
+}
+
+// Conversion Metrics
+export interface ConversionMetrics {
+  metric_name: string;
+  numerator: number; // e.g., users who completed action
+  denominator: number; // e.g., total users who could complete action
+  conversion_rate: number; // Percentage
+  date_range: {
+    start: string;
+    end: string;
+  };
+}
+
+// A/B Test Results (for future)
+export interface ABTestResult {
+  test_id: string;
+  test_name: string;
+  variant_a: {
+    name: string;
+    users_count: number;
+    conversion_rate: number;
+  };
+  variant_b: {
+    name: string;
+    users_count: number;
+    conversion_rate: number;
+  };
+  statistical_significance?: number;
+  winner?: 'a' | 'b' | 'inconclusive';
+}
+
+// User Journey
+export interface UserJourneyStep {
+  step_number: number;
+  event_name: string;
+  timestamp: Timestamp | Date;
+  properties?: Record<string, any>;
+}
+
+export interface UserJourney {
+  user_id: string;
+  session_id: string;
+  journey_start: Timestamp | Date;
+  journey_end?: Timestamp | Date;
+  steps: UserJourneyStep[];
+  completed?: boolean;
+}
+
+// Analytics Report Configuration
+export interface AnalyticsReport {
+  id: string;
+  report_name: string;
+  report_type: 'user_behavior' | 'engagement' | 'retention' | 'funnel' | 'cohort' | 'custom';
+  date_range: {
+    start: string;
+    end: string;
+  };
+  filters?: Record<string, any>;
+  metrics: string[]; // List of metric names
+  created_at: Timestamp | Date;
+  created_by: string; // Admin ID
+  schedule?: 'daily' | 'weekly' | 'monthly'; // For automated reports
+}
+
+// Chart Data Types
+export interface ChartData {
+  labels: string[];
+  datasets: ChartDataset[];
+}
+
+export interface ChartDataset {
+  label: string;
+  data: number[];
+  color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+}
+
+// Analytics Filters
+export interface AnalyticsFilters {
+  date_range?: {
+    start: string;
+    end: string;
+  };
+  user_segments?: string[];
+  platforms?: ('android' | 'ios' | 'web')[];
+  countries?: string[];
+  user_ids?: string[];
+  event_names?: string[];
+}

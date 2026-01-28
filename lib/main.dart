@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:awesome_notifications_fcm/awesome_notifications_fcm.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:crypted_app/app/core/services/att_service.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/fcm_service.dart';
+import 'package:crypted_app/app/core/services/notification_controller.dart';
 import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/core/services/firebase_optimization_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
@@ -19,7 +22,6 @@ import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/theme_manager.dart';
 import 'package:crypted_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_notifications_handler/firebase_notifications_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -89,6 +91,32 @@ Future<void> main() async {
 
     // Initialize Firebase Optimization Service
     FirebaseOptimizationService.initializeFirebase();
+
+    // Initialize Awesome Notifications BEFORE FCM Service
+    await FCMService.initializeAwesomeNotifications();
+    LoggerService.instance.info('Awesome Notifications initialized', context: 'main');
+
+    // Initialize AwesomeNotifications FCM add-on
+    await AwesomeNotificationsFcm().initialize(
+      onFcmSilentDataHandle: NotificationController.onFcmSilentDataHandle,
+      onFcmTokenHandle: NotificationController.onFcmTokenHandle,
+      onNativeTokenHandle: NotificationController.onNativeTokenHandle,
+      debug: kDebugMode,
+    );
+    LoggerService.instance.info('AwesomeNotifications FCM initialized', context: 'main');
+
+    // Set up notification listeners
+    AwesomeNotifications().setListeners(
+      onActionReceivedMethod: NotificationController.onActionReceivedMethod,
+      onNotificationCreatedMethod: NotificationController.onNotificationCreatedMethod,
+      onNotificationDisplayedMethod: NotificationController.onNotificationDisplayedMethod,
+      onDismissActionReceivedMethod: NotificationController.onDismissActionReceivedMethod,
+    );
+    LoggerService.instance.info('Notification listeners configured', context: 'main');
+
+    // Initialize isolate communication
+    await NotificationController.initializeIsolateReceivePort();
+    LoggerService.instance.info('Isolate communication initialized', context: 'main');
 
     // Initialize FCM Service
     await FCMService().initialize();
@@ -186,13 +214,7 @@ Future<void> main() async {
           'User not found at startup, ZegoUIKitPrebuiltCallInvitationService will be initialized after login.');
     }
 
-    runApp(FirebaseNotificationsHandler(
-        onFcmTokenInitialize: (token) async {
-          if (Platform.isIOS) {
-            await FirebaseMessaging.instance.getAPNSToken();
-          }
-        },
-        child: CryptedApp(navigatorKey: navigatorKey)));
+    runApp(CryptedApp(navigatorKey: navigatorKey));
   });
 }
 

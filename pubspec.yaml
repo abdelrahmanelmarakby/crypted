@@ -38,9 +38,9 @@ dependencies:
   flutter_native_contact_picker: ^0.0.10
   story: ^1.1.0
   story_view: ^0.16.5
-  firebase_messaging: ^15.2.8
+  awesome_notifications: ^0.10.0
+  awesome_notifications_fcm: ^0.10.0
   workmanager: ^0.5.2
-  flutter_local_notifications: ^18.0.1
   uuid: ^4.3.3
   zego_uikit: ^2.14.0
   zego_uikit_prebuilt_call: ^4.17.3

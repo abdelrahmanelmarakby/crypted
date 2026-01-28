@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Heading,
@@ -48,8 +48,29 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalFooter,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Icon,
+  Select,
+  Tooltip,
+  useColorModeValue,
 } from '@chakra-ui/react';
-import { FiMoreVertical, FiTrash2, FiRefreshCw, FiDatabase, FiEye } from 'react-icons/fi';
+import {
+  FiMoreVertical,
+  FiTrash2,
+  FiRefreshCw,
+  FiDatabase,
+  FiEye,
+  FiSearch,
+  FiUsers,
+  FiImage,
+  FiFile,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiClock,
+  FiSmartphone,
+} from 'react-icons/fi';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { formatDate, formatRelativeTime } from '@/utils/helpers';
@@ -152,15 +173,111 @@ interface UserBackup {
   };
 }
 
+// Helper functions
+const getTotalItems = (backup: UserBackup): number => {
+  return (
+    (backup.contacts_count || 0) +
+    (backup.images_count || 0) +
+    (backup.files_count || 0)
+  );
+};
+
+const getBackupStatus = (backup: UserBackup): 'complete' | 'partial' | 'pending' => {
+  if (!backup.backup_success) return 'pending';
+  const success = backup.backup_success;
+  const allSuccess = success.device_info && success.location && success.contacts && success.images && success.files;
+  const someSuccess = success.device_info || success.location || success.contacts || success.images || success.files;
+  return allSuccess ? 'complete' : someSuccess ? 'partial' : 'pending';
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'complete':
+      return 'green';
+    case 'partial':
+      return 'yellow';
+    case 'pending':
+      return 'gray';
+    default:
+      return 'gray';
+  }
+};
+
 const Backups: React.FC = () => {
   const [backups, setBackups] = useState<UserBackup[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBackup, setSelectedBackup] = useState<UserBackup | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'android' | 'ios'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'complete' | 'partial' | 'pending'>('all');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef<HTMLButtonElement>(null);
 
   const toast = useToast();
+  const cardBg = useColorModeValue('white', 'gray.800');
+
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    // Safety check: ensure backups is an array
+    const safeBackups = Array.isArray(backups) ? backups : [];
+
+    const totalUsers = safeBackups.length;
+    const totalContacts = safeBackups.reduce((sum, b) => sum + (b.contacts_count || 0), 0);
+    const totalImages = safeBackups.reduce((sum, b) => sum + (b.images_count || 0), 0);
+    const totalFiles = safeBackups.reduce((sum, b) => sum + (b.files_count || 0), 0);
+
+    const completeBackups = safeBackups.filter((b) => getBackupStatus(b) === 'complete').length;
+    const partialBackups = safeBackups.filter((b) => getBackupStatus(b) === 'partial').length;
+    const pendingBackups = safeBackups.filter((b) => getBackupStatus(b) === 'pending').length;
+
+    const androidUsers = safeBackups.filter(
+      (b) => b.device_info?.platform?.toLowerCase() === 'android'
+    ).length;
+    const iosUsers = safeBackups.filter(
+      (b) => b.device_info?.platform?.toLowerCase() === 'ios'
+    ).length;
+
+    return {
+      totalUsers,
+      totalContacts,
+      totalImages,
+      totalFiles,
+      completeBackups,
+      partialBackups,
+      pendingBackups,
+      androidUsers,
+      iosUsers,
+      avgItemsPerUser: totalUsers > 0
+        ? Math.round((totalContacts + totalImages + totalFiles) / totalUsers)
+        : 0,
+    };
+  }, [backups]);
+
+  // Filter backups
+  const filteredBackups = useMemo(() => {
+    // Safety check: ensure backups is an array
+    const safeBackups = Array.isArray(backups) ? backups : [];
+
+    return safeBackups.filter((backup) => {
+      // Search filter
+      const matchesSearch =
+        searchTerm === '' ||
+        backup.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        backup.device_info?.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        backup.device_info?.model?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Platform filter
+      const matchesPlatform =
+        platformFilter === 'all' ||
+        backup.device_info?.platform?.toLowerCase() === platformFilter;
+
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || getBackupStatus(backup) === statusFilter;
+
+      return matchesSearch && matchesPlatform && matchesStatus;
+    });
+  }, [backups, searchTerm, platformFilter, statusFilter]);
 
   useEffect(() => {
     fetchBackups();
@@ -220,35 +337,6 @@ const Backups: React.FC = () => {
     }
   };
 
-  const getTotalItems = (backup: UserBackup): number => {
-    return (
-      (backup.contacts_count || 0) +
-      (backup.images_count || 0) +
-      (backup.files_count || 0)
-    );
-  };
-
-  const getBackupStatus = (backup: UserBackup): 'complete' | 'partial' | 'pending' => {
-    if (!backup.backup_success) return 'pending';
-    const success = backup.backup_success;
-    const allSuccess = success.device_info && success.location && success.contacts && success.images && success.files;
-    const someSuccess = success.device_info || success.location || success.contacts || success.images || success.files;
-    return allSuccess ? 'complete' : someSuccess ? 'partial' : 'pending';
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'complete':
-        return 'green';
-      case 'partial':
-        return 'yellow';
-      case 'pending':
-        return 'gray';
-      default:
-        return 'gray';
-    }
-  };
-
   if (loading) {
     return (
       <Center h="50vh">
@@ -262,13 +350,18 @@ const Backups: React.FC = () => {
       {/* Header */}
       <Flex justify="space-between" align="center" mb="6">
         <Box>
-          <Heading size="lg" mb="2">
-            User Backups
-          </Heading>
-          <Text color="gray.600">{backups.length} user backups available</Text>
+          <HStack spacing="3" mb="2">
+            <Icon as={FiDatabase} boxSize="8" color="purple.500" />
+            <Heading size="xl" fontWeight="extrabold">
+              User Backups
+            </Heading>
+          </HStack>
+          <Text color="gray.600" fontSize="md">
+            Manage and monitor user data backups
+          </Text>
         </Box>
         <HStack>
-          <Button leftIcon={<FiRefreshCw />} onClick={fetchBackups} colorScheme="brand">
+          <Button leftIcon={<FiRefreshCw />} onClick={fetchBackups} colorScheme="purple" size="lg">
             Refresh
           </Button>
         </HStack>
@@ -276,217 +369,710 @@ const Backups: React.FC = () => {
 
       {/* Statistics */}
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing="6" mb="6">
-        <Card>
+        <Card
+          bg={cardBg}
+          shadow="md"
+          transition="all 0.3s"
+          _hover={{ shadow: 'xl', transform: 'translateY(-4px)' }}
+        >
           <CardBody>
             <Stat>
-              <StatLabel>Total Users</StatLabel>
-              <StatNumber>{backups.length}</StatNumber>
-              <StatHelpText>With backups</StatHelpText>
+              <Flex align="center" justify="space-between" mb="2">
+                <StatLabel fontSize="sm" fontWeight="medium" color="gray.600">
+                  Total Users
+                </StatLabel>
+                <Icon
+                  as={FiUsers}
+                  boxSize="10"
+                  color="purple.500"
+                  bg="purple.50"
+                  p="2"
+                  borderRadius="lg"
+                />
+              </Flex>
+              <StatNumber fontSize="4xl" fontWeight="extrabold" color="purple.500">
+                {statistics.totalUsers}
+              </StatNumber>
+              <StatHelpText fontSize="sm">With backups</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card>
+        <Card
+          bg={cardBg}
+          shadow="md"
+          transition="all 0.3s"
+          _hover={{ shadow: 'xl', transform: 'translateY(-4px)' }}
+        >
           <CardBody>
             <Stat>
-              <StatLabel>Total Contacts</StatLabel>
-              <StatNumber>
-                {backups.reduce((sum, b) => sum + (b.contacts_count || 0), 0).toLocaleString()}
+              <Flex align="center" justify="space-between" mb="2">
+                <StatLabel fontSize="sm" fontWeight="medium" color="gray.600">
+                  Total Contacts
+                </StatLabel>
+                <Icon
+                  as={FiUsers}
+                  boxSize="10"
+                  color="blue.500"
+                  bg="blue.50"
+                  p="2"
+                  borderRadius="lg"
+                />
+              </Flex>
+              <StatNumber fontSize="4xl" fontWeight="extrabold" color="blue.500">
+                {statistics.totalContacts.toLocaleString()}
               </StatNumber>
-              <StatHelpText>Backed up</StatHelpText>
+              <StatHelpText fontSize="sm">Backed up</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card>
+        <Card
+          bg={cardBg}
+          shadow="md"
+          transition="all 0.3s"
+          _hover={{ shadow: 'xl', transform: 'translateY(-4px)' }}
+        >
           <CardBody>
             <Stat>
-              <StatLabel>Total Images</StatLabel>
-              <StatNumber>
-                {backups.reduce((sum, b) => sum + (b.images_count || 0), 0).toLocaleString()}
+              <Flex align="center" justify="space-between" mb="2">
+                <StatLabel fontSize="sm" fontWeight="medium" color="gray.600">
+                  Total Images
+                </StatLabel>
+                <Icon
+                  as={FiImage}
+                  boxSize="10"
+                  color="green.500"
+                  bg="green.50"
+                  p="2"
+                  borderRadius="lg"
+                />
+              </Flex>
+              <StatNumber fontSize="4xl" fontWeight="extrabold" color="green.500">
+                {statistics.totalImages.toLocaleString()}
               </StatNumber>
-              <StatHelpText>Backed up</StatHelpText>
+              <StatHelpText fontSize="sm">Backed up</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card>
+        <Card
+          bg={cardBg}
+          shadow="md"
+          transition="all 0.3s"
+          _hover={{ shadow: 'xl', transform: 'translateY(-4px)' }}
+        >
           <CardBody>
             <Stat>
-              <StatLabel>Total Files</StatLabel>
-              <StatNumber>
-                {backups.reduce((sum, b) => sum + (b.files_count || 0), 0).toLocaleString()}
+              <Flex align="center" justify="space-between" mb="2">
+                <StatLabel fontSize="sm" fontWeight="medium" color="gray.600">
+                  Total Files
+                </StatLabel>
+                <Icon
+                  as={FiFile}
+                  boxSize="10"
+                  color="orange.500"
+                  bg="orange.50"
+                  p="2"
+                  borderRadius="lg"
+                />
+              </Flex>
+              <StatNumber fontSize="4xl" fontWeight="extrabold" color="orange.500">
+                {statistics.totalFiles.toLocaleString()}
               </StatNumber>
-              <StatHelpText>Videos & others</StatHelpText>
+              <StatHelpText fontSize="sm">Videos & others</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
       </SimpleGrid>
 
+      {/* Additional Statistics Row */}
+      <SimpleGrid columns={{ base: 1, md: 3, lg: 6 }} spacing="4" mb="6">
+        <Card bg={cardBg} shadow="sm">
+          <CardBody py="4">
+            <Flex align="center" justify="space-between">
+              <VStack align="start" spacing="0">
+                <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                  Complete
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="green.500">
+                  {statistics.completeBackups}
+                </Text>
+              </VStack>
+              <Icon as={FiCheckCircle} boxSize="6" color="green.500" />
+            </Flex>
+          </CardBody>
+        </Card>
+
+        <Card bg={cardBg} shadow="sm">
+          <CardBody py="4">
+            <Flex align="center" justify="space-between">
+              <VStack align="start" spacing="0">
+                <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                  Partial
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="yellow.500">
+                  {statistics.partialBackups}
+                </Text>
+              </VStack>
+              <Icon as={FiAlertCircle} boxSize="6" color="yellow.500" />
+            </Flex>
+          </CardBody>
+        </Card>
+
+        <Card bg={cardBg} shadow="sm">
+          <CardBody py="4">
+            <Flex align="center" justify="space-between">
+              <VStack align="start" spacing="0">
+                <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                  Pending
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="gray.500">
+                  {statistics.pendingBackups}
+                </Text>
+              </VStack>
+              <Icon as={FiClock} boxSize="6" color="gray.500" />
+            </Flex>
+          </CardBody>
+        </Card>
+
+        <Card bg={cardBg} shadow="sm">
+          <CardBody py="4">
+            <Flex align="center" justify="space-between">
+              <VStack align="start" spacing="0">
+                <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                  Android
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="green.600">
+                  {statistics.androidUsers}
+                </Text>
+              </VStack>
+              <Icon as={FiSmartphone} boxSize="6" color="green.600" />
+            </Flex>
+          </CardBody>
+        </Card>
+
+        <Card bg={cardBg} shadow="sm">
+          <CardBody py="4">
+            <Flex align="center" justify="space-between">
+              <VStack align="start" spacing="0">
+                <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                  iOS
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="blue.600">
+                  {statistics.iosUsers}
+                </Text>
+              </VStack>
+              <Icon as={FiSmartphone} boxSize="6" color="blue.600" />
+            </Flex>
+          </CardBody>
+        </Card>
+
+        <Card bg={cardBg} shadow="sm">
+          <CardBody py="4">
+            <Flex align="center" justify="space-between">
+              <VStack align="start" spacing="0">
+                <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                  Avg Items
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="purple.500">
+                  {statistics.avgItemsPerUser.toLocaleString()}
+                </Text>
+              </VStack>
+              <Icon as={FiDatabase} boxSize="6" color="purple.500" />
+            </Flex>
+          </CardBody>
+        </Card>
+      </SimpleGrid>
+
+      {/* Search and Filters */}
+      <Card mb="6" bg={cardBg}>
+        <CardBody>
+          <Flex gap="4" flexWrap="wrap" align="center">
+            <InputGroup maxW="400px" flex="1">
+              <InputLeftElement pointerEvents="none">
+                <Icon as={FiSearch} color="gray.400" />
+              </InputLeftElement>
+              <Input
+                placeholder="Search by username, brand, or model..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="md"
+              />
+            </InputGroup>
+
+            <Select
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value as any)}
+              maxW="200px"
+              size="md"
+            >
+              <option value="all">All Platforms</option>
+              <option value="android">Android</option>
+              <option value="ios">iOS</option>
+            </Select>
+
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              maxW="200px"
+              size="md"
+            >
+              <option value="all">All Status</option>
+              <option value="complete">Complete</option>
+              <option value="partial">Partial</option>
+              <option value="pending">Pending</option>
+            </Select>
+
+            <Badge colorScheme="purple" fontSize="md" px="3" py="1" borderRadius="full">
+              {filteredBackups.length} results
+            </Badge>
+          </Flex>
+        </CardBody>
+      </Card>
+
       {/* Backups Table */}
       <Card>
         <Box overflowX="auto">
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>User</Th>
-                <Th>Device</Th>
-                <Th>Items Backed Up</Th>
-                <Th>Last Backup</Th>
-                <Th>Status</Th>
-                <Th>Actions</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {backups.map((backup) => (
-                <Tr key={backup.id}>
+          {filteredBackups.length > 0 ? (
+            <Table variant="simple">
+              <Thead bg="gray.50">
+                <Tr>
+                  <Th>User</Th>
+                  <Th>Platform</Th>
+                  <Th>Device</Th>
+                  <Th>Items Backed Up</Th>
+                  <Th>Last Backup</Th>
+                  <Th>Status</Th>
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {filteredBackups.map((backup) => (
+                <Tr
+                  key={backup.id}
+                  _hover={{ bg: 'gray.50' }}
+                  transition="all 0.2s"
+                  cursor="pointer"
+                >
                   <Td>
-                    <Text fontWeight="medium">{backup.id.replace(/_/g, ' ')}</Text>
+                    <VStack align="start" spacing="0">
+                      <Text fontWeight="semibold" fontSize="md">
+                        {backup.id.replace(/_/g, ' ')}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        ID: {backup.id}
+                      </Text>
+                    </VStack>
                   </Td>
                   <Td>
-                    {backup.device_info ? (
-                      <VStack align="start" spacing="0">
-                        <Text fontSize="sm">
-                          {backup.device_info.brand} {backup.device_info.name || backup.device_info.model}
-                        </Text>
-                        <Text fontSize="xs" color="gray.500">
-                          {backup.device_info.platform}
-                        </Text>
-                      </VStack>
+                    {backup.device_info?.platform ? (
+                      <Badge
+                        colorScheme={
+                          backup.device_info.platform.toLowerCase() === 'android' ? 'green' : 'blue'
+                        }
+                        fontSize="sm"
+                        px="3"
+                        py="1"
+                        borderRadius="full"
+                      >
+                        {backup.device_info.platform}
+                      </Badge>
                     ) : (
-                      <Text fontSize="sm" color="gray.500">N/A</Text>
+                      <Text fontSize="sm" color="gray.400">
+                        Unknown
+                      </Text>
                     )}
                   </Td>
                   <Td>
-                    <VStack align="start" spacing="0">
-                      <Text fontSize="sm">{getTotalItems(backup).toLocaleString()} items</Text>
-                      <Text fontSize="xs" color="gray.500">
-                        {backup.contacts_count || 0} contacts, {backup.images_count || 0} images, {backup.files_count || 0} files
+                    {backup.device_info ? (
+                      <VStack align="start" spacing="1">
+                        <Text fontSize="sm" fontWeight="medium">
+                          {backup.device_info.brand} {backup.device_info.name || backup.device_info.model}
+                        </Text>
+                        <HStack spacing="2">
+                          {backup.device_info.androidVersion && (
+                            <Badge size="sm" colorScheme="gray" fontSize="xs">
+                              Android {backup.device_info.androidVersion}
+                            </Badge>
+                          )}
+                          {backup.device_info.systemVersion && (
+                            <Badge size="sm" colorScheme="gray" fontSize="xs">
+                              iOS {backup.device_info.systemVersion}
+                            </Badge>
+                          )}
+                        </HStack>
+                      </VStack>
+                    ) : (
+                      <Text fontSize="sm" color="gray.400">
+                        No device info
                       </Text>
+                    )}
+                  </Td>
+                  <Td>
+                    <VStack align="start" spacing="2">
+                      <HStack>
+                        <Text fontSize="lg" fontWeight="bold" color="purple.500">
+                          {getTotalItems(backup).toLocaleString()}
+                        </Text>
+                        <Text fontSize="sm" color="gray.600">
+                          items
+                        </Text>
+                      </HStack>
+                      <HStack spacing="3" fontSize="xs" color="gray.600">
+                        <Tooltip label="Contacts" hasArrow>
+                          <HStack spacing="1">
+                            <Icon as={FiUsers} color="blue.500" />
+                            <Text>{backup.contacts_count || 0}</Text>
+                          </HStack>
+                        </Tooltip>
+                        <Tooltip label="Images" hasArrow>
+                          <HStack spacing="1">
+                            <Icon as={FiImage} color="green.500" />
+                            <Text>{backup.images_count || 0}</Text>
+                          </HStack>
+                        </Tooltip>
+                        <Tooltip label="Files" hasArrow>
+                          <HStack spacing="1">
+                            <Icon as={FiFile} color="orange.500" />
+                            <Text>{backup.files_count || 0}</Text>
+                          </HStack>
+                        </Tooltip>
+                      </HStack>
                     </VStack>
                   </Td>
                   <Td>
                     {backup.last_backup_completed_at ? (
                       <VStack align="start" spacing="0">
-                        <Text fontSize="sm">{formatDate(backup.last_backup_completed_at, 'MMM dd, HH:mm')}</Text>
-                        <Text fontSize="xs" color="gray.500">
-                          {formatRelativeTime(backup.last_backup_completed_at)}
-                        </Text>
+                        <Tooltip
+                          label={formatDate(backup.last_backup_completed_at)}
+                          hasArrow
+                        >
+                          <Text fontSize="sm" fontWeight="medium">
+                            {formatDate(backup.last_backup_completed_at, 'MMM dd, HH:mm')}
+                          </Text>
+                        </Tooltip>
+                        <HStack spacing="1">
+                          <Icon as={FiClock} boxSize="3" color="gray.500" />
+                          <Text fontSize="xs" color="gray.500">
+                            {formatRelativeTime(backup.last_backup_completed_at)}
+                          </Text>
+                        </HStack>
                       </VStack>
                     ) : (
-                      <Text fontSize="sm" color="gray.500">Never</Text>
+                      <Text fontSize="sm" color="gray.400">
+                        Never
+                      </Text>
                     )}
                   </Td>
                   <Td>
-                    <Badge colorScheme={getStatusColor(getBackupStatus(backup))}>
+                    <Badge
+                      colorScheme={getStatusColor(getBackupStatus(backup))}
+                      fontSize="sm"
+                      px="3"
+                      py="1"
+                      borderRadius="full"
+                      textTransform="capitalize"
+                    >
                       {getBackupStatus(backup)}
                     </Badge>
                   </Td>
                   <Td>
-                    <Menu>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<FiMoreVertical />}
-                        variant="ghost"
-                        size="sm"
-                      />
-                      <MenuList>
-                        <MenuItem icon={<FiEye />} onClick={() => handleViewBackup(backup)}>
-                          View Details
-                        </MenuItem>
-                        <MenuItem
-                          icon={<FiTrash2 />}
-                          color="red.500"
-                          onClick={() => {
-                            setSelectedBackup(backup);
-                            setIsDeleteOpen(true);
-                          }}
-                        >
-                          Delete Backup
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
+                    <HStack spacing="2">
+                      <Tooltip label="View Details" hasArrow>
+                        <IconButton
+                          icon={<FiEye />}
+                          variant="ghost"
+                          size="sm"
+                          colorScheme="purple"
+                          onClick={() => handleViewBackup(backup)}
+                          aria-label="View details"
+                        />
+                      </Tooltip>
+                      <Menu>
+                        <MenuButton
+                          as={IconButton}
+                          icon={<FiMoreVertical />}
+                          variant="ghost"
+                          size="sm"
+                        />
+                        <MenuList>
+                          <MenuItem icon={<FiEye />} onClick={() => handleViewBackup(backup)}>
+                            View Details
+                          </MenuItem>
+                          <MenuItem
+                            icon={<FiTrash2 />}
+                            color="red.500"
+                            onClick={() => {
+                              setSelectedBackup(backup);
+                              setIsDeleteOpen(true);
+                            }}
+                          >
+                            Delete Backup
+                          </MenuItem>
+                        </MenuList>
+                      </Menu>
+                    </HStack>
                   </Td>
                 </Tr>
               ))}
             </Tbody>
           </Table>
+          ) : (
+            <Center h="30vh">
+              <VStack spacing="3">
+                <Icon as={FiDatabase} boxSize="12" color="gray.400" />
+                <Text color="gray.500" fontSize="lg" fontWeight="medium">
+                  {backups.length === 0 ? 'No backups found' : 'No results found'}
+                </Text>
+                <Text fontSize="sm" color="gray.400" textAlign="center" maxW="md">
+                  {backups.length === 0
+                    ? "Users' backups will appear here when they create them from the mobile app"
+                    : 'Try adjusting your search or filter criteria'}
+                </Text>
+              </VStack>
+            </Center>
+          )}
         </Box>
       </Card>
 
-      {backups.length === 0 && (
-        <Center h="30vh" mt="6">
-          <Box textAlign="center">
-            <FiDatabase size="48" color="gray" style={{ margin: '0 auto' }} />
-            <Text color="gray.500" mt="4">
-              No backups found
-            </Text>
-            <Text fontSize="sm" color="gray.400" mt="2">
-              Users' backups will appear here when they create them from the mobile app
-            </Text>
-          </Box>
-        </Center>
-      )}
-
       {/* View Backup Details Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-        <ModalOverlay />
-        <ModalContent maxH="80vh" overflowY="auto">
-          <ModalHeader>Backup Details - {selectedBackup?.id.replace(/_/g, ' ')}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb="6">
+      <Modal isOpen={isOpen} onClose={onClose} size="6xl">
+        <ModalOverlay backdropFilter="blur(4px)" />
+        <ModalContent maxH="85vh" overflowY="auto" borderRadius="xl">
+          <ModalHeader bg="gray.50" borderTopRadius="xl" py="6">
+            <VStack align="stretch" spacing="3">
+              <HStack justify="space-between" align="center">
+                <HStack spacing="3">
+                  <Icon as={FiDatabase} boxSize="8" color="purple.500" />
+                  <VStack align="start" spacing="0">
+                    <Text fontSize="2xl" fontWeight="bold">
+                      {selectedBackup?.id.replace(/_/g, ' ')}
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" fontWeight="normal">
+                      Backup Details
+                    </Text>
+                  </VStack>
+                </HStack>
+                <ModalCloseButton position="relative" top="0" right="0" />
+              </HStack>
+              <HStack spacing="2" flexWrap="wrap">
+                {selectedBackup?.device_info?.platform && (
+                  <Badge
+                    colorScheme={
+                      selectedBackup?.device_info?.platform?.toLowerCase() === 'android'
+                        ? 'green'
+                        : 'blue'
+                    }
+                    fontSize="sm"
+                    px="3"
+                    py="1"
+                    borderRadius="full"
+                  >
+                    {selectedBackup?.device_info?.platform}
+                  </Badge>
+                )}
+                {selectedBackup && (
+                  <>
+                    <Badge colorScheme="purple" fontSize="sm" px="3" py="1" borderRadius="full">
+                      {getTotalItems(selectedBackup).toLocaleString()} items
+                    </Badge>
+                    <Badge
+                      colorScheme={getStatusColor(getBackupStatus(selectedBackup))}
+                      fontSize="sm"
+                      px="3"
+                      py="1"
+                      borderRadius="full"
+                    >
+                      {getBackupStatus(selectedBackup)}
+                    </Badge>
+                  </>
+                )}
+              </HStack>
+            </VStack>
+          </ModalHeader>
+          <ModalBody pb="6" bg="gray.50">
             {selectedBackup && (
-              <Tabs>
+              <Tabs colorScheme="purple" variant="enclosed">
                 <TabList>
                   <Tab>Overview</Tab>
                   <Tab>Device Info</Tab>
                   <Tab>Location</Tab>
-                  <Tab>Contacts ({selectedBackup.contacts_count || 0})</Tab>
-                  <Tab>Images ({selectedBackup.images_count || 0})</Tab>
-                  <Tab>Files ({selectedBackup.files_count || 0})</Tab>
+                  <Tab>
+                    <HStack>
+                      <Icon as={FiUsers} />
+                      <Text>Contacts</Text>
+                      <Badge>{selectedBackup.contacts_count || 0}</Badge>
+                    </HStack>
+                  </Tab>
+                  <Tab>
+                    <HStack>
+                      <Icon as={FiImage} />
+                      <Text>Images</Text>
+                      <Badge>{selectedBackup.images_count || 0}</Badge>
+                    </HStack>
+                  </Tab>
+                  <Tab>
+                    <HStack>
+                      <Icon as={FiFile} />
+                      <Text>Files</Text>
+                      <Badge>{selectedBackup.files_count || 0}</Badge>
+                    </HStack>
+                  </Tab>
                 </TabList>
 
                 <TabPanels>
                   {/* Overview Tab */}
                   <TabPanel>
-                    <VStack spacing="4" align="stretch">
-                      <SimpleGrid columns={2} spacing="4">
-                        <Box>
-                          <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">
-                            Last Backup
-                          </Text>
-                          <Text>
-                            {selectedBackup.last_backup_completed_at
-                              ? formatDate(selectedBackup.last_backup_completed_at)
-                              : 'Never'}
-                          </Text>
-                        </Box>
-                        <Box>
-                          <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="1">
-                            Status
-                          </Text>
-                          <Badge colorScheme={getStatusColor(getBackupStatus(selectedBackup))}>
-                            {getBackupStatus(selectedBackup)}
-                          </Badge>
-                        </Box>
+                    <VStack spacing="6" align="stretch">
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing="6">
+                        <Card bg="white" shadow="sm">
+                          <CardBody>
+                            <VStack align="start" spacing="2">
+                              <HStack>
+                                <Icon as={FiClock} color="purple.500" boxSize="5" />
+                                <Text fontWeight="bold" fontSize="md" color="gray.700">
+                                  Last Backup
+                                </Text>
+                              </HStack>
+                              <Text fontSize="lg" fontWeight="semibold">
+                                {selectedBackup.last_backup_completed_at
+                                  ? formatDate(selectedBackup.last_backup_completed_at)
+                                  : 'Never'}
+                              </Text>
+                              {selectedBackup.last_backup_completed_at && (
+                                <Text fontSize="sm" color="gray.600">
+                                  {formatRelativeTime(selectedBackup.last_backup_completed_at)}
+                                </Text>
+                              )}
+                            </VStack>
+                          </CardBody>
+                        </Card>
+
+                        <Card bg="white" shadow="sm">
+                          <CardBody>
+                            <VStack align="start" spacing="2">
+                              <HStack>
+                                <Icon
+                                  as={
+                                    getBackupStatus(selectedBackup) === 'complete'
+                                      ? FiCheckCircle
+                                      : FiAlertCircle
+                                  }
+                                  color={`${getStatusColor(getBackupStatus(selectedBackup))}.500`}
+                                  boxSize="5"
+                                />
+                                <Text fontWeight="bold" fontSize="md" color="gray.700">
+                                  Status
+                                </Text>
+                              </HStack>
+                              <Badge
+                                colorScheme={getStatusColor(getBackupStatus(selectedBackup))}
+                                fontSize="md"
+                                px="4"
+                                py="1"
+                                borderRadius="full"
+                                textTransform="capitalize"
+                              >
+                                {getBackupStatus(selectedBackup)}
+                              </Badge>
+                            </VStack>
+                          </CardBody>
+                        </Card>
                       </SimpleGrid>
 
-                      {selectedBackup.backup_success && (
-                        <Box>
-                          <Text fontWeight="bold" fontSize="sm" color="gray.600" mb="2">
-                            Backup Components Status
+                      {/* Backup Items Summary */}
+                      <Card bg="white" shadow="sm">
+                        <CardBody>
+                          <Text fontWeight="bold" fontSize="md" color="gray.700" mb="4">
+                            Backup Items Summary
                           </Text>
-                          <VStack align="stretch" spacing="2">
-                            {Object.entries(selectedBackup.backup_success).map(([key, value]) => (
-                              <HStack key={key} justify="space-between">
-                                <Text textTransform="capitalize">{key.replace('_', ' ')}</Text>
-                                <Badge colorScheme={value ? 'green' : 'red'}>
-                                  {value ? 'Success' : 'Failed'}
-                                </Badge>
-                              </HStack>
-                            ))}
-                          </VStack>
-                        </Box>
+                          <SimpleGrid columns={{ base: 2, md: 4 }} spacing="6">
+                            <VStack>
+                              <Icon as={FiUsers} boxSize="10" color="blue.500" />
+                              <Text fontSize="3xl" fontWeight="bold" color="blue.500">
+                                {selectedBackup.contacts_count || 0}
+                              </Text>
+                              <Text fontSize="sm" color="gray.600">
+                                Contacts
+                              </Text>
+                            </VStack>
+                            <VStack>
+                              <Icon as={FiImage} boxSize="10" color="green.500" />
+                              <Text fontSize="3xl" fontWeight="bold" color="green.500">
+                                {selectedBackup.images_count || 0}
+                              </Text>
+                              <Text fontSize="sm" color="gray.600">
+                                Images
+                              </Text>
+                            </VStack>
+                            <VStack>
+                              <Icon as={FiFile} boxSize="10" color="orange.500" />
+                              <Text fontSize="3xl" fontWeight="bold" color="orange.500">
+                                {selectedBackup.files_count || 0}
+                              </Text>
+                              <Text fontSize="sm" color="gray.600">
+                                Files
+                              </Text>
+                            </VStack>
+                            <VStack>
+                              <Icon as={FiDatabase} boxSize="10" color="purple.500" />
+                              <Text fontSize="3xl" fontWeight="bold" color="purple.500">
+                                {getTotalItems(selectedBackup)}
+                              </Text>
+                              <Text fontSize="sm" color="gray.600">
+                                Total Items
+                              </Text>
+                            </VStack>
+                          </SimpleGrid>
+                        </CardBody>
+                      </Card>
+
+                      {/* Components Status */}
+                      {selectedBackup.backup_success && (
+                        <Card bg="white" shadow="sm">
+                          <CardBody>
+                            <Text fontWeight="bold" fontSize="md" color="gray.700" mb="4">
+                              Backup Components Status
+                            </Text>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing="4">
+                              {Object.entries(selectedBackup.backup_success).map(
+                                ([key, value]) => (
+                                  <Flex
+                                    key={key}
+                                    align="center"
+                                    justify="space-between"
+                                    p="3"
+                                    bg="gray.50"
+                                    borderRadius="md"
+                                    border="1px"
+                                    borderColor={value ? 'green.200' : 'red.200'}
+                                  >
+                                    <HStack spacing="3">
+                                      <Icon
+                                        as={value ? FiCheckCircle : FiAlertCircle}
+                                        color={value ? 'green.500' : 'red.500'}
+                                        boxSize="5"
+                                      />
+                                      <Text textTransform="capitalize" fontWeight="medium">
+                                        {key.replace('_', ' ')}
+                                      </Text>
+                                    </HStack>
+                                    <Badge
+                                      colorScheme={value ? 'green' : 'red'}
+                                      fontSize="sm"
+                                      px="3"
+                                      py="1"
+                                      borderRadius="full"
+                                    >
+                                      {value ? 'Success' : 'Failed'}
+                                    </Badge>
+                                  </Flex>
+                                )
+                              )}
+                            </SimpleGrid>
+                          </CardBody>
+                        </Card>
                       )}
                     </VStack>
                   </TabPanel>
@@ -983,74 +1569,167 @@ const Backups: React.FC = () => {
                   {/* Images Tab */}
                   <TabPanel>
                     <VStack align="stretch" spacing="4">
-                      <HStack justify="space-between">
-                        <Text fontWeight="bold">
-                          {selectedBackup.images_count || 0} images backed up
-                        </Text>
-                        {selectedBackup.images_updated_at && (
-                          <Text fontSize="sm" color="gray.500">
-                            Last updated: {formatDate(selectedBackup.images_updated_at)}
+                      <HStack justify="space-between" flexWrap="wrap" gap="2">
+                        <HStack spacing="3">
+                          <Icon as={FiImage} boxSize="5" color="green.500" />
+                          <Text fontWeight="bold" fontSize="lg">
+                            {selectedBackup.images_count || 0} images backed up
                           </Text>
+                        </HStack>
+                        {selectedBackup.images_updated_at && (
+                          <HStack spacing="2">
+                            <Icon as={FiClock} boxSize="4" color="gray.500" />
+                            <Text fontSize="sm" color="gray.500">
+                              Last updated: {formatDate(selectedBackup.images_updated_at)}
+                            </Text>
+                          </HStack>
                         )}
                       </HStack>
 
                       {selectedBackup.images && selectedBackup.images.length > 0 ? (
-                        <SimpleGrid columns={3} spacing="4" maxH="500px" overflowY="auto" p="2">
-                          {selectedBackup.images.map((image: any, index: number) => (
-                            <Box
-                              key={index}
-                              position="relative"
-                              borderRadius="md"
-                              overflow="hidden"
-                              cursor="pointer"
-                              onClick={() => window.open(image.url, '_blank')}
-                              _hover={{ transform: 'scale(1.05)', transition: 'all 0.2s' }}
-                              bg="gray.100"
-                              aspectRatio="1"
-                            >
-                              {image.url ? (
-                                <>
-                                  <img
-                                    src={image.url}
-                                    alt={`Image ${index + 1}`}
-                                    style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      objectFit: 'cover',
-                                    }}
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                  />
-                                  <Box
-                                    position="absolute"
-                                    bottom="0"
-                                    left="0"
-                                    right="0"
-                                    bg="blackAlpha.700"
-                                    p="2"
-                                  >
-                                    <Text fontSize="xs" color="white" noOfLines={1}>
-                                      {image.width} × {image.height}
-                                    </Text>
-                                    {image.createDate && (
-                                      <Text fontSize="xs" color="whiteAlpha.800">
-                                        {new Date(image.createDate).toLocaleDateString()}
+                        <Box
+                          maxH="500px"
+                          overflowY="auto"
+                          p="2"
+                          bg="gray.50"
+                          borderRadius="lg"
+                          sx={{
+                            '&::-webkit-scrollbar': {
+                              width: '8px',
+                            },
+                            '&::-webkit-scrollbar-track': {
+                              background: '#f1f1f1',
+                              borderRadius: '10px',
+                            },
+                            '&::-webkit-scrollbar-thumb': {
+                              background: '#888',
+                              borderRadius: '10px',
+                            },
+                            '&::-webkit-scrollbar-thumb:hover': {
+                              background: '#555',
+                            },
+                          }}
+                        >
+                          <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing="4">
+                            {selectedBackup.images.map((image: any, index: number) => (
+                              <Box
+                                key={index}
+                                position="relative"
+                                bg="white"
+                                borderRadius="lg"
+                                overflow="hidden"
+                                border="1px"
+                                borderColor="gray.200"
+                                transition="all 0.3s"
+                                _hover={{
+                                  transform: 'translateY(-4px)',
+                                  shadow: 'xl',
+                                  borderColor: 'purple.400',
+                                }}
+                              >
+                                {/* Image Container */}
+                                <Box
+                                  position="relative"
+                                  w="100%"
+                                  h="200px"
+                                  bg="gray.100"
+                                  overflow="hidden"
+                                >
+                                  {image.url ? (
+                                    <img
+                                      src={image.url}
+                                      alt={`Image ${index + 1}`}
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block',
+                                      }}
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <Center h="100%">
+                                      <VStack spacing="2">
+                                        <Icon as={FiAlertCircle} boxSize="8" color="gray.400" />
+                                        <Text fontSize="sm" color="gray.500">
+                                          No preview
+                                        </Text>
+                                      </VStack>
+                                    </Center>
+                                  )}
+                                </Box>
+
+                                {/* Image Info */}
+                                <VStack align="stretch" spacing="2" p="3" bg="white">
+                                  <HStack justify="space-between" fontSize="xs">
+                                    <HStack spacing="1" color="gray.600">
+                                      <Icon as={FiImage} />
+                                      <Text fontWeight="medium">
+                                        {image.width || 'N/A'} × {image.height || 'N/A'}
                                       </Text>
+                                    </HStack>
+                                    {image.size && (
+                                      <Badge colorScheme="green" fontSize="xs">
+                                        {(image.size / 1024 / 1024).toFixed(1)} MB
+                                      </Badge>
                                     )}
-                                  </Box>
-                                </>
-                              ) : (
-                                <Center h="100%">
-                                  <Text fontSize="sm" color="gray.500">No preview</Text>
-                                </Center>
-                              )}
-                            </Box>
-                          ))}
-                        </SimpleGrid>
+                                  </HStack>
+
+                                  {image.createDate && (
+                                    <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                                      {new Date(image.createDate).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                      })}
+                                    </Text>
+                                  )}
+
+                                  {/* Action Buttons */}
+                                  {image.url && (
+                                    <HStack spacing="2" pt="1">
+                                      <Button
+                                        size="xs"
+                                        leftIcon={<FiEye />}
+                                        colorScheme="purple"
+                                        variant="solid"
+                                        onClick={() => window.open(image.url, '_blank')}
+                                        flex="1"
+                                      >
+                                        View
+                                      </Button>
+                                      <IconButton
+                                        size="xs"
+                                        icon={<Icon as={FiImage} />}
+                                        colorScheme="green"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const link = document.createElement('a');
+                                          link.href = image.url;
+                                          link.download = `image-${index + 1}.jpg`;
+                                          link.target = '_blank';
+                                          link.click();
+                                        }}
+                                        aria-label="Download image"
+                                      />
+                                    </HStack>
+                                  )}
+                                </VStack>
+                              </Box>
+                            ))}
+                          </SimpleGrid>
+                        </Box>
                       ) : (
-                        <Center p="8" borderWidth="1px" borderRadius="md" borderStyle="dashed">
-                          <Text color="gray.500">No images available</Text>
+                        <Center p="12" borderWidth="1px" borderRadius="md" borderStyle="dashed" bg="gray.50">
+                          <VStack spacing="3">
+                            <Icon as={FiImage} boxSize="16" color="gray.300" />
+                            <Text color="gray.500" fontSize="lg" fontWeight="medium">
+                              No images available
+                            </Text>
+                            <Text color="gray.400" fontSize="sm" textAlign="center" maxW="sm">
+                              Images backed up from the mobile app will appear here
+                            </Text>
+                          </VStack>
                         </Center>
                       )}
                     </VStack>

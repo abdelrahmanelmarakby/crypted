@@ -1667,3 +1667,304 @@ exports.sendScheduledNotifications = functions.pubsub
       return null;
     }
   });
+
+// ============================================
+// ANALYTICS CLOUD FUNCTIONS
+// ============================================
+
+/**
+ * Daily Aggregation Function
+ * Runs daily at 00:30 UTC to aggregate previous day's analytics
+ * Reduces dashboard query load from 10,000+ reads to ~7 reads
+ */
+exports.dailyAggregation = functions.pubsub
+  .schedule('30 0 * * *')
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dateStr = yesterday.toISOString().split('T')[0];
+
+      functions.logger.log(`Starting daily aggregation for ${dateStr}`);
+
+      // Aggregate daily metrics
+      const metricsSnapshot = await db
+        .collection('daily_metrics')
+        .where('date', '==', dateStr)
+        .get();
+
+      let totalMessagesSent = 0;
+      let totalMessagesReceived = 0;
+      let totalStoriesCreated = 0;
+      let totalStoriesViewed = 0;
+      let totalCallsMade = 0;
+      const activeUserIds = new Set();
+
+      metricsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        totalMessagesSent += data.messages_sent_count || 0;
+        totalMessagesReceived += data.messages_received_count || 0;
+        totalStoriesCreated += data.stories_created_count || 0;
+        totalStoriesViewed += data.stories_viewed_count || 0;
+        totalCallsMade += data.calls_made_count || 0;
+        if (data.user_id) {
+          activeUserIds.add(data.user_id);
+        }
+      });
+
+      // Store aggregated data
+      await db
+        .collection('daily_aggregated_stats')
+        .doc(dateStr)
+        .set({
+          date: dateStr,
+          dau: activeUserIds.size,
+          total_messages_sent: totalMessagesSent,
+          total_messages_received: totalMessagesReceived,
+          total_stories_created: totalStoriesCreated,
+          total_stories_viewed: totalStoriesViewed,
+          total_calls_made: totalCallsMade,
+          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      functions.logger.log(
+        `Daily aggregation complete: DAU=${activeUserIds.size}, Messages=${totalMessagesSent}`
+      );
+
+      return { success: true, date: dateStr, dau: activeUserIds.size };
+    } catch (error) {
+      functions.logger.error('Daily aggregation error:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Cohort Analysis Function
+ * Runs daily at 01:00 UTC to calculate retention rates
+ * Pre-computes retention for all cohorts
+ */
+exports.cohortAnalysis = functions.pubsub
+  .schedule('0 1 * * *')
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    try {
+      functions.logger.log('Starting cohort analysis');
+
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Get users from last 30 days
+      const usersSnapshot = await db
+        .collection('users')
+        .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+        .get();
+
+      // Group users by signup date (cohort)
+      const cohorts = new Map();
+
+      usersSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate();
+        if (!createdAt) return;
+
+        const cohortDate = createdAt.toISOString().split('T')[0];
+        if (!cohorts.has(cohortDate)) {
+          cohorts.set(cohortDate, []);
+        }
+        cohorts.get(cohortDate).push({
+          id: doc.id,
+          lastSeen: data.lastSeen?.toDate(),
+        });
+      });
+
+      // Calculate retention for each cohort
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const batch = db.batch();
+      let cohortCount = 0;
+
+      for (const [cohortDate, users] of cohorts.entries()) {
+        const cohortDateTime = new Date(cohortDate);
+        const daysSinceCohort = Math.floor(
+          (today - cohortDateTime) / (1000 * 60 * 60 * 24)
+        );
+
+        // Calculate retention for day 1, 7, 14, 30
+        const retentionData = {
+          cohort_date: cohortDate,
+          cohort_size: users.length,
+          days_since_cohort: daysSinceCohort,
+          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        [1, 7, 14, 30].forEach(dayN => {
+          if (daysSinceCohort >= dayN) {
+            const targetDate = new Date(cohortDateTime);
+            targetDate.setDate(targetDate.getDate() + dayN);
+            targetDate.setHours(0, 0, 0, 0);
+
+            const activeCount = users.filter(user => {
+              return user.lastSeen && user.lastSeen >= targetDate;
+            }).length;
+
+            const retentionRate = users.length > 0
+              ? (activeCount / users.length) * 100
+              : 0;
+
+            retentionData[`day${dayN}_retention`] = retentionRate;
+            retentionData[`day${dayN}_active_count`] = activeCount;
+          }
+        });
+
+        const docRef = db.collection('retention_cohorts').doc(cohortDate);
+        batch.set(docRef, retentionData);
+        cohortCount++;
+      }
+
+      await batch.commit();
+
+      functions.logger.log(`Cohort analysis complete: ${cohortCount} cohorts processed`);
+
+      return { success: true, cohorts: cohortCount };
+    } catch (error) {
+      functions.logger.error('Cohort analysis error:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Time Series Aggregation Function
+ * Runs hourly to pre-aggregate time series data for charts
+ */
+exports.timeSeriesAggregation = functions.pubsub
+  .schedule('0 * * * *')
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    try {
+      functions.logger.log('Starting time series aggregation');
+
+      const now = new Date();
+      const last30Days = new Date(now);
+      last30Days.setDate(last30Days.getDate() - 30);
+
+      // Get daily aggregated stats for last 30 days
+      const statsSnapshot = await db
+        .collection('daily_aggregated_stats')
+        .where('date', '>=', last30Days.toISOString().split('T')[0])
+        .orderBy('date', 'asc')
+        .get();
+
+      const timeSeriesData = {
+        users: [],
+        messages: [],
+        stories: [],
+        calls: [],
+      };
+
+      statsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        timeSeriesData.users.push({
+          date: data.date,
+          value: data.dau || 0,
+        });
+        timeSeriesData.messages.push({
+          date: data.date,
+          value: data.total_messages_sent || 0,
+        });
+        timeSeriesData.stories.push({
+          date: data.date,
+          value: data.total_stories_created || 0,
+        });
+        timeSeriesData.calls.push({
+          date: data.date,
+          value: data.total_calls_made || 0,
+        });
+      });
+
+      // Store aggregated time series
+      await db
+        .collection('time_series_data')
+        .doc('last_30_days')
+        .set({
+          ...timeSeriesData,
+          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      functions.logger.log(`Time series aggregation complete: ${statsSnapshot.size} days`);
+
+      return { success: true, days: statsSnapshot.size };
+    } catch (error) {
+      functions.logger.error('Time series aggregation error:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Real-time Metrics Trigger
+ * Updates real-time counters when analytics events are written
+ */
+exports.realtimeMetrics = functions.firestore
+  .document('analytics_events/{eventId}')
+  .onCreate(async (snapshot, context) => {
+    try {
+      const eventData = snapshot.data();
+      const now = new Date();
+      const currentMinute = Math.floor(now.getTime() / 60000);
+
+      // Update real-time metrics
+      const metricsRef = db.collection('real_time_metrics').doc('current');
+
+      await db.runTransaction(async (transaction) => {
+        const metricsDoc = await transaction.get(metricsRef);
+        const currentData = metricsDoc.exists ? metricsDoc.data() : {};
+
+        // Initialize counters
+        const eventsPerMinute = currentData.events_per_minute || {};
+        const activeUsers = new Set(currentData.active_users || []);
+        const activeSessions = new Set(currentData.active_sessions || []);
+
+        // Update counters
+        eventsPerMinute[currentMinute] = (eventsPerMinute[currentMinute] || 0) + 1;
+        if (eventData.user_id) {
+          activeUsers.add(eventData.user_id);
+        }
+        if (eventData.session_id) {
+          activeSessions.add(eventData.session_id);
+        }
+
+        // Clean up old minute data (keep last 5 minutes)
+        Object.keys(eventsPerMinute).forEach(minute => {
+          if (currentMinute - parseInt(minute) > 5) {
+            delete eventsPerMinute[minute];
+          }
+        });
+
+        // Calculate average events per minute
+        const recentMinutes = Object.values(eventsPerMinute);
+        const avgEventsPerMinute = recentMinutes.length > 0
+          ? recentMinutes.reduce((a, b) => a + b, 0) / recentMinutes.length
+          : 0;
+
+        transaction.set(metricsRef, {
+          events_per_minute: eventsPerMinute,
+          avg_events_per_minute: Math.round(avgEventsPerMinute),
+          active_users: Array.from(activeUsers),
+          active_users_count: activeUsers.size,
+          active_sessions: Array.from(activeSessions),
+          active_sessions_count: activeSessions.size,
+          last_event_at: admin.firestore.FieldValue.serverTimestamp(),
+          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      return { success: true };
+    } catch (error) {
+      functions.logger.error('Real-time metrics error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+functions.logger.log('Analytics Cloud Functions loaded successfully');

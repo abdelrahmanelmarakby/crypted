@@ -23,6 +23,7 @@ class RegisterController extends GetxController {
 
   final formKey = GlobalKey<FormState>();
   final RxBool acceptedTerms = false.obs;
+  final isLoading = false.obs;
 
   void toggleTermsAcceptance(bool? value) {
     acceptedTerms.value = value ?? false;
@@ -50,6 +51,7 @@ class RegisterController extends GetxController {
       return;
     }
 
+    isLoading.value = true;
     final fullName = fullNameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
@@ -115,6 +117,8 @@ class RegisterController extends GetxController {
     } catch (e) {
       print('🚨 خطأ في التسجيل:------------------------------------ $e');
       Get.snackbar(Constants.kError.tr, e.toString());
+    } finally {
+      isLoading.value = false;
     }
   }
 

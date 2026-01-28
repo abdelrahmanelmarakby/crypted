@@ -1,6 +1,6 @@
 import 'package:crypted_app/app/modules/login/widgets/auth_footer.dart';
 import 'package:crypted_app/app/modules/register/widgets/terms_and_conditions_bottom_sheet.dart';
-import 'package:crypted_app/app/widgets/app_progress_button.dart';
+import 'package:crypted_app/app/core/widgets/stripe_payment_button.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -230,13 +230,19 @@ class RegisterView extends GetView<RegisterController> {
                       SizedBox(height: Sizes.size20),
                       _buildTermsCheckbox(context),
                       SizedBox(height: Sizes.size20),
-                      AppProgressButton(
-                        onPressed: (anim) {
-                          controller.register();
-                        },
-                        text: Constants.kSignUp.tr,
-                        backgroundColor: ColorsManager.primary,
-                      ),
+                      Obx(() => StripePaymentButton(
+                            label: Constants.kSignUp.tr,
+                            state: controller.isLoading.value
+                                ? PaymentButtonState.processing
+                                : PaymentButtonState.ready,
+                            onPressed: () {
+                              if (controller.formKey.currentState!.validate()) {
+                                controller.register();
+                              }
+                            },
+                            primaryColor: ColorsManager.primary,
+                            height: 56,
+                          )),
                       SizedBox(height: Sizes.size10),
                       AuthFooter(
                         title: Constants.kAlreadyHaveAnAccount.tr,

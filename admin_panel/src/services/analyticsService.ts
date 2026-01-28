@@ -4,6 +4,34 @@ import { COLLECTIONS } from '@/utils/constants';
 import { DashboardStats, UserGrowthData, MessageActivityData } from '@/types';
 
 /**
+ * Safely convert Firestore Timestamp or Date to Date object
+ */
+const toDate = (value: any): Date | null => {
+  if (!value) return null;
+
+  // Already a Date object
+  if (value instanceof Date) return value;
+
+  // Firestore Timestamp
+  if (value.toDate && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+
+  // Number timestamp (milliseconds)
+  if (typeof value === 'number') {
+    return new Date(value);
+  }
+
+  // String date
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
+};
+
+/**
  * Get dashboard statistics
  */
 export const getDashboardStats = async (): Promise<DashboardStats> => {
@@ -14,25 +42,28 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    console.log('Fetching dashboard stats...');
+    console.log('🔄 Fetching dashboard stats from Firebase...');
+    console.log('📦 Collections:', COLLECTIONS);
 
     // Get total users
+    console.log(`📊 Querying collection: ${COLLECTIONS.USERS}`);
     const usersSnapshot = await getDocs(collection(db, COLLECTIONS.USERS));
     const totalUsers = usersSnapshot.size;
+    console.log(`✅ Users found: ${totalUsers}`);
 
     // Get active users
     const activeUsers24h = usersSnapshot.docs.filter((doc) => {
-      const lastSeen = doc.data().lastSeen?.toDate();
+      const lastSeen = toDate(doc.data().lastSeen);
       return lastSeen && lastSeen >= last24h;
     }).length;
 
     const activeUsers7d = usersSnapshot.docs.filter((doc) => {
-      const lastSeen = doc.data().lastSeen?.toDate();
+      const lastSeen = toDate(doc.data().lastSeen);
       return lastSeen && lastSeen >= last7d;
     }).length;
 
     const activeUsers30d = usersSnapshot.docs.filter((doc) => {
-      const lastSeen = doc.data().lastSeen?.toDate();
+      const lastSeen = toDate(doc.data().lastSeen);
       return lastSeen && lastSeen >= last30d;
     }).length;
 
@@ -69,7 +100,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const totalReportsSnapshot = await getDocs(collection(db, COLLECTIONS.REPORTS));
     const totalReports = totalReportsSnapshot.size;
     const reportsToday = totalReportsSnapshot.docs.filter((doc) => {
-      const createdAt = doc.data().createdAt?.toDate();
+      const createdAt = toDate(doc.data().createdAt);
       return createdAt && createdAt >= today;
     }).length;
 
@@ -77,23 +108,23 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const totalStoriesSnapshot = await getDocs(collection(db, COLLECTIONS.STORIES));
     const totalStories = totalStoriesSnapshot.size;
     const storiesToday = totalStoriesSnapshot.docs.filter((doc) => {
-      const createdAt = doc.data().createdAt?.toDate();
+      const createdAt = toDate(doc.data().createdAt);
       return createdAt && createdAt >= today;
     }).length;
 
     // Calculate new users
     const newUsersToday = usersSnapshot.docs.filter((doc) => {
-      const createdAt = doc.data().createdAt?.toDate();
+      const createdAt = toDate(doc.data().createdAt);
       return createdAt && createdAt >= today;
     }).length;
 
     const newUsersThisWeek = usersSnapshot.docs.filter((doc) => {
-      const createdAt = doc.data().createdAt?.toDate();
+      const createdAt = toDate(doc.data().createdAt);
       return createdAt && createdAt >= last7d;
     }).length;
 
     const newUsersThisMonth = usersSnapshot.docs.filter((doc) => {
-      const createdAt = doc.data().createdAt?.toDate();
+      const createdAt = toDate(doc.data().createdAt);
       return createdAt && createdAt >= last30d;
     }).length;
 
@@ -204,7 +235,7 @@ export const getUserGrowthData = async (days: number = 30): Promise<UserGrowthDa
 
     // Count users per day
     usersSnapshot.docs.forEach((doc) => {
-      const createdAt = doc.data().createdAt?.toDate();
+      const createdAt = toDate(doc.data().createdAt);
       if (createdAt) {
         const dateStr = createdAt.toISOString().split('T')[0];
         if (growthMap.has(dateStr)) {

@@ -1,27 +1,29 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:io';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:awesome_notifications_fcm/awesome_notifications_fcm.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
-import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/core/services/notification_controller.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
-import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart' as settings_model;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
-/// Production-grade FCM Service for 1M+ users
-/// Handles all push notifications with proper routing and state management
+/// Production-grade FCM Service with awesome_notifications
+///
+/// Handles all push notifications with advanced features:
+/// - Smart replies (inline text responses)
+/// - Reaction buttons (like, love, laugh)
+/// - Rich media support
+/// - Conversation grouping
+/// - Full-screen call notifications
+/// - Background action handling
 class FCMService {
   static final FCMService _instance = FCMService._internal();
   factory FCMService() => _instance;
   FCMService._internal();
-
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
 
   // Notification settings service for decision logic
   NotificationSettingsService? _notificationSettingsService;
@@ -34,252 +36,227 @@ class FCMService {
     _notificationSettingsService = service;
   }
 
+  /// Initialize awesome_notifications channels
+  ///
+  /// This should be called in main.dart BEFORE runApp()
+  static Future<void> initializeAwesomeNotifications() async {
+    try {
+      await AwesomeNotifications().initialize(
+        'resource://drawable/ic_notification',
+        [
+          // Direct Messages Channel
+          NotificationChannel(
+            channelGroupKey: 'messages_group',
+            channelKey: 'direct_messages',
+            channelName: 'Direct Messages',
+            channelDescription: 'Personal messages from contacts',
+            importance: NotificationImportance.High,
+            defaultColor: const Color(0xFF31A354),
+            ledColor: Colors.white,
+            soundSource: 'resource://raw/notification_sound',
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 250, 250, 250]),
+            playSound: true,
+            groupAlertBehavior: GroupAlertBehavior.Children,
+            icon: 'resource://drawable/ic_notification',
+          ),
+
+          // Group Messages Channel
+          NotificationChannel(
+            channelGroupKey: 'messages_group',
+            channelKey: 'group_messages',
+            channelName: 'Group Messages',
+            channelDescription: 'Messages in group chats',
+            importance: NotificationImportance.High,
+            defaultColor: const Color(0xFF31A354),
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 250, 250, 250]),
+            playSound: true,
+          ),
+
+          // Calls Channel
+          NotificationChannel(
+            channelGroupKey: 'calls_group',
+            channelKey: 'incoming_calls',
+            channelName: 'Incoming Calls',
+            channelDescription: 'Voice and video call notifications',
+            importance: NotificationImportance.Max,
+            defaultColor: const Color(0xFF31A354),
+            soundSource: 'resource://raw/call_ringtone',
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 500, 500, 500]),
+            playSound: true,
+            locked: true,
+          ),
+
+          // Stories Channel
+          NotificationChannel(
+            channelGroupKey: 'social_group',
+            channelKey: 'stories',
+            channelName: 'Stories',
+            channelDescription: 'New story notifications',
+            importance: NotificationImportance.Default,
+            defaultColor: const Color(0xFF31A354),
+          ),
+
+          // Reactions Channel
+          NotificationChannel(
+            channelGroupKey: 'social_group',
+            channelKey: 'reactions',
+            channelName: 'Reactions',
+            channelDescription: 'Story and message reactions',
+            importance: NotificationImportance.Low,
+            defaultColor: const Color(0xFF31A354),
+          ),
+
+          // General Channel
+          NotificationChannel(
+            channelGroupKey: 'general_group',
+            channelKey: 'general',
+            channelName: 'General',
+            channelDescription: 'General notifications',
+            importance: NotificationImportance.Default,
+            defaultColor: const Color(0xFF31A354),
+          ),
+        ],
+        channelGroups: [
+          NotificationChannelGroup(
+            channelGroupKey: 'messages_group',
+            channelGroupName: 'Messages',
+          ),
+          NotificationChannelGroup(
+            channelGroupKey: 'calls_group',
+            channelGroupName: 'Calls',
+          ),
+          NotificationChannelGroup(
+            channelGroupKey: 'social_group',
+            channelGroupName: 'Social',
+          ),
+          NotificationChannelGroup(
+            channelGroupKey: 'general_group',
+            channelGroupName: 'General',
+          ),
+        ],
+        debug: kDebugMode,
+      );
+
+      if (kDebugMode) {
+        developer.log('✅ Awesome Notifications initialized', name: 'FCMService');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('❌ Error initializing Awesome Notifications: $e', name: 'FCMService');
+      }
+    }
+  }
+
   /// Initialize FCM service
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
       // Request notification permissions
-      final settings = await _requestPermissions();
-      
-      if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+      final isAllowed = await _requestPermissions();
+
+      if (!isAllowed) {
         if (kDebugMode) {
-          print('⚠️ Notification permissions not granted');
+          developer.log('⚠️ Notification permissions not granted', name: 'FCMService');
         }
         return;
       }
 
-      // Initialize local notifications
-      await _initializeLocalNotifications();
-
-      // Get and save FCM token
-      await _getFCMToken();
-
-      // Listen for token refresh
-      _messaging.onTokenRefresh.listen(_handleTokenRefresh);
-
-      // Handle foreground messages
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-      // Handle background messages
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-      // Handle notification tap
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
-
-      // Check for initial message (app opened from terminated state)
-      final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) {
-        _handleNotificationTap(initialMessage);
-      }
+      // Initialize FCM add-on (handles FCM token automatically)
+      await AwesomeNotificationsFcm().initialize(
+        onFcmSilentDataHandle: NotificationController.onFcmSilentDataHandle,
+        onFcmTokenHandle: NotificationController.onFcmTokenHandle,
+        onNativeTokenHandle: NotificationController.onNativeTokenHandle,
+        debug: kDebugMode,
+      );
 
       _isInitialized = true;
       if (kDebugMode) {
-        print('✅ FCM Service initialized successfully');
+        developer.log('✅ FCM Service initialized successfully', name: 'FCMService');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error initializing FCM Service: $e');
+        developer.log('❌ Error initializing FCM Service: $e', name: 'FCMService');
       }
     }
   }
 
   /// Request notification permissions
-  Future<NotificationSettings> _requestPermissions() async {
-    return await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-      announcement: false,
-      carPlay: false,
-      criticalAlert: false,
-    );
-  }
-
-  /// Initialize local notifications
-  Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
-
-    // Create notification channels for Android
-    if (Platform.isAndroid) {
-      await _createNotificationChannels();
-    }
-  }
-
-  /// Create Android notification channels
-  Future<void> _createNotificationChannels() async {
-    final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-
-    if (androidPlugin == null) return;
-
-    // Messages channel
-    await androidPlugin.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'messages',
-        'Messages',
-        description: 'New message notifications',
-        importance: Importance.high,
-        enableVibration: true,
-        showBadge: true,
-      ),
-    );
-
-    // Calls channel
-    await androidPlugin.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'calls',
-        'Calls',
-        description: 'Incoming call notifications',
-        importance: Importance.max,
-        enableVibration: true,
-        showBadge: true,
-        playSound: true,
-      ),
-    );
-
-    // Stories channel
-    await androidPlugin.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'stories',
-        'Stories',
-        description: 'New story notifications',
-        importance: Importance.defaultImportance,
-        enableVibration: false,
-        showBadge: true,
-      ),
-    );
-
-    // General channel
-    await androidPlugin.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'general',
-        'General',
-        description: 'General notifications',
-        importance: Importance.defaultImportance,
-        enableVibration: true,
-        showBadge: true,
-      ),
-    );
-  }
-
-  /// Get FCM token and save to Firestore
-  Future<void> _getFCMToken() async {
+  Future<bool> _requestPermissions() async {
     try {
-      final token = await _messaging.getToken();
-      if (token != null) {
-        _currentToken = token;
-        await _saveFCMToken(token);
-      }
+      return await AwesomeNotifications().requestPermissionToSendNotifications(
+        permissions: [
+          NotificationPermission.Alert,
+          NotificationPermission.Sound,
+          NotificationPermission.Badge,
+          NotificationPermission.Vibration,
+          NotificationPermission.Light,
+        ],
+      );
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting FCM token: $e');
+        developer.log('❌ Error requesting permissions: $e', name: 'FCMService');
       }
+      return false;
     }
   }
 
-  /// Save FCM token to Firestore
-  Future<void> _saveFCMToken(String token) async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return;
-
-      await FirebaseFirestore.instance
-          .collection(FirebaseCollections.fcmTokens)
-          .doc(token)
-          .set({
-        'uid': userId,
-        'token': token,
-        'platform': Platform.isAndroid ? 'android' : 'ios',
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastUsed': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      if (kDebugMode) {
-        print('✅ FCM token saved: ${token.substring(0, 20)}...');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error saving FCM token: $e');
-      }
-    }
-  }
-
-  /// Handle token refresh
-  Future<void> _handleTokenRefresh(String token) async {
-    _currentToken = token;
-    await _saveFCMToken(token);
-  }
-
-  /// Handle foreground messages
-  void _handleForegroundMessage(RemoteMessage message) {
+  /// Handle FCM data messages (called from NotificationController)
+  Future<void> handleFcmDataMessage(Map<String, dynamic> data) async {
     if (kDebugMode) {
-      print('📨 Foreground message received: ${message.data}');
+      developer.log('📨 FCM data message received: $data', name: 'FCMService');
     }
 
-    final type = message.data['type'] as String?;
+    final type = data['type'] as String?;
 
     switch (type) {
       case 'new_message':
-        _handleNewMessageNotification(message);
+        _handleNewMessageNotification(data);
         break;
       case 'incoming_call':
-        _handleIncomingCallNotification(message);
-        break;
-      case 'typing_indicator':
-        _handleTypingIndicator(message);
-        break;
-      case 'presence_update':
-        _handlePresenceUpdate(message);
-        break;
-      case 'read_receipt':
-        _handleReadReceipt(message);
+        _handleIncomingCallNotification(data);
         break;
       case 'new_story':
-        _handleNewStoryNotification(message);
+        _handleNewStoryNotification(data);
         break;
       case 'backup_completed':
-        _handleBackupNotification(message);
+        _handleBackupNotification(data);
+        break;
+      case 'typing_indicator':
+      case 'presence_update':
+      case 'read_receipt':
+        // Silent messages - handled by Firestore listeners
         break;
       default:
-        _showLocalNotification(message);
+        _showGenericNotification(data);
     }
   }
 
   /// Handle new message notification
-  Future<void> _handleNewMessageNotification(RemoteMessage message) async {
-    final chatId = message.data['chatId'] as String?;
-    final senderId = message.data['senderId'] as String?;
-    final isGroup = message.data['isGroup'] == 'true';
-    final isReaction = message.data['isReaction'] == 'true';
-    final isMention = message.data['isMention'] == 'true';
+  Future<void> _handleNewMessageNotification(Map<String, dynamic> data) async {
+    final chatId = data['chatId'] as String?;
+    final senderId = data['senderId'] as String?;
+    final senderName = data['senderName'] as String?;
+    final messageText = data['message'] as String?;
+    final senderAvatar = data['senderAvatar'] as String?;
+    final isGroup = data['isGroup'] == 'true';
+    final isReaction = data['isReaction'] == 'true';
+    final isMention = data['isMention'] == 'true';
+
+    if (chatId == null || senderId == null) return;
 
     // Check notification settings before showing
-    if (_notificationSettingsService != null && chatId != null && senderId != null) {
-      // Check contact and starred status for proper notification filtering
+    if (_notificationSettingsService != null) {
       final isContact = await _isUserContact(senderId);
       final isStarred = await _isUserStarred(senderId, chatId);
 
       final decision = _notificationSettingsService!.shouldDeliverNotification(
         senderId: senderId,
         chatId: chatId,
-        category: isGroup ? NotificationCategory.group : NotificationCategory.message,
+        category: settings_model.NotificationCategory.message,
         isContact: isContact,
         isStarred: isStarred,
         isReaction: isReaction,
@@ -288,105 +265,134 @@ class FCMService {
 
       if (!decision.shouldDeliver) {
         if (kDebugMode) {
-          print('🔕 Notification blocked: ${decision.blockReason?.displayMessage}');
+          developer.log('🔕 Notification blocked: ${decision.blockReason?.displayMessage}', name: 'FCMService');
         }
         return;
       }
-
-      // Use decision settings for notification
-      await _showLocalNotificationWithSettings(
-        message,
-        channelId: isGroup ? 'groups' : 'messages',
-        payload: 'chat:$chatId',
-        decision: decision,
-      );
-    } else {
-      // Fallback to default notification
-      await _showLocalNotification(
-        message,
-        channelId: 'messages',
-        payload: 'chat:$chatId',
-      );
     }
 
-    // Update chat list if visible
-    // This will be handled by Firestore listeners
+    // Create notification with awesome_notifications
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: chatId.hashCode,
+        channelKey: isGroup ? 'group_messages' : 'direct_messages',
+        groupKey: chatId,
+        title: senderName ?? 'New Message',
+        body: messageText ?? '',
+        largeIcon: senderAvatar,
+        notificationLayout: isGroup
+            ? NotificationLayout.MessagingGroup
+            : NotificationLayout.Messaging,
+        category: NotificationCategory.Message,
+        displayOnForeground: true,
+        displayOnBackground: true,
+        wakeUpScreen: false,
+        payload: {
+          'chatId': chatId,
+          'senderId': senderId,
+          'conversationId': chatId,
+          'isGroup': isGroup.toString(),
+          'type': isGroup ? 'group_message' : 'direct_message',
+        },
+      ),
+      actionButtons: [
+        NotificationActionButton(
+          key: isGroup ? 'REPLY_GROUP' : 'REPLY',
+          label: 'Reply',
+          icon: 'resource://drawable/ic_reply',
+          requireInputText: true,
+          actionType: ActionType.SilentAction,
+          showInCompactView: true,
+        ),
+        NotificationActionButton(
+          key: 'MARK_READ',
+          label: 'Mark as Read',
+          icon: 'resource://drawable/ic_done_all',
+          actionType: ActionType.SilentBackgroundAction,
+        ),
+        NotificationActionButton(
+          key: 'MUTE',
+          label: 'Mute',
+          icon: 'resource://drawable/ic_notifications_off',
+          actionType: ActionType.SilentBackgroundAction,
+        ),
+      ],
+    );
   }
 
   /// Handle incoming call notification
-  void _handleIncomingCallNotification(RemoteMessage message) {
-    final callId = message.data['callId'] as String?;
-    final callerId = message.data['callerId'] as String?;
-    final callerName = message.data['callerName'] as String?;
-    final callType = message.data['callType'] as String?;
+  Future<void> _handleIncomingCallNotification(Map<String, dynamic> data) async {
+    final callId = data['callId'] as String?;
+    final callerId = data['callerId'] as String?;
+    final callerName = data['callerName'] as String?;
+    final callerAvatar = data['callerAvatar'] as String?;
+    final callType = data['callType'] as String?;
 
-    // Navigate to call screen
-    if (callId != null) {
-      Get.toNamed(
-        Routes.CALL,
-        arguments: {
+    if (callId == null) return;
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: callId.hashCode,
+        channelKey: 'incoming_calls',
+        title: callerName ?? 'Incoming Call',
+        body: callType == 'video' ? '📹 Video Call' : '📞 Voice Call',
+        largeIcon: callerAvatar,
+        category: NotificationCategory.Call,
+        fullScreenIntent: true,
+        wakeUpScreen: true,
+        displayOnForeground: true,
+        displayOnBackground: true,
+        autoDismissible: false,
+        locked: true,
+        payload: {
           'callId': callId,
-          'callerId': callerId,
-          'callerName': callerName,
-          'callType': callType,
-          'isIncoming': true,
+          'callerId': callerId ?? '',
+          'callerName': callerName ?? '',
+          'callType': callType ?? 'voice',
+          'type': 'incoming_call',
         },
-      );
-    }
-  }
-
-  /// Handle typing indicator
-  void _handleTypingIndicator(RemoteMessage message) {
-    final chatId = message.data['chatId'] as String?;
-    final userId = message.data['userId'] as String?;
-    final isTyping = message.data['isTyping'] == 'true';
-
-    if (chatId != null && userId != null) {
-      // Emit event for chat screen to handle
-      Get.find<dynamic>().updateTypingStatus?.call(chatId, userId, isTyping);
-    }
-  }
-
-  /// Handle presence update
-  void _handlePresenceUpdate(RemoteMessage message) {
-    final userId = message.data['userId'] as String?;
-    final status = message.data['status'] as String?;
-
-    if (userId != null && status != null) {
-      // Emit event for UI to update
-      Get.find<dynamic>().updateUserPresence?.call(userId, status == 'online');
-    }
-  }
-
-  /// Handle read receipt
-  void _handleReadReceipt(RemoteMessage message) {
-    final messageId = message.data['messageId'] as String?;
-    final readBy = message.data['readBy'] as String?;
-
-    if (messageId != null && readBy != null) {
-      // Update message status in cache
-      // This will be handled by Firestore listeners
-    }
+      ),
+      actionButtons: [
+        NotificationActionButton(
+          key: 'ACCEPT_CALL',
+          label: 'Accept',
+          icon: 'resource://drawable/ic_call_accept',
+          color: Colors.green,
+          actionType: ActionType.Default,
+          showInCompactView: true,
+        ),
+        NotificationActionButton(
+          key: 'DECLINE_CALL',
+          label: 'Decline',
+          icon: 'resource://drawable/ic_call_decline',
+          color: Colors.red,
+          isDangerousOption: true,
+          actionType: ActionType.Default,
+          showInCompactView: true,
+        ),
+      ],
+    );
   }
 
   /// Handle new story notification
-  Future<void> _handleNewStoryNotification(RemoteMessage message) async {
-    final storyId = message.data['storyId'] as String?;
-    final userId = message.data['userId'] as String?;
-    // Use payload isContact as fallback, but verify from Firestore
-    final payloadIsContact = message.data['isContact'] == 'true';
+  Future<void> _handleNewStoryNotification(Map<String, dynamic> data) async {
+    final storyId = data['storyId'] as String?;
+    final userId = data['userId'] as String?;
+    final userName = data['userName'] as String?;
+    final userAvatar = data['userAvatar'] as String?;
+    final storyType = data['storyType'] as String?;
 
-    // Check notification settings before showing
-    if (_notificationSettingsService != null && userId != null) {
-      // Verify contact status from Firestore (more reliable than payload)
-      final isContact = payloadIsContact || await _isUserContact(userId);
-      // Check if user is starred (in allowed contacts or favorited)
+    if (storyId == null || userId == null) return;
+
+    // Check notification settings
+    if (_notificationSettingsService != null) {
+      final isContact = await _isUserContact(userId);
       final isStarred = await _isUserStarred(userId, null);
 
       final decision = _notificationSettingsService!.shouldDeliverNotification(
         senderId: userId,
         chatId: 'story_$userId',
-        category: NotificationCategory.status,
+        category: settings_model.NotificationCategory.status,
         isContact: isContact,
         isStarred: isStarred,
         isReaction: false,
@@ -395,194 +401,73 @@ class FCMService {
 
       if (!decision.shouldDeliver) {
         if (kDebugMode) {
-          print('🔕 Story notification blocked: ${decision.blockReason?.displayMessage}');
+          developer.log('🔕 Story notification blocked: ${decision.blockReason?.displayMessage}', name: 'FCMService');
         }
         return;
       }
-
-      await _showLocalNotificationWithSettings(
-        message,
-        channelId: 'stories',
-        payload: 'story:$userId',
-        decision: decision,
-      );
-    } else {
-      await _showLocalNotification(
-        message,
-        channelId: 'stories',
-        payload: 'story:$userId',
-      );
     }
-  }
 
-  /// Handle backup notification
-  void _handleBackupNotification(RemoteMessage message) {
-    _showLocalNotification(
-      message,
-      channelId: 'general',
-    );
-  }
-
-  /// Show local notification
-  Future<void> _showLocalNotification(
-    RemoteMessage message, {
-    String channelId = 'general',
-    String? payload,
-  }) async {
-    final notification = message.notification;
-    if (notification == null) return;
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelId.capitalize ?? channelId,
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
-      enableVibration: true,
-      playSound: true,
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _localNotifications.show(
-      message.hashCode,
-      notification.title,
-      notification.body,
-      details,
-      payload: payload ?? message.data['chatId'] as String?,
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: storyId.hashCode,
+        channelKey: 'stories',
+        title: '$userName posted a story',
+        body: storyType == 'video' ? '🎥 Video Story' : '📷 Photo Story',
+        largeIcon: userAvatar,
+        category: NotificationCategory.Social,
+        displayOnForeground: true,
+        displayOnBackground: true,
+        payload: {
+          'storyId': storyId,
+          'userId': userId,
+          'type': 'new_story',
+        },
+      ),
+      actionButtons: [
+        NotificationActionButton(
+          key: 'REACT_LIKE',
+          label: '👍',
+          actionType: ActionType.SilentBackgroundAction,
+          showInCompactView: true,
+        ),
+        NotificationActionButton(
+          key: 'REACT_LOVE',
+          label: '❤️',
+          actionType: ActionType.SilentBackgroundAction,
+          showInCompactView: true,
+        ),
+        NotificationActionButton(
+          key: 'REACT_LAUGH',
+          label: '😂',
+          actionType: ActionType.SilentBackgroundAction,
+          showInCompactView: true,
+        ),
+      ],
     );
   }
 
-  /// Show local notification with custom settings from NotificationDecision
-  Future<void> _showLocalNotificationWithSettings(
-    RemoteMessage message, {
-    String channelId = 'general',
-    String? payload,
-    required NotificationDecision decision,
-  }) async {
-    final notification = message.notification;
-    if (notification == null) return;
-
-    // Map priority to Android importance
-    Importance importance = Importance.high;
-    Priority priority = Priority.high;
-    if (decision.priority != null) {
-      switch (decision.priority!) {
-        case NotificationPriority.silent:
-          importance = Importance.min;
-          priority = Priority.min;
-          break;
-        case NotificationPriority.low:
-          importance = Importance.low;
-          priority = Priority.low;
-          break;
-        case NotificationPriority.normal:
-          importance = Importance.defaultImportance;
-          priority = Priority.defaultPriority;
-          break;
-        case NotificationPriority.high:
-          importance = Importance.high;
-          priority = Priority.high;
-          break;
-        case NotificationPriority.urgent:
-          importance = Importance.max;
-          priority = Priority.max;
-          break;
-      }
-    }
-
-    // Check if sound should be enabled
-    final playSound = decision.sound?.enabled ?? true;
-
-    // Check vibration pattern
-    final enableVibration = decision.vibration != null &&
-        decision.vibration != VibrationPattern.none;
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelId.capitalize ?? channelId,
-      importance: importance,
-      priority: priority,
-      showWhen: true,
-      enableVibration: enableVibration,
-      playSound: playSound,
-    );
-
-    final iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: playSound,
-    );
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _localNotifications.show(
-      message.hashCode,
-      notification.title,
-      notification.body,
-      details,
-      payload: payload ?? message.data['chatId'] as String?,
-    );
+  /// Handle backup completion notification
+  void _handleBackupNotification(Map<String, dynamic> data) {
+    _showGenericNotification(data);
   }
 
-  /// Handle notification tap
-  void _handleNotificationTap(RemoteMessage message) {
-    final type = message.data['type'] as String?;
-    final chatId = message.data['chatId'] as String?;
-    final callId = message.data['callId'] as String?;
-    final storyId = message.data['storyId'] as String?;
-    final userId = message.data['userId'] as String?;
+  /// Show generic notification
+  Future<void> _showGenericNotification(Map<String, dynamic> data) async {
+    final title = data['title'] as String? ?? 'Crypted';
+    final body = data['body'] as String? ?? 'You have a new notification';
 
-    if (kDebugMode) {
-      print('🔔 Notification tapped: $type');
-    }
-
-    switch (type) {
-      case 'new_message':
-        if (chatId != null) {
-          Get.toNamed(Routes.CHAT, arguments: {'chatId': chatId});
-        }
-        break;
-      case 'incoming_call':
-        if (callId != null) {
-          Get.toNamed(Routes.CALL, arguments: {'callId': callId});
-        }
-        break;
-      case 'new_story':
-        if (userId != null) {
-          Get.toNamed(Routes.STORIES, arguments: {'userId': userId});
-        }
-        break;
-      default:
-        // Navigate to home
-        Get.toNamed(Routes.HOME);
-    }
-  }
-
-  /// Handle local notification tap
-  void _onNotificationTapped(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload == null) return;
-
-    if (payload.startsWith('chat:')) {
-      final chatId = payload.substring(5);
-      Get.toNamed(Routes.CHAT, arguments: {'chatId': chatId});
-    } else if (payload.startsWith('story:')) {
-      final userId = payload.substring(6);
-      Get.toNamed(Routes.STORIES, arguments: {'userId': userId});
-    }
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: DateTime.now().millisecondsSinceEpoch,
+        channelKey: 'general',
+        title: title,
+        body: body,
+        category: NotificationCategory.Message,
+        displayOnForeground: true,
+        displayOnBackground: true,
+        payload: data.map((key, value) => MapEntry(key, value?.toString() ?? '')),
+      ),
+    );
   }
 
   /// Delete FCM token (on logout)
@@ -594,15 +479,17 @@ class FCMService {
             .doc(_currentToken)
             .delete();
       }
-      await _messaging.deleteToken();
+
+      // Note: awesome_notifications_fcm manages tokens internally
+      // Token is automatically refreshed when needed
       _currentToken = null;
 
       if (kDebugMode) {
-        print('✅ FCM token deleted');
+        developer.log('✅ FCM token deleted', name: 'FCMService');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error deleting FCM token: $e');
+        developer.log('❌ Error deleting FCM token: $e', name: 'FCMService');
       }
     }
   }
@@ -641,9 +528,6 @@ class FCMService {
   }
 
   /// Check if a user is "starred" (has a favorited chat room with current user)
-  /// This includes:
-  /// 1. Chat room with isFavorite = true
-  /// 2. User in globalAllowedContacts list (for DND bypass)
   Future<bool> _isUserStarred(String senderId, String? chatId) async {
     try {
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
@@ -667,7 +551,6 @@ class FCMService {
 
         if (chatDoc.exists) {
           final data = chatDoc.data();
-          // Check per-user favorites (stored as map) or global isFavorite
           final favorites = data?['favorites'] as Map<String, dynamic>?;
           if (favorites != null && favorites[currentUserId] == true) {
             return true;
@@ -688,225 +571,4 @@ class FCMService {
       return false;
     }
   }
-}
-
-/// Background message handler (must be top-level function)
-/// FIX: Implement actual handling for call and message notifications
-/// Note: This runs in a separate isolate - cannot use GetX navigation
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (kDebugMode) {
-    print('📨 Background message received: ${message.messageId}');
-    print('📨 Message data: ${message.data}');
-  }
-
-  // Initialize local notifications for background handling
-  final FlutterLocalNotificationsPlugin localNotifications =
-      FlutterLocalNotificationsPlugin();
-
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosSettings = DarwinInitializationSettings(
-    requestAlertPermission: false,
-    requestBadgePermission: false,
-    requestSoundPermission: false,
-  );
-  const initSettings = InitializationSettings(
-    android: androidSettings,
-    iOS: iosSettings,
-  );
-  await localNotifications.initialize(initSettings);
-
-  final messageType = message.data['type'] as String?;
-
-  try {
-    switch (messageType) {
-      case 'incoming_call':
-        // Show high-priority call notification
-        await _showBackgroundCallNotification(localNotifications, message);
-        break;
-
-      case 'chat_message':
-        // Show chat message notification
-        await _showBackgroundChatNotification(localNotifications, message);
-        break;
-
-      case 'story_reply':
-      case 'story_reaction':
-        // Show story notification
-        await _showBackgroundStoryNotification(localNotifications, message);
-        break;
-
-      default:
-        // Show generic notification
-        await _showBackgroundGenericNotification(localNotifications, message);
-        break;
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error handling background message: $e');
-    }
-  }
-}
-
-/// Show call notification in background
-Future<void> _showBackgroundCallNotification(
-  FlutterLocalNotificationsPlugin localNotifications,
-  RemoteMessage message,
-) async {
-  final callerName = message.data['callerName'] as String? ?? 'Unknown';
-  final callType = message.data['callType'] as String? ?? 'voice';
-  final callId = message.data['callId'] as String? ?? '';
-
-  // High priority notification channel for calls
-  const androidDetails = AndroidNotificationDetails(
-    'incoming_calls',
-    'Incoming Calls',
-    channelDescription: 'Notifications for incoming voice and video calls',
-    importance: Importance.max,
-    priority: Priority.max,
-    category: AndroidNotificationCategory.call,
-    fullScreenIntent: true,
-    ongoing: true,
-    autoCancel: false,
-    playSound: true,
-    enableVibration: true,
-    visibility: NotificationVisibility.public,
-  );
-
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-    interruptionLevel: InterruptionLevel.timeSensitive,
-  );
-
-  const details = NotificationDetails(
-    android: androidDetails,
-    iOS: iosDetails,
-  );
-
-  final callTypeEmoji = callType == 'video' ? '📹' : '📞';
-
-  await localNotifications.show(
-    callId.hashCode,
-    '$callTypeEmoji Incoming ${callType == 'video' ? 'Video' : 'Voice'} Call',
-    '$callerName is calling...',
-    details,
-    payload: 'call:$callId',
-  );
-}
-
-/// Show chat notification in background
-Future<void> _showBackgroundChatNotification(
-  FlutterLocalNotificationsPlugin localNotifications,
-  RemoteMessage message,
-) async {
-  final senderName = message.data['senderName'] as String? ?? 'Someone';
-  final messageText = message.data['message'] as String? ?? 'New message';
-  final chatId = message.data['chatId'] as String? ?? '';
-
-  const androidDetails = AndroidNotificationDetails(
-    'messages',
-    'Messages',
-    channelDescription: 'Chat message notifications',
-    importance: Importance.high,
-    priority: Priority.high,
-    category: AndroidNotificationCategory.message,
-  );
-
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-  );
-
-  const details = NotificationDetails(
-    android: androidDetails,
-    iOS: iosDetails,
-  );
-
-  await localNotifications.show(
-    chatId.hashCode,
-    senderName,
-    messageText,
-    details,
-    payload: 'chat:$chatId',
-  );
-}
-
-/// Show story notification in background
-Future<void> _showBackgroundStoryNotification(
-  FlutterLocalNotificationsPlugin localNotifications,
-  RemoteMessage message,
-) async {
-  final senderName = message.data['senderName'] as String? ?? 'Someone';
-  final type = message.data['type'] as String?;
-  final storyId = message.data['storyId'] as String? ?? '';
-
-  final title = type == 'story_reaction' ? 'Story Reaction' : 'Story Reply';
-  final body = type == 'story_reaction'
-      ? '$senderName reacted to your story'
-      : '$senderName replied to your story';
-
-  const androidDetails = AndroidNotificationDetails(
-    'stories',
-    'Stories',
-    channelDescription: 'Story notifications',
-    importance: Importance.defaultImportance,
-    priority: Priority.defaultPriority,
-  );
-
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-  );
-
-  const details = NotificationDetails(
-    android: androidDetails,
-    iOS: iosDetails,
-  );
-
-  await localNotifications.show(
-    storyId.hashCode,
-    title,
-    body,
-    details,
-    payload: 'story:$storyId',
-  );
-}
-
-/// Show generic notification in background
-Future<void> _showBackgroundGenericNotification(
-  FlutterLocalNotificationsPlugin localNotifications,
-  RemoteMessage message,
-) async {
-  final title = message.notification?.title ?? 'Crypted';
-  final body = message.notification?.body ?? 'You have a new notification';
-
-  const androidDetails = AndroidNotificationDetails(
-    'general',
-    'General',
-    channelDescription: 'General notifications',
-    importance: Importance.defaultImportance,
-    priority: Priority.defaultPriority,
-  );
-
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-  );
-
-  const details = NotificationDetails(
-    android: androidDetails,
-    iOS: iosDetails,
-  );
-
-  await localNotifications.show(
-    DateTime.now().millisecondsSinceEpoch.remainder(100000),
-    title,
-    body,
-    details,
-  );
 }

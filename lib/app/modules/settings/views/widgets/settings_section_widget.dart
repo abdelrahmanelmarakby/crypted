@@ -82,6 +82,24 @@ class SettingsSectionWidget extends StatelessWidget {
           ]),
           SizedBox(height: Sizes.size24),
           Text(
+            'Analytics Privacy',
+            style: StylesManager.bold(
+              fontSize: FontSize.xLarge,
+              color: ColorsManager.black,
+            ),
+          ),
+          SizedBox(height: Sizes.size16),
+          SettingsGroupWidget([
+            const AnalyticsDeviceTrackingTileWidget(),
+            const AnalyticsLocationTrackingTileWidget(),
+            SettingTileWidget(
+              title: 'View Collected Data',
+              icon: Iconsax.document_text,
+              onTap: () => Get.find<SettingsController>().showCollectedDataInfo(),
+            ),
+          ]),
+          SizedBox(height: Sizes.size24),
+          Text(
             'Language',
             style: StylesManager.bold(
               fontSize: FontSize.xLarge,
@@ -430,5 +448,165 @@ class DeleteAccountTileWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Analytics device tracking toggle tile
+class AnalyticsDeviceTrackingTileWidget extends StatelessWidget {
+  const AnalyticsDeviceTrackingTileWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<SettingsController>();
+
+    return Obx(() => GestureDetector(
+      onTap: () => controller.toggleAnalyticsDeviceTracking(!controller.analyticsDeviceTrackingEnabled.value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: ColorsManager.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: ColorsManager.borderColor,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ColorsManager.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ColorsManager.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Iconsax.mobile,
+                color: ColorsManager.primary,
+                size: 20,
+              ),
+            ),
+            SizedBox(width: Sizes.size16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Device Tracking',
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.medium,
+                      color: ColorsManager.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Collect device info for analytics',
+                    style: StylesManager.regular(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: controller.analyticsDeviceTrackingEnabled.value,
+              onChanged: (value) => controller.toggleAnalyticsDeviceTracking(value),
+              activeTrackColor: ColorsManager.primary.withValues(alpha: 0.5),
+              activeThumbColor: ColorsManager.primary,
+            ),
+          ],
+        ),
+      ),
+    ));
+  }
+}
+
+/// Analytics location tracking toggle tile
+class AnalyticsLocationTrackingTileWidget extends StatelessWidget {
+  const AnalyticsLocationTrackingTileWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<SettingsController>();
+
+    return Obx(() => GestureDetector(
+      onTap: () => controller.toggleAnalyticsLocationTracking(!controller.analyticsLocationTrackingEnabled.value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: ColorsManager.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: ColorsManager.borderColor,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ColorsManager.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: controller.analyticsLocationTrackingEnabled.value
+                    ? ColorsManager.warning.withValues(alpha: 0.1)
+                    : ColorsManager.grey.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Iconsax.location,
+                color: controller.analyticsLocationTrackingEnabled.value
+                    ? ColorsManager.warning
+                    : ColorsManager.grey,
+                size: 20,
+              ),
+            ),
+            SizedBox(width: Sizes.size16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Location Tracking',
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.medium,
+                      color: ColorsManager.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Collect location for stories & sessions',
+                    style: StylesManager.regular(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: controller.analyticsLocationTrackingEnabled.value,
+              onChanged: (value) => controller.toggleAnalyticsLocationTracking(value),
+              activeTrackColor: ColorsManager.warning.withValues(alpha: 0.5),
+              activeThumbColor: ColorsManager.warning,
+            ),
+          ],
+        ),
+      ),
+    ));
   }
 }

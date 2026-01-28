@@ -1,7 +1,7 @@
 import 'package:crypted_app/app/modules/login/controllers/login_controller.dart';
 import 'package:crypted_app/app/modules/login/widgets/auth_footer.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
-import 'package:crypted_app/app/widgets/app_progress_button.dart';
+import 'package:crypted_app/app/core/widgets/stripe_payment_button.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -115,13 +115,19 @@ class LoginView extends GetView<LoginController> {
                         ],
                       ),
                       SizedBox(height: Sizes.size20),
-                      AppProgressButton(
-                        onPressed: (anim) {
-                          controller.login();
-                        },
-                        text: Constants.kLogin.tr,
-                        backgroundColor: ColorsManager.primary,
-                      ),
+                      Obx(() => StripePaymentButton(
+                            label: Constants.kLogin.tr,
+                            state: controller.isLoading.value
+                                ? PaymentButtonState.processing
+                                : PaymentButtonState.ready,
+                            onPressed: () {
+                              if (controller.formKey.currentState!.validate()) {
+                                controller.login();
+                              }
+                            },
+                            primaryColor: ColorsManager.primary,
+                            height: 56,
+                          )),
                       SizedBox(height: Sizes.size10),
                       AuthFooter(
                         title: Constants.kDontHaveAnAccount.tr,

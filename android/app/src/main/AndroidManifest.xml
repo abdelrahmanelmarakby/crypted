@@ -31,6 +31,10 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- awesome_notifications permissions -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+
     <!-- System alert window for bringing app to foreground -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 

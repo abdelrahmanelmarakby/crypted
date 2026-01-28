@@ -4,6 +4,7 @@ import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:crypted_app/app/core/services/backup_service.dart';
+import 'package:crypted_app/app/core/services/analytics_service.dart';
 import 'package:crypted_app/app/widgets/bottom_sheets/custom_bottom_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/locale/constant.dart';
@@ -31,6 +32,10 @@ class SettingsController extends GetxController {
   var maxImages = 50.obs;
   var backupQuality = 'medium'.obs;
 
+  // Analytics privacy settings
+  var analyticsDeviceTrackingEnabled = true.obs;
+  var analyticsLocationTrackingEnabled = false.obs;
+
   // Active backup task
   String? _activeBackupId;
   StreamSubscription<BackupProgress>? _progressSubscription;
@@ -54,6 +59,9 @@ class SettingsController extends GetxController {
 
     // Load initial backup settings
     _loadBackupSettings();
+
+    // Load analytics privacy settings
+    _loadAnalyticsSettings();
 
     // Listen to active tasks
     _monitorActiveTasks();
@@ -1081,6 +1089,281 @@ class SettingsController extends GetxController {
     } else {
       return 'Backup';
     }
+  }
+
+  // ============================================
+  // ANALYTICS PRIVACY CONTROLS
+  // ============================================
+
+  /// Load analytics privacy settings
+  Future<void> _loadAnalyticsSettings() async {
+    try {
+      final analyticsService = Get.find<AnalyticsService>();
+      analyticsDeviceTrackingEnabled.value = analyticsService.isDeviceTrackingEnabled;
+      analyticsLocationTrackingEnabled.value = analyticsService.isLocationTrackingEnabled;
+    } catch (e) {
+      log('❌ Error loading analytics settings: $e');
+    }
+  }
+
+  /// Toggle analytics device tracking
+  Future<void> toggleAnalyticsDeviceTracking(bool value) async {
+    try {
+      final analyticsService = Get.find<AnalyticsService>();
+      await analyticsService.setDeviceTrackingEnabled(value);
+      analyticsDeviceTrackingEnabled.value = value;
+
+      Get.snackbar(
+        'Analytics Privacy',
+        value
+            ? 'Device tracking enabled'
+            : 'Device tracking disabled. Your device information will not be collected.',
+        backgroundColor: value ? ColorsManager.success : ColorsManager.warning,
+        colorText: ColorsManager.white,
+      );
+    } catch (e) {
+      log('❌ Error toggling device tracking: $e');
+      Get.snackbar(
+        Constants.kError.tr,
+        'Failed to update device tracking setting',
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
+
+  /// Toggle analytics location tracking
+  Future<void> toggleAnalyticsLocationTracking(bool value) async {
+    try {
+      final analyticsService = Get.find<AnalyticsService>();
+      await analyticsService.setLocationTrackingEnabled(value);
+      analyticsLocationTrackingEnabled.value = analyticsService.isLocationTrackingEnabled;
+
+      if (value && !analyticsLocationTrackingEnabled.value) {
+        // Permission was denied
+        Get.snackbar(
+          'Location Permission',
+          'Location permission is required to enable location tracking',
+          backgroundColor: ColorsManager.warning,
+          colorText: ColorsManager.white,
+        );
+      } else {
+        Get.snackbar(
+          'Analytics Privacy',
+          value
+              ? 'Location tracking enabled'
+              : 'Location tracking disabled. Your location will not be collected.',
+          backgroundColor: value ? ColorsManager.success : ColorsManager.warning,
+          colorText: ColorsManager.white,
+        );
+      }
+    } catch (e) {
+      log('❌ Error toggling location tracking: $e');
+      Get.snackbar(
+        Constants.kError.tr,
+        'Failed to update location tracking setting',
+        backgroundColor: ColorsManager.red,
+        colorText: ColorsManager.white,
+      );
+    }
+  }
+
+  /// Show collected data information bottom sheet
+  void showCollectedDataInfo() {
+    try {
+      final analyticsService = Get.find<AnalyticsService>();
+      final exampleData = analyticsService.getCollectedDataExample();
+
+      Get.bottomSheet(
+        Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: ColorsManager.primary, size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Collected Data',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Description
+                Text(
+                  'We collect the following information to improve your experience and provide better analytics:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Device Context Section
+                _buildDataSection(
+                  title: 'Device Information',
+                  icon: Icons.phone_android,
+                  enabled: analyticsDeviceTrackingEnabled.value,
+                  data: exampleData['device_context'] as Map<String, dynamic>,
+                ),
+                const SizedBox(height: 16),
+                // Location Context Section
+                _buildDataSection(
+                  title: 'Location Information',
+                  icon: Icons.location_on,
+                  enabled: analyticsLocationTrackingEnabled.value,
+                  data: exampleData['location_context'] as Map<String, dynamic>,
+                ),
+                const SizedBox(height: 24),
+                // Privacy Note
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.privacy_tip, color: ColorsManager.primary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Your privacy is important to us. You can disable any tracking at any time from the settings page. No personally identifiable information is collected.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+      );
+    } catch (e) {
+      log('❌ Error showing collected data info: $e');
+    }
+  }
+
+  /// Build data section widget
+  Widget _buildDataSection({
+    required String title,
+    required IconData icon,
+    required bool enabled,
+    required Map<String, dynamic> data,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: ColorsManager.primary),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: enabled ? ColorsManager.success : ColorsManager.warning,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  enabled ? 'Enabled' : 'Disabled',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (enabled) ...[
+            const SizedBox(height: 12),
+            ...data.entries.map((entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '• ',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                            ),
+                            children: [
+                              TextSpan(
+                                text: '${entry.key.replaceAll('_', ' ')}: ',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              TextSpan(text: '${entry.value}'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'No data is being collected for this category',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   /// Delete user account

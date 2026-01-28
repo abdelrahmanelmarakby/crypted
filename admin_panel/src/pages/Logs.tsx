@@ -20,17 +20,25 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  VStack,
 } from '@chakra-ui/react';
 import { FiRefreshCw, FiSearch, FiFileText } from 'react-icons/fi';
 import { getAdminLogs } from '@/services/adminService';
 import { AdminLog } from '@/types';
 import { formatDate, getStatusColor } from '@/utils/helpers';
+import { runDiagnostics } from '@/utils/diagnostics';
 
 const Logs: React.FC = () => {
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [resourceFilter, setResourceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
 
   const toast = useToast();
 
@@ -41,21 +49,61 @@ const Logs: React.FC = () => {
   const fetchLogs = async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      console.log('📋 Logs: Fetching admin logs...');
+
       const fetchedLogs =
         resourceFilter === 'all'
           ? await getAdminLogs(200)
           : await getAdminLogs(200, resourceFilter);
+
+      console.log('📋 Logs: Fetched', fetchedLogs.length, 'log entries');
+
       setLogs(fetchedLogs);
-    } catch (error) {
+
+      if (fetchedLogs.length === 0) {
+        setError('No logs found. The admin_logs collection may be empty or you may not have permission to read it.');
+      }
+    } catch (error: any) {
+      console.error('❌ Logs: Error fetching logs:', error);
+      const errorMessage = error?.message || 'Failed to fetch activity logs';
+      setError(errorMessage);
       toast({
         title: 'Error loading logs',
-        description: 'Failed to fetch activity logs',
+        description: errorMessage,
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRunDiagnostics = async () => {
+    setRunningDiagnostics(true);
+    try {
+      console.log('🔍 Running Firebase diagnostics...');
+      await runDiagnostics();
+      toast({
+        title: 'Diagnostics Complete',
+        description: 'Check the browser console for detailed results',
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (error: any) {
+      console.error('❌ Diagnostics error:', error);
+      toast({
+        title: 'Diagnostics Failed',
+        description: error?.message || 'Could not run diagnostics',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setRunningDiagnostics(false);
     }
   };
 
@@ -84,6 +132,30 @@ const Logs: React.FC = () => {
 
   return (
     <Box>
+      {/* Error Alert */}
+      {error && logs.length === 0 && (
+        <Alert status="warning" mb="6" borderRadius="md">
+          <AlertIcon />
+          <Box flex="1">
+            <AlertTitle>No Logs Found</AlertTitle>
+            <AlertDescription display="block">
+              {error}
+              <Button
+                size="sm"
+                colorScheme="orange"
+                variant="outline"
+                ml="4"
+                mt="2"
+                onClick={handleRunDiagnostics}
+                isLoading={runningDiagnostics}
+              >
+                Run Diagnostics
+              </Button>
+            </AlertDescription>
+          </Box>
+        </Alert>
+      )}
+
       {/* Header */}
       <Flex justify="space-between" align="center" mb="6">
         <Box>
@@ -189,15 +261,24 @@ const Logs: React.FC = () => {
 
       {filteredLogs.length === 0 && (
         <Center h="30vh" mt="6">
-          <Box textAlign="center">
+          <VStack spacing={4} textAlign="center">
             <FiFileText size="48" color="gray" style={{ margin: '0 auto 16px' }} />
             <Text color="gray.500" fontSize="lg">
               No activity logs found
             </Text>
-            <Text color="gray.400" fontSize="sm" mt="2">
+            <Text color="gray.400" fontSize="sm">
               Admin actions will be recorded here
             </Text>
-          </Box>
+            <Button
+              size="sm"
+              colorScheme="blue"
+              onClick={handleRunDiagnostics}
+              isLoading={runningDiagnostics}
+              loadingText="Running diagnostics..."
+            >
+              Run Diagnostics
+            </Button>
+          </VStack>
         </Center>
       )}
     </Box>
