@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
-import 'package:crypted_app/app/core/services/backup_service.dart';
+import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart' as backup_v3;
 import 'package:crypted_app/app/core/services/analytics_service.dart';
 import 'package:crypted_app/app/widgets/bottom_sheets/custom_bottom_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
@@ -38,10 +38,10 @@ class SettingsController extends GetxController {
 
   // Active backup task
   String? _activeBackupId;
-  StreamSubscription<BackupProgress>? _progressSubscription;
+  StreamSubscription? _progressSubscription;
+  StreamSubscription? _eventsSubscription;
 
   // Services
-  final BackupService _backupService = BackupService.instance;
   final BackupDataSource _backupDataSource = BackupDataSource();
 
   @override
@@ -70,6 +70,7 @@ class SettingsController extends GetxController {
   @override
   void onClose() {
     _progressSubscription?.cancel();
+    _eventsSubscription?.cancel();
     super.onClose();
   }
 
@@ -109,14 +110,19 @@ class SettingsController extends GetxController {
       backupStatus.value = BackupStatus.inProgress;
       currentBackupTask.value = Constants.kPreparingBackup.tr;
 
-      // Start quick backup in background
-      _activeBackupId = await _backupService.quickBackup(
-        userId: user.uid ?? '',
-        backupName: 'Quick Backup ${DateTime.now().toString().split(' ')[0]}',
+      // Start quick backup with chats and contacts only
+      _activeBackupId = await backup_v3.BackupServiceV3.instance.startBackup(
+        types: {backup_v3.BackupType.chats, backup_v3.BackupType.contacts},
+        options: backup_v3.BackupOptions(
+          wifiOnly: true,
+          minBatteryPercent: 20,
+          compressMedia: true,
+          maxMediaSize: 50,
+        ),
       );
 
       // Listen to progress
-      _listenToBackupProgress(_activeBackupId!);
+      _listenToBackupProgress();
 
       Get.snackbar(
         Constants.kBackup.tr,
@@ -168,24 +174,25 @@ class SettingsController extends GetxController {
       backupStatus.value = BackupStatus.inProgress;
       currentBackupTask.value = Constants.kPreparingBackup.tr;
 
-      // Start full backup in background
-      _activeBackupId = await _backupService.startFullBackup(
-        userId: user.uid ?? '',
-        backupName: 'Full Backup ${DateTime.now().toString().split(' ')[0]}',
-        options: {
-          'includeDeviceInfo': includeDeviceInfo.value,
-          'includeContacts': includeContacts.value,
-          'includeImages': includeImages.value,
-          'maxImages': maxImages.value,
-          'includePhotos': true,
-          'includeGroups': true,
-          'includeAccounts': true,
-          'includeMetadata': true,
-        },
+      // Start full backup with all types
+      final types = <backup_v3.BackupType>{};
+      types.add(backup_v3.BackupType.chats);
+      if (includeImages.value) types.add(backup_v3.BackupType.media);
+      if (includeContacts.value) types.add(backup_v3.BackupType.contacts);
+      if (includeDeviceInfo.value) types.add(backup_v3.BackupType.deviceInfo);
+
+      _activeBackupId = await backup_v3.BackupServiceV3.instance.startBackup(
+        types: types,
+        options: backup_v3.BackupOptions(
+          wifiOnly: true,
+          minBatteryPercent: 20,
+          compressMedia: true,
+          maxMediaSize: maxImages.value,
+        ),
       );
 
       // Listen to progress
-      _listenToBackupProgress(_activeBackupId!);
+      _listenToBackupProgress();
 
       Get.snackbar(
         Constants.kBackup.tr,
@@ -209,146 +216,75 @@ class SettingsController extends GetxController {
   /// Start contacts backup
   Future<void> startContactsBackup() async {
     await _startSpecificBackup(
-      backupType: BackupType.contacts,
+      types: {backup_v3.BackupType.contacts},
       backupName: Constants.kContactsBackup.tr,
-      action: () async {
-        final user = UserService.currentUserValue;
-        if (user == null) throw Exception(Constants.kPleaseLoginFirst.tr);
-
-        return await _backupService.startContactsBackup(
-          userId: user.uid ?? '',
-          backupName: 'Contacts Backup ${DateTime.now().toString().split(' ')[0]}',
-          includePhotos: true,
-          includeGroups: true,
-          includeAccounts: true,
-        );
-      },
     );
   }
 
   /// Start images backup
   Future<void> startImagesBackup() async {
     await _startSpecificBackup(
-      backupType: BackupType.images,
+      types: {backup_v3.BackupType.media},
       backupName: Constants.kImagesBackup.tr,
-      action: () async {
-        final user = UserService.currentUserValue;
-        if (user == null) throw Exception(Constants.kPleaseLoginFirst.tr);
-
-        return await _backupService.startImagesBackup(
-          userId: user.uid ?? '',
-          backupName: 'Images Backup ${DateTime.now().toString().split(' ')[0]}',
-          maxImages: maxImages.value,
-          includeMetadata: true,
-        );
-      },
     );
   }
 
   /// Start chat backup
   Future<void> startChatBackup() async {
     await _startSpecificBackup(
-      backupType: BackupType.full,
+      types: {backup_v3.BackupType.chats},
       backupName: 'Chat Messages',
-      action: () async {
-        final user = UserService.currentUserValue;
-        if (user == null) throw Exception(Constants.kPleaseLoginFirst.tr);
-
-        return await _backupService.startChatBackup(
-          userId: user.uid ?? '',
-          backupName: 'Chat Backup ${DateTime.now().toString().split(' ')[0]}',
-          messagesPerRoom: 500,
-          includeMediaFiles: true,
-          includeDeletedMessages: false,
-          includeParticipantsInfo: true,
-        );
-      },
     );
   }
 
-  /// Start location backup with enhanced progress details
+  /// Start location backup (using device info type)
   Future<void> startLocationBackup() async {
     await _startSpecificBackup(
-      backupType: BackupType.deviceInfo, // Using deviceInfo type for location
+      types: {backup_v3.BackupType.deviceInfo},
       backupName: 'Location Data',
-      action: () async {
-        final user = UserService.currentUserValue;
-        if (user == null) throw Exception(Constants.kPleaseLoginFirst.tr);
-
-        return await _backupService.startLocationBackup(
-          userId: user.uid ?? '',
-          backupName: 'Location Backup ${DateTime.now().toString().split(' ')[0]}',
-          historyDays: 7,
-          includeHistory: true,
-          includeSavedLocations: true,
-          includeCurrentLocation: true,
-        );
-      },
     );
   }
 
   /// Start device info backup
   Future<void> startDeviceInfoBackup() async {
     await _startSpecificBackup(
-      backupType: BackupType.deviceInfo,
+      types: {backup_v3.BackupType.deviceInfo},
       backupName: Constants.kDeviceInfoBackup.tr,
-      action: () async {
-        final user = UserService.currentUserValue;
-        if (user == null) throw Exception(Constants.kPleaseLoginFirst.tr);
-
-        return await _backupService.startDeviceInfoBackup(
-          userId: user.uid ?? '',
-          backupName: 'Device Info ${DateTime.now().toString().split(' ')[0]}',
-        );
-      },
     );
   }
 
   /// Check location availability
   Future<bool> isLocationAvailable() async {
-    try {
-      return await _backupService.isLocationAvailable();
-    } catch (e) {
-      log('❌ Error checking location availability: $e');
-      return false;
-    }
+    // Location backup is now part of device info backup
+    return true;
   }
 
   /// Request location permission
   Future<void> requestLocationPermission() async {
     try {
-      final granted = await _backupService.requestLocationPermission();
-      if (granted) {
-        Get.snackbar(
-          Constants.kSuccess.tr,
-          'Location permission granted successfully',
-          backgroundColor: ColorsManager.success,
-          colorText: ColorsManager.white,
-        );
-      } else {
-        Get.snackbar(
-          Constants.kWarning.tr,
-          'Location permission denied',
-          backgroundColor: ColorsManager.red,
-          colorText: ColorsManager.white,
-        );
-      }
+      // Request location permission through backup service
+      await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
+      Get.snackbar(
+        Constants.kSuccess.tr,
+        'Permissions requested successfully',
+        backgroundColor: ColorsManager.success,
+        colorText: ColorsManager.white,
+      );
     } catch (e) {
-      log('❌ Error requesting location permission: $e');
+      log('❌ Error requesting permissions: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to request location permission: $e',
+        'Failed to request permissions: $e',
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
       );
     }
   }
 
-  /// Generic method to start specific backup types with enhanced progress details
+  /// Generic method to start specific backup types
   Future<void> _startSpecificBackup({
-    required BackupType backupType,
+    required Set<backup_v3.BackupType> types,
     required String backupName,
-    required Future<String> Function() action,
   }) async {
     if (isBackupInProgress.value) {
       Get.snackbar(
@@ -379,11 +315,19 @@ class SettingsController extends GetxController {
       String initialTask = 'Preparing ${backupName.toLowerCase()} backup...';
       currentBackupTask.value = initialTask;
 
-      // Execute backup action
-      _activeBackupId = await action();
+      // Start backup with specified types
+      _activeBackupId = await backup_v3.BackupServiceV3.instance.startBackup(
+        types: types,
+        options: backup_v3.BackupOptions(
+          wifiOnly: true,
+          minBatteryPercent: 20,
+          compressMedia: types.contains(backup_v3.BackupType.media),
+          maxMediaSize: maxImages.value,
+        ),
+      );
 
       // Listen to progress with enhanced details
-      _listenToBackupProgress(_activeBackupId!);
+      _listenToBackupProgress();
 
       Get.snackbar(
         backupName,
@@ -408,7 +352,7 @@ class SettingsController extends GetxController {
   Future<void> cancelBackup() async {
     try {
       if (_activeBackupId != null) {
-        await _backupService.cancelBackup(_activeBackupId!);
+        await backup_v3.BackupServiceV3.instance.cancelBackup(_activeBackupId!);
         _resetBackupState();
 
         Get.snackbar(
@@ -430,34 +374,51 @@ class SettingsController extends GetxController {
   }
 
   /// Listen to backup progress updates
-  void _listenToBackupProgress(String backupId) {
+  void _listenToBackupProgress() {
     _progressSubscription?.cancel();
+    _eventsSubscription?.cancel();
 
-    final progressStream = _backupService.getBackupProgress(backupId);
-    if (progressStream != null) {
-      _progressSubscription = progressStream.listen(
-        (progress) {
-          backupStatus.value = progress.status ?? BackupStatus.pending;
-          backupProgress.value = progress.progress ?? 0.0;
-          currentBackupTask.value = progress.currentTask ?? '';
+    // Listen to progress stream
+    _progressSubscription = backup_v3.BackupServiceV3.instance.progressStream.listen(
+      (progress) {
+        // Only update if this is our active backup
+        if (_activeBackupId != null && progress.backupId == _activeBackupId) {
+          backupProgress.value = progress.percentage / 100.0;
+          currentBackupTask.value =
+            progress.currentType != null
+              ? 'Backing up ${progress.currentType!.name}...'
+              : 'In progress...';
 
-          if (progress.status == BackupStatus.completed) {
+          if (progress.percentage >= 100) {
             _onBackupCompleted();
-          } else if (progress.status == BackupStatus.failed) {
-            _onBackupFailed(progress.errorMessage ?? 'Unknown error');
-          } else if (progress.status == BackupStatus.cancelled) {
+          }
+        }
+      },
+      onError: (error) {
+        log('❌ Error in backup progress stream: $error');
+        _onBackupFailed(error.toString());
+      },
+    );
+
+    // Listen to events stream
+    _eventsSubscription = backup_v3.BackupServiceV3.instance.eventStream.listen(
+      (event) {
+        // Only process events for our active backup
+        if (_activeBackupId != null && event.backupId == _activeBackupId) {
+          if (event.type == backup_v3.BackupEventType.completed) {
+            _onBackupCompleted();
+          } else if (event.type == backup_v3.BackupEventType.failed) {
+            _onBackupFailed(event.message ?? 'Unknown error');
+          } else if (event.type == backup_v3.BackupEventType.paused) {
+            // Backup paused (closest to cancellation, but will resume)
             _onBackupCancelled();
           }
-        },
-        onError: (error) {
-          log('❌ Error in backup progress stream: $error');
-          _onBackupFailed(error.toString());
-        },
-      );
-    } else {
-      log('❌ No progress stream available for backup: $backupId');
-      _resetBackupState();
-    }
+        }
+      },
+      onError: (error) {
+        log('❌ Error in backup events stream: $error');
+      },
+    );
   }
 
   /// Show backup settings sheet
@@ -674,12 +635,20 @@ class SettingsController extends GetxController {
   }
 
   /// Load backup statistics
-  void _loadBackupStatistics() async {
+  void _loadBackupStatistics() {
     try {
       final user = UserService.currentUserValue;
       if (user != null) {
-        backupStatistics.value = await _backupService.getBackupStatistics(user.uid ?? '');
-        lastBackupDate.value = backupStatistics.value?['lastBackup'] as DateTime?;
+        // Get backup statistics from data source
+        final stats = _backupDataSource.getCachedBackupPreferences();
+        if (stats != null) {
+          backupStatistics.value = {
+            'totalBackups': stats['totalBackups'] ?? 0,
+            'totalSize': stats['totalSize'] ?? 0,
+            'lastBackup': stats['lastBackup'],
+          };
+          lastBackupDate.value = stats['lastBackup'] as DateTime?;
+        }
       }
     } catch (e) {
       log('❌ Error loading backup statistics: $e');
@@ -688,12 +657,14 @@ class SettingsController extends GetxController {
 
   /// Monitor active backup tasks
   void _monitorActiveTasks() {
-    Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (!isBackupInProgress.value && _backupService.isAnyBackupInProgress()) {
+    // Listen to backup progress stream to detect any backups
+    backup_v3.BackupServiceV3.instance.progressStream.listen((progress) {
+      if (!isBackupInProgress.value && progress.percentage < 100) {
         // A backup started from elsewhere, update our state
         isBackupInProgress.value = true;
         backupStatus.value = BackupStatus.inProgress;
         currentBackupTask.value = Constants.kBackupInProgress.tr;
+        _activeBackupId = progress.backupId;
       }
     });
   }
@@ -733,7 +704,12 @@ class SettingsController extends GetxController {
   /// Get backup readiness status
   Future<Map<String, dynamic>> getBackupReadiness() async {
     try {
-      return await _backupService.checkBackupReadiness();
+      // Get readiness status from BackupServiceV3
+      final permissions = await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
+      return {
+        'isOnline': true, // Assume online
+        'permissions': permissions,
+      };
     } catch (e) {
       log('❌ Error checking backup readiness: $e');
       return {};
@@ -746,7 +722,16 @@ class SettingsController extends GetxController {
       final user = UserService.currentUserValue;
       if (user == null) return {};
 
-      return await _backupService.getBackupRecommendations(user.uid ?? '');
+      // Provide basic recommendations
+      return {
+        'recommendedTypes': [
+          backup_v3.BackupType.chats,
+          backup_v3.BackupType.contacts,
+          backup_v3.BackupType.media,
+        ],
+        'estimatedSize': 0,
+        'recommendedFrequency': 'daily',
+      };
     } catch (e) {
       log('❌ Error getting backup recommendations: $e');
       return {};
@@ -756,7 +741,7 @@ class SettingsController extends GetxController {
   /// Request backup permissions
   Future<void> requestBackupPermissions() async {
     try {
-      final permissions = await _backupService.requestBackupPermissions();
+      final permissions = await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
 
       final missingPermissions = permissions.entries
           .where((entry) => !entry.value)
@@ -809,13 +794,20 @@ class SettingsController extends GetxController {
   /// Get backup size estimate
   Future<Map<String, int>> getBackupSizeEstimate() async {
     try {
-      return await _backupService.getBackupSizeEstimate(
-        includeDeviceInfo: includeDeviceInfo.value,
-        includeContacts: includeContacts.value,
-        includeImages: includeImages.value,
-        includeSettings: true,
-        maxImages: maxImages.value,
-      );
+      // Provide basic estimate based on selected options
+      int estimatedSize = 0;
+
+      if (includeContacts.value) {
+        estimatedSize += 1 * 1024 * 1024; // 1MB for contacts
+      }
+      if (includeDeviceInfo.value) {
+        estimatedSize += 100 * 1024; // 100KB for device info
+      }
+      if (includeImages.value) {
+        estimatedSize += maxImages.value * 2 * 1024 * 1024; // 2MB per image average
+      }
+
+      return {'estimatedSize': estimatedSize};
     } catch (e) {
       log('❌ Error getting backup size estimate: $e');
       return {'estimatedSize': 0};
@@ -1074,21 +1066,21 @@ class SettingsController extends GetxController {
 
   /// Get task title for display
   String _getTaskTitle(String task) {
-    if (task.toLowerCase().contains('location')) {
+    final taskLower = task.toLowerCase();
+    if (taskLower.contains('location')) {
       return 'Location Data';
-    } else if (task.toLowerCase().contains('contact')) {
+    } else if (taskLower.contains('contact')) {
       return 'Contacts';
-    } else if (task.toLowerCase().contains('image') || task.toLowerCase().contains('photo')) {
+    } else if (taskLower.contains('image') || taskLower.contains('photo')) {
       return 'Photos & Media';
-    } else if (task.toLowerCase().contains('device')) {
+    } else if (taskLower.contains('device')) {
       return 'Device Info';
-    } else if (task.toLowerCase().contains('chat')) {
+    } else if (taskLower.contains('chat')) {
       return 'Chat Messages';
-    } else if (task.toLowerCase().contains('setting')) {
+    } else if (taskLower.contains('setting')) {
       return 'Settings';
-    } else {
-      return 'Backup';
     }
+    return 'Backup';
   }
 
   // ============================================

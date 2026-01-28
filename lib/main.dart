@@ -4,6 +4,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:awesome_notifications_fcm/awesome_notifications_fcm.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:crypted_app/app/core/services/att_service.dart';
+import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/core/services/fcm_service.dart';
 import 'package:crypted_app/app/core/services/notification_controller.dart';
@@ -22,6 +23,7 @@ import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/themes/theme_manager.dart';
 import 'package:crypted_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -84,10 +86,16 @@ Future<void> main() async {
   LoggerService.instance.info('App starting...', context: 'main');
 
   try {
+
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     LoggerService.instance.info('Firebase initialized successfully', context: 'main');
+
+    // Enable Realtime Database persistence (offline support) for presence system
+    FirebaseDatabase.instance.setPersistenceEnabled(true);
+    FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10000000); // 10MB
+    LoggerService.instance.info('Realtime Database persistence enabled', context: 'main');
 
     // Initialize Firebase Optimization Service
     FirebaseOptimizationService.initializeFirebase();
@@ -165,7 +173,7 @@ Future<void> main() async {
   ConnectivityService().startMonitoring();
 
   ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
-  ZegoUIKit().initLog().then((value) async {
+  await ZegoUIKit().initLog().then((value) async {
     // Check if user is in China - CallKit must be disabled for China App Store
     final isInChina = _isUserInChina();
 
@@ -213,7 +221,7 @@ Future<void> main() async {
       print(
           'User not found at startup, ZegoUIKitPrebuiltCallInvitationService will be initialized after login.');
     }
-
+    await BackupServiceV3.instance.initialize();                                                                          
     runApp(CryptedApp(navigatorKey: navigatorKey));
   });
 }

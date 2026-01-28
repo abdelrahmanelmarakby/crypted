@@ -1,0 +1,61 @@
+# Alert Policy: Slow Function Execution
+# Triggers when P95 execution time > 5 seconds for 5 minutes
+
+displayName: "Firebase Function Execution Time > 5s (P95)"
+documentation:
+  content: |
+    ## Slow Function Execution Detected
+
+    One or more Firebase Functions is executing slowly (P95 > 5 seconds).
+
+    **Immediate Actions:**
+    1. Check Cloud Monitoring dashboard for performance metrics
+    2. Identify which function is slow
+    3. Review function logs for bottlenecks
+    4. Check Firestore/RTDB query performance
+
+    **Common Causes:**
+    - Inefficient Firestore queries (missing indexes)
+    - Cold starts (should be rare with v2)
+    - External API slowness
+    - Memory constraints (increase if needed)
+    - Large batch operations (move to Cloud Tasks)
+
+    **Optimization Steps:**
+    1. Add Firestore composite indexes if needed
+    2. Implement caching for frequently accessed data
+    3. Move heavy operations to async Cloud Tasks
+    4. Increase memory allocation if CPU-bound
+  mimeType: text/markdown
+
+conditions:
+  - displayName: "P95 execution time > 5 seconds"
+    conditionThreshold:
+      filter: |
+        resource.type = "cloud_function"
+        AND metric.type = "cloudfunctions.googleapis.com/function/execution_times"
+
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_DELTA
+          crossSeriesReducer: REDUCE_PERCENTILE_95
+          groupByFields:
+            - "resource.function_name"
+
+      comparison: COMPARISON_GT
+      thresholdValue: 5000  # 5 seconds (in milliseconds)
+      duration: "300s"  # 5 minutes
+
+      trigger:
+        count: 1
+
+combiner: OR
+
+alertStrategy:
+  autoClose: "1800s"
+  notificationRateLimit:
+    period: "300s"
+
+enabled: true
+
+# Note: Add notification channels after creating them

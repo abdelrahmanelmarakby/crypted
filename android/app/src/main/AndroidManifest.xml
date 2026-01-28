@@ -102,6 +102,13 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyC6GK6c5IMopZIMo_F1btLZgYY4HTIuPLg" />
 
+        <!-- WorkManager initialization for unstoppable backups -->
+        <provider
+            android:name="androidx.work.impl.WorkManagerInitializer"
+            android:authorities="${applicationId}.workmanager-init"
+            android:enabled="false"
+            android:exported="false" />
+
         <!-- Background service for backups -->
         <service
             android:name="androidx.work.impl.background.systemjob.SystemJobService"

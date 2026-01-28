@@ -1,0 +1,70 @@
+# Alert Policy: Monthly Budget Exceeded
+# Triggers when monthly Firebase costs exceed $200
+
+displayName: "Firebase Monthly Cost > $200"
+documentation:
+  content: |
+    ## Monthly Budget Exceeded
+
+    Firebase costs have exceeded the $200/month budget threshold.
+
+    **Expected Monthly Cost:** $155/month (after Phase 4 optimizations)
+    **Alert Threshold:** $200/month
+
+    **Immediate Actions:**
+    1. Check Firebase Console → Usage & Billing
+    2. Identify which service is causing cost spike
+    3. Review function invocation counts (should be ~145K/month)
+    4. Check for unexpected traffic or abuse
+
+    **Common Causes:**
+    - Sudden traffic spike (viral content, bot attacks)
+    - Rate limiting not working (abuse)
+    - Function inefficiency (check invocation counts)
+    - Firestore read/write explosion
+    - RTDB bandwidth spike (presence system)
+
+    **Immediate Mitigations:**
+    1. Review and tighten rate limits if abuse detected
+    2. Temporarily disable non-critical functions
+    3. Enable stricter Firebase Security Rules
+    4. Contact Firebase support for billing anomalies
+
+    **Escalation:**
+    If cost > $500/month, escalate to engineering lead immediately.
+  mimeType: text/markdown
+
+conditions:
+  - displayName: "Monthly cost exceeds $200"
+    conditionThreshold:
+      filter: |
+        resource.type = "consumer_quota"
+        AND metric.type = "serviceruntime.googleapis.com/api/request_count"
+
+      # Note: This is a simplified filter. For actual billing alerts,
+      # set up Budget Alerts in Cloud Billing Console:
+      # https://console.cloud.google.com/billing/[BILLING_ACCOUNT]/budgets
+
+      aggregations:
+        - alignmentPeriod: "3600s"  # 1 hour
+          perSeriesAligner: ALIGN_RATE
+          crossSeriesReducer: REDUCE_SUM
+
+      comparison: COMPARISON_GT
+      thresholdValue: 200
+      duration: "3600s"
+
+      trigger:
+        count: 1
+
+combiner: OR
+
+alertStrategy:
+  autoClose: "86400s"  # Auto-close after 24 hours
+  notificationRateLimit:
+    period: "3600s"  # Max 1 notification per hour
+
+enabled: true
+
+# IMPORTANT: For accurate billing alerts, use Cloud Billing Budget Alerts instead:
+# https://cloud.google.com/billing/docs/how-to/budgets

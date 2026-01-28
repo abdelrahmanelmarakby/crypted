@@ -1,0 +1,304 @@
+{
+  "displayName": "Crypted Firebase Functions - Production Dashboard",
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Function Invocations (Last 24h)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_count\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": ["resource.function_name"]
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Invocations/sec",
+              "scale": "LINEAR"
+            },
+            "chartOptions": {
+              "mode": "COLOR"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 6,
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Execution Time P95 (Last 24h)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_times\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_DELTA",
+                      "crossSeriesReducer": "REDUCE_PERCENTILE_95",
+                      "groupByFields": ["resource.function_name"]
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "Duration (ms)",
+              "scale": "LINEAR"
+            },
+            "thresholds": [
+              {
+                "value": 5000,
+                "color": "RED",
+                "direction": "ABOVE",
+                "label": "Alert Threshold (5s)"
+              },
+              {
+                "value": 1000,
+                "color": "YELLOW",
+                "direction": "ABOVE",
+                "label": "Warning (1s)"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "yPos": 4,
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Error Rate by Function",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_count\" AND metric.label.status!=\"ok\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": ["resource.function_name"]
+                    }
+                  }
+                },
+                "plotType": "STACKED_AREA",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "Errors/sec",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 6,
+        "yPos": 4,
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Active Instances",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/active_instances\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": ["resource.function_name"]
+                    }
+                  }
+                },
+                "plotType": "STACKED_AREA",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "Active Instances",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 8,
+        "width": 4,
+        "height": 4,
+        "widget": {
+          "title": "Firestore Operations (Last 24h)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"firestore.googleapis.com/Database\" AND metric.type=\"firestore.googleapis.com/document/read_count\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              },
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"firestore.googleapis.com/Database\" AND metric.type=\"firestore.googleapis.com/document/write_count\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "Operations/sec",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 4,
+        "yPos": 8,
+        "width": 4,
+        "height": 4,
+        "widget": {
+          "title": "Realtime Database Bandwidth",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "resource.type=\"firebase_domain\" AND metric.type=\"firebase.googleapis.com/network/active_connections\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "Active Connections",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 8,
+        "yPos": 8,
+        "width": 4,
+        "height": 4,
+        "widget": {
+          "title": "Monthly Invocations Trend",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_count\"",
+                "aggregation": {
+                  "alignmentPeriod": "2592000s",
+                  "perSeriesAligner": "ALIGN_SUM",
+                  "crossSeriesReducer": "REDUCE_SUM"
+                }
+              }
+            },
+            "sparkChartView": {
+              "sparkChartType": "SPARK_LINE"
+            },
+            "thresholds": [
+              {
+                "value": 200000,
+                "color": "RED",
+                "direction": "ABOVE",
+                "label": "Above Target (200K)"
+              },
+              {
+                "value": 145000,
+                "color": "YELLOW",
+                "direction": "ABOVE",
+                "label": "Expected (145K)"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "yPos": 12,
+        "width": 12,
+        "height": 1,
+        "widget": {
+          "title": "Rate Limiting & Performance Summary",
+          "text": {
+            "content": "**Expected Monthly Metrics (Phase 3):**\n- Invocations: ~145K/month (98.1% reduction from 7.6M)\n- Error Rate: < 1%\n- P95 Latency: < 500ms\n- Monthly Cost: ~$115\n- Rate Limit Hits: < 100/hour\n\n**Alert Thresholds:**\n- Error Rate > 5% for 5 min\n- P95 Latency > 5s for 5 min\n- Rate Limits > 100/hour\n- Monthly Cost > $200",
+            "format": "MARKDOWN"
+          }
+        }
+      },
+      {
+        "yPos": 13,
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Top Functions by Invocations",
+          "logsPanel": {
+            "resourceNames": [
+              "projects/crypted-8468f"
+            ],
+            "filter": "resource.type=\"cloud_function\"\njsonPayload.function!=\"\""
+          }
+        }
+      },
+      {
+        "xPos": 6,
+        "yPos": 13,
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Recent Errors",
+          "logsPanel": {
+            "resourceNames": [
+              "projects/crypted-8468f"
+            ],
+            "filter": "resource.type=\"cloud_function\"\nseverity >= ERROR"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
@@ -12,18 +10,12 @@ import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings
 import 'package:crypted_app/app/modules/settings_v2/core/services/privacy_settings_service.dart';
 
 /// Production-grade Presence Service for 1M+ users
-/// Manages user online/offline status using Firebase Realtime Database
-/// Migrated from Firestore for 100x cost reduction and better performance
-/// Includes privacy-aware presence visibility
+/// Manages user online/offline status with heartbeat mechanism
+/// Now includes privacy-aware presence visibility
 class PresenceService {
   static final PresenceService _instance = PresenceService._internal();
   factory PresenceService() => _instance;
   PresenceService._internal();
-
-  // Firebase Realtime Database reference
-  final DatabaseReference _presenceRef = FirebaseDatabase.instance.ref('presence');
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Privacy settings service reference (lazy loaded)
   PrivacySettingsService? _privacyService;
@@ -39,10 +31,9 @@ class PresenceService {
     return _privacyService;
   }
 
-  // Presence cache for faster lookups
-  final RxMap<String, Map<String, dynamic>> _presenceCache = <String, Map<String, dynamic>>{}.obs;
-
   String? _sessionId;
+  Timer? _heartbeatTimer;
+  Timer? _connectionCheckTimer;
   bool _isOnline = false;
   bool _isInitialized = false;
   String? _deviceId;
@@ -53,14 +44,11 @@ class PresenceService {
       _deviceId = await _getDeviceId();
       _isInitialized = true;
 
-      // Set user online automatically
-      final user = _auth.currentUser;
-      if (user != null) {
-        await goOnline();
-      }
+      // Start connection monitoring
+      _startConnectionMonitoring();
 
       if (kDebugMode) {
-        print('✅ Presence Service initialized with Realtime Database');
+        print('✅ Presence Service initialized with connection monitoring');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -69,53 +57,89 @@ class PresenceService {
     }
   }
 
-  /// Set user online using Realtime Database
+  /// Start monitoring network connection state
+  void _startConnectionMonitoring() {
+    // Check connection every 30 seconds
+    _connectionCheckTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _checkConnection(),
+    );
+  }
+
+  /// Check if we're still connected and update presence accordingly
+  Future<void> _checkConnection() async {
+    if (!_isOnline) return;
+
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        await goOffline();
+        return;
+      }
+
+      // Try to read our presence document to verify connection
+      final doc = await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      if (!doc.exists) {
+        if (kDebugMode) {
+          print('⚠️ User document not found, going offline');
+        }
+        await goOffline();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Connection check failed: $e');
+      }
+      // Connection lost, mark as offline
+      _isOnline = false;
+      _heartbeatTimer?.cancel();
+    }
+  }
+
+  /// Set user online
   Future<void> goOnline() async {
     if (_isOnline) return;
 
     try {
-      final userId = _auth.currentUser?.uid;
+      final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;
 
       // Generate unique session ID
       _sessionId = const Uuid().v4();
 
-      // Call Cloud Function to validate and set presence
-      try {
-        await _functions.httpsCallable('updatePresence').call({
-          'userId': userId,
-          'online': true,
-          'lastSeen': DateTime.now().millisecondsSinceEpoch,
-        });
-      } catch (fnError) {
-        if (kDebugMode) {
-          print('⚠️ Cloud Function updatePresence failed: $fnError (using fallback)');
-        }
-      }
-
-      // Direct update to Realtime Database for faster response
-      await _presenceRef.child(userId).set({
-        'online': true,
-        'lastSeen': ServerValue.timestamp,
-        'updatedAt': ServerValue.timestamp,
+      // Create presence document
+      await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .collection(FirebaseCollections.presence)
+          .doc(_sessionId)
+          .set({
+        'status': 'online',
+        'lastUpdate': FieldValue.serverTimestamp(),
         'deviceId': _deviceId ?? 'unknown',
         'platform': defaultTargetPlatform.name,
-        'sessionId': _sessionId,
       });
 
-      // Set up auto-offline on disconnect (native RTDB feature)
-      await _presenceRef.child(userId).onDisconnect().set({
-        'online': false,
-        'lastSeen': ServerValue.timestamp,
-        'updatedAt': ServerValue.timestamp,
-        'deviceId': _deviceId ?? 'unknown',
-        'platform': defaultTargetPlatform.name,
+      // Update user's main document
+      await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .update({
+        'isOnline': true,
+        'lastSeen': FieldValue.serverTimestamp(),
       });
 
       _isOnline = true;
 
+      // Start heartbeat timer (every 2 minutes)
+      _startHeartbeat(userId);
+
       if (kDebugMode) {
-        print('✅ User set online (RTDB): $userId');
+        print('✅ User set online: $userId');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -124,35 +148,86 @@ class PresenceService {
     }
   }
 
-  /// Set user offline using Realtime Database
+  /// Set user offline
   Future<void> goOffline() async {
     if (!_isOnline) return;
 
     try {
-      final userId = _auth.currentUser?.uid;
-      if (userId == null) return;
+      // Stop heartbeat
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
 
-      // Update Realtime Database
-      await _presenceRef.child(userId).set({
-        'online': false,
-        'lastSeen': ServerValue.timestamp,
-        'updatedAt': ServerValue.timestamp,
-        'deviceId': _deviceId ?? 'unknown',
-        'platform': defaultTargetPlatform.name,
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null || _sessionId == null) return;
+
+      // Update presence document
+      await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .collection(FirebaseCollections.presence)
+          .doc(_sessionId)
+          .update({
+        'status': 'offline',
+        'lastUpdate': FieldValue.serverTimestamp(),
       });
 
-      // Cancel disconnect handler
-      await _presenceRef.child(userId).onDisconnect().cancel();
+      // Update user's main document
+      await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .update({
+        'isOnline': false,
+        'lastSeen': FieldValue.serverTimestamp(),
+      });
 
       _isOnline = false;
       _sessionId = null;
 
       if (kDebugMode) {
-        print('✅ User set offline (RTDB): $userId');
+        print('✅ User set offline: $userId');
       }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error setting user offline: $e');
+      }
+    }
+  }
+
+  /// Start heartbeat timer
+  /// IMPROVED: Reduced from 2 minutes to 30 seconds for faster offline detection
+  void _startHeartbeat(String userId) {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(
+      const Duration(minutes: 30), // IMPROVED: was 2 minutes, now 30 seconds
+      (_) => _updateHeartbeat(userId),
+    );
+  }
+
+  /// Update heartbeat timestamp
+  Future<void> _updateHeartbeat(String userId) async {
+    if (_sessionId == null || !_isOnline) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .collection(FirebaseCollections.presence)
+          .doc(_sessionId)
+          .update({
+        'lastUpdate': FieldValue.serverTimestamp(),
+      });
+
+      if (kDebugMode) {
+        print('💓 Heartbeat updated for user: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error updating heartbeat: $e');
+      }
+      // If heartbeat fails, try to go online again
+      if (e.toString().contains('not-found')) {
+        _isOnline = false;
+        await goOnline();
       }
     }
   }
@@ -176,14 +251,17 @@ class PresenceService {
     }
   }
 
-  /// Listen to user online status from Realtime Database (privacy-aware)
+  /// Listen to user online status (privacy-aware)
   /// Returns false if:
   /// - User is blocked
   /// - User's privacy settings don't allow viewing online status
   Stream<bool> listenToUserOnlineStatus(String userId) {
-    return _presenceRef.child(userId).onValue.asyncMap((event) async {
-      final data = event.snapshot.value as Map<dynamic, dynamic>?;
-      if (data == null) return false;
+    return FirebaseFirestore.instance
+        .collection(FirebaseCollections.users)
+        .doc(userId)
+        .snapshots()
+        .asyncMap((doc) async {
+      if (!doc.exists) return false;
 
       // Check privacy settings
       final visibilityResult = await _checkOnlineStatusVisibility(userId);
@@ -191,18 +269,21 @@ class PresenceService {
         return false;
       }
 
-      return data['online'] == true;
+      return doc.data()?['isOnline'] ?? false;
     });
   }
 
-  /// Get user last seen from Realtime Database (privacy-aware)
+  /// Get user last seen (privacy-aware)
   /// Returns null if:
   /// - User is blocked
   /// - User's privacy settings don't allow viewing last seen
   Stream<DateTime?> listenToUserLastSeen(String userId) {
-    return _presenceRef.child(userId).onValue.asyncMap((event) async {
-      final data = event.snapshot.value as Map<dynamic, dynamic>?;
-      if (data == null) return null;
+    return FirebaseFirestore.instance
+        .collection(FirebaseCollections.users)
+        .doc(userId)
+        .snapshots()
+        .asyncMap((doc) async {
+      if (!doc.exists) return null;
 
       // Check privacy settings
       final visibilityResult = await _checkLastSeenVisibility(userId);
@@ -210,19 +291,19 @@ class PresenceService {
         return null;
       }
 
-      final lastSeenTimestamp = data['lastSeen'] as int?;
-      return lastSeenTimestamp != null
-          ? DateTime.fromMillisecondsSinceEpoch(lastSeenTimestamp)
-          : null;
+      final lastSeen = doc.data()?['lastSeen'] as Timestamp?;
+      return lastSeen?.toDate();
     });
   }
 
-  /// Privacy-aware presence stream from Realtime Database with visibility info
+  /// Privacy-aware online status stream with visibility info
   Stream<PresenceInfo> listenToUserPresence(String userId) {
-    return _presenceRef.child(userId).onValue.asyncMap((event) async {
-      final data = event.snapshot.value as Map<dynamic, dynamic>?;
-
-      if (data == null) {
+    return FirebaseFirestore.instance
+        .collection(FirebaseCollections.users)
+        .doc(userId)
+        .snapshots()
+        .asyncMap((doc) async {
+      if (!doc.exists) {
         return PresenceInfo(
           isOnline: false,
           lastSeen: null,
@@ -246,22 +327,15 @@ class PresenceService {
       final onlineVisibility = await _checkOnlineStatusVisibility(userId);
       final lastSeenVisibility = await _checkLastSeenVisibility(userId);
 
-      final isOnline = onlineVisibility.canView ? (data['online'] == true) : false;
+      final isOnline = onlineVisibility.canView
+          ? (doc.data()?['isOnline'] ?? false)
+          : false;
 
       DateTime? lastSeen;
       if (lastSeenVisibility.canView) {
-        final lastSeenTimestamp = data['lastSeen'] as int?;
-        lastSeen = lastSeenTimestamp != null
-            ? DateTime.fromMillisecondsSinceEpoch(lastSeenTimestamp)
-            : null;
+        final timestamp = doc.data()?['lastSeen'] as Timestamp?;
+        lastSeen = timestamp?.toDate();
       }
-
-      // Update cache
-      _presenceCache[userId] = {
-        'online': data['online'] == true,
-        'lastSeen': data['lastSeen'] ?? 0,
-        'updatedAt': data['updatedAt'] ?? 0,
-      };
 
       return PresenceInfo(
         isOnline: isOnline,
@@ -271,97 +345,6 @@ class PresenceService {
         hiddenReason: onlineVisibility.canView ? null : onlineVisibility.reason,
       );
     });
-  }
-
-  /// Get presence for a single user (one-time read)
-  Future<Map<String, dynamic>> getPresence(String userId) async {
-    try {
-      // Check cache first
-      if (_presenceCache.containsKey(userId)) {
-        return _presenceCache[userId]!;
-      }
-
-      // Read from Realtime Database
-      final snapshot = await _presenceRef.child(userId).get();
-      if (snapshot.exists && snapshot.value != null) {
-        final data = snapshot.value as Map<dynamic, dynamic>;
-        final presence = {
-          'online': data['online'] == true,
-          'lastSeen': data['lastSeen'] ?? 0,
-          'updatedAt': data['updatedAt'] ?? 0,
-        };
-
-        // Update cache
-        _presenceCache[userId] = presence;
-
-        return presence;
-      }
-
-      // Return offline if no presence data
-      return {
-        'online': false,
-        'lastSeen': 0,
-        'updatedAt': 0,
-      };
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error getting presence for $userId: $e');
-      }
-      return {
-        'online': false,
-        'lastSeen': 0,
-        'updatedAt': 0,
-      };
-    }
-  }
-
-  /// Get presence for multiple users in a single batch request via Cloud Function
-  Future<Map<String, Map<String, dynamic>>> batchGetPresence(
-    List<String> userIds,
-  ) async {
-    if (userIds.isEmpty) return {};
-
-    try {
-      // Call Cloud Function for batch query
-      final result = await _functions.httpsCallable('getPresence').call({
-        'userIds': userIds,
-      });
-
-      final presenceData = Map<String, Map<String, dynamic>>.from(result.data['presence']);
-
-      // Update cache
-      _presenceCache.addAll(presenceData);
-
-      return presenceData;
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Error getting batch presence (using fallback): $e');
-      }
-
-      // Fallback: read individually from RTDB
-      final Map<String, Map<String, dynamic>> presenceMap = {};
-      for (final uid in userIds) {
-        presenceMap[uid] = await getPresence(uid);
-      }
-      return presenceMap;
-    }
-  }
-
-  /// Get cached presence data (no network call)
-  Map<String, dynamic>? getCachedPresence(String uid) {
-    return _presenceCache[uid];
-  }
-
-  /// Check if a user is online (from cache)
-  bool isUserOnline(String uid) {
-    final presence = _presenceCache[uid];
-    return presence?['online'] == true;
-  }
-
-  /// Get last seen timestamp for a user (from cache)
-  int? getLastSeen(String uid) {
-    final presence = _presenceCache[uid];
-    return presence?['lastSeen'] as int?;
   }
 
   /// Check if user allows viewing their online status
@@ -578,19 +561,26 @@ class PresenceService {
     return '${months[dateTime.month - 1]} ${dateTime.day}';
   }
 
-  /// Clean up presence data for user (on logout)
+  /// Clean up all presence documents for user (on logout)
   Future<void> cleanupPresence() async {
     try {
       await goOffline();
 
-      final userId = _auth.currentUser?.uid;
+      final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;
 
-      // Remove from Realtime Database
-      await _presenceRef.child(userId).remove();
+      // Delete all presence documents
+      final presenceSnapshot = await FirebaseFirestore.instance
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .collection(FirebaseCollections.presence)
+          .get();
 
-      // Clear cache
-      _presenceCache.clear();
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in presenceSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
 
       if (kDebugMode) {
         print('✅ Presence cleaned up for user: $userId');
@@ -607,8 +597,11 @@ class PresenceService {
 
   /// Dispose resources
   void dispose() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _connectionCheckTimer?.cancel();
+    _connectionCheckTimer = null;
     _isInitialized = false;
-    _presenceCache.clear();
 
     if (kDebugMode) {
       print('🧹 PresenceService disposed');
@@ -621,19 +614,17 @@ class PresenceService {
       'isOnline': _isOnline,
       'isInitialized': _isInitialized,
       'deviceId': _deviceId ?? 'unknown',
-      'cachedPresenceCount': _presenceCache.length,
+      'hasHeartbeat': _heartbeatTimer != null && _heartbeatTimer!.isActive,
+      'hasConnectionCheck': _connectionCheckTimer != null && _connectionCheckTimer!.isActive,
     };
   }
 
   /// Force refresh presence status
   Future<void> refreshPresence() async {
     if (_isOnline) {
-      final userId = _auth.currentUser?.uid;
+      final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {
-        // Just update the timestamp in RTDB
-        await _presenceRef.child(userId).update({
-          'updatedAt': ServerValue.timestamp,
-        });
+        await _updateHeartbeat(userId);
       }
     }
   }

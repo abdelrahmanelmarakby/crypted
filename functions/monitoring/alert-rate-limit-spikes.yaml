@@ -1,0 +1,72 @@
+# Alert Policy: Rate Limit Spike Detection
+# Triggers when rate limit errors exceed 100/hour (potential abuse)
+
+displayName: "Rate Limit Hits > 100/hour"
+documentation:
+  content: |
+    ## Rate Limit Spike Detected
+
+    More than 100 rate limit errors occurred in the last hour.
+    This may indicate abuse or a misconfigured client.
+
+    **Immediate Actions:**
+    1. Check Cloud Logging for rate limit errors:
+       ```
+       jsonPayload.error=~"resource-exhausted"
+       ```
+    2. Identify which users are hitting rate limits
+    3. Review user behavior patterns
+    4. Check if client is properly implementing exponential backoff
+
+    **Common Causes:**
+    - Malicious user attempting DoS attack
+    - Client bug causing retry loop
+    - Legitimate high-activity user (may need exemption)
+    - Rate limits too strict (adjust if needed)
+
+    **Response Actions:**
+    1. **Investigate User:** Check userId in logs to identify offender
+    2. **Block if Abuse:** Add user to blocklist if malicious
+    3. **Fix Client Bug:** If legitimate user, check client code
+    4. **Adjust Limits:** If too strict, update MAX_REQUESTS_PER_MINUTE in functions/index.js
+
+    **Current Rate Limits (per minute):**
+    - batchStatusUpdate: 60 requests
+    - updatePresence: 20 requests
+    - getPresence: 100 requests
+    - getUserProfile: 100 requests
+    - blockUser: 10 requests
+    - unblockUser: 10 requests
+    - reportUser: 5 requests
+  mimeType: text/markdown
+
+conditions:
+  - displayName: "Rate limit errors > 100/hour"
+    conditionThreshold:
+      filter: |
+        resource.type = "cloud_function"
+        AND jsonPayload.error =~ "resource-exhausted"
+
+      aggregations:
+        - alignmentPeriod: "3600s"  # 1 hour
+          perSeriesAligner: ALIGN_RATE
+          crossSeriesReducer: REDUCE_COUNT
+          groupByFields:
+            - "resource.function_name"
+            - "jsonPayload.userId"
+
+      comparison: COMPARISON_GT
+      thresholdValue: 100
+      duration: "3600s"
+
+      trigger:
+        count: 1
+
+combiner: OR
+
+alertStrategy:
+  autoClose: "3600s"  # Auto-close after 1 hour
+  notificationRateLimit:
+    period: "1800s"  # Max 1 notification per 30 minutes
+
+enabled: true

@@ -1,0 +1,38 @@
+# Cloud Tasks Queue Configuration
+# Queues for async processing of heavy operations
+
+# Notification Queue - High throughput, moderate latency
+- name: notification-queue
+  rateLimits:
+    maxConcurrentDispatches: 100
+    maxDispatchesPerSecond: 50
+  retryConfig:
+    maxAttempts: 5
+    maxRetryDuration: 3600s  # 1 hour
+    minBackoff: 5s
+    maxBackoff: 300s  # 5 minutes
+    maxDoublings: 5
+
+# Analytics Queue - Lower priority, can be slower
+- name: analytics-queue
+  rateLimits:
+    maxConcurrentDispatches: 10
+    maxDispatchesPerSecond: 5
+  retryConfig:
+    maxAttempts: 3
+    maxRetryDuration: 7200s  # 2 hours
+    minBackoff: 10s
+    maxBackoff: 600s  # 10 minutes
+    maxDoublings: 4
+
+# Cleanup Queue - Low priority, background tasks
+- name: cleanup-queue
+  rateLimits:
+    maxConcurrentDispatches: 5
+    maxDispatchesPerSecond: 1
+  retryConfig:
+    maxAttempts: 3
+    maxRetryDuration: 3600s
+    minBackoff: 30s
+    maxBackoff: 1800s  # 30 minutes
+    maxDoublings: 3

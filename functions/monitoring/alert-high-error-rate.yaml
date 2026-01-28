@@ -1,0 +1,62 @@
+# Alert Policy: High Function Error Rate
+# Triggers when any function has > 5% error rate for 5 minutes
+
+displayName: "Firebase Function Error Rate > 5%"
+documentation:
+  content: |
+    ## High Error Rate Detected
+
+    One or more Firebase Functions is experiencing a high error rate (>5%).
+
+    **Immediate Actions:**
+    1. Check Firebase Console logs: https://console.firebase.google.com/project/crypted-8468f/functions
+    2. Identify which function is failing
+    3. Check recent deployments (possible bad release)
+    4. Review error messages in Cloud Logging
+
+    **Common Causes:**
+    - Bad deployment (roll back if needed)
+    - Firestore/RTDB connectivity issues
+    - Rate limiting exhaustion
+    - External API failures
+
+    **Escalation:**
+    If error rate > 20%, page on-call engineer immediately.
+  mimeType: text/markdown
+
+conditions:
+  - displayName: "Error rate exceeds 5%"
+    conditionThreshold:
+      filter: |
+        resource.type = "cloud_function"
+        AND metric.type = "cloudfunctions.googleapis.com/function/execution_count"
+        AND metric.label.status != "ok"
+
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_RATE
+          crossSeriesReducer: REDUCE_SUM
+          groupByFields:
+            - "resource.function_name"
+            - "metric.label.status"
+
+      comparison: COMPARISON_GT
+      thresholdValue: 0.05  # 5% error rate
+      duration: "300s"  # 5 minutes
+
+      trigger:
+        count: 1
+
+combiner: OR
+
+alertStrategy:
+  autoClose: "1800s"  # Auto-close after 30 minutes if resolved
+  notificationRateLimit:
+    period: "300s"  # Don't spam - max 1 notification per 5 minutes
+
+enabled: true
+
+# Note: Add notification channels after creating them:
+# notificationChannels:
+#   - projects/crypted-8468f/notificationChannels/[EMAIL_CHANNEL_ID]
+#   - projects/crypted-8468f/notificationChannels/[SLACK_CHANNEL_ID]

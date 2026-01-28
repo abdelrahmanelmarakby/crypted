@@ -1,20 +1,24 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:crypted_app/app/core/services/reliable_backup_service.dart';
-import 'package:crypted_app/app/core/services/backup_scheduler.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart';
+import 'package:crypted_app/app/core/services/backup/backup_worker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:workmanager/workmanager.dart';
 
+/// **BackupController V3** - Updated to use BackupServiceV3
+///
+/// Features:
+/// - Unstoppable backups (survives app kill, device restart)
+/// - Real-time progress tracking
+/// - Scheduled backups (nightly, weekly)
+/// - All backup types: chats, media, contacts, device info
 class BackupController extends GetxController {
   // Singleton instance
   static BackupController get instance => Get.find();
 
-  // Backup service
-  final _backupService = ReliableBackupService.instance;
+  // NEW: BackupServiceV3 (replaces ReliableBackupService)
+  final _backupService = BackupServiceV3.instance;
 
   // Observable states
   final RxBool isBackupRunning = false.obs;
@@ -22,6 +26,9 @@ class BackupController extends GetxController {
   final RxString backupStatus = 'Ready to backup'.obs;
   final RxString errorMessage = ''.obs;
   final RxBool hasError = false.obs;
+
+  // Current backup ID
+  final RxString currentBackupId = ''.obs;
 
   // Backup history
   final RxList<BackupHistoryItem> backupHistory = <BackupHistoryItem>[].obs;
@@ -33,99 +40,124 @@ class BackupController extends GetxController {
   final RxInt autoBackupInterval = 24.obs; // hours
   final RxBool backupOnWifiOnly = true.obs;
   final RxBool showNotifications = true.obs;
+  final RxBool compressMedia = true.obs;
+  final RxInt maxMediaSize = 100.obs; // MB
+  final RxBool incrementalOnly = true.obs;
 
-  // Notification plugin
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  // Backup type selection
+  final RxBool backupChats = true.obs;
+  final RxBool backupMedia = true.obs;
+  final RxBool backupContacts = true.obs;
+  final RxBool backupDeviceInfo = true.obs;
 
   // Streams
   StreamSubscription? _progressSubscription;
-  StreamSubscription? _statusSubscription;
+  StreamSubscription? _eventSubscription;
 
   @override
   void onInit() {
     super.onInit();
-    _initializeNotifications();
-    _subscribeToBackupProgress();
+    _subscribeToBackupStreams();
     _loadBackupHistory();
     _loadSettings();
-    _initializeBackupScheduler();
-  }
-
-  /// Initialize backup scheduler with daily cron job
-  Future<void> _initializeBackupScheduler() async {
-    try {
-      await BackupScheduler.instance.initialize();
-      await BackupScheduler.instance.scheduleDailyBackupUpdate();
-      log('✅ Backup scheduler initialized with daily cron job');
-    } catch (e) {
-      log('❌ Error initializing backup scheduler: $e');
-    }
   }
 
   @override
   void onClose() {
     _progressSubscription?.cancel();
-    _statusSubscription?.cancel();
+    _eventSubscription?.cancel();
     super.onClose();
   }
 
-  /// Initialize notifications
-  Future<void> _initializeNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _notificationsPlugin.initialize(initSettings);
-  }
-
-  /// Subscribe to backup progress and status streams
-  void _subscribeToBackupProgress() {
+  /// Subscribe to backup progress and events from BackupServiceV3
+  void _subscribeToBackupStreams() {
+    // Progress stream (real-time updates)
     _progressSubscription = _backupService.progressStream.listen((progress) {
-      backupProgress.value = progress;
+      backupProgress.value = progress.percentage / 100.0;
+      backupStatus.value = 'Processing ${progress.currentType?.name ?? "data"}... '
+          '${progress.processedItems}/${progress.totalItems}';
 
-      // Update notification with progress
-      if (showNotifications.value && isBackupRunning.value) {
-        _showProgressNotification(progress);
+      log('📊 Backup progress: ${progress.percentage}% - ${progress.formattedSize}');
+    });
+
+    // Event stream (state changes)
+    _eventSubscription = _backupService.eventStream.listen((event) {
+      switch (event.type) {
+        case BackupEventType.started:
+          isBackupRunning.value = true;
+          backupStatus.value = 'Backup started...';
+          break;
+
+        case BackupEventType.completed:
+          isBackupRunning.value = false;
+          backupProgress.value = 1.0;
+          backupStatus.value = 'Backup completed successfully!';
+          hasError.value = false;
+
+          // Reload history
+          _loadBackupHistory();
+
+          // Show success notification
+          Get.snackbar(
+            'Success ✅',
+            'Backup completed successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Get.theme.colorScheme.primaryContainer,
+            duration: const Duration(seconds: 3),
+          );
+          break;
+
+        case BackupEventType.failed:
+          isBackupRunning.value = false;
+          hasError.value = true;
+          errorMessage.value = event.message ?? 'Unknown error';
+          backupStatus.value = 'Backup failed';
+
+          Get.snackbar(
+            'Error ❌',
+            event.message ?? 'Backup failed',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Get.theme.colorScheme.errorContainer,
+          );
+          break;
+
+        case BackupEventType.paused:
+          backupStatus.value = 'Backup paused (waiting for conditions)';
+          break;
+
+        case BackupEventType.resumed:
+          backupStatus.value = 'Backup resumed...';
+          break;
+
+        default:
+          break;
       }
     });
-
-    _statusSubscription = _backupService.statusStream.listen((status) {
-      backupStatus.value = status;
-      log('📊 Backup status: $status');
-    });
-  }
-
-  /// Public method to refresh backup history
-  Future<void> refreshBackupHistory() async {
-    await _loadBackupHistory();
   }
 
   /// Load backup history from Firestore
   Future<void> _loadBackupHistory() async {
     try {
-      final backupData = await _backupService.getBackupStatus();
+      // Get latest backup progress
+      if (currentBackupId.value.isNotEmpty) {
+        final progress = await _backupService.getBackupProgress(currentBackupId.value);
 
-      if (backupData != null) {
-        lastBackupDate.value = backupData['last_backup_completed_at']?.toDate();
-        lastBackupStats.value = backupData;
+        if (progress != null && progress.startedAt != null) {
+          lastBackupDate.value = progress.startedAt;
+          lastBackupStats.value = {
+            'total_items': progress.totalItems,
+            'processed_items': progress.processedItems,
+            'failed_items': progress.failedItems,
+            'bytes_transferred': progress.bytesTransferred,
+            'backup_id': progress.backupId,
+          };
 
-        // Create history item
-        if (lastBackupDate.value != null) {
+          // Add to history
           backupHistory.insert(0, BackupHistoryItem(
-            date: lastBackupDate.value!,
-            success: true,
-            itemsBackedUp: (backupData['contacts_count'] ?? 0) +
-                          (backupData['images_count'] ?? 0) +
-                          (backupData['files_count'] ?? 0),
-            stats: backupData,
+            date: progress.startedAt!,
+            success: progress.failedItems == 0,
+            itemsBackedUp: progress.processedItems,
+            stats: lastBackupStats.value,
           ));
         }
       }
@@ -142,8 +174,17 @@ class BackupController extends GetxController {
       autoBackupInterval.value = prefs.getInt('backup_interval') ?? 24;
       backupOnWifiOnly.value = prefs.getBool('backup_wifi_only') ?? true;
       showNotifications.value = prefs.getBool('backup_show_notifications') ?? true;
+      compressMedia.value = prefs.getBool('backup_compress_media') ?? true;
+      maxMediaSize.value = prefs.getInt('backup_max_media_size') ?? 100;
+      incrementalOnly.value = prefs.getBool('backup_incremental_only') ?? true;
 
-      log('📱 Loaded backup settings: auto=$autoBackupEnabled, interval=$autoBackupInterval');
+      // Backup type selection
+      backupChats.value = prefs.getBool('backup_chats') ?? true;
+      backupMedia.value = prefs.getBool('backup_media') ?? true;
+      backupContacts.value = prefs.getBool('backup_contacts') ?? true;
+      backupDeviceInfo.value = prefs.getBool('backup_device_info') ?? true;
+
+      log('📱 Loaded backup settings');
     } catch (e) {
       log('Error loading backup settings: $e');
     }
@@ -157,6 +198,15 @@ class BackupController extends GetxController {
       await prefs.setInt('backup_interval', autoBackupInterval.value);
       await prefs.setBool('backup_wifi_only', backupOnWifiOnly.value);
       await prefs.setBool('backup_show_notifications', showNotifications.value);
+      await prefs.setBool('backup_compress_media', compressMedia.value);
+      await prefs.setInt('backup_max_media_size', maxMediaSize.value);
+      await prefs.setBool('backup_incremental_only', incrementalOnly.value);
+
+      // Backup type selection
+      await prefs.setBool('backup_chats', backupChats.value);
+      await prefs.setBool('backup_media', backupMedia.value);
+      await prefs.setBool('backup_contacts', backupContacts.value);
+      await prefs.setBool('backup_device_info', backupDeviceInfo.value);
 
       log('💾 Saved backup settings');
     } catch (e) {
@@ -164,7 +214,7 @@ class BackupController extends GetxController {
     }
   }
 
-  /// Start backup process
+  /// Start backup process using BackupServiceV3
   Future<void> startBackup() async {
     if (isBackupRunning.value) {
       Get.snackbar(
@@ -182,147 +232,92 @@ class BackupController extends GetxController {
       backupProgress.value = 0.0;
       backupStatus.value = 'Starting backup...';
 
-      // Show initial notification
-      if (showNotifications.value) {
-        await _showNotification(
-          'Backup Started',
-          'Your data backup has started',
-        );
+      // Prepare backup types
+      final types = <BackupType>{};
+      if (backupChats.value) types.add(BackupType.chats);
+      if (backupMedia.value) types.add(BackupType.media);
+      if (backupContacts.value) types.add(BackupType.contacts);
+      if (backupDeviceInfo.value) types.add(BackupType.deviceInfo);
+
+      if (types.isEmpty) {
+        throw Exception('Please select at least one backup type');
       }
 
-      // Run the backup
-      final success = await _backupService.runFullBackup();
+      // Prepare backup options
+      final options = BackupOptions(
+        wifiOnly: backupOnWifiOnly.value,
+        minBatteryPercent: 20,
+        compressMedia: compressMedia.value,
+        maxMediaSize: maxMediaSize.value,
+        incrementalOnly: incrementalOnly.value,
+      );
 
-      if (success) {
-        // Backup completed successfully
-        backupProgress.value = 1.0;
-        backupStatus.value = 'Backup completed successfully!';
+      // Start the unstoppable backup!
+      final backupId = await _backupService.startBackup(
+        types: types,
+        options: options,
+      );
 
-        // Reload history
-        await _loadBackupHistory();
+      currentBackupId.value = backupId;
 
-        // Show success notification
-        if (showNotifications.value) {
-          await _showNotification(
-            'Backup Complete ✅',
-            'All your data has been backed up successfully',
-          );
-        }
+      log('🚀 Backup started: $backupId');
+      log('   Types: ${types.map((t) => t.name).join(", ")}');
+      log('   WiFi only: ${options.wifiOnly}');
+      log('   Compress media: ${options.compressMedia}');
+      log('   Incremental: ${options.incrementalOnly}');
 
-        Get.snackbar(
-          'Success',
-          'Backup completed successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Get.theme.colorScheme.primaryContainer,
-          duration: const Duration(seconds: 3),
-        );
-      } else {
-        // Backup failed
-        hasError.value = true;
-        errorMessage.value = 'Backup failed or was cancelled';
-        backupStatus.value = 'Backup failed';
+      Get.snackbar(
+        'Backup Started 🚀',
+        'This backup will run to completion, even if you close the app!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.primaryContainer,
+        duration: const Duration(seconds: 4),
+      );
 
-        if (showNotifications.value) {
-          await _showNotification(
-            'Backup Failed ❌',
-            'There was an error backing up your data',
-          );
-        }
-
-        Get.snackbar(
-          'Error',
-          'Backup failed. Please try again.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Get.theme.colorScheme.errorContainer,
-        );
-      }
     } catch (e) {
       hasError.value = true;
       errorMessage.value = e.toString();
       backupStatus.value = 'Error: ${e.toString()}';
+      isBackupRunning.value = false;
 
       log('❌ Backup error: $e');
 
       Get.snackbar(
         'Error',
-        'An unexpected error occurred: $e',
+        'Failed to start backup: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Get.theme.colorScheme.errorContainer,
       );
-    } finally {
-      isBackupRunning.value = false;
     }
   }
 
-  /// Stop backup process
-  void stopBackup() {
-    if (!isBackupRunning.value) return;
+  /// Check backup status
+  Future<void> checkBackupStatus() async {
+    if (currentBackupId.value.isEmpty) return;
 
-    _backupService.stopBackup();
-    backupStatus.value = 'Backup stopped by user';
+    try {
+      final status = await _backupService.getBackupStatus(currentBackupId.value);
 
-    Get.snackbar(
-      'Stopped',
-      'Backup has been stopped',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
+      log('📊 Backup status: ${status.name}');
 
-  /// Show notification
-  Future<void> _showNotification(String title, String body) async {
-    const androidDetails = AndroidNotificationDetails(
-      'backup_channel',
-      'Backup Notifications',
-      channelDescription: 'Notifications for backup progress and status',
-      importance: Importance.high,
-      priority: Priority.high,
-      showProgress: false,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notificationsPlugin.show(
-      0,
-      title,
-      body,
-      details,
-    );
-  }
-
-  /// Show progress notification
-  Future<void> _showProgressNotification(double progress) async {
-    final percentage = (progress * 100).toInt();
-
-    final androidDetails = AndroidNotificationDetails(
-      'backup_progress_channel',
-      'Backup Progress',
-      channelDescription: 'Shows backup progress',
-      importance: Importance.low,
-      priority: Priority.low,
-      showProgress: true,
-      maxProgress: 100,
-      progress: percentage,
-      ongoing: true,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notificationsPlugin.show(
-      1,
-      'Backing up your data...',
-      '$percentage% complete',
-      details,
-    );
+      switch (status) {
+        case BackupStatus.completed:
+          isBackupRunning.value = false;
+          backupProgress.value = 1.0;
+          break;
+        case BackupStatus.failed:
+          isBackupRunning.value = false;
+          hasError.value = true;
+          break;
+        case BackupStatus.running:
+          isBackupRunning.value = true;
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      log('Error checking backup status: $e');
+    }
   }
 
   /// Get formatted last backup date
@@ -348,11 +343,11 @@ class BackupController extends GetxController {
     if (lastBackupStats.value == null) return 'No backup data';
 
     final stats = lastBackupStats.value!;
-    final contacts = stats['contacts_count'] ?? 0;
-    final images = stats['images_count'] ?? 0;
-    final files = stats['files_count'] ?? 0;
+    final total = stats['total_items'] ?? 0;
+    final processed = stats['processed_items'] ?? 0;
+    final failed = stats['failed_items'] ?? 0;
 
-    return '$contacts contacts, $images images, $files files';
+    return '$processed/$total items backed up${failed > 0 ? " ($failed failed)" : ""}';
   }
 
   /// Toggle auto backup
@@ -383,46 +378,86 @@ class BackupController extends GetxController {
     await _saveSettings();
   }
 
-  /// Toggle notifications
-  Future<void> toggleNotifications(bool value) async {
-    showNotifications.value = value;
+  /// Toggle media compression
+  Future<void> toggleCompressMedia(bool value) async {
+    compressMedia.value = value;
     await _saveSettings();
   }
 
-  /// Schedule automatic backup
+  /// Toggle incremental backups
+  Future<void> toggleIncrementalBackups(bool value) async {
+    incrementalOnly.value = value;
+    await _saveSettings();
+  }
+
+  /// Schedule automatic backup using BackupWorker
   Future<void> _scheduleAutoBackup() async {
     try {
-      // iOS doesn't support periodic tasks in Workmanager
-      if (Platform.isIOS) {
-        log('⚠️ iOS does not support background periodic tasks. Auto backup disabled on iOS.');
-        Get.snackbar(
-          'Info',
-          'Auto backup is only available on Android devices',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
-        autoBackupEnabled.value = false;
-        await _saveSettings();
-        return;
-      }
+      // Prepare backup types
+      final types = <BackupType>{};
+      if (backupChats.value) types.add(BackupType.chats);
+      if (backupMedia.value) types.add(BackupType.media);
+      if (backupContacts.value) types.add(BackupType.contacts);
+      if (backupDeviceInfo.value) types.add(BackupType.deviceInfo);
 
-      await Workmanager().cancelByUniqueName('autoBackup');
-
-      await Workmanager().registerPeriodicTask(
-        'autoBackup',
-        'autoBackupTask',
-        frequency: Duration(hours: autoBackupInterval.value),
-        initialDelay: Duration(hours: autoBackupInterval.value),
-        constraints: Constraints(
-          networkType: backupOnWifiOnly.value
-            ? NetworkType.unmetered
-            : NetworkType.connected,
-        ),
+      // Prepare options
+      final options = BackupOptions(
+        wifiOnly: backupOnWifiOnly.value,
+        minBatteryPercent: 20,
+        compressMedia: compressMedia.value,
+        maxMediaSize: maxMediaSize.value,
+        incrementalOnly: incrementalOnly.value,
       );
 
-      log('📅 Scheduled auto backup every ${autoBackupInterval.value} hours');
+      // Schedule based on interval
+      if (autoBackupInterval.value == 24) {
+        // Nightly backup at 2 AM
+        await _backupService.scheduleNightlyBackup(
+          types: types,
+          options: options,
+        );
+
+        log('📅 Scheduled nightly backup at 2 AM');
+
+        Get.snackbar(
+          'Auto Backup Enabled',
+          'Nightly backup scheduled for 2 AM',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Get.theme.colorScheme.primaryContainer,
+        );
+      } else if (autoBackupInterval.value == 168) {
+        // Weekly backup
+        await _backupService.scheduleWeeklyBackup(
+          types: types,
+          options: options,
+        );
+
+        log('📅 Scheduled weekly backup');
+
+        Get.snackbar(
+          'Auto Backup Enabled',
+          'Weekly backup scheduled for Sunday 2 AM',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Get.theme.colorScheme.primaryContainer,
+        );
+      } else {
+        // Custom interval
+        await BackupWorker.instance.schedulePeriodicBackup(
+          taskId: 'custom_backup',
+          types: types,
+          options: options,
+          frequency: Duration(hours: autoBackupInterval.value),
+        );
+
+        log('📅 Scheduled backup every ${autoBackupInterval.value} hours');
+
+        Get.snackbar(
+          'Auto Backup Enabled',
+          'Backup scheduled every ${autoBackupInterval.value} hours',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Get.theme.colorScheme.primaryContainer,
+        );
+      }
     } catch (e) {
       log('Error scheduling auto backup: $e');
       Get.snackbar(
@@ -438,228 +473,83 @@ class BackupController extends GetxController {
   /// Cancel automatic backup
   Future<void> _cancelAutoBackup() async {
     try {
-      await Workmanager().cancelByUniqueName('autoBackup');
+      await BackupWorker.instance.cancelBackup('nightly_backup');
+      await BackupWorker.instance.cancelBackup('weekly_backup');
+      await BackupWorker.instance.cancelBackup('custom_backup');
+
       log('🚫 Cancelled auto backup');
+
+      Get.snackbar(
+        'Auto Backup Disabled',
+        'Automatic backups have been cancelled',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } catch (e) {
       log('Error cancelling auto backup: $e');
     }
   }
 
-  /// Delete all backups
+  /// Refresh backup history
+  Future<void> refreshBackupHistory() async {
+    await _loadBackupHistory();
+  }
+
+  /// NOTE: Delete and Restore functionality not yet implemented in BackupServiceV3
+  /// These will be added in a future update (RestoreServiceV3)
+
   Future<void> deleteAllBackups() async {
-    try {
-      await _backupService.deleteAllBackups();
-      backupHistory.clear();
-      lastBackupDate.value = null;
-      lastBackupStats.value = null;
-
-      Get.back(); // Close confirmation dialog
-      Get.snackbar(
-        'Success',
-        'All backups deleted successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-
-      log('🗑️ Deleted all backups');
-    } catch (e) {
-      log('Error deleting backups: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to delete backups: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // =================== RESTORE FUNCTIONALITY ===================
-
-  // Restore states
-  final RxBool isRestoreRunning = false.obs;
-  final RxDouble restoreProgress = 0.0.obs;
-  final RxString restoreStatus = ''.obs;
-  final Rx<BackupData?> backupData = Rx<BackupData?>(null);
-
-  // Restore options
-  final RxBool restoreContacts = true.obs;
-  final RxBool restoreMedia = true.obs;
-
-  /// Load available backup data for restore
-  Future<void> loadBackupData() async {
-    try {
-      backupData.value = await _backupService.getBackupData();
-    } catch (e) {
-      log('Error loading backup data: $e');
-      backupData.value = null;
-    }
-  }
-
-  /// Start restore process
-  Future<void> startRestore() async {
-    if (isRestoreRunning.value) return;
-
-    final data = backupData.value;
-    if (data == null || !data.hasData) {
-      Get.snackbar(
-        'No Backup',
-        'No backup data available to restore',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    try {
-      isRestoreRunning.value = true;
-      restoreProgress.value = 0.0;
-      restoreStatus.value = 'Starting restore...';
-
-      int contactsRestored = 0;
-      int mediaRestored = 0;
-
-      // Restore contacts if selected
-      if (restoreContacts.value && data.contacts.isNotEmpty) {
-        restoreStatus.value = 'Restoring contacts...';
-        contactsRestored = await _backupService.restoreContacts(data.contacts);
-      }
-
-      // Restore media if selected
-      if (restoreMedia.value && (data.images.isNotEmpty || data.files.isNotEmpty)) {
-        restoreStatus.value = 'Downloading media...';
-        mediaRestored = await _backupService.restoreMedia(
-          images: data.images,
-          files: data.files,
-        );
-      }
-
-      restoreProgress.value = 1.0;
-      restoreStatus.value = 'Restore completed!';
-
-      Get.back(); // Close dialog
-
-      Get.snackbar(
-        'Restore Complete',
-        'Restored $contactsRestored contacts and $mediaRestored files',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
-    } catch (e) {
-      log('Error during restore: $e');
-      restoreStatus.value = 'Restore failed: $e';
-
-      Get.snackbar(
-        'Error',
-        'Restore failed: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isRestoreRunning.value = false;
-    }
-  }
-
-  /// Show restore dialog with options
-  Future<void> showRestoreDialog() async {
-    // First load backup data
-    await loadBackupData();
-
-    final data = backupData.value;
-
-    if (data == null || !data.hasData) {
-      Get.dialog(
-        AlertDialog(
-          title: const Text('No Backup Found'),
-          content: const Text(
-            'No backup data available to restore. Please create a backup first.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    Get.dialog(
-      Obx(() => AlertDialog(
-        title: const Text('Restore Backup'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (data.lastBackupDate != null)
-              Text(
-                'Backup from: ${_formatDate(data.lastBackupDate!)}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            const SizedBox(height: 16),
-
-            // Contacts option
-            CheckboxListTile(
-              value: restoreContacts.value,
-              onChanged: isRestoreRunning.value
-                  ? null
-                  : (v) => restoreContacts.value = v ?? true,
-              title: const Text('Contacts'),
-              subtitle: Text('${data.contactsCount} contacts'),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-            ),
-
-            // Media option
-            CheckboxListTile(
-              value: restoreMedia.value,
-              onChanged: isRestoreRunning.value
-                  ? null
-                  : (v) => restoreMedia.value = v ?? true,
-              title: const Text('Media'),
-              subtitle: Text('${data.imagesCount} images, ${data.filesCount} files'),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-            ),
-
-            // Progress indicator when restoring
-            if (isRestoreRunning.value) ...[
-              const SizedBox(height: 16),
-              LinearProgressIndicator(value: restoreProgress.value),
-              const SizedBox(height: 8),
-              Text(
-                restoreStatus.value,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: isRestoreRunning.value ? null : () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: isRestoreRunning.value ? null : startRestore,
-            child: isRestoreRunning.value
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Restore'),
-          ),
-        ],
-      )),
+    Get.snackbar(
+      'Info',
+      'Delete functionality coming soon in BackupServiceV3',
+      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  Future<void> showRestoreDialog() async {
+    Get.snackbar(
+      'Info',
+      'Restore functionality coming soon (RestoreServiceV3)',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
+  /// Stop/cancel backup (NOTE: Backups are unstoppable)
+  /// This exists for UI compatibility but backups continue to completion
+  Future<void> stopBackup() async {
+    try {
+      if (currentBackupId.value.isEmpty) {
+        log('⚠️ No active backup to stop');
+        return;
+      }
+
+      // Try to cancel (will return false as backups are unstoppable)
+      final cancelled = await _backupService.cancelBackup(currentBackupId.value);
+
+      if (!cancelled) {
+        Get.snackbar(
+          'Info',
+          'Backups are designed to run to completion for reliability',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      log('❌ Error stopping backup: $e');
+    }
+  }
+
+  /// Toggle backup notifications
+  void toggleNotifications(bool value) {
+    showNotifications.value = value;
+    _saveSettings();
+
+    Get.snackbar(
+      'Settings Updated',
+      value ? 'Backup notifications enabled' : 'Backup notifications disabled',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+    );
   }
 }
 
