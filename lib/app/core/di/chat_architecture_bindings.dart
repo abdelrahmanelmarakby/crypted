@@ -11,6 +11,7 @@
 /// - New components are registered alongside existing ones
 /// - Feature flag `useNewArchitecture` enables gradual migration
 /// - Once migration is complete, old bindings can be removed
+library;
 
 import 'package:crypted_app/app/core/caching/query_cache.dart';
 import 'package:crypted_app/app/core/caching/user_profile_cache.dart';

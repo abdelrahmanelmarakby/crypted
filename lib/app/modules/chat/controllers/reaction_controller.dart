@@ -120,7 +120,7 @@ class ReactionController extends GetxController {
     if (_currentUserId == null) return false;
 
     final reactions = message.reactions;
-    if (reactions == null || reactions.isEmpty) return false;
+    if (reactions.isEmpty) return false;
 
     return reactions.any(
       (r) => r.emoji == emoji && r.userId == _currentUserId,
@@ -130,7 +130,7 @@ class ReactionController extends GetxController {
   /// Get reaction count for a specific emoji on a message
   int getReactionCount(Message message, String emoji) {
     final reactions = message.reactions;
-    if (reactions == null || reactions.isEmpty) return 0;
+    if (reactions.isEmpty) return 0;
 
     return reactions.where((r) => r.emoji == emoji).length;
   }
@@ -138,7 +138,7 @@ class ReactionController extends GetxController {
   /// Get all unique emojis used on a message with their counts
   Map<String, int> getReactionSummary(Message message) {
     final reactions = message.reactions;
-    if (reactions == null || reactions.isEmpty) return {};
+    if (reactions.isEmpty) return {};
 
     final summary = <String, int>{};
     for (final reaction in reactions) {
@@ -150,6 +150,6 @@ class ReactionController extends GetxController {
 
   /// Get total reaction count on a message
   int getTotalReactionCount(Message message) {
-    return message.reactions?.length ?? 0;
+    return message.reactions.length ?? 0;
   }
 }

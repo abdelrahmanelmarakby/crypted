@@ -141,7 +141,7 @@ class UserInfoSwitchTile extends StatelessWidget {
       trailing: Switch(
         value: value,
         onChanged: isLoading ? null : onChanged,
-        activeColor: ColorsManager.primary,
+        activeThumbColor: ColorsManager.primary,
       ),
       onTap: isLoading ? null : () => onChanged?.call(!value),
     );

@@ -2,6 +2,7 @@
 ///
 /// Provides deep sanitization of settings data before persistence
 /// to prevent injection attacks and data corruption.
+library;
 
 import 'dart:convert';
 import 'dart:developer' as developer;

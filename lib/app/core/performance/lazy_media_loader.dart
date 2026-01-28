@@ -1,11 +1,9 @@
 // PERF-004 FIX: Lazy Loading for Media Attachments
 // Defers loading of images/videos until they're visible
 
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:crypted_app/core/themes/color_manager.dart';
 
 /// Configuration for lazy media loading
 class LazyMediaConfig {
@@ -165,14 +163,6 @@ class _VisibilityDetectorState extends State<VisibilityDetector> {
     if (renderObject == null) return;
 
     final viewport = RenderAbstractViewport.of(renderObject);
-    if (viewport == null) {
-      // Not in a scrollable, assume visible
-      if (!_wasVisible) {
-        _wasVisible = true;
-        widget.onVisibilityChanged(true);
-      }
-      return;
-    }
 
     final offsetToReveal = viewport.getOffsetToReveal(renderObject, 0.0);
     final isVisible = offsetToReveal.offset >= 0;

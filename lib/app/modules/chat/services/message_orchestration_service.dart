@@ -12,7 +12,6 @@ import 'package:crypted_app/app/domain/usecases/message/delete_message_usecase.d
 import 'package:crypted_app/app/domain/usecases/reaction/toggle_reaction_usecase.dart';
 import 'package:crypted_app/app/modules/chat/services/optimistic_update_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 
 /// SINGLE SOURCE OF TRUTH for all message operations
 ///

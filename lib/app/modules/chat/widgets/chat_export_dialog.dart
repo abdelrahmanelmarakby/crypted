@@ -339,7 +339,7 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: ColorsManager.primary,
+        activeThumbColor: ColorsManager.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

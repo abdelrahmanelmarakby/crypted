@@ -411,7 +411,7 @@ class AttachmentWidget extends GetView<ChatController> {
                             final fileSize = await file.length();
                             final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
 
-                            debugPrint("📷 Starting upload: $fileName (${fileSize} bytes)");
+                            debugPrint("📷 Starting upload: $fileName ($fileSize bytes)");
 
                             // Start upload tracking
                             controller.startUpload(
@@ -471,7 +471,7 @@ class AttachmentWidget extends GetView<ChatController> {
                               final fileSize = await file.length();
                               final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
 
-                              debugPrint("📸 Starting upload: $fileName (${fileSize} bytes)");
+                              debugPrint("📸 Starting upload: $fileName ($fileSize bytes)");
 
                               // Start upload tracking
                               controller.startUpload(

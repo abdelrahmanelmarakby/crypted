@@ -5,6 +5,7 @@
 /// - Grouped undo for related changes
 /// - Expiration of old undo entries
 /// - Memory-efficient state snapshots
+library;
 
 import 'dart:async';
 import 'dart:developer' as developer;

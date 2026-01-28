@@ -488,7 +488,7 @@ class _GroupPermissionsEditorState extends State<GroupPermissionsEditor> {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: ColorsManager.primary,
+        activeThumbColor: ColorsManager.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

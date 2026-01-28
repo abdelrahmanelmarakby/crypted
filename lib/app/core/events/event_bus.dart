@@ -2,7 +2,6 @@
 // Decoupled event-driven communication between components
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 
 /// Base class for all events
 abstract class AppEvent {

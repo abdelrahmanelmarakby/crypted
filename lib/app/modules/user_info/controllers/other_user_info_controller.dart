@@ -11,11 +11,9 @@ import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/controllers/notification_settings_controller.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
 import 'package:crypted_app/app/modules/settings_v2/notifications/widgets/muted_chats_manager.dart';
-import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_export_dialog.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
-import 'package:crypted_app/app/data/models/messages/message_model.dart';
 
 /// Enhanced controller for viewing other user's information
 class OtherUserInfoController extends GetxController {
@@ -216,6 +214,7 @@ class OtherUserInfoController extends GetxController {
   }
 
   /// Refresh all data
+  @override
   Future<void> refresh() async {
     state.value = state.value.copyWith(isLoading: true);
     await _loadInitialData();

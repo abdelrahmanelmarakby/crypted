@@ -5,6 +5,7 @@
 /// - Change confirmations
 /// - Sync status
 /// - Conflict notifications
+library;
 
 import 'dart:async';
 import 'dart:developer' as developer;

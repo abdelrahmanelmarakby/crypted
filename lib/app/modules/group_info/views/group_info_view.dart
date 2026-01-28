@@ -188,7 +188,7 @@ class GroupInfoView extends GetView<GroupInfoController> {
                                   if (member != members.last) buildDivider(),
                                 ],
                               );
-                            }).toList(),
+                            }),
                           ],
                         );
                       }),

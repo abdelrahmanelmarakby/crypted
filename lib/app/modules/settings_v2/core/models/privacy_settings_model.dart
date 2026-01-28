@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Enhanced Privacy Settings Model
 /// Provides comprehensive privacy control with per-contact exceptions,
 /// security features, and privacy checkup capabilities.
+library;
 
 // ============================================================================
 // ENUMS

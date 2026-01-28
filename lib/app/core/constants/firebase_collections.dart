@@ -11,6 +11,7 @@
 /// // Instead of: .collection('chats')
 /// // Use: .collection(FirebaseCollections.chats)
 /// ```
+library;
 
 class FirebaseCollections {
   // Private constructor to prevent instantiation

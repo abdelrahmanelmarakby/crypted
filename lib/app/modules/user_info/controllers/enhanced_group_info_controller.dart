@@ -9,7 +9,6 @@ import 'package:crypted_app/app/modules/user_info/repositories/group_info_reposi
 import 'package:crypted_app/app/modules/user_info/models/group_info_state.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
-import 'package:crypted_app/core/themes/color_manager.dart';
 
 /// Enhanced controller for group information screen
 class EnhancedGroupInfoController extends GetxController {
@@ -164,6 +163,7 @@ class EnhancedGroupInfoController extends GetxController {
   }
 
   /// Refresh all data
+  @override
   Future<void> refresh() async {
     state.value = state.value.copyWith(isLoading: true);
     await _loadInitialData();

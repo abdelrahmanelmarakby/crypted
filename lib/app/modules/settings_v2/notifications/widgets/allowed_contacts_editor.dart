@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 
 /// Allowed Contacts Editor Widget

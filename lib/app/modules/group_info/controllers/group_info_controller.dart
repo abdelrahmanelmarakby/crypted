@@ -17,9 +17,6 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
-import 'package:dio/dio.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:crypted_app/core/locale/constant.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:crypted_app/app/modules/media_gallery/views/video_player_view.dart';
 

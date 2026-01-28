@@ -139,7 +139,7 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
         duration = _parseDuration(widget.message.duration!);
       }
 
-    } catch (e, stackTrace) {
+    } catch (e) {
 
       if (mounted) {
         Get.snackbar(
@@ -209,7 +209,7 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> with SingleTick
     } else {
       try {
         await _audioPlayer.play();
-      } catch (e, stackTrace) {
+      } catch (e) {
         Get.snackbar("Error", "Cannot play audio message: ${e.toString()}");
       }
     }

@@ -5,7 +5,6 @@ import 'package:crypted_app/app/core/services/app_lock_service.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
-import 'package:crypted_app/gen/assets.gen.dart';
 
 /// Full-screen lock screen that appears when the app is locked
 /// Supports biometric authentication and PIN/password entry

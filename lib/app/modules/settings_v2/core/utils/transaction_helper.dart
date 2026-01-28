@@ -2,6 +2,7 @@
 ///
 /// Provides utilities for performing atomic updates across multiple
 /// documents with rollback support and optimistic locking.
+library;
 
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';

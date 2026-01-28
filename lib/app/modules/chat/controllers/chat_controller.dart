@@ -2528,6 +2528,7 @@ class ChatController extends GetxController
   }
 
   /// Copy message content
+  @override
   void copyMessage(Message message) {
     try {
       String textToCopy = '';

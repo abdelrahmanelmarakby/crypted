@@ -7,6 +7,7 @@
 /// - Media sharing statistics
 /// - Privacy controls (block, report)
 /// - Chat options (mute, favorite, archive)
+library;
 
 // Repositories
 export 'repositories/user_info_repository.dart';

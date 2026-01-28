@@ -7,9 +7,7 @@ import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
 import 'package:crypted_app/app/modules/chat/widgets/blocked_chat_banner.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_search_bar.dart';
-import 'package:crypted_app/app/core/services/chat_privacy_helper.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
-import 'package:crypted_app/app/modules/chat/widgets/optimized/optimized_message_list.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
@@ -19,7 +17,6 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 // ARCH-004: Removed provider import - using GetX observables only
@@ -106,7 +103,7 @@ class PrivateChatScreen extends GetView<ChatController> {
             return Obx(() {
               // Get uploading messages from local controller state (reactive via Obx)
               final localUploadingMessages = controller.messages
-                  .where((msg) => msg is UploadingMessage)
+                  .whereType<UploadingMessage>()
                   .toList();
 
               // Combine: uploading messages first (they're newest), then Firestore messages

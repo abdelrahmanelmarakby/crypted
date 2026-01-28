@@ -2,6 +2,7 @@
 ///
 /// Provides input validation, sanitization, and data integrity checks
 /// for notification and privacy settings.
+library;
 
 import 'dart:developer' as developer;
 

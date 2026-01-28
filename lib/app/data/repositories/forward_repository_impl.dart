@@ -249,7 +249,7 @@ class ForwardRepositoryImpl implements IForwardRepository {
         return Result.failure(RepositoryError.notFound('Message'));
       }
 
-      final messageData = messageDoc.data() as Map<String, dynamic>?;
+      final messageData = messageDoc.data();
       if (messageData == null) {
         return Result.failure(RepositoryError.notFound('Message data'));
       }
@@ -319,8 +319,8 @@ class ForwardRepositoryImpl implements IForwardRepository {
           return Result.failure(RepositoryError.notFound('User'));
         }
 
-        final currentUserData = currentUserDoc.data() as Map<String, dynamic>?;
-        final targetUserData = targetUserDoc.data() as Map<String, dynamic>?;
+        final currentUserData = currentUserDoc.data();
+        final targetUserData = targetUserDoc.data();
 
         final currentBlocked =
             List<String>.from(currentUserData?['blockedUsers'] ?? []);

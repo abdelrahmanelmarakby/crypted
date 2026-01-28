@@ -2,6 +2,7 @@
 ///
 /// Provides error classification, recovery strategies, and user-friendly
 /// error messages for settings operations.
+library;
 
 import 'dart:async';
 import 'dart:developer' as developer;

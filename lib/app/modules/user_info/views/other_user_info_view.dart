@@ -8,7 +8,6 @@ import 'package:crypted_app/app/modules/user_info/widgets/user_info_section.dart
 import 'package:crypted_app/app/modules/user_info/widgets/user_info_action_tile.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/widgets/disappearing_messages_settings.dart';
-import 'package:crypted_app/app/modules/chat/widgets/chat_export_dialog.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
-import 'package:flutter/foundation.dart';
 
 /// ARCH-011: Legacy Collection Migration Helper
 /// Helps migrate from legacy 'Chats' collection to new 'chats' collection

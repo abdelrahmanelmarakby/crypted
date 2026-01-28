@@ -179,11 +179,11 @@ class ControllerBridge implements IControllerBridge {
     // Create a stream controller for this event
     final controller = StreamController<dynamic>.broadcast();
 
-    final handler = (dynamic data) {
+    void handler(dynamic data) {
       if (!controller.isClosed) {
         controller.add(data);
       }
-    };
+    }
 
     _listeners[event] ??= [];
     _listeners[event]!.add(handler);

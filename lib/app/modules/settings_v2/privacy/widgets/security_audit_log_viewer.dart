@@ -32,7 +32,7 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
 
   // Filter state
   SecurityEventType? _selectedFilter;
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String _searchQuery = '';
   final _searchController = TextEditingController();
 

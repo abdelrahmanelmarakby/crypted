@@ -900,7 +900,7 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
           HapticFeedback.lightImpact();
           onChanged(newValue);
         },
-        activeColor: ColorsManager.primary,
+        activeThumbColor: ColorsManager.primary,
       ),
     );
   }

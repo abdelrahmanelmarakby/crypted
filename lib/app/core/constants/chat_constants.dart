@@ -1,6 +1,7 @@
 /// QUALITY-003: Chat Constants
 /// Extracted magic numbers and configuration values
 /// to make code more maintainable and self-documenting
+library;
 
 class ChatConstants {
   // Private constructor to prevent instantiation

@@ -4,7 +4,6 @@ import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
-import 'package:get/get.dart';
 
 /// UI-004: Discoverable Message Actions
 /// Makes message actions visible and accessible without long-press

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
@@ -17,7 +16,6 @@ import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
-import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:get/get.dart';
 

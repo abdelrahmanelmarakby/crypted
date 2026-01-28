@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
-import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:flutter/foundation.dart';
 
 /// Interface for Firebase message operations

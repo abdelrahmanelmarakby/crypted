@@ -2,6 +2,7 @@
 ///
 /// Provides type-safe, validated wrappers around settings operations
 /// to ensure data integrity before persistence.
+library;
 
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart' show TimeOfDay;

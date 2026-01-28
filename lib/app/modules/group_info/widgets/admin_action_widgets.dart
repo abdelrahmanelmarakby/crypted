@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 

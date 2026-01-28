@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
 import 'package:get/get.dart';

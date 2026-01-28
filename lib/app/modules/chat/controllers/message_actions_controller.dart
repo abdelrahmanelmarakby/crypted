@@ -6,7 +6,6 @@ import 'package:crypted_app/app/core/error_handling/error_handler.dart';
 import 'package:crypted_app/app/core/repositories/chat_repository.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 

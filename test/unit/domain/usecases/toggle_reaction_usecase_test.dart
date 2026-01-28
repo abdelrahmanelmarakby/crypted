@@ -1,4 +1,3 @@
-import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/domain/core/result.dart';
 import 'package:crypted_app/app/domain/repositories/i_reaction_repository.dart';
 import 'package:crypted_app/app/domain/usecases/reaction/toggle_reaction_usecase.dart';

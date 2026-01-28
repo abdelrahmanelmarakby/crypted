@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';

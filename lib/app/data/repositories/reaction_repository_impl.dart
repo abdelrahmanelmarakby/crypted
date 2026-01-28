@@ -1,7 +1,6 @@
 import 'package:crypted_app/app/core/caching/user_profile_cache.dart';
 import 'package:crypted_app/app/core/events/event_bus.dart';
 import 'package:crypted_app/app/data/datasources/firebase/firebase_reaction_datasource.dart';
-import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/domain/core/result.dart';
 import 'package:crypted_app/app/domain/repositories/i_reaction_repository.dart';
 import 'package:flutter/foundation.dart';

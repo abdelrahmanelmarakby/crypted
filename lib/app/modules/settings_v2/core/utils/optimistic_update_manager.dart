@@ -2,6 +2,7 @@
 ///
 /// Provides immediate UI updates with automatic rollback on failure,
 /// conflict resolution, and pending change tracking.
+library;
 
 import 'dart:async';
 import 'dart:developer' as developer;
