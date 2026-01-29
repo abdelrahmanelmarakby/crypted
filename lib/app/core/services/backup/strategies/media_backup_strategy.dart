@@ -253,10 +253,12 @@ class MediaBackupStrategy extends BackupStrategy {
     required BackupContext context,
   }) async {
     try {
+      // FIX: Use chatMessages ('chat') instead of messages ('messages')
+      // The actual Firestore structure is: chats/{roomId}/chat/{messageId}
       final querySnapshot = await context.firestore
           .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection(FirebaseCollections.messages)
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .limit(limit)
           .get();
@@ -371,11 +373,71 @@ class MediaBackupStrategy extends BackupStrategy {
     required String originalUrl,
     required Map<String, dynamic> metadata,
   }) {
-    final timestamp = metadata['timestamp'] ?? DateTime.now().toIso8601String();
+    // FIX: Shorten filename to avoid "Message too long" error
     final messageId = metadata['messageId'] ?? 'unknown';
-    final extension = originalUrl.split('.').last.split('?').first;
+    final messageType = metadata['messageType'] ?? '';
 
-    return 'media_${messageId}_$timestamp.$extension';
+    // Extract clean extension from URL
+    // Firebase Storage URLs are URL-encoded, so we need to decode first
+    String extension = _inferExtensionFromType(messageType);
+    try {
+      // Decode URL-encoded path (Firebase uses %2F for /)
+      final decodedUrl = Uri.decodeFull(originalUrl);
+
+      // Try to extract from the decoded URL
+      // Firebase Storage format: .../o/path%2Fto%2Ffile.jpg?alt=media...
+      final urlWithoutQuery = decodedUrl.split('?').first;
+      final lastSlash = urlWithoutQuery.lastIndexOf('/');
+      final fileName = lastSlash != -1
+          ? urlWithoutQuery.substring(lastSlash + 1)
+          : urlWithoutQuery;
+
+      // Get extension from filename
+      final lastDot = fileName.lastIndexOf('.');
+      if (lastDot != -1 && lastDot < fileName.length - 1) {
+        final ext = fileName.substring(lastDot + 1).toLowerCase();
+        // Only use if it's a valid media extension
+        if (_isValidExtension(ext)) {
+          extension = ext;
+        }
+      }
+    } catch (_) {}
+
+    // Use short timestamp (millis only)
+    final ts = DateTime.now().millisecondsSinceEpoch;
+
+    // Keep filename short: media_{shortId}_{timestamp}.{ext}
+    final shortId = messageId.length > 8 ? messageId.substring(0, 8) : messageId;
+    return 'media_${shortId}_$ts.$extension';
+  }
+
+  /// Infer file extension from message type
+  String _inferExtensionFromType(String messageType) {
+    if (messageType.contains('Photo') || messageType.contains('Image')) {
+      return 'jpg';
+    } else if (messageType.contains('Video')) {
+      return 'mp4';
+    } else if (messageType.contains('Audio')) {
+      return 'm4a';
+    } else if (messageType.contains('File')) {
+      return 'bin';
+    }
+    return 'bin';
+  }
+
+  /// Check if extension is a valid media extension
+  bool _isValidExtension(String ext) {
+    const validExtensions = {
+      // Images
+      'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'bmp',
+      // Videos
+      'mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp',
+      // Audio
+      'm4a', 'mp3', 'wav', 'aac', 'ogg', 'flac', 'wma',
+      // Documents
+      'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt',
+    };
+    return validExtensions.contains(ext.toLowerCase());
   }
 
   Future<void> _saveMediaMetadata({
@@ -383,19 +445,37 @@ class MediaBackupStrategy extends BackupStrategy {
     required Map<String, Map<String, dynamic>> mediaUrls,
   }) async {
     try {
+      // FIX: Convert all DateTime objects to ISO strings for JSON serialization
+      final mediaIndex = <String, Map<String, dynamic>>{};
+
+      for (final entry in mediaUrls.entries) {
+        final url = entry.key;
+        final data = entry.value;
+
+        // Convert any DateTime to string
+        final cleanData = <String, dynamic>{};
+        for (final dataEntry in data.entries) {
+          final value = dataEntry.value;
+          if (value is DateTime) {
+            cleanData[dataEntry.key] = value.toIso8601String();
+          } else {
+            cleanData[dataEntry.key] = value;
+          }
+        }
+
+        mediaIndex[url] = {
+          'backupFileName': _generateFileName(
+            originalUrl: url,
+            metadata: data,
+          ),
+          ...cleanData,
+        };
+      }
+
       final metadata = {
         'totalMediaFiles': mediaUrls.length,
         'backupDate': DateTime.now().toIso8601String(),
-        'mediaIndex': mediaUrls.map((url, data) => MapEntry(
-          url,
-          {
-            'backupFileName': _generateFileName(
-              originalUrl: url,
-              metadata: data,
-            ),
-            ...data,
-          },
-        )),
+        'mediaIndex': mediaIndex,
       };
 
       await _backupDataSource.uploadJsonData(

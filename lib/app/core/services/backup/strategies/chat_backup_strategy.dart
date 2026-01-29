@@ -199,10 +199,12 @@ class ChatBackupStrategy extends BackupStrategy {
     required BackupContext context,
   }) async {
     try {
+      // FIX: Use chatMessages ('chat') instead of messages ('messages')
+      // The actual Firestore structure is: chats/{roomId}/chat/{messageId}
       final querySnapshot = await context.firestore
           .collection(FirebaseCollections.chats)
           .doc(roomId)
-          .collection(FirebaseCollections.messages)
+          .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
           .limit(limit)
           .get();

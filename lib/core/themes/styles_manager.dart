@@ -146,4 +146,132 @@ class StylesManager {
       fontWeight: FontWeights.light,
     );
   }
+
+  // ============================================
+  // DM SANS STYLES - For Zen/Minimal Design
+  // ============================================
+
+  /// DM Sans Regular - Clean geometric sans-serif (local font)
+  static TextStyle dmSans({
+    double fontSize = 14,
+    Color? color,
+    FontWeight fontWeight = FontWeight.w400,
+    TextDecoration decoration = TextDecoration.none,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return TextStyle(
+      fontFamily: FontFamily.dmSans,
+      fontSize: fontSize,
+      color: color,
+      fontWeight: fontWeight,
+      decoration: decoration,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+
+  /// DM Sans Medium - For subheadings
+  static TextStyle dmSansMedium({
+    double fontSize = 14,
+    Color? color,
+    TextDecoration decoration = TextDecoration.none,
+    double? letterSpacing,
+  }) {
+    return dmSans(
+      fontSize: fontSize,
+      color: color,
+      fontWeight: FontWeight.w500,
+      decoration: decoration,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// DM Sans SemiBold - For section headers
+  static TextStyle dmSansSemiBold({
+    double fontSize = 14,
+    Color? color,
+    TextDecoration decoration = TextDecoration.none,
+    double? letterSpacing,
+  }) {
+    return dmSans(
+      fontSize: fontSize,
+      color: color,
+      fontWeight: FontWeight.w600,
+      decoration: decoration,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// DM Sans Bold - For primary headings
+  static TextStyle dmSansBold({
+    double fontSize = 14,
+    Color? color,
+    TextDecoration decoration = TextDecoration.none,
+    double? letterSpacing,
+  }) {
+    return dmSans(
+      fontSize: fontSize,
+      color: color,
+      fontWeight: FontWeight.w700,
+      decoration: decoration,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  // ============================================
+  // ZEN TYPOGRAPHY PRESETS
+  // ============================================
+
+  /// Large page title - 28px DM Sans Bold
+  static TextStyle zenTitle({Color? color}) {
+    return dmSansBold(
+      fontSize: 28,
+      color: color ?? const Color(0xFF1A1A1A),
+      letterSpacing: -0.5,
+    );
+  }
+
+  /// Section heading - 18px DM Sans SemiBold
+  static TextStyle zenHeading({Color? color}) {
+    return dmSansSemiBold(
+      fontSize: 18,
+      color: color ?? const Color(0xFF1A1A1A),
+      letterSpacing: -0.3,
+    );
+  }
+
+  /// Subheading - 15px DM Sans Medium
+  static TextStyle zenSubheading({Color? color}) {
+    return dmSansMedium(
+      fontSize: 15,
+      color: color ?? const Color(0xFF1A1A1A),
+      letterSpacing: -0.1,
+    );
+  }
+
+  /// Body text - 14px IBM Plex (your existing font)
+  static TextStyle zenBody({Color? color}) {
+    return regular(
+      fontSize: 14,
+      color: color ?? const Color(0xFF6B7280),
+    );
+  }
+
+  /// Caption/small text - 12px IBM Plex
+  static TextStyle zenCaption({Color? color}) {
+    return regular(
+      fontSize: 12,
+      color: color ?? const Color(0xFF9CA3AF),
+    );
+  }
+
+  /// Large stat number - 32px DM Sans Bold
+  static TextStyle zenStat({Color? color}) {
+    return dmSansBold(
+      fontSize: 32,
+      color: color ?? const Color(0xFF1A1A1A),
+      letterSpacing: -1,
+    );
+  }
 }

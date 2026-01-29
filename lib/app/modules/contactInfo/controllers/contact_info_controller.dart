@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
+import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
@@ -997,6 +1001,101 @@ class ContactInfoController extends GetxController {
 
   // Get the image (user or group)
   String? get displayImage => isGroupContact ? null : userImage; // Groups use different image handling
+
+  /// Start a call with the user
+  Future<void> startCall({bool isVideo = false}) async {
+    if (isGroupContact) {
+      Get.snackbar(
+        'Not Available',
+        'Group calls are not supported yet',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final otherUser = user.value;
+    if (otherUser == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot start call: Missing user data',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final currentUser = UserService.currentUser.value;
+    if (currentUser == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot start call: Not authenticated',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      developer.log('[ContactInfoController] Starting ${isVideo ? "video" : "audio"} call to ${otherUser.uid}');
+
+      // Create call model
+      final callModel = CallModel(
+        callType: isVideo ? CallType.video : CallType.audio,
+        callStatus: CallStatus.outgoing,
+        calleeId: otherUser.uid ?? '',
+        calleeImage: otherUser.imageUrl ?? '',
+        calleeUserName: otherUser.fullName ?? '',
+        callerId: currentUser.uid ?? '',
+        callerImage: currentUser.imageUrl ?? '',
+        callerUserName: currentUser.fullName ?? '',
+        time: DateTime.now(),
+      );
+
+      // Store call in Firestore
+      final callId = await CallDataSources().storeCall(callModel);
+      if (callId == null) {
+        Get.snackbar(
+          'Error',
+          'Failed to create call record',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Update call model with generated ID
+      final callWithId = callModel.copyWith(callId: callId);
+
+      // Send ZEGO call invitation
+      final invitationSent = await ZegoCallService.instance.sendCallInvitation(
+        calleeId: otherUser.uid ?? '',
+        calleeName: otherUser.fullName ?? '',
+        isVideoCall: isVideo,
+        resourceID: 'zego_data',
+      );
+
+      if (!invitationSent) {
+        developer.log('[ContactInfoController] ZEGO invitation failed, continuing with direct call');
+      }
+
+      // Navigate to call screen
+      Get.toNamed(Routes.CALL, arguments: callWithId);
+    } catch (e) {
+      developer.log('[ContactInfoController] Error starting call: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to start call',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
+        colorText: Colors.white,
+      );
+    }
+  }
 
   /// Update bio/status
   Future<void> updateBio(String newBio) async {

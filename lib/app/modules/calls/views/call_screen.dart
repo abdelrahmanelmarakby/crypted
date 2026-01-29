@@ -1,16 +1,26 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
-import 'package:crypted_app/app/data/models/call_model.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:zego_uikit/zego_uikit.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
+
 import 'package:crypted_app/core/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:crypted_app/app/data/models/call_model.dart';
+import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_config.dart';
 
+/// Screen for active voice/video calls using ZEGO UIKit.
+///
+/// This screen displays the ZEGO call UI and manages:
+/// - Call initialization and room joining
+/// - Call duration tracking
+/// - Call status updates in Firestore
+/// - Error handling and recovery
 class CallScreen extends StatefulWidget {
   const CallScreen({super.key});
 
@@ -19,300 +29,336 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  CallModel? callModel;
-  bool _isCallStarted = false;
+  // Call data
+  CallModel? _callModel;
+  String? _callId;
+
+  // State management
   bool _isInitializing = true;
-  Timer? _callTimer;
-  int _callDuration = 0;
-  int _retryCount = 0;
-  static const int _maxRetries = 2;
-  // FIX: Store generated call ID to ensure it's consistent across init and build
-  String? _generatedCallId;
+  bool _isCallReady = false;
+  String? _errorMessage;
+
+  // Duration tracking
+  Timer? _durationTimer;
+  int _callDurationSeconds = 0;
+
+  // Data source
+  final CallDataSources _callDataSources = CallDataSources();
 
   @override
   void initState() {
     super.initState();
-    // Initialize call immediately
     _initializeCall();
   }
 
   @override
   void dispose() {
-    _callTimer?.cancel();
-
-    // End call properly when screen is disposed
-    if (callModel != null && callModel!.callId != null) {
-      _endCall();
-    }
-
+    _durationTimer?.cancel();
+    _handleCallEnd();
     super.dispose();
   }
 
-  Future<void> _endCall() async {
-    if (callModel?.callId != null && _callDuration > 0) {
-      try {
-        final callDataSource = CallDataSources();
-        await callDataSource.endCall(callModel!.callId!, _callDuration);
-        log('✅ Call ended properly: ${callModel!.callId}');
-      } catch (e) {
-        log('❌ Error ending call: $e');
-      }
-    }
-  }
-
-  Future<bool?> _showEndCallDialog() {
-    return Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('End Call'),
-        content: const Text('Are you sure you want to end this call?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text('Cancel', style: TextStyle(color: ColorsManager.grey)),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _endCall();
-              Get.back(result: true);
-              Get.back(); // Go back to chat screen
-            },
-            child: Text('End Call', style: TextStyle(color: ColorsManager.error)),
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// Initialize the call from navigation arguments.
   Future<void> _initializeCall() async {
     try {
-      // Get call model from arguments - handle both CallModel and Map types
-      final args = Get.arguments;
-      if (args is CallModel) {
-        callModel = args;
-      } else if (args is Map<String, dynamic>) {
-        callModel = CallModel.fromMap(args);
-      } else if (args is Map) {
-        // Handle Map<String, Object?> case
-        callModel = CallModel.fromMap(Map<String, dynamic>.from(args));
-      } else {
-        callModel = null;
-      }
+      // Parse call model from arguments
+      _callModel = _parseCallArguments();
 
-      if (callModel == null) {
-        _showErrorDialog('Invalid call parameters');
+      if (_callModel == null) {
+        _setError('Invalid call parameters');
         return;
       }
 
-      // FIX: Generate unique call ID ONCE if not provided, and store it
-      // This prevents the bug where build() generates a different ID
-      _generatedCallId = callModel!.callId ??
-          '${callModel!.callerId}_${callModel!.calleeId}_${DateTime.now().millisecondsSinceEpoch}';
-      final String callID = _generatedCallId!;
-
-      // Check internet connectivity first
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult == ConnectivityResult.none) {
-        _showErrorDialog('No internet connection. Please check your network and try again.');
+      // Check network connectivity
+      final connectivityResults = await Connectivity().checkConnectivity();
+      if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
+        _setError('No internet connection');
         return;
       }
 
-      // Log call details for debugging
-      log('Initializing call with details:');
-      log('  Call ID: $callID');
-      log('  Caller ID: ${callModel!.callerId}');
-      log('  Caller Name: ${callModel!.callerUserName}');
-      log('  Call Type: ${callModel!.callType}');
-      log('  Connectivity: $connectivityResult');
-      log('  Is Voice Call: ${callModel!.callType == CallType.audio}');
+      // Generate or use existing call ID
+      _callId = _callModel!.callId ??
+          '${_callModel!.callerId}_${_callModel!.calleeId}_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Ensure Zego UIKit is properly initialized before proceeding
-      if (callModel!.callerId != null && callModel!.callerUserName != null) {
-        try {
-          await CallDataSources().onUserLogin(callModel!.callerId!, callModel!.callerUserName!)
-              .timeout(const Duration(seconds: 25)); // Increased timeout
+      log('[CallScreen] Initializing call: $_callId');
+      log('[CallScreen] Caller: ${_callModel!.callerId} -> Callee: ${_callModel!.calleeId}');
+      log('[CallScreen] Type: ${_callModel!.callType?.name}');
 
-          // Wait for room login to complete with additional verification
-          await Future.delayed(const Duration(seconds: 3));
-          log('Waiting for room to be fully ready...');
-
-          // Additional check for room readiness
-          await Future.delayed(const Duration(seconds: 2));
-
-          _retryCount = 0; // Reset retry count on success
-          log('Zego UIKit initialization and room login completed successfully');
-        } catch (e) {
-          log('Zego UIKit initialization failed (attempt ${_retryCount + 1}): $e');
-
-          if (_retryCount < _maxRetries) {
-            _retryCount++;
-            log('Retrying initialization...');
-            await Future.delayed(const Duration(seconds: 2));
-            return await _initializeCall(); // Retry recursively
-          }
-
-          // All retries failed
-          if (e.toString().contains('timeout') || e.toString().contains('network')) {
-            _showErrorDialog('Network connection timeout after multiple attempts. Please check your internet connection and try again.');
-          } else if (e.toString().contains('room') || e.toString().contains('login')) {
-            _showErrorDialog('Room login failed after multiple attempts. Please try again.');
-          } else {
-            _showErrorDialog('Failed to initialize calling service after multiple attempts. Please try again.');
-          }
-          return;
-        }
-      }
-
-      // Skip permission checks - let Zego UIKit handle permissions internally
-      // FIX: Check mounted before setState to prevent crash if user navigates away
+      // Mark call as ready
       if (mounted) {
         setState(() {
-          _isCallStarted = true;
           _isInitializing = false;
+          _isCallReady = true;
         });
-
-        // Start call duration timer for actual calls
-        if (callModel != null) {
-          _startCallTimer();
-        }
+        _startDurationTimer();
       }
-
-    } catch (e) {
-      log('Error initializing call: $e');
-      _showErrorDialog('Failed to initialize call: ${e.toString()}');
+    } catch (e, stackTrace) {
+      log('[CallScreen] Error initializing call: $e');
+      log('[CallScreen] Stack trace: $stackTrace');
+      _setError('Failed to initialize call');
     }
   }
 
-  void _startCallTimer() {
-    _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  /// Parse call arguments from navigation.
+  CallModel? _parseCallArguments() {
+    final args = Get.arguments;
+
+    if (args is CallModel) {
+      return args;
+    }
+
+    if (args is Map<String, dynamic>) {
+      return CallModel.fromMap(args);
+    }
+
+    if (args is Map) {
+      return CallModel.fromMap(Map<String, dynamic>.from(args));
+    }
+
+    return null;
+  }
+
+  /// Set error state and stop loading.
+  void _setError(String message) {
+    if (mounted) {
+      setState(() {
+        _errorMessage = message;
+        _isInitializing = false;
+        _isCallReady = false;
+      });
+    }
+  }
+
+  /// Start tracking call duration.
+  void _startDurationTimer() {
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() {
-          _callDuration++;
+          _callDurationSeconds++;
         });
       }
     });
   }
 
+  /// Format duration as MM:SS.
   String _formatDuration(int seconds) {
     final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
     return '$minutes:$secs';
   }
 
-  void _showErrorDialog(String message) {
-    Get.dialog(
+  /// Handle call end - update Firestore and cleanup.
+  Future<void> _handleCallEnd() async {
+    if (_callModel?.callId == null && _callId == null) return;
+
+    final callId = _callModel?.callId ?? _callId;
+    if (callId == null) return;
+
+    try {
+      if (_callDurationSeconds > 0) {
+        await _callDataSources.endCall(callId, _callDurationSeconds);
+        log('[CallScreen] Call ended: $callId (${_callDurationSeconds}s)');
+      } else {
+        await _callDataSources.markCallAsCancelled(callId);
+        log('[CallScreen] Call cancelled: $callId');
+      }
+    } catch (e) {
+      log('[CallScreen] Error ending call: $e');
+    }
+  }
+
+  /// Show end call confirmation dialog.
+  Future<bool> _showEndCallConfirmation() async {
+    final result = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('Call Error'),
-        content: Text('$message\n\nPlease check your internet connection and try again. If the problem persists, please restart the app.'),
+        title: const Text('End Call'),
+        content: const Text('Are you sure you want to end this call?'),
         actions: [
           TextButton(
-            onPressed: () {
-              Get.back();
-              Get.back(); // Go back to chat screen
-            },
-            child: const Text('OK'),
+            onPressed: () => Get.back(result: false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: ColorsManager.grey),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(
+              'End Call',
+              style: TextStyle(color: ColorsManager.error),
+            ),
           ),
         ],
       ),
-      barrierDismissible: false,
     );
+
+    return result ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (callModel == null || !_isCallStarted || _isInitializing) {
-      return Scaffold(
-        backgroundColor: ColorsManager.navbarColor,
-        body: Center(
+    // Show loading state
+    if (_isInitializing) {
+      return _buildLoadingScreen('Initializing call...');
+    }
+
+    // Show error state
+    if (_errorMessage != null) {
+      return _buildErrorScreen(_errorMessage!);
+    }
+
+    // Show call not ready state
+    if (!_isCallReady || _callModel == null || _callId == null) {
+      return _buildLoadingScreen('Starting call...');
+    }
+
+    // Show call UI
+    return _buildCallScreen();
+  }
+
+  /// Build loading screen.
+  Widget _buildLoadingScreen(String message) {
+    return Scaffold(
+      backgroundColor: ColorsManager.navbarColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              color: ColorsManager.primary,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: TextStyle(
+                color: ColorsManager.grey,
+                fontSize: FontSize.medium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build error screen.
+  Widget _buildErrorScreen(String message) {
+    return Scaffold(
+      backgroundColor: ColorsManager.navbarColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(
-                color: ColorsManager.primary,
+              Icon(
+                Icons.error_outline,
+                color: ColorsManager.error,
+                size: 64,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Text(
-                _isInitializing ? 'Initializing call...' : 'Starting call...',
+                'Call Error',
+                style: TextStyle(
+                  color: ColorsManager.white,
+                  fontSize: FontSize.large,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: ColorsManager.grey,
                   fontSize: FontSize.medium,
                 ),
               ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Get.back(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorsManager.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text(
+                  'Go Back',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    // FIX: Use the call ID that was generated once in _initializeCall()
-    // instead of regenerating with a new timestamp
-    final String callID = _generatedCallId ?? callModel!.callId ?? '';
+  /// Build the actual call screen with ZEGO UI.
+  Widget _buildCallScreen() {
+    final isVideoCall = _callModel!.callType == CallType.video;
 
-    return WillPopScope(
-      onWillPop: () async {
-        // Prevent accidental back press during call
-        return await _showEndCallDialog() ?? false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldEnd = await _showEndCallConfirmation();
+        if (shouldEnd && mounted) {
+          await _handleCallEnd();
+          Get.back();
+        }
       },
       child: Scaffold(
         backgroundColor: ColorsManager.navbarColor,
         body: Stack(
           children: [
+            // ZEGO Call UI
             ZegoUIKitPrebuiltCall(
               appID: AppConstants.appID,
               appSign: AppConstants.appSign,
-              userID: callModel!.callerId ?? '',
-              userName: callModel!.callerUserName ?? '',
-              callID: callID,
-              config: (callModel!.callType == CallType.video)
-                  ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
-                  : ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall(),
-              // Add error handling and proper configuration
+              userID: _callModel!.callerId ?? '',
+              userName: _callModel!.callerUserName ?? '',
+              callID: _callId!,
+              config: isVideoCall
+                  ? ZegoCallConfig.getOneOnOneConfig(true)
+                  : ZegoCallConfig.getOneOnOneConfig(false),
               events: ZegoUIKitPrebuiltCallEvents(
-                onError: (error) {
-                  log('ZegoUIKit Error: ${error.code} - ${error.message}');
-                  log('Error details: ${error.toString()}');
-
-                  // Handle different error types with more specific handling
-                  if (error.code == 300001003) {
-                    // Room login error - check underlying error
-                    if (error.message.contains('1001004')) {
-                      _showErrorDialog('Room login failed due to connection issues. Please check your internet connection and try again.');
-                    } else {
-                      _showErrorDialog('Room login failed. Please try again.');
+                onError: _handleZegoError,
+                onCallEnd: _handleZegoCallEnd,
+                user: ZegoCallUserEvents(
+                  onEnter: (user) {
+                    log('[CallScreen] User joined: ${user.name}');
+                    // Mark call as connected when other user joins
+                    if (_callModel?.callId != null) {
+                      _callDataSources.markCallAsConnected(_callModel!.callId!);
                     }
-                  } else if (error.code == 1001004) {
-                    // Login failed - likely network or credentials issue
-                    _showErrorDialog('Unable to connect to calling service. Please check your internet connection and try again.');
-                  } else if (error.code == 1000002) {
-                    // Not logged in to room - stream publishing issue
-                    _showErrorDialog('Stream publishing failed. Please try again.');
-                  } else {
-                    _showErrorDialog('Call error: ${error.message} (Code: ${error.code})');
-                  }
-                  Get.back(); // Go back to chat screen on error
-                },
-                onCallEnd: (call, callEndEvent) {
-                  log('Call ended: ${call.callID}');
-                  // Update call status in database
-                  CallDataSources().updateCallStatus(call.callID, CallStatus.ended);
-                                  Get.back(); // Go back to chat screen
-                },
+                  },
+                  onLeave: (user) {
+                    log('[CallScreen] User left: ${user.name}');
+                  },
+                ),
               ),
             ),
 
-            // Call duration overlay
+            // Duration overlay
             Positioned(
               top: MediaQuery.of(context).padding.top + 50,
               left: 0,
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _formatDuration(_callDuration),
+                    _formatDuration(_callDurationSeconds),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: FontSize.medium,
@@ -326,5 +372,64 @@ class _CallScreenState extends State<CallScreen> {
         ),
       ),
     );
+  }
+
+  /// Handle ZEGO SDK errors.
+  void _handleZegoError(ZegoUIKitError error) {
+    log('[CallScreen] ZEGO error: ${error.code} - ${error.message}');
+
+    String userMessage;
+
+    switch (error.code) {
+      case 300001003:
+        userMessage = 'Failed to join call room. Please try again.';
+        break;
+      case 1001004:
+        userMessage = 'Connection failed. Check your internet connection.';
+        break;
+      case 1000002:
+        userMessage = 'Failed to start media stream.';
+        break;
+      default:
+        userMessage = 'Call error: ${error.message}';
+    }
+
+    Get.snackbar(
+      'Call Error',
+      userMessage,
+      backgroundColor: ColorsManager.error,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+    );
+
+    // End call on error
+    _handleCallEnd();
+    Get.back();
+  }
+
+  /// Handle call end event from ZEGO.
+  void _handleZegoCallEnd(
+    ZegoCallEndEvent event,
+    VoidCallback defaultAction,
+  ) {
+    log('[CallScreen] Call ended by ZEGO: ${event.reason}');
+
+    // Update status based on end reason
+    if (_callModel?.callId != null) {
+      switch (event.reason) {
+        case ZegoCallEndReason.localHangUp:
+        case ZegoCallEndReason.remoteHangUp:
+          _callDataSources.endCall(_callModel!.callId!, _callDurationSeconds);
+          break;
+        case ZegoCallEndReason.kickOut:
+          _callDataSources.markCallAsCancelled(_callModel!.callId!);
+          break;
+        default:
+          _callDataSources.endCall(_callModel!.callId!, _callDurationSeconds);
+      }
+    }
+
+    // Execute default action (navigate back)
+    defaultAction();
   }
 }

@@ -47,7 +47,7 @@ class CallsController extends GetxController {
     print('🔍 CallsController: Initializing with userId: $userId');
 
     // إنشاء streams مع shareReplay
-    calls = callDataSource.getMyCalls(userId);
+    calls = callDataSource.getMyCallsStream(userId);
     callsFromChat = _getCallsFromChat(userId);
 
     // إضافة listener للتحديثات
@@ -55,7 +55,7 @@ class CallsController extends GetxController {
       if (user != null) {
         print('🔍 CallsController: User updated, refreshing calls');
         final newUserId = user.uid ?? CacheHelper.getUserId ?? '';
-        calls = callDataSource.getMyCalls(newUserId);
+        calls = callDataSource.getMyCallsStream(newUserId);
         callsFromChat = _getCallsFromChat(newUserId);
         update();
       }
@@ -117,7 +117,7 @@ class CallsController extends GetxController {
     print('🔍 CallsController: Manually refreshing calls for user: $userId');
 
     // إعادة إنشاء streams
-    calls = callDataSource.getMyCalls(userId);
+    calls = callDataSource.getMyCallsStream(userId);
     callsFromChat = _getCallsFromChat(userId);
 
     // تحديث الواجهة
@@ -182,7 +182,7 @@ class CallsController extends GetxController {
 
       final moreCalls = await callDataSource.loadMoreCalls(
         userId,
-        lastCallTime,
+        afterTime: lastCallTime,
         pageSize: _pageSize,
       );
 

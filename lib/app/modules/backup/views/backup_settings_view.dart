@@ -1,564 +1,526 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
-import 'package:crypted_app/core/themes/font_manager.dart';
 import '../controllers/backup_controller.dart';
 
+/// Backup Settings View - Zen/Minimal Design
+///
+/// Design Philosophy:
+/// - Clean sections with minimal visual noise
+/// - Typography-driven hierarchy
+/// - Subtle dividers, no cards
+/// - Consistent spacing rhythm
 class BackupSettingsView extends GetView<BackupController> {
   const BackupSettingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('Backup Settings'),
-        elevation: 0,
-        backgroundColor: ColorsManager.primary,
-        foregroundColor: Colors.white,
+    // Set status bar to dark for white background
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Auto Backup Section
-          _buildSectionCard(
-            context,
-            title: 'Automatic Backup',
-            icon: Icons.schedule,
-            iconColor: Colors.blue,
-            children: [
-              Obx(() => _buildSwitchTile(
-                context,
-                title: 'Enable Auto Backup',
-                subtitle: Platform.isIOS
-                    ? 'Not available on iOS'
-                    : 'Automatically backup your data periodically',
-                value: controller.autoBackupEnabled.value,
-                onChanged: Platform.isIOS ? null : controller.toggleAutoBackup,
-                icon: Icons.backup_outlined,
-              )),
+    );
 
-              Obx(() {
-                if (!controller.autoBackupEnabled.value || Platform.isIOS) {
-                  return const SizedBox.shrink();
-                }
+    return Scaffold(
+      backgroundColor: ColorsManager.white,
+      body: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // Minimal Header
+            SliverToBoxAdapter(
+              child: _buildHeader(),
+            ),
 
-                return Column(
-                  children: [
-                    const Divider(height: 1),
-                    _buildListTile(
-                      context,
-                      title: 'Backup Interval',
-                      subtitle: 'Every ${controller.autoBackupInterval.value} hours',
-                      icon: Icons.timer_outlined,
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey.shade400,
-                      ),
-                      onTap: () => _showIntervalPicker(context),
-                    ),
-                    const Divider(height: 1),
-                    Obx(() => _buildSwitchTile(
-                      context,
-                      title: 'WiFi Only',
-                      subtitle: 'Only backup when connected to WiFi',
-                      value: controller.backupOnWifiOnly.value,
-                      onChanged: controller.toggleBackupOnWifiOnly,
-                      icon: Icons.wifi,
-                    )),
+            // Settings Content
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Automatic Backup Section
+                  _buildSectionTitle('Automatic Backup'),
+                  const SizedBox(height: 16),
+                  _buildAutoBackupSettings(),
+                  const SizedBox(height: 40),
+
+                  // Notifications Section
+                  _buildSectionTitle('Notifications'),
+                  const SizedBox(height: 16),
+                  _buildNotificationSettings(),
+                  const SizedBox(height: 40),
+
+                  // What Gets Backed Up Section
+                  _buildSectionTitle('What gets backed up'),
+                  const SizedBox(height: 16),
+                  _buildBackupContentsInfo(),
+                  const SizedBox(height: 40),
+
+                  // Important Info Section
+                  _buildInfoSection(),
+                  const SizedBox(height: 40),
+
+                  // iOS Notice
+                  if (Platform.isIOS) ...[
+                    _buildIOSNotice(),
+                    const SizedBox(height: 40),
                   ],
-                );
-              }),
-            ],
-          ),
 
-          const SizedBox(height: 16),
-
-          // Notifications Section
-          _buildSectionCard(
-            context,
-            title: 'Notifications',
-            icon: Icons.notifications_outlined,
-            iconColor: Colors.orange,
-            children: [
-              Obx(() => _buildSwitchTile(
-                context,
-                title: 'Show Notifications',
-                subtitle: 'Get notified about backup status',
-                value: controller.showNotifications.value,
-                onChanged: controller.toggleNotifications,
-                icon: Icons.notification_important_outlined,
-              )),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // What Gets Backed Up
-          _buildSectionCard(
-            context,
-            title: 'What Gets Backed Up',
-            icon: Icons.inventory_2_outlined,
-            iconColor: Colors.green,
-            children: [
-              _buildInfoTile(
-                context,
-                icon: Icons.smartphone,
-                title: 'Device Information',
-                subtitle: 'Brand, model, platform',
-                color: Colors.blue,
-              ),
-              const Divider(height: 1),
-              _buildInfoTile(
-                context,
-                icon: Icons.location_on_outlined,
-                title: 'Location',
-                subtitle: 'Current location and address',
-                color: Colors.red,
-              ),
-              const Divider(height: 1),
-              _buildInfoTile(
-                context,
-                icon: Icons.contacts_outlined,
-                title: 'Contacts',
-                subtitle: 'All your contacts',
-                color: Colors.purple,
-              ),
-              const Divider(height: 1),
-              _buildInfoTile(
-                context,
-                icon: Icons.image_outlined,
-                title: 'Images',
-                subtitle: 'Photos from your gallery',
-                color: Colors.pink,
-              ),
-              const Divider(height: 1),
-              _buildInfoTile(
-                context,
-                icon: Icons.video_library_outlined,
-                title: 'Files & Videos',
-                subtitle: 'Videos and other media',
-                color: Colors.orange,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Important Information Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.blue.shade50,
-                  Colors.blue.shade100,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade700,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.info_outline,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Important Information',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade900,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildInfoPoint(
-                  '🔒 Your data is encrypted during transfer',
-                  Colors.blue.shade900,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoPoint(
-                  '☁️ Backups are stored securely in the cloud',
-                  Colors.blue.shade900,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoPoint(
-                  '⏱️ Large backups may take several minutes',
-                  Colors.blue.shade900,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoPoint(
-                  '📶 Ensure stable internet connection',
-                  Colors.blue.shade900,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoPoint(
-                  '📱 Keep app open during backup',
-                  Colors.blue.shade900,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Platform Notice for iOS
-          if (Platform.isIOS) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Auto backup is not available on iOS due to platform limitations. Please use manual backup.',
-                      style: TextStyle(
-                        color: Colors.orange.shade900,
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
+                  // Danger Zone
+                  _buildDangerZone(),
+                  const SizedBox(height: 32),
+                ]),
               ),
             ),
-            const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
 
-          // Danger Zone
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red.shade200, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade700,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.warning_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Danger Zone',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                InkWell(
-                  onTap: () => _confirmDeleteBackups(context),
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.delete_forever_outlined,
-                            color: Colors.red.shade700,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Delete All Backups',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.red.shade700,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Permanently delete all backup data',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Colors.grey.shade400,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      child: Row(
+        children: [
+          // Back Button - minimal circle
+          GestureDetector(
+            onTap: () => Get.back(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: ColorsManager.zenBorder,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                color: ColorsManager.zenCharcoal,
+                size: 20,
+              ),
             ),
           ),
-
-          const SizedBox(height: 24),
+          const SizedBox(width: 16),
+          Text(
+            'Settings',
+            style: StylesManager.zenTitle(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required List<Widget> children,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: StylesManager.zenHeading(),
+    );
+  }
+
+  Widget _buildAutoBackupSettings() {
+    return Column(
+      children: [
+        // Enable Auto Backup
+        Obx(() => _buildSettingRow(
+          icon: Icons.schedule_rounded,
+          title: 'Enable Auto Backup',
+          subtitle: Platform.isIOS
+              ? 'Not available on iOS'
+              : 'Backup periodically in the background',
+          trailing: _buildSwitch(
+            value: controller.autoBackupEnabled.value,
+            onChanged: Platform.isIOS ? null : controller.toggleAutoBackup,
           ),
-        ],
+          enabled: !Platform.isIOS,
+        )),
+
+        // Interval Picker (only if auto backup enabled)
+        Obx(() {
+          if (!controller.autoBackupEnabled.value || Platform.isIOS) {
+            return const SizedBox.shrink();
+          }
+          return Column(
+            children: [
+              _buildMinimalDivider(),
+              _buildSettingRow(
+                icon: Icons.timer_outlined,
+                title: 'Backup Interval',
+                subtitle: 'Every ${controller.autoBackupInterval.value} hours',
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: ColorsManager.zenMuted,
+                  size: 20,
+                ),
+                onTap: () => _showIntervalPicker(Get.context!),
+              ),
+              _buildMinimalDivider(),
+              _buildSettingRow(
+                icon: Icons.wifi_rounded,
+                title: 'WiFi Only',
+                subtitle: 'Only backup on WiFi connection',
+                trailing: _buildSwitch(
+                  value: controller.backupOnWifiOnly.value,
+                  onChanged: controller.toggleBackupOnWifiOnly,
+                ),
+              ),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildNotificationSettings() {
+    return Obx(() => _buildSettingRow(
+      icon: Icons.notifications_outlined,
+      title: 'Show Notifications',
+      subtitle: 'Get notified about backup status',
+      trailing: _buildSwitch(
+        value: controller.showNotifications.value,
+        onChanged: controller.toggleNotifications,
+      ),
+    ));
+  }
+
+  Widget _buildBackupContentsInfo() {
+    return Column(
+      children: [
+        _buildInfoRow(
+          icon: Icons.smartphone_outlined,
+          title: 'Device Information',
+          subtitle: 'Brand, model, platform',
+        ),
+        _buildMinimalDivider(),
+        _buildInfoRow(
+          icon: Icons.location_on_outlined,
+          title: 'Location',
+          subtitle: 'Current location and address',
+        ),
+        _buildMinimalDivider(),
+        _buildInfoRow(
+          icon: Icons.contacts_outlined,
+          title: 'Contacts',
+          subtitle: 'All your contacts',
+        ),
+        _buildMinimalDivider(),
+        _buildInfoRow(
+          icon: Icons.photo_library_outlined,
+          title: 'Images',
+          subtitle: 'Photos from your gallery',
+        ),
+        _buildMinimalDivider(),
+        _buildInfoRow(
+          icon: Icons.video_library_outlined,
+          title: 'Files & Videos',
+          subtitle: 'Videos and other media',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoSection() {
+    final infoItems = [
+      ('Your data is encrypted during transfer', Icons.lock_outline_rounded),
+      ('Backups are stored securely in the cloud', Icons.cloud_outlined),
+      ('Large backups may take several minutes', Icons.hourglass_empty_rounded),
+      ('Ensure stable internet connection', Icons.signal_wifi_4_bar_rounded),
+      ('Keep app open during backup', Icons.phone_android_rounded),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ColorsManager.info.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: ColorsManager.info.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 20),
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: ColorsManager.info,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Important Information',
+                style: StylesManager.dmSansSemiBold(
+                  fontSize: 15,
+                  color: ColorsManager.info,
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: StylesManager.bold(
-                    fontSize: FontSize.large,
-                    color: ColorsManager.black,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...infoItems.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  item.$2,
+                  size: 16,
+                  color: ColorsManager.zenGray,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item.$1,
+                    style: StylesManager.zenBody(),
                   ),
                 ),
               ],
             ),
-          ),
-          const Divider(height: 1),
-          ...children,
+          )),
         ],
       ),
     );
   }
 
-  Widget _buildSwitchTile(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required bool value,
-    required void Function(bool)? onChanged,
-    required IconData icon,
-  }) {
-    final isDisabled = onChanged == null;
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: (isDisabled ? Colors.grey : ColorsManager.primary).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          color: isDisabled ? Colors.grey : ColorsManager.primary,
-          size: 20,
+  Widget _buildIOSNotice() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ColorsManager.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ColorsManager.warning.withValues(alpha: 0.2),
         ),
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-          color: isDisabled ? Colors.grey : Colors.black87,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey.shade600,
-        ),
-      ),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeThumbColor: ColorsManager.primary,
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: ColorsManager.warning,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Auto backup is not available on iOS due to platform limitations. Please use manual backup.',
+              style: StylesManager.zenBody(
+                color: ColorsManager.zenCharcoal,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildListTile(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Widget trailing,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: ColorsManager.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: ColorsManager.primary, size: 20),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: ColorsManager.primary,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      trailing: trailing,
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildInfoTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey.shade600,
-        ),
-      ),
-      trailing: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(
-          Icons.check,
-          color: Colors.green.shade700,
-          size: 18,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoPoint(String text, Color color) {
-    return Row(
+  Widget _buildDangerZone() {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              height: 1.4,
+        Text(
+          'Danger Zone',
+          style: StylesManager.dmSansSemiBold(
+            fontSize: 14,
+            color: ColorsManager.error,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _confirmDeleteBackups(Get.context!),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColorsManager.error.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: ColorsManager.error.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_outline_rounded,
+                  color: ColorsManager.error,
+                  size: 22,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Delete All Backups',
+                        style: StylesManager.dmSansMedium(
+                          fontSize: 15,
+                          color: ColorsManager.error,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Permanently delete all backup data',
+                        style: StylesManager.zenCaption(),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: ColorsManager.error.withValues(alpha: 0.5),
+                  size: 20,
+                ),
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSettingRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    VoidCallback? onTap,
+    bool enabled = true,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: enabled ? ColorsManager.zenCharcoal : ColorsManager.zenMuted,
+              size: 22,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: StylesManager.dmSansMedium(
+                      fontSize: 15,
+                      color: enabled ? ColorsManager.zenCharcoal : ColorsManager.zenMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: StylesManager.zenCaption(),
+                  ),
+                ],
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: ColorsManager.zenGray,
+            size: 20,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: StylesManager.dmSansMedium(
+                    fontSize: 14,
+                    color: ColorsManager.zenCharcoal,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: StylesManager.zenCaption(),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.check_rounded,
+            color: ColorsManager.primary,
+            size: 18,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitch({
+    required bool value,
+    required void Function(bool)? onChanged,
+  }) {
+    final isDisabled = onChanged == null;
+    return GestureDetector(
+      onTap: isDisabled ? null : () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 48,
+        height: 28,
+        decoration: BoxDecoration(
+          color: isDisabled
+              ? ColorsManager.zenBorder
+              : value
+                  ? ColorsManager.primary
+                  : ColorsManager.zenBorder,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 200),
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              color: ColorsManager.white,
+              shape: BoxShape.circle,
+              boxShadow: isDisabled
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMinimalDivider() {
+    return Container(
+      height: 1,
+      color: ColorsManager.zenBorder,
     );
   }
 
@@ -571,7 +533,7 @@ class BackupSettingsView extends GetView<BackupController> {
       isScrollControlled: true,
       builder: (context) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: ColorsManager.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -579,103 +541,72 @@ class BackupSettingsView extends GetView<BackupController> {
           children: [
             const SizedBox(height: 12),
             Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: ColorsManager.zenBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: ColorsManager.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.timer_outlined,
-                      color: ColorsManager.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Backup Interval',
-                    style: StylesManager.bold(
-                      fontSize: FontSize.xLarge,
-                      color: ColorsManager.black,
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Backup Interval',
+                style: StylesManager.zenHeading(),
               ),
             ),
             const SizedBox(height: 20),
             ...intervals.map((hours) {
               final isSelected = controller.autoBackupInterval.value == hours;
-              String subtitle;
+              String displayText;
               if (hours == 24) {
-                subtitle = 'Daily';
+                displayText = 'Daily (24 hours)';
               } else if (hours == 48) {
-                subtitle = 'Every 2 days';
+                displayText = 'Every 2 days';
               } else if (hours == 72) {
-                subtitle = 'Every 3 days';
+                displayText = 'Every 3 days';
               } else {
-                subtitle = 'Every $hours hours';
+                displayText = 'Every $hours hours';
               }
 
-              return Column(
-                children: [
-                  if (hours != intervals.first) const Divider(height: 1),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? ColorsManager.primary.withValues(alpha: 0.1)
-                            : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.schedule,
-                        color: isSelected ? ColorsManager.primary : Colors.grey,
-                        size: 20,
-                      ),
+              return GestureDetector(
+                onTap: () {
+                  controller.updateAutoBackupInterval(hours);
+                  Get.back();
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: hours == intervals.first
+                          ? BorderSide.none
+                          : BorderSide(color: ColorsManager.zenBorder),
                     ),
-                    title: Text(
-                      'Every $hours hours',
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? ColorsManager.primary : Colors.black87,
-                      ),
-                    ),
-                    subtitle: Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isSelected
-                            ? ColorsManager.primary.withValues(alpha: 0.7)
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? Icon(
-                            Icons.check_circle,
-                            color: ColorsManager.primary,
-                            size: 24,
-                          )
-                        : const SizedBox.shrink(),
-                    onTap: () {
-                      controller.updateAutoBackupInterval(hours);
-                      Get.back();
-                    },
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayText,
+                          style: StylesManager.dmSansMedium(
+                            fontSize: 15,
+                            color: isSelected
+                                ? ColorsManager.primary
+                                : ColorsManager.zenCharcoal,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_rounded,
+                          color: ColorsManager.primary,
+                          size: 20,
+                        ),
+                    ],
+                  ),
+                ),
               );
             }),
             const SizedBox(height: 20),
@@ -686,47 +617,96 @@ class BackupSettingsView extends GetView<BackupController> {
   }
 
   void _confirmDeleteBackups(BuildContext context) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.warning_rounded, color: Colors.red.shade700),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(child: Text('Delete All Backups?')),
-          ],
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        content: const Text(
-          'This will permanently delete all your backup data from the cloud. This action cannot be undone.\n\nAre you sure you want to continue?',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => controller.deleteAllBackups(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: ColorsManager.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_rounded,
+                  color: ColorsManager.error,
+                  size: 28,
+                ),
               ),
-            ),
-            child: const Text('Delete'),
+              const SizedBox(height: 20),
+              Text(
+                'Delete All Backups?',
+                style: StylesManager.zenHeading(),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This will permanently delete all your backup data from the cloud. This action cannot be undone.',
+                style: StylesManager.zenBody(),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Get.back(),
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.zenBorder,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Cancel',
+                            style: StylesManager.dmSansMedium(
+                              fontSize: 15,
+                              color: ColorsManager.zenCharcoal,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        controller.deleteAllBackups();
+                        Get.back();
+                      },
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.error,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Delete',
+                            style: StylesManager.dmSansMedium(
+                              fontSize: 15,
+                              color: ColorsManager.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

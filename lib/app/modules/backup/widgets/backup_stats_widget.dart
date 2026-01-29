@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
-import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../controllers/backup_controller.dart';
 
+/// Backup Stats Widget - Stateful & Explanatory Design
+///
+/// Design Philosophy:
+/// - Show meaningful stats with context (not just numbers)
+/// - Explain what each stat means for the user
+/// - Animated counters for visual feedback
+/// - State-aware empty state with guidance
 class BackupStatsWidget extends GetView<BackupController> {
   const BackupStatsWidget({super.key});
 
@@ -14,365 +22,585 @@ class BackupStatsWidget extends GetView<BackupController> {
       final stats = controller.lastBackupStats.value;
 
       if (stats == null) {
-        return Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.cloud_off_outlined,
-                  size: 48,
-                  color: Colors.grey.shade400,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No backup data yet',
-                style: StylesManager.semiBold(
-                  fontSize: FontSize.large,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Start your first backup to see detailed statistics',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        );
+        return _buildEmptyState();
       }
 
       final contactsCount = stats['contacts_count'] ?? 0;
       final imagesCount = stats['images_count'] ?? 0;
       final filesCount = stats['files_count'] ?? 0;
-      final deviceInfo = stats['device_info'];
-      final location = stats['location'];
+      final totalItems = contactsCount + imagesCount + filesCount;
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Container(
+        decoration: BoxDecoration(
+          color: ColorsManager.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: ColorsManager.zenBorder,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            // Stats Grid - 2x2 with explanations
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // First row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          value: contactsCount,
+                          label: 'Chats',
+                          icon: Icons.chat_bubble_outline_rounded,
+                          color: Colors.blue,
+                          explanation: 'Conversations backed up',
+                          index: 0,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          value: imagesCount,
+                          label: 'Media',
+                          icon: Icons.photo_library_outlined,
+                          color: Colors.purple,
+                          explanation: 'Photos & videos saved',
+                          index: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Second row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          value: filesCount,
+                          label: 'Files',
+                          icon: Icons.folder_outlined,
+                          color: Colors.orange,
+                          explanation: 'Documents & attachments',
+                          index: 2,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          value: totalItems,
+                          label: 'Total',
+                          icon: Icons.inventory_2_outlined,
+                          color: ColorsManager.primary,
+                          explanation: 'All items protected',
+                          isHighlighted: true,
+                          index: 3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Storage info footer
+            _buildStorageInfo(stats),
+          ],
+        ),
+      )
+          .animate()
+          .fadeIn(duration: 400.ms)
+          .slideY(begin: 0.1, end: 0, duration: 400.ms);
+    });
+  }
+
+  Widget _buildStatCard({
+    required int value,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required String explanation,
+    bool isHighlighted = false,
+    required int index,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showStatDetails(label, value, explanation, icon, color);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isHighlighted
+              ? ColorsManager.primary.withValues(alpha: 0.05)
+              : ColorsManager.zenSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: isHighlighted
+              ? Border.all(
+                  color: ColorsManager.primary.withValues(alpha: 0.2),
+                  width: 1,
+                )
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon and value row
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: color,
+                  ),
+                ),
+                const Spacer(),
+                // Tap hint
+                Icon(
+                  Icons.touch_app_rounded,
+                  size: 14,
+                  color: ColorsManager.zenMuted.withValues(alpha: 0.4),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Large number with animation
+            _AnimatedCounter(
+              value: value,
+              style: StylesManager.zenStat(
+                color: isHighlighted
+                    ? ColorsManager.primary
+                    : ColorsManager.zenCharcoal,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Label
+            Text(
+              label,
+              style: StylesManager.dmSansMedium(
+                fontSize: 14,
+                color: ColorsManager.zenGray,
+              ),
+            ),
+            const SizedBox(height: 2),
+            // Explanation
+            Text(
+              explanation,
+              style: StylesManager.zenCaption(
+                color: ColorsManager.zenMuted,
+              ),
+            ),
+          ],
+        ),
+      )
+          .animate()
+          .fadeIn(delay: Duration(milliseconds: 100 * index), duration: 300.ms)
+          .slideY(begin: 0.2, end: 0, duration: 300.ms),
+    );
+  }
+
+  Widget _buildStorageInfo(Map<String, dynamic> stats) {
+    final storageUsed = stats['storage_used'] ?? 0;
+    final storageLimit = stats['storage_limit'] ?? 5000; // Default 5GB
+    final usagePercent = (storageUsed / storageLimit * 100).clamp(0, 100);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ColorsManager.zenBorder.withValues(alpha: 0.5),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(20),
+        ),
+      ),
+      child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Icon(
+                Icons.cloud_outlined,
+                size: 18,
+                color: ColorsManager.zenGray,
+              ),
+              const SizedBox(width: 8),
               Text(
-                'Backup Details',
-                style: StylesManager.bold(
-                  fontSize: FontSize.xLarge,
-                  color: ColorsManager.black,
+                'Cloud Storage',
+                style: StylesManager.dmSansMedium(
+                  fontSize: 14,
+                  color: ColorsManager.zenCharcoal,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
+              const Spacer(),
+              Text(
+                '${_formatStorage(storageUsed)} / ${_formatStorage(storageLimit)}',
+                style: StylesManager.zenCaption(
+                  color: ColorsManager.zenGray,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Storage bar
+          Stack(
+            children: [
+              // Background
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: ColorsManager.zenBorder,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              // Used
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: 6,
+                width: (Get.width - 72) * (usagePercent / 100),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: usagePercent > 80
+                        ? [ColorsManager.warning, ColorsManager.error]
+                        : [ColorsManager.primary, ColorsManager.primary],
+                  ),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Storage tip
+          Row(
+            children: [
+              Icon(
+                usagePercent > 80
+                    ? Icons.warning_amber_rounded
+                    : Icons.lightbulb_outline_rounded,
+                size: 14,
+                color: usagePercent > 80
+                    ? ColorsManager.warning
+                    : ColorsManager.zenMuted,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  usagePercent > 80
+                      ? 'Running low on storage. Consider upgrading.'
+                      : 'Your data is safely stored in the cloud',
+                  style: StylesManager.zenCaption(
+                    color: usagePercent > 80
+                        ? ColorsManager.warning
+                        : ColorsManager.zenMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: ColorsManager.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ColorsManager.zenBorder,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Empty state icon with animation
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: ColorsManager.zenBorder.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.bar_chart_rounded,
+              size: 36,
+              color: ColorsManager.zenMuted,
+            ),
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.05, 1.05),
+                duration: 1500.ms,
+              ),
+          const SizedBox(height: 20),
+          Text(
+            'No backup data yet',
+            style: StylesManager.dmSansSemiBold(
+              fontSize: 18,
+              color: ColorsManager.zenCharcoal,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your backup statistics will appear here\nafter your first successful backup',
+            style: StylesManager.zenBody(),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          // What to expect section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColorsManager.info.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
                     Icon(
-                      Icons.check_circle,
-                      size: 14,
-                      color: Colors.green.shade700,
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: ColorsManager.info,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                     Text(
-                      'Synced',
-                      style: TextStyle(
-                        color: Colors.green.shade700,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                      'What you\'ll see',
+                      style: StylesManager.dmSansMedium(
+                        fontSize: 13,
+                        color: ColorsManager.info,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Main Stats Grid
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
-            children: [
-              _buildStatCard(
-                context,
-                icon: Icons.contacts_outlined,
-                label: 'Contacts',
-                value: contactsCount.toString(),
-                color: Colors.blue,
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade400, Colors.blue.shade600],
-                ),
-              ),
-              _buildStatCard(
-                context,
-                icon: Icons.image_outlined,
-                label: 'Images',
-                value: imagesCount.toString(),
-                color: Colors.purple,
-                gradient: LinearGradient(
-                  colors: [Colors.purple.shade400, Colors.purple.shade600],
-                ),
-              ),
-              _buildStatCard(
-                context,
-                icon: Icons.video_library_outlined,
-                label: 'Files',
-                value: filesCount.toString(),
-                color: Colors.orange,
-                gradient: LinearGradient(
-                  colors: [Colors.orange.shade400, Colors.orange.shade600],
-                ),
-              ),
-              _buildStatCard(
-                context,
-                icon: Icons.data_usage_outlined,
-                label: 'Total Items',
-                value: (contactsCount + imagesCount + filesCount).toString(),
-                color: Colors.teal,
-                gradient: LinearGradient(
-                  colors: [Colors.teal.shade400, Colors.teal.shade600],
-                ),
-              ),
-            ],
-          ),
-
-          // Additional Info Cards
-          if (deviceInfo != null || location != null) ...[
-            const SizedBox(height: 20),
-
-            if (deviceInfo != null) _buildDeviceInfoCard(context, deviceInfo),
-            if (deviceInfo != null && location != null) const SizedBox(height: 12),
-            if (location != null) _buildLocationCard(context, location),
-          ],
-        ],
-      );
-    });
-  }
-
-  Widget _buildStatCard(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    required LinearGradient gradient,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+                const SizedBox(height: 10),
+                _buildExpectationItem('Number of chats backed up'),
+                _buildExpectationItem('Media files (photos & videos)'),
+                _buildExpectationItem('Documents & attachments'),
+                _buildExpectationItem('Cloud storage usage'),
+              ],
+            ),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    )
+        .animate()
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.1, end: 0, duration: 400.ms);
+  }
+
+  Widget _buildExpectationItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              color: ColorsManager.zenMuted,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Text(
+            text,
+            style: StylesManager.zenCaption(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStatDetails(
+    String label,
+    int value,
+    String explanation,
+    IconData icon,
+    Color color,
+  ) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: ColorsManager.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.white, size: 28),
-            const Spacer(),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+            // Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ColorsManager.zenBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeviceInfoCard(BuildContext context, Map<String, dynamic> deviceInfo) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.smartphone,
-                  color: Colors.blue.shade700,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Device Information',
-                style: StylesManager.semiBold(
-                  fontSize: FontSize.medium,
-                  color: ColorsManager.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          _buildInfoRow('Platform', deviceInfo['platform'] ?? 'Unknown'),
-          const SizedBox(height: 8),
-          _buildInfoRow('Brand', deviceInfo['brand'] ?? 'Unknown'),
-          const SizedBox(height: 8),
-          _buildInfoRow('Model', deviceInfo['name'] ?? deviceInfo['model'] ?? 'Unknown'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationCard(BuildContext context, Map<String, dynamic> location) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.location_on_outlined,
-                  color: Colors.red.shade700,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Location',
-                style: StylesManager.semiBold(
-                  fontSize: FontSize.medium,
-                  color: ColorsManager.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.place, size: 16, color: Colors.grey.shade600),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  location['address'] ?? 'Unknown location',
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (location['latitude'] != null && location['longitude'] != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+            // Header
             Row(
               children: [
-                Icon(Icons.my_location, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 8),
-                Text(
-                  '${location['latitude']?.toStringAsFixed(4)}, ${location['longitude']?.toStringAsFixed(4)}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$value',
+                      style: StylesManager.dmSansBold(
+                        fontSize: 32,
+                        color: ColorsManager.zenCharcoal,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: StylesManager.zenBody(
+                        color: ColorsManager.zenGray,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            // Divider
+            Container(
+              height: 1,
+              color: ColorsManager.zenBorder,
+            ),
+            const SizedBox(height: 20),
+            // Explanation
+            Text(
+              'What this means',
+              style: StylesManager.dmSansMedium(
+                fontSize: 15,
+                color: ColorsManager.zenCharcoal,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _getDetailedExplanation(label, value),
+              style: StylesManager.zenBody(),
+            ),
+            const SizedBox(height: 20),
+            // Tip
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: ColorsManager.zenSurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 18,
+                    color: ColorsManager.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _getTip(label),
+                      style: StylesManager.zenCaption(
+                        color: ColorsManager.zenGray,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
-        ],
+        ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 13,
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-      ],
+  String _getDetailedExplanation(String label, int value) {
+    switch (label) {
+      case 'Chats':
+        return 'You have $value chat conversations safely backed up. This includes all messages, timestamps, and delivery status for each conversation.';
+      case 'Media':
+        return 'Your backup contains $value media files including photos and videos. These are stored in their original quality.';
+      case 'Files':
+        return 'You have $value documents and attachments backed up. This includes PDFs, voice messages, and other file types.';
+      case 'Total':
+        return 'In total, $value items are protected in your backup. All items are encrypted and can be restored to any device.';
+      default:
+        return 'This data is safely backed up and encrypted.';
+    }
+  }
+
+  String _getTip(String label) {
+    switch (label) {
+      case 'Chats':
+        return 'Run regular backups to capture new conversations';
+      case 'Media':
+        return 'Media files use the most storage space';
+      case 'Files':
+        return 'Delete old files to reduce backup time';
+      case 'Total':
+        return 'Your data can be restored on any new device';
+      default:
+        return 'Keep your backup up to date';
+    }
+  }
+
+  String _formatStorage(int mb) {
+    if (mb >= 1000) {
+      return '${(mb / 1000).toStringAsFixed(1)} GB';
+    }
+    return '$mb MB';
+  }
+}
+
+/// Animated counter widget for visual feedback
+class _AnimatedCounter extends StatelessWidget {
+  final int value;
+  final TextStyle style;
+
+  const _AnimatedCounter({
+    required this.value,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<int>(
+      tween: IntTween(begin: 0, end: value),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedValue, child) {
+        return Text(
+          '$animatedValue',
+          style: style,
+        );
+      },
     );
   }
 }

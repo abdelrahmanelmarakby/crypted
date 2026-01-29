@@ -4,6 +4,7 @@ import 'package:crypted_app/app/data/data_source/auth_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/firebase_exceptions.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -46,6 +47,19 @@ class LoginController extends GetxController {
 
         if (userProfile != null) {
           print("✅ User profile loaded: ${userProfile.fullName}");
+
+          // Login to ZEGO for call services
+          try {
+            await ZegoCallService.instance.loginUser(
+              userId: userId,
+              userName: userProfile.fullName ?? 'User',
+              userAvatarUrl: userProfile.imageUrl,
+            );
+            log('✅ ZEGO call service logged in');
+          } catch (e) {
+            log('⚠️ ZEGO login failed (calls may not work): $e');
+          }
+
           Get.offAllNamed(Routes.NAVBAR);
         } else {
           print("❌ Failed to load user profile");

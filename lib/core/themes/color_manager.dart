@@ -88,6 +88,27 @@ class ColorsManager {
   static const Color voiceProgressColor = Color(0xffC8C8C8);
 
   // ============================================
+  // ZEN / MINIMAL DESIGN PALETTE
+  // ============================================
+  /// Deep charcoal for primary text - sophisticated alternative to pure black
+  static const Color zenCharcoal = Color(0xFF1A1A1A);
+
+  /// Secondary text color - balanced gray
+  static const Color zenGray = Color(0xFF6B7280);
+
+  /// Muted text color - for tertiary information
+  static const Color zenMuted = Color(0xFF9CA3AF);
+
+  /// Ultra subtle border color
+  static const Color zenBorder = Color(0xFFF3F4F6);
+
+  /// Subtle surface for cards
+  static const Color zenSurface = Color(0xFFFAFAFA);
+
+  /// Hover/pressed state background
+  static const Color zenHover = Color(0xFFF9FAFB);
+
+  // ============================================
   // MISC COLORS
   // ============================================
   static const Color star = Color(0xFFFBEC26);

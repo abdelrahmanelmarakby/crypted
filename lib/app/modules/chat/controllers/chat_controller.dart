@@ -1149,8 +1149,8 @@ class ChatController extends GetxController
       if (isGroupChat.value && members.length > 2) {
         print("📞 Initiating group audio call with ${members.length} members");
         // Group calls: store call and let Zego handle it
-        final success = await CallDataSources().storeCall(call);
-        if (success) {
+        final callId = await CallDataSources().storeCall(call);
+        if (callId != null) {
           log('Group audio call initiated');
         }
       } else {
@@ -1165,8 +1165,8 @@ class ChatController extends GetxController
           }
         } else {
           // Fallback to direct storage if no other user found
-          final success = await CallDataSources().storeCall(call);
-          if (success) {
+          final callId = await CallDataSources().storeCall(call);
+          if (callId != null) {
             log('Audio call initiated (fallback)');
           }
         }
@@ -1186,8 +1186,8 @@ class ChatController extends GetxController
       if (isGroupChat.value && members.length > 2) {
         print("📹 Initiating group video call with ${members.length} members");
         // Group calls: store call and let Zego handle it
-        final success = await CallDataSources().storeCall(call);
-        if (success) {
+        final callId = await CallDataSources().storeCall(call);
+        if (callId != null) {
           log('Group video call initiated');
           return true;
         }
@@ -1205,8 +1205,8 @@ class ChatController extends GetxController
           return true;
         } else {
           // Fallback to direct storage if no other user found
-          final success = await CallDataSources().storeCall(call);
-          if (success) {
+          final callId = await CallDataSources().storeCall(call);
+          if (callId != null) {
             log('Video call initiated (fallback)');
             return true;
           }

@@ -9,7 +9,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_volume_controller
   open_file_linux
   record_linux
-  rive_common
+  rive_native
   url_launcher_linux
   zego_express_engine
 )

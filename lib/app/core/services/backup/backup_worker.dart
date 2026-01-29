@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:isolate';
+import 'package:flutter/widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart';
 import 'package:crypted_app/app/core/services/backup/strategies/chat_backup_strategy.dart';
@@ -77,20 +77,42 @@ void callbackDispatcher() {
 /// Initialize Firebase in the isolate
 Future<void> _initializeFirebaseInIsolate() async {
   try {
+    // CRITICAL: Ensure Flutter bindings are initialized in background isolate
+    // This must be called before any platform channel operations
+    WidgetsFlutterBinding.ensureInitialized();
+
     // Check if already initialized
     if (Firebase.apps.isNotEmpty) {
       log('✅ [Isolate] Firebase already initialized');
       return;
     }
 
-    // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    // Initialize Firebase with error handling for "already initialized" case
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      log('✅ [Isolate] Firebase initialized in isolate');
+    } on FirebaseException catch (e) {
+      // Handle "already exists" error gracefully
+      if (e.code == 'duplicate-app' || e.message?.contains('already exists') == true) {
+        log('✅ [Isolate] Firebase app already exists, using existing instance');
+      } else {
+        rethrow;
+      }
+    }
+  } catch (e, stackTrace) {
+    // Log but don't rethrow - try to continue with existing Firebase instance
+    log('⚠️ [Isolate] Firebase initialization warning: $e');
+    log('$stackTrace');
 
-    log('✅ [Isolate] Firebase initialized in isolate');
-  } catch (e) {
-    log('❌ [Isolate] Firebase initialization failed: $e');
+    // If Firebase.apps is not empty, we can still proceed
+    if (Firebase.apps.isNotEmpty) {
+      log('✅ [Isolate] Proceeding with existing Firebase instance');
+      return;
+    }
+
+    // Only rethrow if we truly have no Firebase instance
     rethrow;
   }
 }
@@ -351,7 +373,7 @@ class BackupWorker {
         ),
         backoffPolicy: BackoffPolicy.exponential,
         backoffPolicyDelay: Duration(minutes: 15),
-        existingWorkPolicy: ExistingWorkPolicy.replace,
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
       );
 
       log('✅ Periodic backup scheduled: $taskId');

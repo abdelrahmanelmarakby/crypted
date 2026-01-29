@@ -28,38 +28,66 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
-import 'package:zego_uikit/zego_uikit.dart';
-import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
-import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
-import 'package:crypted_app/core/constant.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-/// Check if user is in China region
-/// Used to disable CallKit as required by Chinese MIIT regulations
-bool _isUserInChina() {
+/// Initialize ZEGO Call Service for video/audio calls.
+/// This is now centralized in ZegoCallService.
+Future<void> _initializeZegoCallService() async {
   try {
-    // Check device locale
-    final locale = Platform.localeName.toLowerCase();
-
-    // Check for Chinese locales (zh_CN, zh_Hans_CN, etc.)
-    if (locale.contains('_cn') || locale.contains('-cn')) {
-      return true;
+    // Register ZegoCallService with GetX BEFORE initialization
+    // This ensures Get.find<ZegoCallService>() works throughout the app
+    if (!Get.isRegistered<ZegoCallService>()) {
+      Get.put(ZegoCallService(), permanent: true);
     }
 
-    // Also check the language code for simplified Chinese in mainland China context
-    if (locale.startsWith('zh_hans') && !locale.contains('_hk') && !locale.contains('_tw')) {
-      return true;
+    // Initialize ZEGO SDK with navigator key
+    await ZegoCallService.instance.initializeSDK(navigatorKey);
+    LoggerService.instance.info('ZEGO Call Service SDK initialized', context: 'main');
+
+    // Login user to ZEGO if already authenticated
+    String? userID;
+    String? userName;
+
+    if (UserService.currentUser.value != null) {
+      userID = UserService.currentUser.value!.uid;
+      userName = UserService.currentUser.value!.fullName;
+    } else {
+      // Try to get from FirebaseAuth directly
+      try {
+        final firebaseUser = FirebaseAuth.instance.currentUser;
+        if (firebaseUser != null) {
+          userID = firebaseUser.uid;
+          userName = firebaseUser.displayName ?? Constants.kUser.tr;
+        }
+      } catch (e) {
+        LoggerService.instance.warning('Error getting FirebaseAuth user: $e', context: 'ZEGO');
+      }
     }
 
-    return false;
-  } catch (e) {
-    // If we can't determine, assume not in China
-    return false;
+    if (userID != null && userName != null) {
+      await ZegoCallService.instance.loginUser(
+        userId: userID,
+        userName: userName,
+      );
+      LoggerService.instance.info('ZEGO user logged in: $userID', context: 'main');
+    } else {
+      LoggerService.instance.info(
+        'User not found at startup, ZEGO will be initialized after login',
+        context: 'main',
+      );
+    }
+  } catch (e, stackTrace) {
+    LoggerService.instance.logError(
+      'Failed to initialize ZEGO Call Service',
+      error: e,
+      context: 'main',
+    );
   }
 }
 
@@ -172,58 +200,14 @@ Future<void> main() async {
   // Start connectivity monitoring
   ConnectivityService().startMonitoring();
 
-  ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
-  await ZegoUIKit().initLog().then((value) async {
-    // Check if user is in China - CallKit must be disabled for China App Store
-    final isInChina = _isUserInChina();
+  // Initialize ZEGO Call Service
+  await _initializeZegoCallService();
 
-    if (!isInChina) {
-      // Enable system calling UI (CallKit) only for non-China regions
-      ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI(
-        [ZegoUIKitSignalingPlugin()],
-      );
-    } else {
-      LoggerService.instance.info(
-        'CallKit disabled for China region',
-        context: 'Zego',
-      );
-    }
+  // Initialize Backup Service
+  await BackupServiceV3.instance.initialize();
 
-    // محاولة جلب المستخدم الحالي من UserService.currentUser.value أو من FirebaseAuth
-    String? userID;
-    String? userName;
-    if (UserService.currentUser.value != null) {
-      userID = UserService.currentUser.value!.uid;
-      userName = UserService.currentUser.value!.fullName;
-    } else {
-      // جلب من FirebaseAuth مباشرة إذا لم يكن موجوداً في UserService
-      try {
-        final firebaseUser = FirebaseAuth.instance.currentUser;
-        if (firebaseUser != null) {
-          userID = firebaseUser.uid;
-          userName = firebaseUser.displayName ?? Constants.kUser.tr;
-        }
-      } catch (e) {
-        print('Error getting FirebaseAuth user: $e');
-      }
-    }
-
-    if (userID != null && userName != null) {
-      await ZegoUIKitPrebuiltCallInvitationService().init(
-        appID: AppConstants.appID,
-        appSign: AppConstants.appSign,
-        userID: userID,
-        userName: userName,
-        plugins: [ZegoUIKitSignalingPlugin()],
-      );
-      print('ZegoUIKitPrebuiltCallInvitationService initialized for $userID');
-    } else {
-      print(
-          'User not found at startup, ZegoUIKitPrebuiltCallInvitationService will be initialized after login.');
-    }
-    await BackupServiceV3.instance.initialize();                                                                          
-    runApp(CryptedApp(navigatorKey: navigatorKey));
-  });
+  // Run the app
+  runApp(CryptedApp(navigatorKey: navigatorKey));
 }
 
 class CryptedApp extends StatefulWidget {

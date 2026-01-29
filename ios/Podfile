@@ -40,11 +40,63 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
+      # Enforce iOS 15.0 minimum deployment target
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+
+      # Fix: Disable module interfaces for pods with bridging headers
+      config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+
       # Required for awesome_notifications
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_NOTIFICATIONS=1',
       ]
+    end
+
+    # Fix for PromisesObjC/FBLPromises module - ensure modules are enabled
+    if ['PromisesObjC', 'PromisesSwift', 'FBLPromises'].include?(target.name)
+      target.build_configurations.each do |config|
+        config.build_settings['DEFINES_MODULE'] = 'YES'
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+      end
+    end
+  end
+
+  # Fix for packages with missing imports in Swift files (pub cache)
+  packages_to_fix = [
+    { path: '~/.pub-cache/hosted/pub.dev/video_compress-3.1.4/ios/Classes', import: 'Foundation' },
+    { path: '~/.pub-cache/hosted/pub.dev/flutter_volume_controller-1.3.4/ios/Classes', import: 'Flutter' },
+    { path: '~/.pub-cache/hosted/pub.dev/workmanager_apple-0.9.1+2/ios/Sources/workmanager_apple', import: 'UIKit' },
+    { path: '~/.pub-cache/hosted/pub.dev/record_darwin-1.2.2/ios/Classes', import: 'Flutter' },
+  ]
+
+  packages_to_fix.each do |pkg|
+    cache_path = File.expand_path(pkg[:path])
+    import_statement = "import #{pkg[:import]}"
+    if Dir.exist?(cache_path)
+      Dir.glob("#{cache_path}/**/*.swift").each do |file|
+        content = File.read(file)
+        unless content.include?(import_statement)
+          File.write(file, "#{import_statement}\n" + content)
+          puts "Added '#{import_statement}' to #{file}"
+        end
+      end
+    end
+  end
+
+  # Fix for IosAwnCore: add missing UserNotifications and Foundation imports
+  ios_awn_core_path = installer.sandbox.pod_dir('IosAwnCore')
+  if ios_awn_core_path && ios_awn_core_path.exist?
+    Dir.glob("#{ios_awn_core_path}/**/*.swift").each do |file|
+      content = File.read(file)
+      imports_needed = []
+      imports_needed << 'import Foundation' unless content.include?('import Foundation')
+      imports_needed << 'import UIKit' unless content.include?('import UIKit')
+      imports_needed << 'import UserNotifications' unless content.include?('import UserNotifications')
+      if imports_needed.any?
+        File.write(file, imports_needed.join("\n") + "\n" + content)
+        puts "Added imports to #{file}"
+      end
     end
   end
 end

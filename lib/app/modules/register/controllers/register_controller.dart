@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
@@ -98,7 +99,7 @@ class RegisterController extends GetxController {
             uid: uid,
             fullName: fullName,
             email: email,
-           
+
             imageUrl: imageUrl,
             address: '',
             bio: '',
@@ -111,6 +112,18 @@ class RegisterController extends GetxController {
             phoneNumber: '',
             provider: '',
           ).toMap());
+
+      // Login to ZEGO for call services
+      try {
+        await ZegoCallService.instance.loginUser(
+          userId: uid,
+          userName: fullName,
+          userAvatarUrl: imageUrl.isNotEmpty ? imageUrl : null,
+        );
+        log('✅ ZEGO call service logged in');
+      } catch (e) {
+        log('⚠️ ZEGO login failed (calls may not work): $e');
+      }
 
       Get.offAllNamed(Routes.NAVBAR);
       CacheHelper.cacheUserId(id: uid);

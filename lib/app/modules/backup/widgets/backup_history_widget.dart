@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
-import 'package:crypted_app/core/themes/font_manager.dart';
-import '../controllers/backup_controller.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import '../controllers/backup_controller.dart';
 
+/// Backup History Widget - Stateful & Explanatory Design
+///
+/// Design Philosophy:
+/// - Staggered entrance animations for visual delight
+/// - Clear success/failure states with explanations
+/// - Educational empty state guiding users
+/// - Detailed bottom sheet with actionable information
 class BackupHistoryWidget extends GetView<BackupController> {
   const BackupHistoryWidget({super.key});
 
@@ -15,171 +23,328 @@ class BackupHistoryWidget extends GetView<BackupController> {
       final history = controller.backupHistory;
 
       if (history.isEmpty) {
-        return Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.history,
-                size: 48,
-                color: Colors.grey.shade300,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No backup history yet',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Your backup history will appear here',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        );
+        return _buildEmptyState();
       }
 
       return Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+          color: ColorsManager.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: ColorsManager.zenBorder,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            // List of history items with staggered animation
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: history.length > 5 ? 5 : history.length,
+              separatorBuilder: (context, index) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                height: 1,
+                color: ColorsManager.zenBorder,
+              ),
+              itemBuilder: (context, index) {
+                final item = history[index];
+                return _buildHistoryItem(context, item, index == 0, index)
+                    .animate()
+                    .fadeIn(
+                      delay: Duration(milliseconds: 80 * index),
+                      duration: 300.ms,
+                    )
+                    .slideX(
+                      begin: 0.1,
+                      end: 0,
+                      delay: Duration(milliseconds: 80 * index),
+                      duration: 300.ms,
+                    );
+              },
             ),
+
+            // View all link (if more than 5)
+            if (history.length > 5)
+              GestureDetector(
+                onTap: () => _showAllHistory(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.zenSurface,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(20),
+                    ),
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View all ${history.length} backups',
+                          style: StylesManager.dmSansMedium(
+                            fontSize: 14,
+                            color: ColorsManager.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: ColorsManager.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
-        child: ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: history.length > 5 ? 5 : history.length, // Limit to 5 items
-          separatorBuilder: (context, index) => Divider(
-            height: 1,
-            color: Colors.grey.shade200,
-          ),
-          itemBuilder: (context, index) {
-            final item = history[index];
-            return _buildHistoryTile(context, item);
-          },
-        ),
-      );
+      )
+          .animate()
+          .fadeIn(duration: 400.ms);
     });
   }
 
-  Widget _buildHistoryTile(BuildContext context, BackupHistoryItem item) {
-    return InkWell(
-      onTap: () => _showBackupDetails(context, item),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: ColorsManager.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ColorsManager.zenBorder,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Animated icon
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: ColorsManager.zenBorder.withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Icon(
+                Icons.history_rounded,
+                size: 36,
+                color: ColorsManager.zenMuted,
+              ),
+            ],
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.05, 1.05),
+                duration: 1500.ms,
+              ),
+          const SizedBox(height: 20),
+          Text(
+            'No backup history yet',
+            style: StylesManager.dmSansSemiBold(
+              fontSize: 18,
+              color: ColorsManager.zenCharcoal,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your completed backups will appear here\nso you can track when you last saved your data',
+            style: StylesManager.zenBody(),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+
+          // What history shows section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColorsManager.zenSurface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: ColorsManager.zenGray,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'What you\'ll see here',
+                      style: StylesManager.dmSansMedium(
+                        fontSize: 13,
+                        color: ColorsManager.zenCharcoal,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildInfoItem(Icons.calendar_today_rounded, 'Date & time of each backup'),
+                _buildInfoItem(Icons.check_circle_outline_rounded, 'Success or failure status'),
+                _buildInfoItem(Icons.analytics_outlined, 'Items backed up count'),
+                _buildInfoItem(Icons.restore_rounded, 'Option to restore from any backup'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.1, end: 0, duration: 400.ms);
+  }
+
+  Widget _buildInfoItem(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: ColorsManager.zenMuted,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            text,
+            style: StylesManager.zenCaption(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryItem(
+    BuildContext context,
+    BackupHistoryItem item,
+    bool isLatest,
+    int index,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showBackupDetails(context, item);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            // Icon
-            Container(
-              padding: const EdgeInsets.all(12),
+            // Status Icon with animation
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: item.success
-                      ? [Colors.green.shade400, Colors.green.shade600]
-                      : [Colors.red.shade400, Colors.red.shade600],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: (item.success ? Colors.green : Colors.red).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: item.success
+                    ? ColorsManager.primary.withValues(alpha: 0.1)
+                    : ColorsManager.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
-                item.success ? Icons.backup : Icons.error_outline,
-                color: Colors.white,
-                size: 24,
+                item.success ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                color: item.success ? ColorsManager.primary : ColorsManager.error,
+                size: 22,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
 
             // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.formattedDate,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  // Date and badge row
                   Row(
                     children: [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
                       Text(
-                        '${item.itemsBackedUp} items backed up',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 13,
+                        item.formattedDate,
+                        style: StylesManager.dmSansMedium(
+                          fontSize: 15,
+                          color: ColorsManager.zenCharcoal,
                         ),
                       ),
+                      if (isLatest) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                ColorsManager.primary,
+                                ColorsManager.primary.withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Latest',
+                            style: StylesManager.zenCaption(
+                              color: ColorsManager.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Status text with explanation
+                  Row(
+                    children: [
+                      Text(
+                        item.success
+                            ? '${item.itemsBackedUp} items saved'
+                            : 'Backup failed',
+                        style: StylesManager.zenCaption(
+                          color: item.success
+                              ? ColorsManager.zenGray
+                              : ColorsManager.error,
+                        ),
+                      ),
+                      if (item.success) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: ColorsManager.zenMuted,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _getRelativeTime(item.date),
+                          style: StylesManager.zenCaption(),
+                        ),
+                      ],
                     ],
                   ),
                 ],
               ),
             ),
 
-            // Status Badge & Arrow
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (item.success ? Colors.green : Colors.red).shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    item.success ? 'Success' : 'Failed',
-                    style: TextStyle(
-                      color: (item.success ? Colors.green : Colors.red).shade700,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey.shade400,
-                  size: 20,
-                ),
-              ],
+            // Arrow with hover hint
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ColorsManager.zenBorder.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: ColorsManager.zenMuted,
+                size: 14,
+              ),
             ),
           ],
         ),
@@ -193,14 +358,14 @@ class BackupHistoryWidget extends GetView<BackupController> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
+        initialChildSize: 0.65,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
         expand: false,
         builder: (context, scrollController) {
           return Container(
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: ColorsManager.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
@@ -208,120 +373,114 @@ class BackupHistoryWidget extends GetView<BackupController> {
                 // Handle
                 const SizedBox(height: 12),
                 Container(
-                  width: 40,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: ColorsManager.zenBorder,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // Content
                 Expanded(
                   child: SingleChildScrollView(
                     controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: item.success
-                                      ? [Colors.green.shade400, Colors.green.shade600]
-                                      : [Colors.red.shade400, Colors.red.shade600],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Icon(
-                                item.success ? Icons.backup : Icons.error,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Backup Details',
-                                    style: StylesManager.bold(
-                                      fontSize: FontSize.xLarge,
-                                      color: ColorsManager.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _formatDetailedDate(item.date),
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        // Header with status
+                        _buildDetailHeader(item),
+                        const SizedBox(height: 24),
 
-                        const SizedBox(height: 28),
+                        // Divider
+                        Container(height: 1, color: ColorsManager.zenBorder),
+                        const SizedBox(height: 24),
 
-                        // Stats Cards with clickable actions
-                        if (item.stats != null) ...[
-                          InkWell(
-                            onTap: () => _showContactsDetails(context, item.stats!),
-                            child: _buildDetailCard(
-                              context,
-                              icon: Icons.contacts_outlined,
-                              label: 'Contacts',
-                              value: '${item.stats!['contacts_count'] ?? 0}',
-                              color: Colors.blue,
-                              trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.blue),
-                            ),
+                        // Explanation section
+                        Text(
+                          'Backup Details',
+                          style: StylesManager.dmSansSemiBold(
+                            fontSize: 16,
+                            color: ColorsManager.zenCharcoal,
                           ),
-                          const SizedBox(height: 12),
-                          InkWell(
-                            onTap: () => _showImagesGallery(context, item.stats!),
-                            child: _buildDetailCard(
-                              context,
-                              icon: Icons.image_outlined,
-                              label: 'Images',
-                              value: '${item.stats!['images_count'] ?? 0}',
-                              color: Colors.purple,
-                              trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.purple),
-                            ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Stats cards
+                        if (item.stats != null) ...[
+                          _buildDetailCard(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            color: Colors.blue,
+                            label: 'Conversations',
+                            value: '${item.stats!['contacts_count'] ?? 0}',
+                            explanation: 'Chat threads backed up',
                           ),
                           const SizedBox(height: 12),
                           _buildDetailCard(
-                            context,
-                            icon: Icons.video_library_outlined,
-                            label: 'Files',
-                            value: '${item.stats!['files_count'] ?? 0}',
-                            color: Colors.orange,
+                            icon: Icons.photo_library_outlined,
+                            color: Colors.purple,
+                            label: 'Media Files',
+                            value: '${item.stats!['images_count'] ?? 0}',
+                            explanation: 'Photos and videos saved',
                           ),
-                          const SizedBox(height: 28),
-
-                          // Backup Components Status
-                          if (item.stats!['backup_success'] != null) ...[
-                            Text(
-                              'Backup Components',
-                              style: StylesManager.bold(
-                                fontSize: FontSize.large,
-                                color: ColorsManager.black,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildSuccessCard(context, item.stats!['backup_success']),
-                          ],
+                          const SizedBox(height: 12),
+                          _buildDetailCard(
+                            icon: Icons.folder_outlined,
+                            color: Colors.orange,
+                            label: 'Documents',
+                            value: '${item.stats!['files_count'] ?? 0}',
+                            explanation: 'Files and attachments',
+                          ),
                         ],
 
                         const SizedBox(height: 24),
+
+                        // Timestamp details
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: ColorsManager.zenSurface,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildTimestampRow(
+                                'Backup started',
+                                DateFormat('MMM d, yyyy • h:mm a').format(item.date),
+                              ),
+                              const SizedBox(height: 10),
+                              _buildTimestampRow(
+                                'Duration',
+                                _formatDuration(item.duration),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Actions
+                        if (item.success) ...[
+                          _buildActionButton(
+                            icon: Icons.restore_rounded,
+                            label: 'Restore from this backup',
+                            explanation: 'Replace current data with this backup',
+                            onTap: () => _confirmRestore(item),
+                            isPrimary: true,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        _buildActionButton(
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Delete this backup',
+                          explanation: 'Remove from backup history',
+                          onTap: () => _confirmDelete(item),
+                          isDangerous: true,
+                        ),
+
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
@@ -334,417 +493,184 @@ class BackupHistoryWidget extends GetView<BackupController> {
     );
   }
 
-  Widget _buildDetailCard(
-    BuildContext context, {
+  Widget _buildDetailHeader(BackupHistoryItem item) {
+    return Row(
+      children: [
+        // Status Icon
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: item.success
+                ? ColorsManager.primary.withValues(alpha: 0.1)
+                : ColorsManager.error.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Icon(
+            item.success ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+            color: item.success ? ColorsManager.primary : ColorsManager.error,
+            size: 28,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.success ? 'Backup Successful' : 'Backup Failed',
+                style: StylesManager.dmSansBold(
+                  fontSize: 20,
+                  color: ColorsManager.zenCharcoal,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.success
+                    ? '${item.itemsBackedUp} items safely stored'
+                    : 'The backup could not be completed',
+                style: StylesManager.zenBody(
+                  color: ColorsManager.zenGray,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailCard({
     required IconData icon,
+    required Color color,
     required String label,
     required String value,
-    required Color color,
-    Widget? trailing,
+    required String explanation,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withAlpha(35), color.withAlpha(70)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withAlpha(100)),
+        color: ColorsManager.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ColorsManager.zenBorder),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color,
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: color.withAlpha(200),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: StylesManager.zenBody(
+                    color: ColorsManager.zenGray,
+                  ),
+                ),
+                Text(
+                  explanation,
+                  style: StylesManager.zenCaption(),
+                ),
+              ],
             ),
           ),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color.withAlpha(150),
+            style: StylesManager.dmSansBold(
+              fontSize: 22,
+              color: ColorsManager.zenCharcoal,
             ),
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: 8),
-            trailing,
-          ],
         ],
       ),
     );
   }
 
-  /// Show contacts details in a modal
-  void _showContactsDetails(BuildContext context, Map<String, dynamic> stats) {
-    final contacts = stats['contacts'] as List<dynamic>? ?? [];
-
-    if (contacts.isEmpty) {
-      Get.snackbar(
-        'No Contacts',
-        'No contacts found in this backup',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.8,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.contacts, color: Colors.blue.shade700, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Contacts Backup',
-                              style: StylesManager.bold(
-                                fontSize: FontSize.xLarge,
-                                color: ColorsManager.black,
-                              ),
-                            ),
-                            Text(
-                              '${contacts.length} contacts',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: ListView.separated(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: contacts.length,
-                    separatorBuilder: (context, index) => Divider(
-                      height: 1,
-                      color: Colors.grey.shade200,
-                    ),
-                    itemBuilder: (context, index) {
-                      final contact = contacts[index] as Map<String, dynamic>;
-                      final displayName = contact['displayName'] ?? 'Unknown';
-                      final phones = contact['phones'] as List<dynamic>? ?? [];
-                      final emails = contact['emails'] as List<dynamic>? ?? [];
-
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade100,
-                          child: Text(
-                            displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                            style: TextStyle(
-                              color: Colors.blue.shade700,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          displayName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (phones.isNotEmpty)
-                              ...phones.map((phone) => Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      phone['number'] ?? '',
-                                      style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                            if (emails.isNotEmpty)
-                              ...emails.map((email) => Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.email, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      email['address'] ?? '',
-                                      style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+  Widget _buildTimestampRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: StylesManager.zenBody(),
+        ),
+        Text(
+          value,
+          style: StylesManager.dmSansMedium(
+            fontSize: 14,
+            color: ColorsManager.zenCharcoal,
+          ),
+        ),
+      ],
     );
   }
 
-  /// Show images gallery in a modal
-  void _showImagesGallery(BuildContext context, Map<String, dynamic> stats) {
-    final images = stats['images'] as List<dynamic>? ?? [];
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required String explanation,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+    bool isDangerous = false,
+  }) {
+    final color = isDangerous
+        ? ColorsManager.error
+        : isPrimary
+            ? ColorsManager.primary
+            : ColorsManager.zenGray;
 
-    if (images.isEmpty) {
-      Get.snackbar(
-        'No Images',
-        'No images found in this backup',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.8,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.image, color: Colors.purple.shade700, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Images Gallery',
-                              style: StylesManager.bold(
-                                fontSize: FontSize.xLarge,
-                                color: ColorsManager.black,
-                              ),
-                            ),
-                            Text(
-                              '${images.length} images',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: GridView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: images.length,
-                    itemBuilder: (context, index) {
-                      final image = images[index] as Map<String, dynamic>;
-                      final imageUrl = image['url'] as String?;
-
-                      return GestureDetector(
-                        onTap: () => _showFullImage(context, imageUrl, image),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.grey.shade200,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: imageUrl != null
-                                ? Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Center(
-                                        child: CircularProgressIndicator(
-                                          value: loadingProgress.expectedTotalBytes != null
-                                              ? loadingProgress.cumulativeBytesLoaded /
-                                                  loadingProgress.expectedTotalBytes!
-                                              : null,
-                                          strokeWidth: 2,
-                                        ),
-                                      );
-                                    },
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(Icons.error_outline, color: Colors.red);
-                                    },
-                                  )
-                                : const Icon(Icons.image_not_supported, color: Colors.grey),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// Show full image viewer
-  void _showFullImage(BuildContext context, String? imageUrl, Map<String, dynamic> imageData) {
-    if (imageUrl == null) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(0),
-        child: Stack(
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isPrimary
+              ? ColorsManager.primary.withValues(alpha: 0.1)
+              : isDangerous
+                  ? ColorsManager.error.withValues(alpha: 0.05)
+                  : ColorsManager.zenSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: isPrimary
+              ? Border.all(color: ColorsManager.primary.withValues(alpha: 0.3))
+              : null,
+        ),
+        child: Row(
           children: [
-            Center(
-              child: InteractiveViewer(
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                            : null,
-                      ),
-                    );
-                  },
-                ),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: StylesManager.dmSansMedium(
+                      fontSize: 15,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    explanation,
+                    style: StylesManager.zenCaption(),
+                  ),
+                ],
               ),
             ),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.black54,
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 40,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (imageData['width'] != null && imageData['height'] != null)
-                      Text(
-                        'Size: ${imageData['width']}x${imageData['height']}',
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
-                      ),
-                    if (imageData['createDate'] != null)
-                      Text(
-                        'Date: ${imageData['createDate']}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                  ],
-                ),
-              ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: color.withValues(alpha: 0.5),
+              size: 20,
             ),
           ],
         ),
@@ -752,90 +678,155 @@ class BackupHistoryWidget extends GetView<BackupController> {
     );
   }
 
-  Widget _buildSuccessCard(BuildContext context, Map<String, dynamic> success) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: success.entries.map((entry) {
-          final isSuccess = entry.value == true;
-          final componentName = entry.key
-              .replaceAll('_', ' ')
-              .split(' ')
-              .map((word) => word[0].toUpperCase() + word.substring(1))
-              .join(' ');
-
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: entry.key != success.keys.last
-                    ? BorderSide(color: Colors.grey.shade200)
-                    : BorderSide.none,
+  void _confirmRestore(BackupHistoryItem item) {
+    Get.back();
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Restore Backup?', style: StylesManager.zenHeading()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will replace your current data with the backup from ${item.formattedDate}.',
+              style: StylesManager.zenBody(),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ColorsManager.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: ColorsManager.warning,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Current data will be overwritten',
+                      style: StylesManager.zenCaption(
+                        color: ColorsManager.warning,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: (isSuccess ? Colors.green : Colors.red).shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    isSuccess ? Icons.check_circle : Icons.cancel,
-                    color: (isSuccess ? Colors.green : Colors.red).shade700,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    componentName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (isSuccess ? Colors.green : Colors.red).shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    isSuccess ? 'Success' : 'Failed',
-                    style: TextStyle(
-                      color: (isSuccess ? Colors.green : Colors.red).shade700,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: StylesManager.dmSansMedium(
+                fontSize: 14,
+                color: ColorsManager.zenGray,
+              ),
             ),
-          );
-        }).toList(),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.restoreBackup(item);
+            },
+            child: Text(
+              'Restore',
+              style: StylesManager.dmSansMedium(
+                fontSize: 14,
+                color: ColorsManager.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  String _formatDetailedDate(DateTime date) {
+  void _confirmDelete(BackupHistoryItem item) {
+    Get.back();
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete Backup?', style: StylesManager.zenHeading()),
+        content: Text(
+          'This backup will be permanently removed. You won\'t be able to restore from it.',
+          style: StylesManager.zenBody(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: StylesManager.dmSansMedium(
+                fontSize: 14,
+                color: ColorsManager.zenGray,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.deleteBackup(item);
+            },
+            child: Text(
+              'Delete',
+              style: StylesManager.dmSansMedium(
+                fontSize: 14,
+                color: ColorsManager.error,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAllHistory() {
+    // Navigate to full history page
+    Get.snackbar(
+      'Coming Soon',
+      'Full backup history view is being built',
+      backgroundColor: ColorsManager.zenCharcoal,
+      colorText: ColorsManager.white,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
+  String _getRelativeTime(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
 
-    if (difference.inDays == 0) {
-      return 'Today at ${DateFormat('h:mm a').format(date)}';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday at ${DateFormat('h:mm a').format(date)}';
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago at ${DateFormat('h:mm a').format(date)}';
+      return '${difference.inDays}d ago';
     } else {
-      return DateFormat('MMM d, yyyy \'at\' h:mm a').format(date);
+      return DateFormat('MMM d').format(date);
+    }
+  }
+
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return 'Unknown';
+
+    if (duration.inMinutes < 1) {
+      return '${duration.inSeconds} seconds';
+    } else if (duration.inMinutes < 60) {
+      return '${duration.inMinutes} minutes';
+    } else {
+      final hours = duration.inHours;
+      final minutes = duration.inMinutes % 60;
+      return '$hours hour${hours > 1 ? 's' : ''} $minutes min';
     }
   }
 }

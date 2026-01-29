@@ -1,7 +1,9 @@
-// ARCH-008 FIX: Call Handler Service
-// Moves call logic from view to a dedicated service
+import 'dart:developer';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+
+import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
@@ -9,25 +11,26 @@ import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/calls/controllers/calls_controller.dart';
-import 'package:crypted_app/core/themes/color_manager.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 
-/// Result of a call operation
+/// Result of a call operation.
 class CallResult {
   final bool success;
   final String? error;
   final CallModel? callModel;
+  final String? callId;
 
   const CallResult({
     required this.success,
     this.error,
     this.callModel,
+    this.callId,
   });
 
-  factory CallResult.success(CallModel model) => CallResult(
+  factory CallResult.success(CallModel model, {String? callId}) => CallResult(
         success: true,
         callModel: model,
+        callId: callId,
       );
 
   factory CallResult.failure(String error) => CallResult(
@@ -36,7 +39,13 @@ class CallResult {
       );
 }
 
-/// Service to handle call operations for chat
+/// Service to handle call operations for chat screens.
+///
+/// This handler manages:
+/// - Initiating audio/video calls
+/// - Storing call records in Firestore
+/// - Sending call messages in chat
+/// - Navigating to call screen
 class ChatCallHandler {
   final CallDataSources _callDataSource;
   final String roomId;
@@ -48,49 +57,46 @@ class ChatCallHandler {
     CallDataSources? callDataSource,
   }) : _callDataSource = callDataSource ?? CallDataSources();
 
-  /// Initiate an audio call
+  /// Initiate an audio call.
   Future<CallResult> initiateAudioCall(SocialMediaUser otherUser) async {
     return _initiateCall(otherUser, isVideoCall: false);
   }
 
-  /// Initiate a video call
+  /// Initiate a video call.
   Future<CallResult> initiateVideoCall(SocialMediaUser otherUser) async {
     return _initiateCall(otherUser, isVideoCall: true);
   }
 
-  /// Internal method to initiate a call
+  /// Internal method to initiate a call.
   Future<CallResult> _initiateCall(
     SocialMediaUser otherUser, {
     required bool isVideoCall,
   }) async {
+    // Haptic feedback
     HapticFeedback.lightImpact();
 
     try {
+      // Validate current user
       final currentUser = UserService.currentUser.value;
       if (currentUser == null) {
         return CallResult.failure('User not authenticated');
       }
 
+      // Validate callee
       if (otherUser.uid == null || otherUser.uid!.isEmpty) {
         return CallResult.failure('Invalid recipient');
       }
 
-      // Send call invitation
-      final invitationSuccess = await _callDataSource.sendCallInvitation(
-        callerId: currentUser.uid ?? '',
-        callerName: currentUser.fullName ?? '',
-        calleeId: otherUser.uid ?? '',
-        calleeName: otherUser.fullName ?? '',
-        isVideoCall: isVideoCall,
-        customData:
-            '${isVideoCall ? "video" : "audio"}_call_${DateTime.now().millisecondsSinceEpoch}',
-      );
+      log('[ChatCallHandler] Initiating ${isVideoCall ? "video" : "audio"} call to ${otherUser.uid}');
 
-      if (!invitationSuccess) {
-        _showError('Failed to send call invitation');
-        return CallResult.failure('Failed to send call invitation');
+      // Check if user is already in a call
+      final isInCall = await _callDataSource.isUserInActiveCall(currentUser.uid ?? '');
+      if (isInCall) {
+        _showError('You are already in a call');
+        return CallResult.failure('Already in a call');
       }
 
+      // Create call model
       final callModel = CallModel(
         callType: isVideoCall ? CallType.video : CallType.audio,
         callStatus: CallStatus.outgoing,
@@ -103,72 +109,123 @@ class ChatCallHandler {
         time: DateTime.now(),
       );
 
-      // Store call data and send message
-      await _storeCallAndSendMessage(callModel);
+      // Store call in Firestore and get the ID
+      final callId = await _callDataSource.storeCall(callModel);
+
+      if (callId == null) {
+        _showError('Failed to create call record');
+        return CallResult.failure('Failed to create call record');
+      }
+
+      // Update call model with the generated ID
+      final callWithId = callModel.copyWith(callId: callId);
+
+      // Send call message in chat
+      await _sendCallMessage(callWithId);
+
+      // Send ZEGO call invitation (for push notification)
+      final invitationSent = await ZegoCallService.instance.sendCallInvitation(
+        calleeId: otherUser.uid ?? '',
+        calleeName: otherUser.fullName ?? '',
+        isVideoCall: isVideoCall,
+        resourceID: 'zego_data',
+      );
+
+      if (!invitationSent) {
+        log('[ChatCallHandler] ZEGO invitation failed, but continuing with direct call');
+      }
 
       // Navigate to call screen
-      Get.toNamed('/call', arguments: callModel);
+      Get.toNamed('/call', arguments: callWithId);
 
-      return CallResult.success(callModel);
-    } catch (e) {
+      // Refresh calls list
+      _refreshCallsList();
+
+      return CallResult.success(callWithId, callId: callId);
+    } catch (e, stackTrace) {
+      log('[ChatCallHandler] Error initiating call: $e');
+      log('[ChatCallHandler] Stack trace: $stackTrace');
+
       final errorMessage =
-          'Failed to start ${isVideoCall ? "video" : "audio"} call: ${e.toString()}';
+          'Failed to start ${isVideoCall ? "video" : "audio"} call';
       _showError(errorMessage);
-      return CallResult.failure(errorMessage);
+      return CallResult.failure('$errorMessage: ${e.toString()}');
     }
   }
 
-  /// Store call data and send call message
-  Future<void> _storeCallAndSendMessage(CallModel callModel) async {
+  /// Send a call message in the chat.
+  Future<void> _sendCallMessage(CallModel callModel) async {
     try {
-      final success = await _callDataSource.storeCall(callModel);
+      final callMessage = CallMessage(
+        id: 'call_${DateTime.now().millisecondsSinceEpoch}',
+        roomId: roomId,
+        senderId: UserService.currentUser.value?.uid ?? '',
+        timestamp: DateTime.now(),
+        callModel: callModel,
+      );
 
-      if (success) {
-        // Send call message to chat
-        await sendMessage(CallMessage(
-          id: '${Timestamp.now().toDate()}',
-          roomId: roomId,
-          senderId: UserService.currentUser.value?.uid ?? '',
-          timestamp: Timestamp.now().toDate(),
-          callModel: callModel,
-        ));
-
-        // Refresh calls list
-        _refreshCallsList();
-      }
+      await sendMessage(callMessage);
+      log('[ChatCallHandler] Call message sent in chat');
     } catch (e) {
-      print('❌ Error handling call: $e');
-      rethrow;
+      log('[ChatCallHandler] Error sending call message: $e');
+      // Don't throw - call can proceed even if message fails
     }
   }
 
-  /// Refresh calls list in CallsController if available
+  /// Refresh calls list in CallsController if available.
   void _refreshCallsList() {
     try {
       if (Get.isRegistered<CallsController>()) {
         Get.find<CallsController>().refreshCalls();
       }
     } catch (e) {
-      print('[ChatCallHandler] Could not refresh calls list: $e');
+      log('[ChatCallHandler] Could not refresh calls list: $e');
     }
   }
 
-  /// Show error snackbar
+  /// Show error snackbar.
   void _showError(String message) {
     Get.snackbar(
       'Call Error',
       message,
       backgroundColor: ColorsManager.error,
       colorText: ColorsManager.white,
+      snackPosition: SnackPosition.TOP,
     );
   }
 }
 
-/// Mixin to add call handling capabilities to controllers
+/// Mixin to add call handling capabilities to GetX controllers.
+///
+/// Usage:
+/// ```dart
+/// class ChatController extends GetxController with CallHandlerMixin {
+///   @override
+///   void onInit() {
+///     super.onInit();
+///     initializeCallHandler(
+///       roomId: 'room_123',
+///       sendMessage: (message) async {
+///         // Send message logic
+///       },
+///     );
+///   }
+///
+///   void makeAudioCall(SocialMediaUser user) {
+///     startAudioCall(user);
+///   }
+///
+///   @override
+///   void onClose() {
+///     disposeCallHandler();
+///     super.onClose();
+///   }
+/// }
+/// ```
 mixin CallHandlerMixin {
   ChatCallHandler? _callHandler;
 
-  /// Initialize call handler
+  /// Initialize call handler.
   void initializeCallHandler({
     required String roomId,
     required Future<void> Function(Message message) sendMessage,
@@ -179,12 +236,12 @@ mixin CallHandlerMixin {
     );
   }
 
-  /// Dispose call handler
+  /// Dispose call handler.
   void disposeCallHandler() {
     _callHandler = null;
   }
 
-  /// Initiate audio call
+  /// Initiate audio call.
   Future<CallResult> startAudioCall(SocialMediaUser otherUser) async {
     if (_callHandler == null) {
       return CallResult.failure('Call handler not initialized');
@@ -192,11 +249,14 @@ mixin CallHandlerMixin {
     return _callHandler!.initiateAudioCall(otherUser);
   }
 
-  /// Initiate video call
+  /// Initiate video call.
   Future<CallResult> startVideoCall(SocialMediaUser otherUser) async {
     if (_callHandler == null) {
       return CallResult.failure('Call handler not initialized');
     }
     return _callHandler!.initiateVideoCall(otherUser);
   }
+
+  /// Check if call handler is initialized.
+  bool get isCallHandlerReady => _callHandler != null;
 }

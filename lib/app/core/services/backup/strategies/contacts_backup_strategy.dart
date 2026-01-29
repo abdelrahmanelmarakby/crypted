@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart';
 import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 /// Contacts backup strategy - backs up device contacts
 ///

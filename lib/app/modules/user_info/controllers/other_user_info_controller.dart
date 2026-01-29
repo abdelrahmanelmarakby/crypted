@@ -3,7 +3,10 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 import 'package:crypted_app/app/modules/user_info/repositories/user_info_repository.dart';
 import 'package:crypted_app/app/modules/user_info/models/user_info_state.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
@@ -449,18 +452,63 @@ class OtherUserInfoController extends GetxController {
   }
 
   /// Start a call with the user
-  void startCall({bool isVideo = false}) {
-    if (state.value.user == null) {
+  Future<void> startCall({bool isVideo = false}) async {
+    final otherUser = state.value.user;
+    if (otherUser == null) {
       _showError('Cannot start call: Missing user data');
       return;
     }
-    Get.toNamed(
-      Routes.CALL,
-      arguments: {
-        'user': state.value.user,
-        'isVideo': isVideo,
-      },
-    );
+
+    final currentUser = UserService.currentUser.value;
+    if (currentUser == null) {
+      _showError('Cannot start call: Not authenticated');
+      return;
+    }
+
+    try {
+      developer.log('[OtherUserInfoController] Starting ${isVideo ? "video" : "audio"} call to ${otherUser.uid}');
+
+      // Create call model
+      final callModel = CallModel(
+        callType: isVideo ? CallType.video : CallType.audio,
+        callStatus: CallStatus.outgoing,
+        calleeId: otherUser.uid ?? '',
+        calleeImage: otherUser.imageUrl ?? '',
+        calleeUserName: otherUser.fullName ?? '',
+        callerId: currentUser.uid ?? '',
+        callerImage: currentUser.imageUrl ?? '',
+        callerUserName: currentUser.fullName ?? '',
+        time: DateTime.now(),
+      );
+
+      // Store call in Firestore
+      final callId = await CallDataSources().storeCall(callModel);
+      if (callId == null) {
+        _showError('Failed to create call record');
+        return;
+      }
+
+      // Update call model with generated ID
+      final callWithId = callModel.copyWith(callId: callId);
+
+      // Send ZEGO call invitation
+      final invitationSent = await ZegoCallService.instance.sendCallInvitation(
+        calleeId: otherUser.uid ?? '',
+        calleeName: otherUser.fullName ?? '',
+        isVideoCall: isVideo,
+        resourceID: 'zego_data',
+      );
+
+      if (!invitationSent) {
+        developer.log('[OtherUserInfoController] ZEGO invitation failed, continuing with direct call');
+      }
+
+      // Navigate to call screen
+      Get.toNamed(Routes.CALL, arguments: callWithId);
+    } catch (e) {
+      developer.log('[OtherUserInfoController] Error starting call: $e');
+      _showError('Failed to start call');
+    }
   }
 
   /// Open chat with user

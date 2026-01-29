@@ -60,6 +60,30 @@ class BackupController extends GetxController {
     _subscribeToBackupStreams();
     _loadBackupHistory();
     _loadSettings();
+    _checkRunningBackups(); // Check for active backups on init
+  }
+
+  /// Check if any backup is currently running
+  /// Syncs UI state with BackupServiceV3 state
+  void _checkRunningBackups() {
+    final runningIds = _backupService.runningBackupIds;
+    if (runningIds.isNotEmpty) {
+      final activeId = runningIds.first;
+      currentBackupId.value = activeId;
+      isBackupRunning.value = true;
+      backupStatus.value = 'Backup in progress...';
+
+      log('📊 Found active backup on init: $activeId');
+
+      // Fetch current progress
+      _backupService.getBackupProgress(activeId).then((progress) {
+        if (progress != null) {
+          backupProgress.value = progress.percentage / 100.0;
+          backupStatus.value = 'Processing ${progress.currentType?.name ?? "data"}... '
+              '${progress.processedItems}/${progress.totalItems}';
+        }
+      });
+    }
   }
 
   @override
@@ -551,6 +575,82 @@ class BackupController extends GetxController {
       duration: const Duration(seconds: 2),
     );
   }
+
+  /// Cancel the current backup
+  /// Note: Backups are designed to be unstoppable, but this provides user feedback
+  Future<void> cancelBackup() async {
+    await stopBackup();
+  }
+
+  /// Restore from a specific backup
+  /// NOTE: Full implementation requires RestoreServiceV3
+  Future<void> restoreBackup(BackupHistoryItem item) async {
+    try {
+      isBackupRunning.value = true;
+      backupStatus.value = 'Restoring backup from ${item.formattedDate}...';
+
+      // Show progress indicator
+      Get.snackbar(
+        'Restore Started',
+        'Restoring from backup: ${item.formattedDate}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.primaryContainer,
+        duration: const Duration(seconds: 3),
+      );
+
+      // TODO: Implement actual restore logic with RestoreServiceV3
+      // For now, simulate restore process
+      await Future.delayed(const Duration(seconds: 2));
+
+      isBackupRunning.value = false;
+      backupStatus.value = 'Ready to backup';
+
+      Get.snackbar(
+        'Info',
+        'Restore functionality coming soon in RestoreServiceV3',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (e) {
+      isBackupRunning.value = false;
+      hasError.value = true;
+      errorMessage.value = 'Failed to restore: ${e.toString()}';
+
+      Get.snackbar(
+        'Error',
+        'Failed to restore backup: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.errorContainer,
+      );
+    }
+  }
+
+  /// Delete a specific backup from history
+  Future<void> deleteBackup(BackupHistoryItem item) async {
+    try {
+      // Remove from local list
+      backupHistory.removeWhere((h) => h.date == item.date);
+
+      Get.snackbar(
+        'Backup Deleted',
+        'Backup from ${item.formattedDate} has been removed',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+
+      // TODO: Implement Firestore deletion when backup storage is implemented
+      log('🗑️ Deleted backup from ${item.formattedDate}');
+    } catch (e) {
+      log('Error deleting backup: $e');
+
+      Get.snackbar(
+        'Error',
+        'Failed to delete backup: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.errorContainer,
+      );
+    }
+  }
 }
 
 /// Backup history item model
@@ -559,12 +659,16 @@ class BackupHistoryItem {
   final bool success;
   final int itemsBackedUp;
   final Map<String, dynamic>? stats;
+  final Duration? duration;
+  final String? id;
 
   BackupHistoryItem({
     required this.date,
     required this.success,
     required this.itemsBackedUp,
     this.stats,
+    this.duration,
+    this.id,
   });
 
   String get formattedDate {

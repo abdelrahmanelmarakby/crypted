@@ -4,6 +4,10 @@ const String fontName = 'IBM Plex Sans Arabic';
 
 class FontFamily {
   static const String fontFamily = 'IBMPlexSansArabic';
+
+  /// DM Sans - Clean geometric sans-serif for English headings
+  /// Used in Zen/Minimal design aesthetic
+  static const String dmSans = 'DM Sans';
 }
 
 class FontWeights {

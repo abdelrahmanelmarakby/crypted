@@ -5,6 +5,7 @@ import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart' as backup_v3;
 import 'package:crypted_app/app/core/services/analytics_service.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 import 'package:crypted_app/app/widgets/bottom_sheets/custom_bottom_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/locale/constant.dart';
@@ -545,7 +546,15 @@ class SettingsController extends GetxController {
   }
 
   /// Logout user
-  void logout() {
+  Future<void> logout() async {
+    // Logout from ZEGO call service
+    try {
+      await ZegoCallService.instance.logoutUser();
+      log('✅ ZEGO call service logged out');
+    } catch (e) {
+      log('⚠️ ZEGO logout failed: $e');
+    }
+
     CacheHelper.logout();
     Get.offAllNamed(Routes.LOGIN);
   }

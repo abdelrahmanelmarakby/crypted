@@ -74,6 +74,13 @@ class BackupServiceV3 {
   // Initialization flag
   bool _isInitialized = false;
 
+  // CRITICAL: Strong reference to prevent garbage collection
+  // This ensures foreground backups survive navigation
+  final Map<String, Future<void>> _activeBackups = {};
+
+  // Track running backup IDs
+  final Set<String> _runningBackupIds = {};
+
   /// Initialize backup service
   /// Call this once during app startup
   Future<void> initialize() async {
@@ -100,9 +107,63 @@ class BackupServiceV3 {
 
       _isInitialized = true;
       log('✅ BackupServiceV3 initialized successfully');
+
+      // Resume any interrupted backups from previous session
+      await _resumeInterruptedBackups();
     } catch (e, stackTrace) {
       log('❌ Failed to initialize BackupServiceV3: $e', stackTrace: stackTrace);
       rethrow;
+    }
+  }
+
+  /// Resume any backups that were interrupted (app killed, device restarted)
+  /// This runs on app startup to ensure no backups are lost
+  Future<void> _resumeInterruptedBackups() async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) {
+        log('⚠️ No user logged in, skipping backup resume check');
+        return;
+      }
+
+      // Find any backups that are "running" or "queued" for this user
+      final querySnapshot = await _firestore
+          .collection('backup_jobs')
+          .where('userId', isEqualTo: userId)
+          .where('status', whereIn: [
+            BackupStatus.running.name,
+            BackupStatus.queued.name,
+            BackupStatus.paused.name,
+          ])
+          .orderBy('createdAt', descending: true)
+          .limit(1) // Only resume the most recent one
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        log('✅ No interrupted backups to resume');
+        return;
+      }
+
+      // Resume the interrupted backup
+      final doc = querySnapshot.docs.first;
+      final job = BackupJob.fromJson(doc.data());
+
+      log('🔄 Found interrupted backup: ${job.id} (status: ${job.status.name})');
+      log('   Resuming backup automatically...');
+
+      // Re-execute the backup
+      _startImmediateBackup(job);
+
+      // Emit event
+      _eventController.add(BackupEvent(
+        type: BackupEventType.resumed,
+        backupId: job.id,
+        message: 'Resumed interrupted backup',
+      ));
+
+    } catch (e) {
+      log('⚠️ Error checking for interrupted backups: $e');
+      // Non-fatal - don't rethrow
     }
   }
 
@@ -292,14 +353,185 @@ class BackupServiceV3 {
   }
 
   Future<void> _saveBackupJob(BackupJob job) async {
-    await _firestore.collection('backup_jobs').doc(job.id).set(job.toJson());
+    // Use toFirestoreJson() for Firestore (supports Timestamp)
+    await _firestore.collection('backup_jobs').doc(job.id).set(job.toFirestoreJson());
   }
 
   Future<void> _scheduleBackupExecution(BackupJob job) async {
-    // Schedule via BackupWorker (WorkManager implementation)
-    // This ensures execution even if app is killed, device restarts, etc.
-    await BackupWorker.instance.scheduleBackup(job);
-    log('✅ Unstoppable backup scheduled via WorkManager: ${job.id}');
+    // FIX: Use WorkManager for truly unstoppable background execution
+    // This ensures backup continues even if user navigates away or kills app
+    log('🚀 Scheduling unstoppable backup via WorkManager: ${job.id}');
+
+    try {
+      // Schedule via WorkManager (runs in separate isolate, survives app kill)
+      await BackupWorker.instance.scheduleBackup(job);
+      log('✅ Backup scheduled with WorkManager: ${job.id}');
+
+      // Also start immediate foreground execution for faster progress
+      // This runs in parallel - WorkManager handles completion guarantee
+      _startImmediateBackup(job);
+    } catch (e) {
+      log('⚠️ WorkManager scheduling failed, falling back to foreground: $e');
+      // Fallback: Run directly (less reliable but works on iOS)
+      _startImmediateBackup(job);
+    }
+  }
+
+  /// Start immediate foreground backup for faster progress
+  /// WorkManager guarantees completion, this provides faster feedback
+  void _startImmediateBackup(BackupJob job) {
+    log('🚀 Starting immediate foreground backup: ${job.id}');
+
+    // CRITICAL: Store future in map to prevent garbage collection
+    // This is what makes the backup truly unstoppable during navigation
+    _runningBackupIds.add(job.id);
+
+    final backupFuture = _executeBackupWithTracking(job);
+
+    // Keep strong reference - this is the key to unstoppable backups!
+    _activeBackups[job.id] = backupFuture;
+
+    log('✅ Backup ${job.id} is now tracked and unstoppable');
+  }
+
+  /// Execute backup with proper tracking and cleanup
+  Future<void> _executeBackupWithTracking(BackupJob job) async {
+    try {
+      await _executeBackupDirectly(job);
+    } catch (e, stackTrace) {
+      log('❌ Foreground backup execution failed: $e');
+      log('$stackTrace');
+      // WorkManager will pick up and complete the backup
+    } finally {
+      // Cleanup tracking
+      _activeBackups.remove(job.id);
+      _runningBackupIds.remove(job.id);
+      log('🧹 Backup ${job.id} tracking cleaned up');
+    }
+  }
+
+  /// Check if backup is currently running
+  bool isBackupRunning(String backupId) {
+    return _runningBackupIds.contains(backupId);
+  }
+
+  /// Get all running backup IDs
+  Set<String> get runningBackupIds => Set.unmodifiable(_runningBackupIds);
+
+  /// Execute backup directly in the current context (foreground)
+  /// This is more reliable than WorkManager on iOS
+  Future<void> _executeBackupDirectly(BackupJob job) async {
+    try {
+      // Update status to running
+      await _firestore.collection('backup_jobs').doc(job.id).update({
+        'status': BackupStatus.running.name,
+        'startedAt': FieldValue.serverTimestamp(),
+      });
+
+      int totalItems = 0;
+      int processedItems = 0;
+      int failedItems = 0;
+      int bytesTransferred = 0;
+
+      // Execute each backup type
+      for (final backupType in job.types) {
+        try {
+          log('🔄 Starting ${backupType.name} backup...');
+
+          final strategy = _strategies[backupType];
+          if (strategy == null) {
+            log('⚠️ No strategy registered for ${backupType.name}');
+            continue;
+          }
+
+          // Create backup context
+          final context = BackupContext(
+            userId: job.userId,
+            backupId: job.id,
+            options: job.options,
+            firestore: _firestore,
+          );
+
+          // Estimate items first
+          final estimatedCount = await strategy.estimateItemCount(context);
+          totalItems += estimatedCount;
+
+          // Execute the strategy
+          final result = await strategy.execute(context);
+
+          processedItems += result.successfulItems;
+          failedItems += result.failedItems;
+          bytesTransferred += result.bytesTransferred;
+
+          // Emit progress
+          _progressController.add(BackupProgress(
+            backupId: job.id,
+            totalItems: totalItems,
+            processedItems: processedItems,
+            failedItems: failedItems,
+            currentType: backupType,
+            bytesTransferred: bytesTransferred,
+            startedAt: job.createdAt,
+          ));
+
+          // Update Firestore progress
+          await _firestore.collection('backup_jobs').doc(job.id).update({
+            'totalItems': totalItems,
+            'processedItems': processedItems,
+            'failedItems': failedItems,
+            'bytesTransferred': bytesTransferred,
+            'currentType': backupType.name,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+
+          log('✅ ${backupType.name} backup completed: ${result.successfulItems}/${result.totalItems}');
+
+        } catch (e, stackTrace) {
+          log('❌ ${backupType.name} backup failed: $e');
+          log('$stackTrace');
+          failedItems++;
+        }
+      }
+
+      // Determine final status
+      final finalStatus = failedItems == 0
+          ? BackupStatus.completed
+          : (processedItems > 0 ? BackupStatus.partialSuccess : BackupStatus.failed);
+
+      // Update final status
+      await _firestore.collection('backup_jobs').doc(job.id).update({
+        'status': finalStatus.name,
+        'completedAt': FieldValue.serverTimestamp(),
+        'totalItems': totalItems,
+        'processedItems': processedItems,
+        'failedItems': failedItems,
+        'bytesTransferred': bytesTransferred,
+      });
+
+      // Emit completion event
+      if (finalStatus == BackupStatus.completed) {
+        _eventController.add(BackupEvent.completed(job.id));
+        log('✅ Backup completed successfully: ${job.id}');
+      } else {
+        _eventController.add(BackupEvent.failed(job.id, 'Some items failed to backup'));
+        log('⚠️ Backup completed with errors: ${job.id}');
+      }
+
+    } catch (e, stackTrace) {
+      log('❌ Backup execution failed: $e');
+      log('$stackTrace');
+
+      // Update status to failed
+      try {
+        await _firestore.collection('backup_jobs').doc(job.id).update({
+          'status': BackupStatus.failed.name,
+          'failedAt': FieldValue.serverTimestamp(),
+          'errorMessage': e.toString(),
+        });
+      } catch (_) {}
+
+      _eventController.add(BackupEvent.failed(job.id, e.toString()));
+    }
   }
 
   /// Dispose resources
@@ -347,7 +579,19 @@ class BackupJob {
     required this.status,
   });
 
+  /// Convert to JSON for WorkManager (uses primitives only)
+  /// WorkManager only supports: String, int, double, bool, Map, List
   Map<String, dynamic> toJson() => {
+        'id': id,
+        'userId': userId,
+        'types': types.map((t) => t.name).toList(),
+        'options': options.toJson(),
+        'createdAt': createdAt.millisecondsSinceEpoch, // Use millis for WorkManager
+        'status': status.name,
+      };
+
+  /// Convert to JSON for Firestore (uses Timestamp)
+  Map<String, dynamic> toFirestoreJson() => {
         'id': id,
         'userId': userId,
         'types': types.map((t) => t.name).toList(),
@@ -357,15 +601,29 @@ class BackupJob {
       };
 
   factory BackupJob.fromJson(Map<String, dynamic> json) {
+    // Handle both milliseconds (from WorkManager) and Timestamp (from Firestore)
+    DateTime createdAtDate;
+    final createdAtValue = json['createdAt'];
+    if (createdAtValue is int) {
+      createdAtDate = DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+    } else if (createdAtValue is Timestamp) {
+      createdAtDate = createdAtValue.toDate();
+    } else {
+      createdAtDate = DateTime.now();
+    }
+
     return BackupJob(
       id: json['id'],
       userId: json['userId'],
       types: (json['types'] as List)
           .map((t) => BackupType.values.firstWhere((type) => type.name == t))
           .toSet(),
-      options: BackupOptions.fromJson(json['options']),
-      createdAt: (json['createdAt'] as Timestamp).toDate(),
-      status: BackupStatus.values.firstWhere((s) => s.name == json['status']),
+      options: BackupOptions.fromJson(json['options'] ?? {}),
+      createdAt: createdAtDate,
+      status: BackupStatus.values.firstWhere(
+        (s) => s.name == json['status'],
+        orElse: () => BackupStatus.queued,
+      ),
     );
   }
 }

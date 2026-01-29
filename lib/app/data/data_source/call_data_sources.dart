@@ -1,439 +1,452 @@
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypted_app/app/core/constants/firebase_collections.dart';
-import 'package:crypted_app/app/data/models/call_model.dart';
-import 'package:crypted_app/core/constant.dart';
-import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
-import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
+import 'package:crypted_app/app/data/models/call_model.dart';
+import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
+
+/// Data source for call-related Firestore operations.
+///
+/// Handles:
+/// - Storing call records to Firestore
+/// - Retrieving call history
+/// - Updating call status and duration
+/// - Cleaning up stale calls
 class CallDataSources {
-  CollectionReference<Map<String, dynamic>> callsCollection =
+  /// Firestore collection reference for calls.
+  final CollectionReference<Map<String, dynamic>> _callsCollection =
       FirebaseFirestore.instance.collection(FirebaseCollections.calls);
 
-  Future<bool> storeCall(CallModel callModel) async {
+  /// Default page size for call history pagination.
+  static const int defaultPageSize = 20;
+
+  // ============================================================
+  // CALL STORAGE OPERATIONS
+  // ============================================================
+
+  /// Store a new call record in Firestore.
+  ///
+  /// Creates a new document with auto-generated ID and updates the
+  /// callModel with the generated ID.
+  Future<String?> storeCall(CallModel callModel) async {
     try {
-      DocumentReference documentReference = callsCollection.doc();
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        transaction.set(
-          documentReference,
-          callModel.copyWith(callId: documentReference.id).toMap(),
-        );
-      });
-      log('✅ Call stored successfully with ID: ${documentReference.id}');
-      log('📞 Call details: ${callModel.toMap()}');
-      return true;
+      final docRef = _callsCollection.doc();
+      final callWithId = callModel.copyWith(callId: docRef.id);
+
+      await docRef.set(callWithId.toMap());
+
+      log('[CallDataSources] Call stored: ${docRef.id}');
+      return docRef.id;
     } catch (e) {
-      log('❌ Error storing call: $e');
-      return false;
+      log('[CallDataSources] Error storing call: $e');
+      return null;
     }
   }
 
+  /// Delete a call record by ID.
   Future<bool> deleteCall(String callId) async {
     try {
-      await callsCollection.doc(callId).delete();
-      log("Call deleted");
+      await _callsCollection.doc(callId).delete();
+      log('[CallDataSources] Call deleted: $callId');
       return true;
     } catch (e) {
-      log('Error deleting call: $e');
+      log('[CallDataSources] Error deleting call: $e');
       return false;
     }
   }
 
-  Future<bool> deleteAllCalls() async {
+  /// Get a call by its ID.
+  Future<CallModel?> getCallById(String callId) async {
     try {
-      WriteBatch batch = FirebaseFirestore.instance.batch();
-      QuerySnapshot querySnapshot = await callsCollection.get();
+      final doc = await _callsCollection.doc(callId).get();
+      if (doc.exists && doc.data() != null) {
+        return CallModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      log('[CallDataSources] Error getting call: $e');
+      return null;
+    }
+  }
 
-      for (var doc in querySnapshot.docs) {
-        batch.delete(doc.reference);
+  // ============================================================
+  // CALL STATUS UPDATES
+  // ============================================================
+
+  /// Update call status.
+  Future<bool> updateCallStatus(
+    String callId,
+    CallStatus status, {
+    num? duration,
+  }) async {
+    try {
+      final doc = await _callsCollection.doc(callId).get();
+      if (!doc.exists) {
+        log('[CallDataSources] Call not found: $callId');
+        return false;
       }
 
-      await batch.commit();
-      log("All calls deleted");
+      final updates = <String, dynamic>{
+        'callStatus': status.name,
+      };
+
+      if (duration != null) {
+        updates['callDuration'] = duration;
+      }
+
+      await _callsCollection.doc(callId).update(updates);
+
+      log('[CallDataSources] Call status updated: $callId -> ${status.name}');
       return true;
     } catch (e) {
-      log('Error deleting all calls: $e');
+      log('[CallDataSources] Error updating call status: $e');
       return false;
     }
   }
 
-  /// FIX: Added pagination support to prevent loading all calls at once
-  /// Default page size is 20 calls
-  static const int _defaultPageSize = 20;
+  /// End a call and record duration.
+  Future<bool> endCall(String callId, num durationSeconds) async {
+    return updateCallStatus(
+      callId,
+      CallStatus.ended,
+      duration: durationSeconds,
+    );
+  }
 
-  Stream<List<CallModel>> getMyCalls(String userId, {int pageSize = _defaultPageSize}) {
-    log('🔍 Getting calls for user: $userId (pageSize: $pageSize)');
+  /// Mark a call as missed.
+  Future<bool> markCallAsMissed(String callId) async {
+    return updateCallStatus(callId, CallStatus.missed);
+  }
 
-    // جلب المكالمات الصادرة (حيث المستخدم هو caller) with limit
-    Stream<List<CallModel>> outgoingCalls = callsCollection
+  /// Mark a call as cancelled.
+  Future<bool> markCallAsCancelled(String callId) async {
+    return updateCallStatus(callId, CallStatus.canceled);
+  }
+
+  /// Mark a call as connected.
+  Future<bool> markCallAsConnected(String callId) async {
+    return updateCallStatus(callId, CallStatus.connected);
+  }
+
+  // ============================================================
+  // CALL HISTORY STREAMS
+  // ============================================================
+
+  /// Get real-time stream of user's call history.
+  ///
+  /// Combines both outgoing and incoming calls sorted by time.
+  Stream<List<CallModel>> getMyCallsStream(
+    String userId, {
+    int pageSize = defaultPageSize,
+  }) {
+    log('[CallDataSources] Getting calls stream for: $userId');
+
+    // Outgoing calls (user is caller)
+    final outgoingCalls = _callsCollection
         .where('callerId', isEqualTo: userId)
         .orderBy('time', descending: true)
         .limit(pageSize)
         .snapshots()
-        .map((snapshot) {
-      log('📤 Found ${snapshot.docs.length} outgoing calls');
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        log('📤 Outgoing call: $data');
-        return CallModel.fromMap(data);
-      }).toList();
-    });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => CallModel.fromMap(doc.data()))
+            .toList());
 
-    // جلب المكالمات الواردة (حيث المستخدم هو callee) with limit
-    Stream<List<CallModel>> incomingCalls = callsCollection
+    // Incoming calls (user is callee)
+    final incomingCalls = _callsCollection
         .where('calleeId', isEqualTo: userId)
         .orderBy('time', descending: true)
         .limit(pageSize)
         .snapshots()
-        .map((snapshot) {
-      log('📥 Found ${snapshot.docs.length} incoming calls');
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        log('📥 Incoming call: $data');
-        return CallModel.fromMap(data);
-      }).toList();
-    });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => CallModel.fromMap(doc.data()))
+            .toList());
 
-    // دمج المكالمات الصادرة والواردة مع shareReplay لتجنب مشكلة Stream has already been listened to
+    // Combine and sort
     return Rx.combineLatest2(
       outgoingCalls,
       incomingCalls,
       (List<CallModel> outgoing, List<CallModel> incoming) {
-        List<CallModel> allCalls = [...outgoing, ...incoming];
-        // ترتيب المكالمات حسب الوقت (الأحدث أولاً)
+        final allCalls = [...outgoing, ...incoming];
+
+        // Sort by time (newest first)
         allCalls.sort((a, b) =>
             (b.time ?? DateTime.now()).compareTo(a.time ?? DateTime.now()));
-        // Take only pageSize items after merging (since we got pageSize from each query)
+
+        // Limit to pageSize
         if (allCalls.length > pageSize) {
-          allCalls = allCalls.take(pageSize).toList();
+          return allCalls.take(pageSize).toList();
         }
-        log('📞 Total calls found: ${allCalls.length}');
+
         return allCalls;
       },
     ).shareReplay(maxSize: 1);
   }
 
-  /// Load more calls for pagination (one-time fetch, not stream)
-  Future<List<CallModel>> loadMoreCalls(String userId, DateTime? lastCallTime, {int pageSize = _defaultPageSize}) async {
-    log('🔍 Loading more calls for user: $userId after $lastCallTime');
-
-    List<CallModel> allCalls = [];
-
-    // Fetch outgoing calls after the last call time
-    Query<Map<String, dynamic>> outgoingQuery = callsCollection
-        .where('callerId', isEqualTo: userId)
-        .orderBy('time', descending: true)
-        .limit(pageSize);
-
-    if (lastCallTime != null) {
-      outgoingQuery = outgoingQuery.startAfter([Timestamp.fromDate(lastCallTime)]);
-    }
-
-    final outgoingSnapshot = await outgoingQuery.get();
-    for (var doc in outgoingSnapshot.docs) {
-      allCalls.add(CallModel.fromMap(doc.data()));
-    }
-
-    // Fetch incoming calls after the last call time
-    Query<Map<String, dynamic>> incomingQuery = callsCollection
-        .where('calleeId', isEqualTo: userId)
-        .orderBy('time', descending: true)
-        .limit(pageSize);
-
-    if (lastCallTime != null) {
-      incomingQuery = incomingQuery.startAfter([Timestamp.fromDate(lastCallTime)]);
-    }
-
-    final incomingSnapshot = await incomingQuery.get();
-    for (var doc in incomingSnapshot.docs) {
-      allCalls.add(CallModel.fromMap(doc.data()));
-    }
-
-    // Sort by time and take only pageSize
-    allCalls.sort((a, b) =>
-        (b.time ?? DateTime.now()).compareTo(a.time ?? DateTime.now()));
-
-    if (allCalls.length > pageSize) {
-      allCalls = allCalls.take(pageSize).toList();
-    }
-
-    log('📞 Loaded ${allCalls.length} more calls');
-    return allCalls;
-  }
-
-  /// on App's user login
-  Future<void> onUserLogin(String userID, String userName) async {
-    try {
-      log('🔐 Initializing Zego UIKit for user: $userID ($userName)');
-
-      // 1.2.1. Initialize ZegoUIKitPrebuiltCallInvitationService
-      // when app's user is logged in or re-logged in
-      // We recommend calling this method as soon as the user logs in to your app.
-      await ZegoUIKitPrebuiltCallInvitationService().init(
-        appID: AppConstants.appID,
-        /*input your AppID*/
-        appSign: AppConstants.appSign,
-        /*input your AppSign*/
-        userID: userID,
-        userName: userName,
-        plugins: [ZegoUIKitSignalingPlugin()],
-        // Basic notification config (simplified for compatibility)
-        notificationConfig: ZegoCallInvitationNotificationConfig(
-          androidNotificationConfig: ZegoAndroidNotificationConfig(
-            channelID: "ZegoUIKit",
-            channelName: "Zego UIKit",
-            sound: "zego_incoming",
-            icon: "ic_launcher",
-          ),
-        ),
-        // Configure call invitation settings
-        config: ZegoCallInvitationConfig(
-          canInvitingInCalling: false,
-          onlyInitiatorCanInvite: false,
-          endCallWhenInitiatorLeave: true,
-        ),
-      );
-
-      log('✅ Zego UIKit initialized successfully for user: $userID');
-
-      // FIX: Clean up any stale calls from previous sessions
-      // This prevents users from appearing "in call" indefinitely after crashes
-      await cleanupStaleCalls(userID);
-      log('🧹 Cleaned up stale calls for user: $userID');
-    } catch (e) {
-      log('❌ Error initializing Zego UIKit for user $userID: $e');
-      rethrow;
-    }
-  }
-  Future<bool> sendCallInvitation({
-    required String callerId,
-    required String callerName,
-    required String calleeId,
-    required String calleeName,
-    required bool isVideoCall,
-    String? customData,
+  /// Load more calls for pagination (one-time fetch).
+  Future<List<CallModel>> loadMoreCalls(
+    String userId, {
+    DateTime? afterTime,
+    int pageSize = defaultPageSize,
   }) async {
     try {
-      log('📞 Sending ${isVideoCall ? 'video' : 'audio'} call invitation to $calleeId');
+      final allCalls = <CallModel>[];
 
-      // For now, let's use a simplified approach that just stores the call
-      // and relies on the existing call screen navigation
-      // This avoids API compatibility issues while maintaining functionality
+      // Build queries
+      Query<Map<String, dynamic>> outgoingQuery = _callsCollection
+          .where('callerId', isEqualTo: userId)
+          .orderBy('time', descending: true)
+          .limit(pageSize);
 
-      log('✅ Call invitation prepared successfully');
-      return true;
-    } catch (e) {
-      log('❌ Error preparing call invitation: $e');
-      return false;
-    }
-  }
+      Query<Map<String, dynamic>> incomingQuery = _callsCollection
+          .where('calleeId', isEqualTo: userId)
+          .orderBy('time', descending: true)
+          .limit(pageSize);
 
-  /// Accept incoming call invitation (simplified)
-  Future<bool> acceptCallInvitation(String callId) async {
-    try {
-      log('✅ Accepting call invitation: $callId');
-      return true;
-    } catch (e) {
-      log('❌ Error accepting call invitation: $e');
-      return false;
-    }
-  }
-
-  /// Decline incoming call invitation (simplified)
-  Future<bool> declineCallInvitation(String callId) async {
-    try {
-      log('❌ Declining call invitation: $callId');
-      return true;
-    } catch (e) {
-      log('❌ Error declining call invitation: $e');
-      return false;
-    }
-  }
-
-  /// Cancel outgoing call invitation (simplified)
-  Future<bool> cancelCallInvitation(String callId) async {
-    try {
-      log('🚫 Canceling call invitation: $callId');
-      return true;
-    } catch (e) {
-      log('❌ Error canceling call invitation: $e');
-      return false;
-    }
-  }
-
-  /// Update call status and duration
-  Future<bool> updateCallStatus(String callId, CallStatus status, {num? duration}) async {
-    try {
-      // First, check if the call document exists
-      final docSnapshot = await callsCollection.doc(callId).get();
-
-      if (!docSnapshot.exists) {
-        log('⚠️ Call document not found: $callId - Cannot update status');
-        return false;
+      // Apply pagination cursor if provided
+      if (afterTime != null) {
+        final timestamp = Timestamp.fromDate(afterTime);
+        outgoingQuery = outgoingQuery.startAfter([timestamp]);
+        incomingQuery = incomingQuery.startAfter([timestamp]);
       }
 
-      final updateData = <String, dynamic>{
-        'callStatus': status.name,
-        'time': DateTime.now().millisecondsSinceEpoch,
-      };
+      // Fetch both
+      final results = await Future.wait([
+        outgoingQuery.get(),
+        incomingQuery.get(),
+      ]);
 
-      if (duration != null) {
-        updateData['callDuration'] = duration;
+      for (final snapshot in results) {
+        for (final doc in snapshot.docs) {
+          allCalls.add(CallModel.fromMap(doc.data()));
+        }
       }
 
-      await callsCollection.doc(callId).update(updateData);
+      // Sort and limit
+      allCalls.sort((a, b) =>
+          (b.time ?? DateTime.now()).compareTo(a.time ?? DateTime.now()));
 
-      log('✅ Call status updated: $callId -> ${status.name}');
-      return true;
-    } catch (e) {
-      log('❌ Error updating call status: $e');
-      return false;
-    }
-  }
-
-  /// Get call by ID
-  Future<CallModel?> getCallById(String callId) async {
-    try {
-      DocumentSnapshot doc = await callsCollection.doc(callId).get();
-      if (doc.exists) {
-        return CallModel.fromMap(doc.data() as Map<String, dynamic>);
+      if (allCalls.length > pageSize) {
+        return allCalls.take(pageSize).toList();
       }
-      return null;
+
+      return allCalls;
     } catch (e) {
-      log('❌ Error getting call by ID: $e');
-      return null;
+      log('[CallDataSources] Error loading more calls: $e');
+      return [];
     }
   }
 
-  /// Update call with duration when call ends
-  Future<bool> endCall(String callId, num duration) async {
+  /// Get missed calls count for a user.
+  Future<int> getMissedCallsCount(String userId) async {
     try {
-      await updateCallStatus(callId, CallStatus.ended, duration: duration);
-      log('✅ Call ended: $callId with duration: ${duration}s');
-      return true;
+      final snapshot = await _callsCollection
+          .where('calleeId', isEqualTo: userId)
+          .where('callStatus', isEqualTo: CallStatus.missed.name)
+          .count()
+          .get();
+
+      return snapshot.count ?? 0;
     } catch (e) {
-      log('❌ Error ending call: $e');
-      return false;
+      log('[CallDataSources] Error getting missed calls count: $e');
+      return 0;
     }
   }
 
-  /// Check if user is in an active call
-  /// Only considers calls that are actually ongoing: outgoing, incoming, ringing, or connected
-  /// Excludes ended, canceled, and missed calls as these are not active
+  // ============================================================
+  // ACTIVE CALL MANAGEMENT
+  // ============================================================
+
+  /// Check if user is currently in an active call.
   Future<bool> isUserInActiveCall(String userId) async {
     try {
-      // Check outgoing calls that are still active
-      final activeOutgoingCallsQuery = await callsCollection
+      final activeStatuses = [
+        CallStatus.outgoing.name,
+        CallStatus.incoming.name,
+        CallStatus.ringing.name,
+        CallStatus.connected.name,
+      ];
+
+      // Check outgoing
+      final outgoingSnapshot = await _callsCollection
           .where('callerId', isEqualTo: userId)
-          .where('callStatus', whereIn: [
-            CallStatus.outgoing.name,
-            CallStatus.ringing.name,
-            CallStatus.connected.name
-          ])
+          .where('callStatus', whereIn: activeStatuses)
+          .limit(1)
           .get();
 
-      // Check incoming calls that are still active
-      final activeIncomingCallsQuery = await callsCollection
+      if (outgoingSnapshot.docs.isNotEmpty) {
+        return true;
+      }
+
+      // Check incoming
+      final incomingSnapshot = await _callsCollection
           .where('calleeId', isEqualTo: userId)
-          .where('callStatus', whereIn: [
-            CallStatus.incoming.name,
-            CallStatus.ringing.name,
-            CallStatus.connected.name
-          ])
+          .where('callStatus', whereIn: activeStatuses)
+          .limit(1)
           .get();
 
-      final hasActiveOutgoing = activeOutgoingCallsQuery.docs.isNotEmpty;
-      final hasActiveIncoming = activeIncomingCallsQuery.docs.isNotEmpty;
-
-      log('🔍 Active call check for user $userId:');
-      log('   Active outgoing calls: ${activeOutgoingCallsQuery.docs.length}');
-      log('   Active incoming calls: ${activeIncomingCallsQuery.docs.length}');
-      log('   Is in active call: ${hasActiveOutgoing || hasActiveIncoming}');
-
-      return hasActiveOutgoing || hasActiveIncoming;
+      return incomingSnapshot.docs.isNotEmpty;
     } catch (e) {
-      log('❌ Error checking active calls: $e');
+      log('[CallDataSources] Error checking active call: $e');
       return false;
     }
   }
 
-  /// Clean up stale calls that might be stuck in active states
-  /// This helps prevent false positives in isUserInActiveCall
-  Future<void> cleanupStaleCalls(String userId) async {
+  /// Get active call for user if any.
+  Future<CallModel?> getActiveCallForUser(String userId) async {
     try {
-      // Find calls that are older than 5 minutes and still in active states
-      final fiveMinutesAgo = DateTime.now().subtract(const Duration(minutes: 5));
+      final activeStatuses = [
+        CallStatus.outgoing.name,
+        CallStatus.incoming.name,
+        CallStatus.ringing.name,
+        CallStatus.connected.name,
+      ];
 
-      // Clean up outgoing calls
-      final staleOutgoingCalls = await callsCollection
+      // Check outgoing
+      final outgoingSnapshot = await _callsCollection
           .where('callerId', isEqualTo: userId)
-          .where('callStatus', whereIn: [
-            CallStatus.outgoing.name,
-            CallStatus.ringing.name,
-            CallStatus.connected.name
-          ])
-          .where('time', isLessThan: fiveMinutesAgo.millisecondsSinceEpoch)
+          .where('callStatus', whereIn: activeStatuses)
+          .limit(1)
           .get();
 
-      // Clean up incoming calls
-      final staleIncomingCalls = await callsCollection
+      if (outgoingSnapshot.docs.isNotEmpty) {
+        return CallModel.fromMap(outgoingSnapshot.docs.first.data());
+      }
+
+      // Check incoming
+      final incomingSnapshot = await _callsCollection
           .where('calleeId', isEqualTo: userId)
-          .where('callStatus', whereIn: [
-            CallStatus.incoming.name,
-            CallStatus.ringing.name,
-            CallStatus.connected.name
-          ])
-          .where('time', isLessThan: fiveMinutesAgo.millisecondsSinceEpoch)
+          .where('callStatus', whereIn: activeStatuses)
+          .limit(1)
           .get();
 
-      // Update stale calls to ended status
-      for (var doc in staleOutgoingCalls.docs) {
-        await doc.reference.update({
-          'callStatus': CallStatus.ended.name,
-          'time': DateTime.now().millisecondsSinceEpoch,
-        });
-        log('🧹 Cleaned up stale outgoing call: ${doc.id}');
+      if (incomingSnapshot.docs.isNotEmpty) {
+        return CallModel.fromMap(incomingSnapshot.docs.first.data());
       }
 
-      for (var doc in staleIncomingCalls.docs) {
-        await doc.reference.update({
-          'callStatus': CallStatus.ended.name,
-          'time': DateTime.now().millisecondsSinceEpoch,
-        });
-        log('🧹 Cleaned up stale incoming call: ${doc.id}');
-      }
-
-      if (staleOutgoingCalls.docs.isNotEmpty || staleIncomingCalls.docs.isNotEmpty) {
-        log('✅ Cleaned up ${staleOutgoingCalls.docs.length + staleIncomingCalls.docs.length} stale calls for user $userId');
-      }
+      return null;
     } catch (e) {
-      log('❌ Error cleaning up stale calls: $e');
+      log('[CallDataSources] Error getting active call: $e');
+      return null;
     }
   }
 
-  /// Initialize Zego UIKit for a specific user (call this after login)
-  Future<void> initializeZegoForUser(String userID, String userName) async {
+  // ============================================================
+  // CLEANUP OPERATIONS
+  // ============================================================
+
+  /// Clean up stale calls that are stuck in active states.
+  ///
+  /// Marks calls older than [staleThresholdMinutes] as ended.
+  Future<int> cleanupStaleCalls(
+    String userId, {
+    int staleThresholdMinutes = 5,
+  }) async {
     try {
-      await ZegoUIKitPrebuiltCallInvitationService().init(
-        appID: AppConstants.appID,
-        appSign: AppConstants.appSign,
-        userID: userID,
-        userName: userName,
-        plugins: [ZegoUIKitSignalingPlugin()],
-      );
-      log('✅ Zego initialized for user: $userID');
+      final cutoffTime = DateTime.now()
+          .subtract(Duration(minutes: staleThresholdMinutes))
+          .millisecondsSinceEpoch;
+
+      final activeStatuses = [
+        CallStatus.outgoing.name,
+        CallStatus.incoming.name,
+        CallStatus.ringing.name,
+        CallStatus.connected.name,
+      ];
+
+      int cleanedCount = 0;
+
+      // Clean outgoing
+      final staleOutgoing = await _callsCollection
+          .where('callerId', isEqualTo: userId)
+          .where('callStatus', whereIn: activeStatuses)
+          .where('time', isLessThan: cutoffTime)
+          .get();
+
+      // Clean incoming
+      final staleIncoming = await _callsCollection
+          .where('calleeId', isEqualTo: userId)
+          .where('callStatus', whereIn: activeStatuses)
+          .where('time', isLessThan: cutoffTime)
+          .get();
+
+      // Batch update
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (final doc in [...staleOutgoing.docs, ...staleIncoming.docs]) {
+        batch.update(doc.reference, {
+          'callStatus': CallStatus.ended.name,
+        });
+        cleanedCount++;
+      }
+
+      if (cleanedCount > 0) {
+        await batch.commit();
+        log('[CallDataSources] Cleaned up $cleanedCount stale calls');
+      }
+
+      return cleanedCount;
     } catch (e) {
-      log('❌ Error initializing Zego for user $userID: $e');
+      log('[CallDataSources] Error cleaning up stale calls: $e');
+      return 0;
+    }
+  }
+
+  /// Delete all calls for a user (use with caution).
+  Future<bool> deleteAllUserCalls(String userId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+
+      final outgoingDocs = await _callsCollection
+          .where('callerId', isEqualTo: userId)
+          .get();
+
+      final incomingDocs = await _callsCollection
+          .where('calleeId', isEqualTo: userId)
+          .get();
+
+      for (final doc in [...outgoingDocs.docs, ...incomingDocs.docs]) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+
+      log('[CallDataSources] Deleted all calls for user: $userId');
+      return true;
+    } catch (e) {
+      log('[CallDataSources] Error deleting all calls: $e');
+      return false;
+    }
+  }
+
+  // ============================================================
+  // ZEGO SERVICE INTEGRATION
+  // ============================================================
+
+  /// Initialize ZEGO for user login.
+  ///
+  /// This delegates to ZegoCallService for actual ZEGO operations.
+  Future<void> onUserLogin(String userId, String userName) async {
+    try {
+      await ZegoCallService.instance.loginUser(
+        userId: userId,
+        userName: userName,
+      );
+
+      // Clean up any stale calls from previous sessions
+      await cleanupStaleCalls(userId);
+
+      log('[CallDataSources] User logged in to call service: $userId');
+    } catch (e) {
+      log('[CallDataSources] Error during user login: $e');
       rethrow;
     }
   }
 
-  /// on App's user logout
+  /// Logout user from ZEGO.
   void onUserLogout() {
-    /// 1.2.2. de-initialization ZegoUIKitPrebuiltCallInvitationService
-    /// when app's user is logged out
-    ZegoUIKitPrebuiltCallInvitationService().uninit();
+    ZegoCallService.instance.logoutUser();
+    log('[CallDataSources] User logged out from call service');
   }
 }

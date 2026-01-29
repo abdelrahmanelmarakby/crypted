@@ -71,19 +71,43 @@ class ProfileHeaderContact extends GetView<ContactInfoController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircleAvatar(
-                backgroundColor: ColorsManager.backgroundIconSetting,
-                radius: Radiuss.xXLarge,
-                child: SvgPicture.asset(
-                  'assets/icons/call-calling.svg',
-                  colorFilter: ColorFilter.mode(
-                    ColorsManager.primary,
-                    BlendMode.srcIn,
+              // Audio call button
+              GestureDetector(
+                onTap: () => controller.startCall(isVideo: false),
+                child: CircleAvatar(
+                  backgroundColor: ColorsManager.backgroundIconSetting,
+                  radius: Radiuss.xXLarge,
+                  child: SvgPicture.asset(
+                    'assets/icons/call-calling.svg',
+                    colorFilter: ColorFilter.mode(
+                      ColorsManager.primary,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
               ),
 
               SizedBox(width: Sizes.size10),
+
+              // Video call button
+              GestureDetector(
+                onTap: () => controller.startCall(isVideo: true),
+                child: CircleAvatar(
+                  backgroundColor: ColorsManager.backgroundIconSetting,
+                  radius: Radiuss.xXLarge,
+                  child: SvgPicture.asset(
+                    'assets/icons/video.svg',
+                    colorFilter: ColorFilter.mode(
+                      ColorsManager.primary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(width: Sizes.size10),
+
+              // Search button
               CircleAvatar(
                 backgroundColor: ColorsManager.backgroundIconSetting,
                 radius: Radiuss.xXLarge,
