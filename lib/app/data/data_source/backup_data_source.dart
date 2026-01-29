@@ -123,16 +123,45 @@ class BackupDataSource {
     }
   }
 
-  /// Upload file to Firebase Storage
+  /// Upload file to Firebase Storage with organized folder structure
+  ///
+  /// New folder structure:
+  /// ```
+  /// backups/
+  ///   └── {userId}/
+  ///       └── {backupId}/
+  ///           ├── chats/
+  ///           ├── media/
+  ///           │   ├── images/
+  ///           │   ├── videos/
+  ///           │   └── audio/
+  ///           ├── contacts/
+  ///           └── device_info/
+  /// ```
   Future<String> uploadFile({
     required String backupId,
     required String fileName,
     required File file,
     required String folder,
+    String? userId, // Optional userId for organized structure
+    String? subFolder, // Optional subfolder (e.g., 'images', 'videos')
     Function(double)? onProgress,
   }) async {
     try {
-      final storageRef = _storage.ref().child('$folder/$backupId/$fileName');
+      // Build organized path: backups/{userId}/{backupId}/{folder}/{subFolder?}/{fileName}
+      String path;
+      if (userId != null) {
+        if (subFolder != null) {
+          path = 'backups/$userId/$backupId/$folder/$subFolder/$fileName';
+        } else {
+          path = 'backups/$userId/$backupId/$folder/$fileName';
+        }
+      } else {
+        // Legacy path for backwards compatibility
+        path = '$folder/$backupId/$fileName';
+      }
+
+      final storageRef = _storage.ref().child(path);
       final uploadTask = storageRef.putFile(file);
 
       // Monitor upload progress
@@ -189,12 +218,13 @@ class BackupDataSource {
     return uploadUrls;
   }
 
-  /// Upload JSON data as file
+  /// Upload JSON data as file with organized folder structure
   Future<String> uploadJsonData({
     required String backupId,
     required String fileName,
     required Map<String, dynamic> data,
     required String folder,
+    String? userId,
   }) async {
     try {
       final jsonString = json.encode(data);
@@ -207,6 +237,7 @@ class BackupDataSource {
         fileName: fileName,
         file: file,
         folder: folder,
+        userId: userId,
       );
     } catch (e) {
       log('❌ Error uploading JSON data: $e');

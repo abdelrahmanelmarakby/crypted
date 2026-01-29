@@ -145,6 +145,9 @@ Future<bool> _executeBackupInIsolate(BackupJob job) async {
       int failedItems = 0;
       int bytesTransferred = 0;
 
+      // Per-type statistics for UI display
+      final perTypeStats = <String, Map<String, int>>{};
+
       for (final backupType in job.types) {
         try {
           log('🔄 [Isolate] Starting ${backupType.name} backup...');
@@ -165,6 +168,14 @@ Future<bool> _executeBackupInIsolate(BackupJob job) async {
           processedItems += result.successfulItems;
           failedItems += result.failedItems;
           bytesTransferred += result.bytesTransferred;
+
+          // Store per-type statistics for UI display
+          perTypeStats[backupType.name] = {
+            'total': result.totalItems,
+            'successful': result.successfulItems,
+            'failed': result.failedItems,
+            'bytes': result.bytesTransferred,
+          };
 
           // Update progress in Firestore
           await firestore.collection('backup_jobs').doc(job.id).update({
@@ -191,6 +202,7 @@ Future<bool> _executeBackupInIsolate(BackupJob job) async {
               ? BackupStatus.partialSuccess
               : BackupStatus.failed);
 
+      // Update final status with per-type statistics (same as backup_service_v3.dart)
       await firestore.collection('backup_jobs').doc(job.id).update({
         'status': status.name,
         'completedAt': FieldValue.serverTimestamp(),
@@ -198,9 +210,17 @@ Future<bool> _executeBackupInIsolate(BackupJob job) async {
         'processedItems': processedItems,
         'failedItems': failedItems,
         'bytesTransferred': bytesTransferred,
+        // Per-type statistics for UI display
+        'perTypeStats': perTypeStats,
+        // Convenience fields for stats widget
+        'chats_count': perTypeStats['chats']?['successful'] ?? 0,
+        'media_count': perTypeStats['media']?['successful'] ?? 0,
+        'contacts_count': perTypeStats['contacts']?['successful'] ?? 0,
+        'files_count': perTypeStats['deviceInfo']?['successful'] ?? 0,
       });
 
       log('✅ [Isolate] Backup job completed with status: ${status.name}');
+      log('📊 [Isolate] Per-type stats: chats=${perTypeStats['chats']?['successful']}, media=${perTypeStats['media']?['successful']}, contacts=${perTypeStats['contacts']?['successful']}');
       return true;
 
     } catch (e, stackTrace) {

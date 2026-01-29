@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart';
@@ -29,6 +31,12 @@ class BackupController extends GetxController {
 
   // Current backup ID
   final RxString currentBackupId = ''.obs;
+
+  // Detailed media progress (new!)
+  final RxString currentFileName = ''.obs;
+  final RxInt currentFileIndex = 0.obs;
+  final RxInt totalFiles = 0.obs;
+  final RxString fileStatus = ''.obs;
 
   // Backup history
   final RxList<BackupHistoryItem> backupHistory = <BackupHistoryItem>[].obs;
@@ -98,10 +106,24 @@ class BackupController extends GetxController {
     // Progress stream (real-time updates)
     _progressSubscription = _backupService.progressStream.listen((progress) {
       backupProgress.value = progress.percentage / 100.0;
-      backupStatus.value = 'Processing ${progress.currentType?.name ?? "data"}... '
-          '${progress.processedItems}/${progress.totalItems}';
 
-      log('📊 Backup progress: ${progress.percentage}% - ${progress.formattedSize}');
+      // Update detailed file progress if available (from media uploads)
+      if (progress.currentFileName != null) {
+        currentFileName.value = progress.currentFileName!;
+        currentFileIndex.value = progress.currentFileIndex ?? 0;
+        totalFiles.value = progress.totalFiles ?? 0;
+        fileStatus.value = progress.fileStatus ?? '';
+
+        // Show detailed file status
+        backupStatus.value = progress.statusMessage;
+      } else {
+        // Show general progress
+        final typeLabel = progress.currentType?.name ?? 'data';
+        backupStatus.value = 'Processing $typeLabel... '
+            '${progress.processedItems}/${progress.totalItems}';
+      }
+
+      log('📊 Backup progress: ${progress.percentage.toStringAsFixed(1)}% - ${progress.formattedSize}');
     });
 
     // Event stream (state changes)
@@ -162,22 +184,59 @@ class BackupController extends GetxController {
   /// Load backup history from Firestore
   Future<void> _loadBackupHistory() async {
     try {
-      // Get latest backup progress
-      if (currentBackupId.value.isNotEmpty) {
-        final progress = await _backupService.getBackupProgress(currentBackupId.value);
+      String? backupIdToLoad = currentBackupId.value;
 
-        if (progress != null && progress.startedAt != null) {
-          lastBackupDate.value = progress.startedAt;
-          lastBackupStats.value = {
-            'total_items': progress.totalItems,
-            'processed_items': progress.processedItems,
-            'failed_items': progress.failedItems,
-            'bytes_transferred': progress.bytesTransferred,
-            'backup_id': progress.backupId,
-          };
+      // If no current backup ID, find the most recent completed backup
+      if (backupIdToLoad.isEmpty) {
+        backupIdToLoad = await _findLatestCompletedBackupId();
+      }
 
-          // Add to history
+      if (backupIdToLoad == null || backupIdToLoad.isEmpty) {
+        log('ℹ️ No backup history found');
+        return;
+      }
+
+      final progress = await _backupService.getBackupProgress(backupIdToLoad);
+
+      if (progress != null && progress.startedAt != null) {
+        lastBackupDate.value = progress.startedAt;
+
+        // Fetch detailed stats from Firestore backup job
+        final detailedStats = await _fetchDetailedBackupStats(backupIdToLoad);
+
+        lastBackupStats.value = {
+          // Per-type counts for the stats widget
+          // Widget variable names don't match labels:
+          // - contacts_count displays as "Chats"
+          // - images_count displays as "Media"
+          // - files_count displays as "Files"
+          'contacts_count': detailedStats['chats_count'] ?? 0,
+          'images_count': detailedStats['media_count'] ?? 0,
+          'files_count': detailedStats['files_count'] ?? 0,
+          // Storage info (convert bytes to MB)
+          'storage_used': (progress.bytesTransferred / (1024 * 1024)).round(),
+          'storage_limit': 5000, // 5GB default limit
+          // Also keep raw data
+          'total_items': progress.totalItems,
+          'processed_items': progress.processedItems,
+          'failed_items': progress.failedItems,
+          'bytes_transferred': progress.bytesTransferred,
+          'backup_id': progress.backupId,
+        };
+
+        log('📊 Loaded backup stats:');
+        log('   - Chats: ${detailedStats['chats_count']}');
+        log('   - Media: ${detailedStats['media_count']}');
+        log('   - Files: ${detailedStats['files_count']}');
+
+        // Add to history if not already present
+        final alreadyInHistory = backupHistory.any(
+          (h) => h.id == progress.backupId,
+        );
+
+        if (!alreadyInHistory) {
           backupHistory.insert(0, BackupHistoryItem(
+            id: progress.backupId,
             date: progress.startedAt!,
             success: progress.failedItems == 0,
             itemsBackedUp: progress.processedItems,
@@ -188,6 +247,81 @@ class BackupController extends GetxController {
     } catch (e) {
       log('Error loading backup history: $e');
     }
+  }
+
+  /// Find the most recent completed backup ID for the current user
+  Future<String?> _findLatestCompletedBackupId() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return null;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('backup_jobs')
+          .where('userId', isEqualTo: userId)
+          .where('status', whereIn: ['completed', 'partialSuccess'])
+          .orderBy('completedAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+
+      final backupId = snapshot.docs.first.id;
+      log('📂 Found latest completed backup: $backupId');
+      return backupId;
+    } catch (e) {
+      log('Error finding latest backup: $e');
+      return null;
+    }
+  }
+
+  /// Fetch detailed per-type backup statistics from Firestore
+  Future<Map<String, int>> _fetchDetailedBackupStats(String backupId) async {
+    try {
+      // Read directly from Firestore backup_jobs document
+      final doc = await FirebaseFirestore.instance
+          .collection('backup_jobs')
+          .doc(backupId)
+          .get();
+
+      if (!doc.exists) {
+        log('⚠️ Backup job document not found: $backupId');
+        return _getEmptyStats();
+      }
+
+      final data = doc.data()!;
+
+      // Read the per-type stats saved by BackupServiceV3
+      final int chatsCount = data['chats_count'] ?? 0;
+      final int mediaCount = data['media_count'] ?? 0;
+      final int contactsCount = data['contacts_count'] ?? 0;
+      final int filesCount = data['files_count'] ?? 0;
+
+      log('📊 Loaded per-type stats from Firestore:');
+      log('   - Chats: $chatsCount');
+      log('   - Media: $mediaCount');
+      log('   - Contacts: $contactsCount');
+      log('   - Files: $filesCount');
+
+      return {
+        'chats_count': chatsCount,
+        'media_count': mediaCount,
+        'contacts_count': contactsCount,
+        'files_count': filesCount,
+      };
+    } catch (e) {
+      log('Error fetching detailed stats: $e');
+      return _getEmptyStats();
+    }
+  }
+
+  /// Helper to return empty stats map
+  Map<String, int> _getEmptyStats() {
+    return {
+      'chats_count': 0,
+      'media_count': 0,
+      'contacts_count': 0,
+      'files_count': 0,
+    };
   }
 
   /// Load backup settings

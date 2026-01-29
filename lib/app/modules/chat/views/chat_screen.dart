@@ -3,11 +3,14 @@ import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
+import 'package:crypted_app/app/modules/chat/widgets/animated_message_item.dart';
 import 'package:crypted_app/app/modules/chat/widgets/attachment_widget.dart';
 import 'package:crypted_app/app/modules/chat/widgets/blocked_chat_banner.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_wallpaper_picker.dart';
 import 'package:crypted_app/app/modules/chat/widgets/chat_search_bar.dart';
 import 'package:crypted_app/app/modules/chat/widgets/msg_builder.dart';
+import 'package:crypted_app/app/modules/chat/widgets/ui/swipeable_timestamp.dart';
+import 'package:crypted_app/app/modules/chat/widgets/ui/unread_message_divider.dart';
 import 'package:crypted_app/app/core/connectivity/connectivity_service.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
@@ -560,6 +563,24 @@ class PrivateChatScreen extends GetView<ChatController> {
       senderImage = otherUser?.imageUrl;
     }
 
+    // UX-001: Check if this is a new message (for slide-in animation)
+    // Messages sent in the last 2 seconds are considered "new"
+    final isNewMessage = DateTime.now().difference(currentTime).inSeconds < 2;
+
+    // UX-007: Determine if unread divider should show above this message
+    // List is reversed, so we show divider when current is "new" but previous (older in list) is not
+    final entryTime = controller.chatEntryTime.value;
+    final isCurrentNew = entryTime != null &&
+        currentTime.isAfter(entryTime) &&
+        !isMe; // Only count received messages as "new"
+    final isPreviousOld = previousMsg == null ||
+        entryTime == null ||
+        !previousMsg.timestamp.isAfter(entryTime) ||
+        previousMsg.senderId == UserService.currentUser.value?.uid;
+    final showDividerHere = controller.showUnreadDivider.value &&
+        isCurrentNew &&
+        isPreviousOld;
+
     return Column(
       children: [
         // Date separator
@@ -567,15 +588,29 @@ class PrivateChatScreen extends GetView<ChatController> {
             (previousTime != null && !_isSameDay(previousTime, currentTime)))
           _buildDateSeparator(currentTime),
 
-        // Message
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          child: MessageBuilder(
-            !isMe,
-            messageModel: currentMsg,
-            timestamp: currentMsg.timestamp.toIso8601String(),
-            senderName: senderName,
-            senderImage: senderImage,
+        // UX-007: Unread message divider (shows once above first new message)
+        if (showDividerHere)
+          UnreadMessageDivider(
+            onDismiss: () => controller.dismissUnreadDivider(),
+          ),
+
+        // UX-006: Swipeable timestamp wrapper + slide-in animation
+        SwipeableTimestamp(
+          timestamp: currentTime,
+          isMe: isMe,
+          child: AnimatedMessageItem(
+            isMe: isMe,
+            isNewMessage: isNewMessage,
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              child: MessageBuilder(
+                !isMe,
+                messageModel: currentMsg,
+                timestamp: currentMsg.timestamp.toIso8601String(),
+                senderName: senderName,
+                senderImage: senderImage,
+              ),
+            ),
           ),
         ),
       ],

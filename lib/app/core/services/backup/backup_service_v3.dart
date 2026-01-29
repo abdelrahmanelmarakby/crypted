@@ -81,6 +81,11 @@ class BackupServiceV3 {
   // Track running backup IDs
   final Set<String> _runningBackupIds = {};
 
+  // Auto-backup configuration
+  static const int _autoBackupIntervalDays = 7;
+  static const String _autoBackupPrefsKey = 'auto_backup_enabled';
+  static const String _lastAutoBackupKey = 'last_auto_backup_check';
+
   /// Initialize backup service
   /// Call this once during app startup
   Future<void> initialize() async {
@@ -110,10 +115,314 @@ class BackupServiceV3 {
 
       // Resume any interrupted backups from previous session
       await _resumeInterruptedBackups();
+
+      // Check for auto-backup (runs in background, doesn't block)
+      _checkAutoBackup();
     } catch (e, stackTrace) {
       log('❌ Failed to initialize BackupServiceV3: $e', stackTrace: stackTrace);
       rethrow;
     }
+  }
+
+  /// Check if auto-backup should run and start it in background
+  /// This runs asynchronously and doesn't block app startup
+  void _checkAutoBackup() {
+    // Run in background to not block app startup
+    Future.microtask(() async {
+      try {
+        final userId = _auth.currentUser?.uid;
+        if (userId == null) {
+          log('⏭️ Auto-backup skipped: No user logged in');
+          return;
+        }
+
+        // Check if auto-backup is enabled (default: true)
+        final isEnabled = await _isAutoBackupEnabled();
+        if (!isEnabled) {
+          log('⏭️ Auto-backup skipped: Disabled by user');
+          return;
+        }
+
+        // Check last backup date
+        final lastBackupDate = await getLastBackupDate(userId);
+        final now = DateTime.now();
+
+        if (lastBackupDate == null) {
+          log('📅 No previous backup found, starting auto-backup...');
+          await _startAutoBackup();
+          return;
+        }
+
+        final daysSinceLastBackup = now.difference(lastBackupDate).inDays;
+        log('📅 Last backup: ${lastBackupDate.toIso8601String()} ($daysSinceLastBackup days ago)');
+
+        if (daysSinceLastBackup >= _autoBackupIntervalDays) {
+          log('🔄 Auto-backup triggered: $daysSinceLastBackup days since last backup (threshold: $_autoBackupIntervalDays days)');
+          await _startAutoBackup();
+        } else {
+          log('✅ Auto-backup not needed: Only $daysSinceLastBackup days since last backup');
+        }
+      } catch (e) {
+        log('⚠️ Auto-backup check failed: $e');
+        // Non-fatal - don't rethrow
+      }
+    });
+  }
+
+  /// Start automatic background backup with default types
+  Future<void> _startAutoBackup() async {
+    try {
+      // Default auto-backup includes all types
+      final autoBackupTypes = {
+        BackupType.chats,
+        BackupType.media,
+        BackupType.contacts,
+        BackupType.deviceInfo,
+      };
+
+      log('🚀 Starting automatic background backup...');
+
+      // Start backup (runs in background via WorkManager)
+      final backupId = await startBackup(
+        types: autoBackupTypes,
+        options: BackupOptions(
+          wifiOnly: true, // Only on WiFi to save mobile data
+          compressMedia: true,
+          incrementalOnly: true, // Only backup changes
+        ),
+      );
+
+      log('✅ Auto-backup started: $backupId');
+
+      // Emit event for UI notification
+      _eventController.add(BackupEvent(
+        type: BackupEventType.started,
+        backupId: backupId,
+        message: 'Automatic backup started',
+        data: {'isAutoBackup': true},
+      ));
+    } catch (e) {
+      log('❌ Failed to start auto-backup: $e');
+    }
+  }
+
+  /// Get the date of the last completed backup for a user
+  Future<DateTime?> getLastBackupDate(String userId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('backup_jobs')
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: BackupStatus.completed.name)
+          .orderBy('completedAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return null;
+      }
+
+      final doc = querySnapshot.docs.first;
+      final completedAt = doc.data()['completedAt'];
+
+      if (completedAt is Timestamp) {
+        return completedAt.toDate();
+      } else if (completedAt is String) {
+        return DateTime.tryParse(completedAt);
+      }
+
+      return null;
+    } catch (e) {
+      log('⚠️ Error getting last backup date: $e');
+      return null;
+    }
+  }
+
+  /// Check if auto-backup is enabled
+  Future<bool> _isAutoBackupEnabled() async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return false;
+
+      // Check user preferences in Firestore
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (!userDoc.exists) return true; // Default: enabled
+
+      final prefs = userDoc.data()?['backupPreferences'] as Map<String, dynamic>?;
+      return prefs?['autoBackupEnabled'] ?? true; // Default: enabled
+    } catch (e) {
+      log('⚠️ Error checking auto-backup preference: $e');
+      return true; // Default: enabled on error
+    }
+  }
+
+  /// Enable or disable auto-backup
+  Future<void> setAutoBackupEnabled(bool enabled) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return;
+
+      await _firestore.collection('users').doc(userId).set({
+        'backupPreferences': {
+          'autoBackupEnabled': enabled,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+
+      log('✅ Auto-backup ${enabled ? 'enabled' : 'disabled'}');
+    } catch (e) {
+      log('❌ Error setting auto-backup preference: $e');
+    }
+  }
+
+  /// Get auto-backup interval in days
+  int get autoBackupIntervalDays => _autoBackupIntervalDays;
+
+  /// Manually trigger auto-backup check (for testing or settings)
+  Future<void> triggerAutoBackupCheck() async {
+    _checkAutoBackup();
+  }
+
+  /// Schedule nightly backup at approximately 2 AM
+  /// Uses WorkManager's periodic task scheduling
+  Future<void> scheduleNightlyBackup({
+    required Set<BackupType> types,
+    BackupOptions? options,
+  }) async {
+    _ensureInitialized();
+
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      throw BackupException('User not authenticated');
+    }
+
+    try {
+      log('📅 Scheduling nightly backup at ~2 AM');
+
+      // Save scheduled backup configuration
+      await _firestore.collection('users').doc(userId).set({
+        'backupPreferences': {
+          'autoBackupEnabled': true,
+          'scheduledBackupTypes': types.map((t) => t.name).toList(),
+          'scheduledBackupOptions': (options ?? BackupOptions.defaults()).toJson(),
+          'scheduleType': 'nightly',
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+
+      // Calculate delay until 2 AM
+      final now = DateTime.now();
+      var target = DateTime(now.year, now.month, now.day, 2, 0);
+      if (now.hour >= 2) {
+        target = target.add(const Duration(days: 1));
+      }
+      final initialDelay = target.difference(now);
+
+      // Schedule via WorkManager
+      await BackupWorker.instance.schedulePeriodicBackup(
+        taskId: 'nightly_backup',
+        types: types,
+        options: options ?? BackupOptions.defaults(),
+        frequency: const Duration(hours: 24),
+        initialDelay: initialDelay,
+      );
+
+      log('✅ Nightly backup scheduled successfully');
+    } catch (e) {
+      log('❌ Failed to schedule nightly backup: $e');
+      rethrow;
+    }
+  }
+
+  /// Schedule weekly backup (runs Sunday at 2 AM)
+  /// Uses WorkManager's periodic task scheduling
+  Future<void> scheduleWeeklyBackup({
+    required Set<BackupType> types,
+    BackupOptions? options,
+  }) async {
+    _ensureInitialized();
+
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      throw BackupException('User not authenticated');
+    }
+
+    try {
+      log('📅 Scheduling weekly backup');
+
+      // Save scheduled backup configuration
+      await _firestore.collection('users').doc(userId).set({
+        'backupPreferences': {
+          'autoBackupEnabled': true,
+          'scheduledBackupTypes': types.map((t) => t.name).toList(),
+          'scheduledBackupOptions': (options ?? BackupOptions.defaults()).toJson(),
+          'scheduleType': 'weekly',
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+
+      // Calculate delay until Sunday 2 AM
+      final now = DateTime.now();
+      var daysUntilSunday = (DateTime.sunday - now.weekday) % 7;
+      if (daysUntilSunday == 0 && now.hour >= 2) {
+        daysUntilSunday = 7; // Next Sunday
+      }
+      final target = DateTime(now.year, now.month, now.day, 2, 0)
+          .add(Duration(days: daysUntilSunday));
+      final initialDelay = target.difference(now);
+
+      // Schedule via WorkManager
+      await BackupWorker.instance.schedulePeriodicBackup(
+        taskId: 'weekly_backup',
+        types: types,
+        options: options ?? BackupOptions.defaults(),
+        frequency: const Duration(days: 7),
+        initialDelay: initialDelay,
+      );
+
+      log('✅ Weekly backup scheduled successfully');
+    } catch (e) {
+      log('❌ Failed to schedule weekly backup: $e');
+      rethrow;
+    }
+  }
+
+  /// Cancel all scheduled backups
+  Future<void> cancelScheduledBackups() async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return;
+
+      // Update preferences
+      await _firestore.collection('users').doc(userId).set({
+        'backupPreferences': {
+          'autoBackupEnabled': false,
+          'scheduleType': null,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+
+      // Cancel WorkManager tasks
+      await BackupWorker.instance.cancelAllBackups();
+
+      log('✅ Scheduled backups cancelled');
+    } catch (e) {
+      log('❌ Failed to cancel scheduled backups: $e');
+    }
+  }
+
+  /// Get days since last backup (useful for UI display)
+  Future<int?> getDaysSinceLastBackup() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return null;
+
+    final lastBackup = await getLastBackupDate(userId);
+    if (lastBackup == null) return null;
+
+    return DateTime.now().difference(lastBackup).inDays;
   }
 
   /// Resume any backups that were interrupted (app killed, device restarted)
@@ -279,6 +588,124 @@ class BackupServiceV3 {
     }
   }
 
+  /// Estimate backup size and item count before starting
+  ///
+  /// Returns estimation data including:
+  /// - Total estimated items per type
+  /// - Estimated total size in bytes
+  /// - Estimated time in seconds
+  Future<BackupEstimation> estimateBackupSize({
+    required Set<BackupType> types,
+  }) async {
+    _ensureInitialized();
+
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      throw BackupException('User not authenticated');
+    }
+
+    log('📊 Estimating backup size for types: ${types.map((t) => t.name).join(', ')}');
+
+    int totalItems = 0;
+    int estimatedBytes = 0;
+    final perTypeEstimates = <BackupType, BackupTypeEstimate>{};
+
+    // Create temp context for estimation
+    final tempContext = BackupContext(
+      userId: userId,
+      backupId: 'estimation_${DateTime.now().millisecondsSinceEpoch}',
+      options: const BackupOptions(),
+      firestore: _firestore,
+    );
+
+    for (final type in types) {
+      final strategy = _strategies[type];
+      if (strategy == null) continue;
+
+      try {
+        final itemCount = await strategy.estimateItemCount(tempContext);
+        // Use dynamic estimation from strategy (samples real data)
+        final estimatedSize = await _estimateSizeForType(type, itemCount, tempContext);
+
+        perTypeEstimates[type] = BackupTypeEstimate(
+          type: type,
+          itemCount: itemCount,
+          estimatedBytes: estimatedSize,
+        );
+
+        totalItems += itemCount;
+        estimatedBytes += estimatedSize;
+
+        log('   - ${type.name}: $itemCount items (~${_formatBytes(estimatedSize)})');
+      } catch (e) {
+        log('⚠️ Failed to estimate ${type.name}: $e');
+        perTypeEstimates[type] = BackupTypeEstimate(
+          type: type,
+          itemCount: 0,
+          estimatedBytes: 0,
+          error: e.toString(),
+        );
+      }
+    }
+
+    // Estimate time based on typical upload speeds (500KB/s conservative estimate)
+    final estimatedSeconds = (estimatedBytes / (500 * 1024)).ceil();
+
+    final estimation = BackupEstimation(
+      totalItems: totalItems,
+      estimatedBytes: estimatedBytes,
+      estimatedSeconds: estimatedSeconds,
+      perTypeEstimates: perTypeEstimates,
+    );
+
+    log('📊 Total estimation: $totalItems items, ${_formatBytes(estimatedBytes)}, ~${estimation.formattedTime}');
+
+    return estimation;
+  }
+
+  /// Estimate size for a backup type based on item count and strategy sampling
+  /// Uses dynamic estimation from strategies with sensible fallbacks
+  Future<int> _estimateSizeForType(
+    BackupType type,
+    int itemCount,
+    BackupContext context,
+  ) async {
+    final strategy = _strategies[type];
+    if (strategy == null) {
+      return itemCount * 1024; // 1KB fallback
+    }
+
+    try {
+      // Use strategy's dynamic estimation (samples real data)
+      final bytesPerItem = await strategy.estimateBytesPerItem(context);
+      return itemCount * bytesPerItem;
+    } catch (e) {
+      log('⚠️ Failed to get dynamic estimate for ${type.name}, using fallback: $e');
+      // Fallback to static estimates if sampling fails
+      return itemCount * _getFallbackBytesPerItem(type);
+    }
+  }
+
+  /// Fallback bytes per item when dynamic estimation fails
+  int _getFallbackBytesPerItem(BackupType type) {
+    switch (type) {
+      case BackupType.chats:
+        return 2 * 1024; // 2KB per chat room
+      case BackupType.media:
+        return 100 * 1024; // 100KB per media file (after compression)
+      case BackupType.contacts:
+        return 1024; // 1KB per contact
+      case BackupType.deviceInfo:
+        return 5 * 1024; // 5KB for device info
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
   /// Request backup permissions
   ///
   /// Returns map of permission name to granted status
@@ -433,8 +860,13 @@ class BackupServiceV3 {
       int failedItems = 0;
       int bytesTransferred = 0;
 
+      // Per-type statistics for UI display
+      final perTypeStats = <String, Map<String, int>>{};
+
       // Execute each backup type
       for (final backupType in job.types) {
+        StreamSubscription? mediaProgressSubscription;
+
         try {
           log('🔄 Starting ${backupType.name} backup...');
 
@@ -452,6 +884,27 @@ class BackupServiceV3 {
             firestore: _firestore,
           );
 
+          // Subscribe to media progress if this is media backup
+          if (backupType == BackupType.media && strategy is MediaBackupStrategy) {
+            mediaProgressSubscription = strategy.progressStream.listen((mediaProgress) {
+              // Forward detailed progress to main stream
+              _progressController.add(BackupProgress(
+                backupId: job.id,
+                totalItems: totalItems,
+                processedItems: processedItems,
+                failedItems: failedItems,
+                currentType: backupType,
+                bytesTransferred: bytesTransferred,
+                startedAt: job.createdAt,
+                // Detailed file progress
+                currentFileName: mediaProgress.currentFileName,
+                currentFileIndex: mediaProgress.currentIndex,
+                totalFiles: mediaProgress.totalFiles,
+                fileStatus: mediaProgress.status,
+              ));
+            });
+          }
+
           // Estimate items first
           final estimatedCount = await strategy.estimateItemCount(context);
           totalItems += estimatedCount;
@@ -459,9 +912,20 @@ class BackupServiceV3 {
           // Execute the strategy
           final result = await strategy.execute(context);
 
+          // Cancel media progress subscription
+          await mediaProgressSubscription?.cancel();
+
           processedItems += result.successfulItems;
           failedItems += result.failedItems;
           bytesTransferred += result.bytesTransferred;
+
+          // Store per-type statistics for UI display
+          perTypeStats[backupType.name] = {
+            'total': result.totalItems,
+            'successful': result.successfulItems,
+            'failed': result.failedItems,
+            'bytes': result.bytesTransferred,
+          };
 
           // Emit progress
           _progressController.add(BackupProgress(
@@ -498,7 +962,7 @@ class BackupServiceV3 {
           ? BackupStatus.completed
           : (processedItems > 0 ? BackupStatus.partialSuccess : BackupStatus.failed);
 
-      // Update final status
+      // Update final status with per-type statistics
       await _firestore.collection('backup_jobs').doc(job.id).update({
         'status': finalStatus.name,
         'completedAt': FieldValue.serverTimestamp(),
@@ -506,6 +970,13 @@ class BackupServiceV3 {
         'processedItems': processedItems,
         'failedItems': failedItems,
         'bytesTransferred': bytesTransferred,
+        // Per-type statistics for UI display
+        'perTypeStats': perTypeStats,
+        // Convenience fields for stats widget
+        'chats_count': perTypeStats['chats']?['successful'] ?? 0,
+        'media_count': perTypeStats['media']?['successful'] ?? 0,
+        'contacts_count': perTypeStats['contacts']?['successful'] ?? 0,
+        'files_count': perTypeStats['deviceInfo']?['successful'] ?? 0,
       });
 
       // Emit completion event
@@ -676,6 +1147,12 @@ class BackupProgress {
   final DateTime? startedAt;
   final DateTime? estimatedCompletion;
 
+  // Detailed file progress (for media uploads)
+  final String? currentFileName;
+  final int? currentFileIndex;
+  final int? totalFiles;
+  final String? fileStatus;
+
   BackupProgress({
     required this.backupId,
     required this.totalItems,
@@ -685,6 +1162,11 @@ class BackupProgress {
     required this.bytesTransferred,
     this.startedAt,
     this.estimatedCompletion,
+    // Detailed file progress
+    this.currentFileName,
+    this.currentFileIndex,
+    this.totalFiles,
+    this.fileStatus,
   });
 
   double get percentage =>
@@ -696,6 +1178,37 @@ class BackupProgress {
       return '${(bytesTransferred / 1024).toStringAsFixed(2)} KB';
     }
     return '${(bytesTransferred / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+
+  /// Human-readable status message
+  String get statusMessage {
+    if (currentFileName != null && currentFileIndex != null && totalFiles != null) {
+      return '[$currentFileIndex/$totalFiles] $currentFileName ${fileStatus ?? ''}';
+    }
+    return 'Processing ${currentType?.name ?? 'data'}... $processedItems/$totalItems';
+  }
+
+  /// Copy with updated file progress
+  BackupProgress copyWithFileProgress({
+    String? currentFileName,
+    int? currentFileIndex,
+    int? totalFiles,
+    String? fileStatus,
+  }) {
+    return BackupProgress(
+      backupId: backupId,
+      totalItems: totalItems,
+      processedItems: processedItems,
+      failedItems: failedItems,
+      currentType: currentType,
+      bytesTransferred: bytesTransferred,
+      startedAt: startedAt,
+      estimatedCompletion: estimatedCompletion,
+      currentFileName: currentFileName ?? this.currentFileName,
+      currentFileIndex: currentFileIndex ?? this.currentFileIndex,
+      totalFiles: totalFiles ?? this.totalFiles,
+      fileStatus: fileStatus ?? this.fileStatus,
+    );
   }
 }
 
@@ -750,6 +1263,66 @@ class BackupException implements Exception {
   String toString() => 'BackupException: $message';
 }
 
+/// Backup size estimation result
+class BackupEstimation {
+  final int totalItems;
+  final int estimatedBytes;
+  final int estimatedSeconds;
+  final Map<BackupType, BackupTypeEstimate> perTypeEstimates;
+
+  BackupEstimation({
+    required this.totalItems,
+    required this.estimatedBytes,
+    required this.estimatedSeconds,
+    required this.perTypeEstimates,
+  });
+
+  /// Formatted estimated time (e.g., "2 min 30 sec")
+  String get formattedTime {
+    if (estimatedSeconds < 60) {
+      return '$estimatedSeconds sec';
+    }
+    final minutes = estimatedSeconds ~/ 60;
+    final seconds = estimatedSeconds % 60;
+    if (seconds == 0) {
+      return '$minutes min';
+    }
+    return '$minutes min $seconds sec';
+  }
+
+  /// Formatted estimated size (e.g., "15.2 MB")
+  String get formattedSize {
+    if (estimatedBytes < 1024) return '$estimatedBytes B';
+    if (estimatedBytes < 1024 * 1024) {
+      return '${(estimatedBytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(estimatedBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+}
+
+/// Estimate for a single backup type
+class BackupTypeEstimate {
+  final BackupType type;
+  final int itemCount;
+  final int estimatedBytes;
+  final String? error;
+
+  BackupTypeEstimate({
+    required this.type,
+    required this.itemCount,
+    required this.estimatedBytes,
+    this.error,
+  });
+
+  String get formattedSize {
+    if (estimatedBytes < 1024) return '$estimatedBytes B';
+    if (estimatedBytes < 1024 * 1024) {
+      return '${(estimatedBytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(estimatedBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+}
+
 /// Backup executor - lightweight wrapper for progress/event callbacks
 class BackupExecutor {
   final FirebaseFirestore firestore;
@@ -770,6 +1343,14 @@ abstract class BackupStrategy {
 
   /// Estimate number of items to backup
   Future<int> estimateItemCount(BackupContext context);
+
+  /// Estimate bytes per item for this strategy
+  /// Override this to provide more accurate estimates based on real data sampling
+  /// Returns bytes per item on average
+  Future<int> estimateBytesPerItem(BackupContext context) async {
+    // Default fallback - subclasses should override with real data sampling
+    return 1024; // 1KB default
+  }
 
   /// Check if item needs backup (for incremental)
   Future<bool> needsBackup(dynamic item, BackupContext context);

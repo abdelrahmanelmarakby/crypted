@@ -23,28 +23,16 @@ class SettingsView extends GetView<SettingsController> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               // Header Section
-              SliverToBoxAdapter(
-                child: Container(
-                  // padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const HeaderSectionWidget(),
-                    ],
-                  ),
-                ),
+              const SliverToBoxAdapter(
+                child: HeaderSectionWidget(),
               ),
-              // // Auto-backup switch with bottom sheet configuration
-              // SliverToBoxAdapter(
-              //   child: const SimpleBackupSwitchWidget(),
-              // ),
               // Settings Section
-              SliverToBoxAdapter(
-                child: const SettingsSectionWidget(),
+              const SliverToBoxAdapter(
+                child: SettingsSectionWidget(),
               ),
               // Bottom Spacing
-              SliverToBoxAdapter(
-                child: const SizedBox(height: 32),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 32),
               ),
             ],
           ),

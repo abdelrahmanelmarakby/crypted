@@ -12,6 +12,7 @@ import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
+import 'package:crypted_app/app/modules/chat/widgets/animated_message_item.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/audio_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/call_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/contact_message.dart';
@@ -205,13 +206,14 @@ class MessageBuilder extends GetView<ChatController> {
                         const SizedBox(height: Sizes.size4),
                         Row(
                           mainAxisSize: MainAxisSize.min,
-                          //  mainAxisAlignment: MainAxisAlignment.start,
                           children: [
+                            // UX-004: Animated delivery status (✓ → ✓✓)
                             if (!senderType)
-                              const Icon(
-                                Icons.done,
+                              AnimatedDeliveryStatus(
+                                state: _getDeliveryState(messageModel),
                                 color: ColorsManager.grey,
-                                size: Sizes.size18,
+                                readColor: ColorsManager.primary,
+                                size: Sizes.size16,
                               ),
                             const SizedBox(width: Sizes.size4),
                             Text(
@@ -412,6 +414,25 @@ class MessageBuilder extends GetView<ChatController> {
         debugPrint("⚠️ Unknown message type: ${msg.runtimeType}");
         return SizedBox(key: key);
     }
+  }
+
+  /// Determine delivery state for message status animation
+  /// Currently supports: sending (UploadingMessage) and sent (has id)
+  /// Can be extended when read receipts are implemented
+  DeliveryState _getDeliveryState(Message msg) {
+    // Uploading messages are still being sent
+    if (msg is UploadingMessage) {
+      return DeliveryState.sending;
+    }
+
+    // Messages with valid id are sent
+    // In future, check msg.isRead and msg.isDelivered when added to model
+    // For now, show as "delivered" (double check) for all sent messages
+    if (msg.id.isNotEmpty) {
+      return DeliveryState.delivered;
+    }
+
+    return DeliveryState.sent;
   }
 
   /// Build reply context widget to show what message is being replied to

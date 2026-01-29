@@ -2,6 +2,8 @@ import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/ui/online_status_indicator.dart';
+import 'package:crypted_app/app/modules/home/widgets/unread_pulse_badge.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/app/widgets/custom_bottom_sheets.dart';
@@ -9,6 +11,7 @@ import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
+import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -396,160 +399,155 @@ class _ChatRowState extends State<ChatRow> {
         ),
       ],
       child: Material(
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: Paddings.xSmall, vertical: Paddings.normal),
-          decoration: BoxDecoration(
-            color: ColorsManager.white,
-            border: Border(
-              top: BorderSide(color: Colors.grey[400]!, width: .2),
-              bottom: BorderSide(color: Colors.grey[400]!, width: .2),
+        color: ColorsManager.white,
+        child: InkWell(
+          onTap: () {
+            Map<String, dynamic> arg = {
+              'members': widget.chatRoom?.members,
+              "blockingUserId": widget.chatRoom?.blockingUserId,
+              "roomId": widget.chatRoom?.id,
+              "isGroupChat": widget.chatRoom?.isGroupChat,
+            };
+            Get.toNamed(Routes.CHAT, arguments: arg);
+          },
+          child: Container(
+            // Fix #3: Better padding (8→16 horizontal, 12→14 vertical)
+            padding: const EdgeInsets.symmetric(
+              horizontal: Paddings.large,
+              vertical: Paddings.medium,
             ),
-          ),
-          child: Material(
-            child: InkWell(
-              onTap: () {
-                Map<String, dynamic> arg = {
-                  'members': widget.chatRoom?.members,
-                  "blockingUserId": widget.chatRoom?.blockingUserId,
-                  "roomId": widget.chatRoom?.id,
-                  "isGroupChat": widget.chatRoom?.isGroupChat,
-                };
-                Get.toNamed(Routes.CHAT, arguments: arg);
-              },
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: ClipOval(
-                      child: widget.chatRoom?.isGroupChat == true
-                          ? _buildGroupAvatar()
-                          : _buildPrivateAvatar(),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: 100,
-                      maxWidth: context.width * .5,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Row(
-                          mainAxisAlignment:  MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _getChatDisplayName(),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  fontSize: FontSize.small,
-                                  color: ColorsManager.black,
-                                  fontWeight: FontWeights.regular,
-                                ),
-                              ),
-                            ),
-                            if (widget.chatRoom?.isGroupChat == true)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Icon(
-                                  Icons.group,
-                                  size: 14,
-                                  color: ColorsManager.primary,
-                                ),
-                              )
-                            else
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Icon(
-                                  Icons.person,
-                                  size: 14,
-                                  color: ColorsManager.grey,
-                                ),
-                              ),
-                            if (widget.chatRoom?.isPinned == true)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Icon(
-                                  Icons.push_pin,
-                                  size: 12,
-                                  color: ColorsManager.primary,
-                                ),
-                              ),
-                            if (widget.chatRoom?.isArchived == true)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Icon(
-                                  Icons.archive,
-                                  size: 12,
-                                  color: ColorsManager.grey,
-                                ),
-                              ),
-                            if (widget.chatRoom?.isFavorite == true)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Icon(
-                                  Icons.favorite,
-                                  size: 12,
-                                  color: ColorsManager.red,
-                                ),
-                              ),
-                          ],
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          _getChatSubtitle(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: FontSize.xSmall,
-                            fontWeight: FontWeights.medium,
-                            color: ColorsManager.lightGrey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  SizedBox(
-                    width: 80,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          timeago.format(
-                              _parseDateSafely(widget.chatRoom?.lastChat) ?? DateTime.now()),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: const TextStyle(
-                            fontSize: FontSize.xXSmall,
-                            color: ColorsManager.lightGrey,
-                            fontWeight: FontWeights.medium,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        // Show unread indicator for current user
-                        if (widget.chatRoom?.lastSender != UserService.currentUser.value?.uid)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: ColorsManager.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          )
-                        else
-                          const SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
-                ],
+            // Fix #3: Cleaner bottom divider using theme border color
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: ColorsManager.border,
+                  width: 0.5,
+                ),
               ),
+            ),
+            child: Row(
+              children: [
+                // Avatar with online status for private chats
+                SizedBox(
+                  width: Sizes.size48,
+                  height: Sizes.size48,
+                  child: widget.chatRoom?.isGroupChat == true
+                      ? ClipOval(child: _buildGroupAvatar())
+                      : _buildPrivateAvatarWithStatus(),
+                ),
+                const SizedBox(width: Spacing.sm),
+
+                // Fix #4: Use Expanded instead of ConstrainedBox
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top row: Name + status icons | Timestamp
+                      Row(
+                        children: [
+                          // Name + icons (flexible)
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _getChatDisplayName(),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    // Fix #1 & #2: Stronger hierarchy + StylesManager
+                                    style: StylesManager.semiBold(
+                                      fontSize: FontSize.medium,
+                                      color: ColorsManager.black,
+                                    ),
+                                  ),
+                                ),
+                                // Status icons with consistent spacing
+                                if (widget.chatRoom?.isGroupChat == true)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: Spacing.xxs),
+                                    child: Icon(
+                                      Icons.group,
+                                      size: 14,
+                                      color: ColorsManager.primary,
+                                    ),
+                                  ),
+                                if (isPinned)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: Spacing.xxs),
+                                    child: Icon(
+                                      Icons.push_pin,
+                                      size: 12,
+                                      color: ColorsManager.primary,
+                                    ),
+                                  ),
+                                if (isArchived)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: Spacing.xxs),
+                                    child: Icon(
+                                      Icons.archive,
+                                      size: 12,
+                                      color: ColorsManager.grey,
+                                    ),
+                                  ),
+                                if (isFavorite)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: Spacing.xxs),
+                                    child: Icon(
+                                      Icons.favorite,
+                                      size: 12,
+                                      color: ColorsManager.red,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: Spacing.xs),
+                          // Fix #1 & #2: Timestamp with better size + StylesManager
+                          Text(
+                            timeago.format(
+                                _parseDateSafely(widget.chatRoom?.lastChat) ?? DateTime.now()),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: StylesManager.regular(
+                              fontSize: FontSize.xSmall,
+                              color: ColorsManager.lightGrey,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: Spacing.xxs),
+
+                      // Bottom row: Subtitle | Unread badge
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _getChatSubtitle(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              // Fix #1 & #2: Better subtitle contrast + StylesManager
+                              style: StylesManager.regular(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.grey,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: Spacing.xs),
+                          // UX-009: Animated unread indicator with pulse effect
+                          if (widget.chatRoom?.lastSender != UserService.currentUser.value?.uid)
+                            const UnreadPulseBadge(
+                              size: 8,
+                              enablePulse: true,
+                            )
+                          else
+                            const SizedBox(width: Sizes.size20),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -662,6 +660,28 @@ class _ChatRowState extends State<ChatRow> {
                 ),
               ),
             ),
+    );
+  }
+
+  /// Fix #8: Private avatar wrapped in Stack with LiveOnlineStatus dot
+  Widget _buildPrivateAvatarWithStatus() {
+    final otherUser = _getChatDisplayUser();
+    final otherUserId = otherUser?.uid;
+
+    return Stack(
+      children: [
+        ClipOval(child: _buildPrivateAvatar()),
+        // Online status dot — only if we have the other user's ID
+        if (otherUserId != null && otherUserId.isNotEmpty)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: LiveOnlineStatus(
+              userId: otherUserId,
+              size: 14,
+            ),
+          ),
+      ],
     );
   }
 

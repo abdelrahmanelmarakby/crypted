@@ -149,6 +149,14 @@ class ChatController extends GetxController
   /// Flag to indicate if chatDataSource has been initialized
   final RxBool isChatDataSourceReady = false.obs;
 
+  /// UX-007: Unread message tracking for "New Messages" divider
+  /// Stores the timestamp when user entered/opened this chat
+  final Rx<DateTime?> chatEntryTime = Rx<DateTime?>(null);
+  /// Flag to show the unread divider (dismisses after scrolling)
+  final RxBool showUnreadDivider = true.obs;
+  /// Count of messages newer than entry time
+  final RxInt newMessageCount = 0.obs;
+
   // ARCH-003: Repository for abstracted data access
   // This provides a clean interface that hides Firebase implementation details
   IChatRepository? _repository;
@@ -192,8 +200,25 @@ class ChatController extends GetxController
     super.onInit();
     // Initialize scroll controller for search navigation
     messageScrollController = ScrollController();
+
+    // UX-007: Record entry time for unread message divider
+    chatEntryTime.value = DateTime.now();
+    showUnreadDivider.value = true;
+
     _initializeApp();
     _setupSessionListeners();
+  }
+
+  /// UX-007: Dismiss the unread divider (called when user scrolls past it)
+  void dismissUnreadDivider() {
+    showUnreadDivider.value = false;
+  }
+
+  /// UX-007: Check if a message is "new" (received after chat entry)
+  bool isNewMessage(DateTime messageTime) {
+    final entryTime = chatEntryTime.value;
+    if (entryTime == null) return false;
+    return messageTime.isAfter(entryTime);
   }
 
   /// Setup listeners for Chat Session Manager changes

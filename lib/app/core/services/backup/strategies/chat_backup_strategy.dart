@@ -103,12 +103,14 @@ class ChatBackupStrategy extends BackupStrategy {
         },
       };
 
-      // Step 5: Upload as JSON
+      // Step 5: Upload as JSON with organized folder structure
+      // Path: backups/{userId}/{backupId}/chats/chat_data.json
       await _backupDataSource.uploadJsonData(
         backupId: context.backupId,
         fileName: 'chat_data.json',
         data: backupData,
-        folder: 'chat',
+        folder: 'chats',
+        userId: context.userId,
       );
 
       // Estimate bytes transferred (rough estimate based on JSON size)
@@ -145,6 +147,77 @@ class ChatBackupStrategy extends BackupStrategy {
       log('❌ Error estimating chat count: $e');
       return 0;
     }
+  }
+
+  /// Dynamic size estimation by sampling actual chat rooms
+  /// Samples up to 3 rooms to calculate average message size
+  @override
+  Future<int> estimateBytesPerItem(BackupContext context) async {
+    try {
+      log('📊 Sampling chat rooms for size estimation...');
+
+      final chatRooms = await _getUserChatRooms(context);
+      if (chatRooms.isEmpty) return 2 * 1024; // 2KB fallback
+
+      // Sample up to 3 chat rooms
+      final sampleRooms = chatRooms.take(3).toList();
+      int totalMessageSize = 0;
+      int totalMessages = 0;
+
+      for (final room in sampleRooms) {
+        try {
+          final messages = await _getChatMessages(
+            roomId: room.id ?? '',
+            limit: 50, // Sample 50 messages per room
+            context: context,
+          );
+
+          for (final message in messages) {
+            // Estimate JSON size of each message
+            final messageMap = message.toMap();
+            final jsonSize = _estimateJsonSize(messageMap);
+            totalMessageSize += jsonSize;
+            totalMessages++;
+          }
+        } catch (e) {
+          // Skip failed samples
+        }
+      }
+
+      if (totalMessages == 0) return 2 * 1024; // 2KB fallback
+
+      // Calculate average message size
+      final avgMessageSize = totalMessageSize ~/ totalMessages;
+
+      // Estimate per-room size: avg message size * messages per room + room metadata
+      final perRoomEstimate = (avgMessageSize * _messagesPerRoom) + 1024; // +1KB for metadata
+
+      log('📊 Chat estimation: $totalMessages samples, avg message ${avgMessageSize}B, per room ~${perRoomEstimate ~/ 1024}KB');
+
+      return perRoomEstimate;
+    } catch (e) {
+      log('⚠️ Chat estimation failed, using fallback: $e');
+      return 2 * 1024; // 2KB fallback per room
+    }
+  }
+
+  /// Estimate JSON size of a map
+  int _estimateJsonSize(Map<String, dynamic> map) {
+    int size = 2; // {} brackets
+    map.forEach((key, value) {
+      size += key.length + 3; // "key":
+      if (value is String) {
+        size += value.length + 2; // "value"
+      } else if (value is Map) {
+        size += _estimateJsonSize(value.cast<String, dynamic>());
+      } else if (value is List) {
+        size += value.length * 10; // rough estimate
+      } else {
+        size += value.toString().length;
+      }
+      size += 1; // comma
+    });
+    return size;
   }
 
   @override

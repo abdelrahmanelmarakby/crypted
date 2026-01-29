@@ -139,28 +139,29 @@ class TabsChat extends StatelessWidget {
                     ),
                     child: TabBar(
                       isScrollable: false,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      indicatorPadding: EdgeInsets.zero,
-
-                      indicator: UnderlineTabIndicator(
-                        
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: ColorsManager.primary,
-                          width: 1,
-                          
-                          
-                        ),
-                        insets: EdgeInsets.symmetric(horizontal: 1),
+                      // Fix #5: Filled pill indicator instead of thin underline
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicatorPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
+                      indicator: BoxDecoration(
+                        color: ColorsManager.primary,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       labelPadding: EdgeInsets.zero,
-                      labelColor: ColorsManager.primary,
-                      labelStyle: TextStyle(fontSize: FontSize.medium, fontWeight: FontWeight.w500,
-                      color: ColorsManager.primary),
+                      labelColor: ColorsManager.white,
+                      labelStyle: const TextStyle(
+                        fontSize: FontSize.small,
+                        fontWeight: FontWeight.w600,
+                      ),
                       unselectedLabelColor: ColorsManager.grey,
-                      unselectedLabelStyle: TextStyle(fontSize: FontSize.medium, fontWeight: FontWeight.w400,
-                      color: ColorsManager.grey),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: FontSize.small,
+                        fontWeight: FontWeight.w400,
+                      ),
                       dividerColor: Colors.transparent,
+                      splashBorderRadius: BorderRadius.circular(12),
                       tabs: [
                         buildTab(Constants.kAll.tr, true),
                         buildTab(Constants.kUnread.tr, true),
@@ -187,12 +188,6 @@ class TabsChat extends StatelessWidget {
   }
 
   Widget buildTab(String text, bool hasRightBorder) {
-    return Container(
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        border: hasRightBorder ? Border(right: BorderSide(color: Colors.white, width: 1)) : null,
-      ),
-      child: Tab(text: text),
-    );
+    return Tab(text: text);
   }
 }

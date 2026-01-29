@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -70,7 +71,8 @@ class MessageReactionsDisplay extends StatelessWidget {
   }
 }
 
-class _ReactionChip extends StatelessWidget {
+/// UX-005: Animated reaction chip with pop effect when count changes
+class _ReactionChip extends StatefulWidget {
   final String emoji;
   final int count;
   final bool isUserReacted;
@@ -86,46 +88,104 @@ class _ReactionChip extends StatelessWidget {
   });
 
   @override
+  State<_ReactionChip> createState() => _ReactionChipState();
+}
+
+class _ReactionChipState extends State<_ReactionChip>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    // Pop animation: scale up → overshoot → settle
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.3), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 0.9), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 30),
+    ]).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+  }
+
+  @override
+  void didUpdateWidget(_ReactionChip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Trigger pop animation when count changes
+    if (oldWidget.count != widget.count) {
+      _controller.forward(from: 0);
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: Paddings.small,
-          vertical: Paddings.xSmall / 2,
-        ),
-        decoration: BoxDecoration(
-          color: isUserReacted
-              ? ColorsManager.primary.withValues(alpha: 0.2)
-              : (Get.isDarkMode ? Colors.grey[800] : Colors.grey[200]),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isUserReacted
-                ? ColorsManager.primary.withValues(alpha: 0.5)
-                : Colors.transparent,
-            width: 1.5,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onLongPress: widget.onLongPress,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: Paddings.small,
+            vertical: Paddings.xSmall / 2,
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 16),
+          decoration: BoxDecoration(
+            color: widget.isUserReacted
+                ? ColorsManager.primary.withValues(alpha: 0.2)
+                : (Get.isDarkMode ? Colors.grey[800] : Colors.grey[200]),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: widget.isUserReacted
+                  ? ColorsManager.primary.withValues(alpha: 0.5)
+                  : Colors.transparent,
+              width: 1.5,
             ),
-            if (count > 1) ...[
-              SizedBox(width: Paddings.xSmall / 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Text(
-                count.toString(),
-                style: TextStyle(
-                  fontSize: FontSize.small,
-                  fontWeight: isUserReacted ? FontWeight.bold : FontWeight.normal,
-                  color: isUserReacted ? ColorsManager.primary : Colors.grey[600],
-                ),
+                widget.emoji,
+                style: const TextStyle(fontSize: 16),
               ),
+              if (widget.count > 1) ...[
+                SizedBox(width: Paddings.xSmall / 2),
+                // Animate the count number
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(scale: animation, child: child);
+                  },
+                  child: Text(
+                    widget.count.toString(),
+                    key: ValueKey(widget.count),
+                    style: TextStyle(
+                      fontSize: FontSize.small,
+                      fontWeight: widget.isUserReacted ? FontWeight.bold : FontWeight.normal,
+                      color: widget.isUserReacted ? ColorsManager.primary : Colors.grey[600],
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

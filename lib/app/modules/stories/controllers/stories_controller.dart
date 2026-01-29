@@ -419,6 +419,87 @@ class StoriesController extends GetxController {
     }
   }
 
+  /// Upload a story directly from the camera/preview flow.
+  ///
+  /// Called by [StoryPreviewScreen] with the captured file and metadata.
+  /// Unlike [uploadStory] which reads from reactive state, this method
+  /// accepts all parameters directly.
+  Future<void> uploadStoryWithFile({
+    File? file,
+    required StoryType storyType,
+    String? overlayText,
+    String? backgroundColor,
+    double? latitude,
+    double? longitude,
+    String? placeName,
+  }) async {
+    print('🚀 Starting direct file story upload...');
+    isUploading.value = true;
+    update();
+
+    try {
+      bool success = false;
+
+      if (storyType == StoryType.image && file != null) {
+        print('📸 Uploading image story from camera...');
+        final story = StoryModel(
+          storyType: StoryType.image,
+          storyText: overlayText,
+          duration: 5,
+          latitude: latitude,
+          longitude: longitude,
+          placeName: placeName,
+          isLocationPublic: latitude != null,
+        );
+        success = await _storyDataSources.uploadStory(story, file);
+      } else if (storyType == StoryType.video && file != null) {
+        print('🎥 Uploading video story from camera...');
+        final story = StoryModel(
+          storyType: StoryType.video,
+          storyText: overlayText,
+          duration: 15,
+          latitude: latitude,
+          longitude: longitude,
+          placeName: placeName,
+          isLocationPublic: latitude != null,
+        );
+        success = await _storyDataSources.uploadStory(story, file);
+      } else if (storyType == StoryType.text) {
+        print('📝 Uploading text story from camera...');
+        final story = StoryModel(
+          storyText: overlayText ?? '',
+          storyType: StoryType.text,
+          backgroundColor: backgroundColor ?? '#000000',
+          textColor: '#FFFFFF',
+          fontSize: 24.0,
+          textPosition: 'center',
+          duration: 5,
+          latitude: latitude,
+          longitude: longitude,
+          placeName: placeName,
+          isLocationPublic: latitude != null,
+        );
+        success = await _storyDataSources.uploadTextStory(story);
+      }
+
+      if (success) {
+        print('✅ Story uploaded successfully');
+        clearStoryData();
+        fetchAllStories();
+        fetchUserStories();
+      } else {
+        print('❌ Story upload failed');
+        throw Exception('Upload returned false');
+      }
+    } catch (e) {
+      print('❌ Error uploading story: $e');
+      rethrow;
+    } finally {
+      isUploading.value = false;
+      update();
+    }
+  }
+
   // مسح بيانات الـ story
   void clearStoryData() {
     selectedImage.value = null;

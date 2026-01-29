@@ -19,6 +19,7 @@ import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/core/services/firebase_utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -113,10 +114,13 @@ class AttachmentWidget extends GetView<ChatController> {
                   ),
                 if (!controller.isRecording.value)
                   const SizedBox(width: Sizes.size4),
-                if (controller.isRecording.value ||
-                    controller.messageController.text.isEmpty)
+                // UX-002: Animated send button morph (mic ↔ send)
+                // Uses Stack with animated visibility to prevent SocialMediaRecorder disposal issues
+                // The recorder stays mounted to avoid "used after disposed" errors
+                if (controller.isRecording.value)
+                  // Recording mode: Show full recorder widget (expanded)
                   Flexible(
-                    flex: controller.isRecording.value ? 10 : 0,
+                    flex: 10,
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: SizedBox(
@@ -254,23 +258,124 @@ class AttachmentWidget extends GetView<ChatController> {
                     ),
                   )
                 else
-                  InkWell(
-                    onTap: () {
-                      // UI Migration: Use sanitized message sending
-                      _sendSanitizedMessage(controller);
-                    },
-                    child: Container(
-                      width: Sizes.size50,
-                      height: Sizes.size50,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(Radiuss.small),
-                        color: ColorsManager.primary.withAlpha(50),
-                      ),
-                      child: const Icon(
-                        Iconsax.send_2,
-                        color: ColorsManager.primary,
-                        size: Sizes.size20,
-                      ),
+                  // Not recording: Show mic/send with Stack-based animation
+                  // Stack keeps both widgets mounted, avoiding disposal issues
+                  SizedBox(
+                    width: Sizes.size50,
+                    height: Sizes.size50,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Mic button (always mounted, animated visibility)
+                        AnimatedScale(
+                          scale: controller.messageController.text.isEmpty ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutBack,
+                          child: AnimatedOpacity(
+                            opacity: controller.messageController.text.isEmpty ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 150),
+                            child: IgnorePointer(
+                              ignoring: controller.messageController.text.isNotEmpty,
+                              child: SocialMediaRecorder(
+                                backGroundColor: ColorsManager.primary.withAlpha(50),
+                                recordIconBackGroundColor:
+                                    ColorsManager.primary.withAlpha(50),
+                                recordIcon: Icon(
+                                  Iconsax.microphone,
+                                  color: ColorsManager.primary,
+                                  size: Sizes.size24,
+                                ),
+                                initRecordPackageWidth: Sizes.size48,
+                                counterBackGroundColor: Colors.transparent,
+                                counterTextStyle: StylesManager.medium(
+                                  fontSize: FontSize.xSmall,
+                                  color: ColorsManager.primary,
+                                ),
+                                slideToCancelTextStyle: StylesManager.medium(
+                                  fontSize: FontSize.xSmall,
+                                  color: ColorsManager.primary,
+                                ),
+                                cancelTextStyle: StylesManager.medium(
+                                  fontSize: FontSize.xSmall,
+                                  color: ColorsManager.primary,
+                                ),
+                                recordIconWhenLockBackGroundColor:
+                                    ColorsManager.primary.withAlpha(50),
+                                cancelTextBackGroundColor:
+                                    ColorsManager.primary.withAlpha(50),
+                                radius: BorderRadius.circular(Radiuss.small),
+                                startRecording: () {
+                                  controller.onChangeRec(true);
+                                },
+                                stopRecording: (time) {
+                                  controller.onChangeRec(false);
+                                },
+                                sendRequestFunction: (soundFile, time) async {
+                                  controller.onChangeRec(false);
+                                  try {
+                                    final file = File(soundFile.path);
+                                    final exists = await file.exists();
+                                    if (!exists) return;
+
+                                    final audioMessage = await FirebaseUtils.uploadAudio(
+                                      soundFile.path,
+                                      controller.roomId,
+                                      time,
+                                    );
+                                    if (audioMessage != null) {
+                                      await controller.sendMessage(audioMessage);
+                                    }
+                                  } catch (e) {
+                                    Get.snackbar(
+                                      "Error",
+                                      "Failed to send audio message",
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: Colors.red.withValues(alpha: 0.8),
+                                      colorText: Colors.white,
+                                    );
+                                  } finally {
+                                    controller.onChangeRec(false);
+                                  }
+                                },
+                                encode: AudioEncoderType.AAC,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Send button (always mounted, animated visibility)
+                        AnimatedScale(
+                          scale: controller.messageController.text.isNotEmpty ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutBack,
+                          child: AnimatedOpacity(
+                            opacity: controller.messageController.text.isNotEmpty ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 150),
+                            child: IgnorePointer(
+                              ignoring: controller.messageController.text.isEmpty,
+                              child: GestureDetector(
+                                onTap: () {
+                                  // UX-003: Haptic feedback on send
+                                  HapticFeedback.lightImpact();
+                                  _sendSanitizedMessage(controller);
+                                },
+                                child: Container(
+                                  width: Sizes.size50,
+                                  height: Sizes.size50,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(Radiuss.small),
+                                    color: ColorsManager.primary.withAlpha(50),
+                                  ),
+                                  child: const Icon(
+                                    Iconsax.send_2,
+                                    color: ColorsManager.primary,
+                                    size: Sizes.size20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   )
               ],

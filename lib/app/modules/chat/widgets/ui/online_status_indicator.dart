@@ -8,13 +8,14 @@ import 'package:get/get.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 
 /// UI-001: Online Status Indicator
-/// Displays real-time online status for users
+/// Displays real-time online status for users with pulse animation
 
-class OnlineStatusIndicator extends StatelessWidget {
+class OnlineStatusIndicator extends StatefulWidget {
   final bool isOnline;
   final DateTime? lastSeen;
   final double size;
   final bool showBorder;
+  final bool enablePulse;
 
   const OnlineStatusIndicator({
     super.key,
@@ -22,23 +23,140 @@ class OnlineStatusIndicator extends StatelessWidget {
     this.lastSeen,
     this.size = 12,
     this.showBorder = true,
+    this.enablePulse = true,
   });
 
   @override
+  State<OnlineStatusIndicator> createState() => _OnlineStatusIndicatorState();
+}
+
+class _OnlineStatusIndicatorState extends State<OnlineStatusIndicator>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _pulseController;
+  Animation<double>? _pulseAnimation;
+  Animation<double>? _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAnimation();
+  }
+
+  @override
+  void didUpdateWidget(OnlineStatusIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOnline != widget.isOnline) {
+      _setupAnimation();
+    }
+  }
+
+  void _setupAnimation() {
+    if (widget.isOnline && widget.enablePulse) {
+      _pulseController ??= AnimationController(
+        duration: const Duration(milliseconds: 2000),
+        vsync: this,
+      );
+
+      _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+        CurvedAnimation(
+          parent: _pulseController!,
+          curve: Curves.easeInOut,
+        ),
+      );
+
+      _glowAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
+        CurvedAnimation(
+          parent: _pulseController!,
+          curve: Curves.easeInOut,
+        ),
+      );
+
+      _pulseController!.repeat(reverse: true);
+    } else {
+      _pulseController?.stop();
+      _pulseController?.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: isOnline ? ColorsManager.success : ColorsManager.grey,
-        shape: BoxShape.circle,
-        border: showBorder
-            ? Border.all(
-                color: Colors.white,
-                width: size / 6,
-              )
-            : null,
-      ),
+    final dotColor = widget.isOnline ? ColorsManager.success : ColorsManager.grey;
+
+    // Static indicator for offline or when pulse is disabled
+    if (!widget.isOnline || !widget.enablePulse || _pulseAnimation == null) {
+      return Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          color: dotColor,
+          shape: BoxShape.circle,
+          border: widget.showBorder
+              ? Border.all(
+                  color: Colors.white,
+                  width: widget.size / 6,
+                )
+              : null,
+        ),
+      );
+    }
+
+    // Animated pulse for online status
+    return AnimatedBuilder(
+      animation: _pulseController!,
+      builder: (context, child) {
+        return Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: widget.showBorder
+                ? Border.all(
+                    color: Colors.white,
+                    width: widget.size / 6,
+                  )
+                : null,
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow pulse
+              Transform.scale(
+                scale: _pulseAnimation!.value,
+                child: Container(
+                  width: widget.size * 0.85,
+                  height: widget.size * 0.85,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor.withValues(alpha: _glowAnimation!.value * 0.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: dotColor.withValues(alpha: _glowAnimation!.value),
+                        blurRadius: widget.size * 0.5,
+                        spreadRadius: widget.size * 0.1,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Inner solid dot
+              Container(
+                width: widget.size * 0.7,
+                height: widget.size * 0.7,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

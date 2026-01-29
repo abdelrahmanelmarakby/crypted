@@ -46,12 +46,14 @@ class DeviceInfoBackupStrategy extends BackupStrategy {
         },
       };
 
-      // Upload as JSON
+      // Upload as JSON with organized folder structure
+      // Path: backups/{userId}/{backupId}/device_info/device_info.json
       await _backupDataSource.uploadJsonData(
         backupId: context.backupId,
         fileName: 'device_info.json',
         data: backupData,
-        folder: 'device',
+        folder: 'device_info',
+        userId: context.userId,
       );
 
       // Estimate bytes transferred (tiny file, ~1KB)
@@ -81,6 +83,15 @@ class DeviceInfoBackupStrategy extends BackupStrategy {
   @override
   Future<int> estimateItemCount(BackupContext context) async {
     return 1; // Single device info document
+  }
+
+  /// Device info is a fixed small size (~5KB)
+  /// Contains device metadata, app info, and backup configuration
+  @override
+  Future<int> estimateBytesPerItem(BackupContext context) async {
+    // Device info is predictable - always ~5KB regardless of device
+    // Contains: device model, OS, app version, backup config
+    return 5 * 1024; // 5KB
   }
 
   @override
