@@ -271,6 +271,13 @@ class NotificationController {
         'lastUsed': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      // Update the in-memory reference so deleteFCMToken() works on logout.
+      // This may fail in a background isolate where the singleton isn't
+      // available, which is fine — initialize() also fetches the token.
+      try {
+        FCMService().updateToken(token);
+      } catch (_) {}
+
       if (kDebugMode) {
         developer.log(
           '✅ FCM token saved: ${token.substring(0, 20)}...',

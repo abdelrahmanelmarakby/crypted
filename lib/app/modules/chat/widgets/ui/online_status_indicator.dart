@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
-import 'package:crypted_app/app/core/constants/chat_constants.dart';
+import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 
@@ -207,30 +206,14 @@ class _LiveOnlineStatusState extends State<LiveOnlineStatus> {
   }
 
   void _setupListener() {
-    _subscription = FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists && mounted) {
-        final data = snapshot.data()!;
-        final lastActive = data['lastActive'];
-
-        DateTime? lastSeenTime;
-        if (lastActive is Timestamp) {
-          lastSeenTime = lastActive.toDate();
-        } else if (lastActive is String) {
-          lastSeenTime = DateTime.tryParse(lastActive);
-        }
-
-        // Consider online if active within threshold
-        final isOnline = lastSeenTime != null &&
-            DateTime.now().difference(lastSeenTime).inMinutes <
-                ChatConstants.offlineThresholdMinutes;
-
+    // Read from RTDB presence (privacy-aware) instead of Firestore users doc
+    _subscription = PresenceService()
+        .listenToUserPresence(widget.userId)
+        .listen((presence) {
+      if (mounted) {
         setState(() {
-          _isOnline = isOnline;
-          _lastSeen = lastSeenTime;
+          _isOnline = presence.isOnline;
+          _lastSeen = presence.lastSeen;
         });
       }
     });
@@ -342,27 +325,14 @@ class _LiveOnlineStatusTextState extends State<LiveOnlineStatusText> {
   }
 
   void _setupListener() {
-    _subscription = FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists && mounted) {
-        final data = snapshot.data()!;
-        final lastActive = data['lastActive'];
-
-        DateTime? lastSeenTime;
-        if (lastActive is Timestamp) {
-          lastSeenTime = lastActive.toDate();
-        }
-
-        final isOnline = lastSeenTime != null &&
-            DateTime.now().difference(lastSeenTime).inMinutes <
-                ChatConstants.offlineThresholdMinutes;
-
+    // Read from RTDB presence (privacy-aware) instead of Firestore users doc
+    _subscription = PresenceService()
+        .listenToUserPresence(widget.userId)
+        .listen((presence) {
+      if (mounted) {
         setState(() {
-          _isOnline = isOnline;
-          _lastSeen = lastSeenTime;
+          _isOnline = presence.isOnline;
+          _lastSeen = presence.lastSeen;
         });
       }
     });

@@ -432,6 +432,8 @@ class StoriesController extends GetxController {
     double? latitude,
     double? longitude,
     String? placeName,
+    String? linkUrl,
+    String? linkDisplayText,
   }) async {
     print('🚀 Starting direct file story upload...');
     isUploading.value = true;
@@ -450,6 +452,8 @@ class StoriesController extends GetxController {
           longitude: longitude,
           placeName: placeName,
           isLocationPublic: latitude != null,
+          linkUrl: linkUrl,
+          linkDisplayText: linkDisplayText,
         );
         success = await _storyDataSources.uploadStory(story, file);
       } else if (storyType == StoryType.video && file != null) {
@@ -462,6 +466,8 @@ class StoriesController extends GetxController {
           longitude: longitude,
           placeName: placeName,
           isLocationPublic: latitude != null,
+          linkUrl: linkUrl,
+          linkDisplayText: linkDisplayText,
         );
         success = await _storyDataSources.uploadStory(story, file);
       } else if (storyType == StoryType.text) {
@@ -478,6 +484,8 @@ class StoriesController extends GetxController {
           longitude: longitude,
           placeName: placeName,
           isLocationPublic: latitude != null,
+          linkUrl: linkUrl,
+          linkDisplayText: linkDisplayText,
         );
         success = await _storyDataSources.uploadTextStory(story);
       }

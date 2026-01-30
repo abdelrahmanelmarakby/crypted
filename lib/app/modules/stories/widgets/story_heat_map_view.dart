@@ -1,12 +1,22 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/story_cluster.dart';
 import 'package:crypted_app/app/services/story_clustering_service.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:crypted_app/core/themes/styles_manager.dart';
+import 'package:crypted_app/app/modules/stories/widgets/epic_story_viewer.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
 
-/// Epic Story Heat Map View - Better than Snapchat! 🔥
+/// Snapchat-style Story Map — shows stories on a real Google Map
+/// with user avatar markers and cluster indicators.
+/// Falls back to a visual grid when no stories have location data.
 class StoryHeatMapView extends StatefulWidget {
   final List<StoryModel> stories;
   final VoidCallback? onCreateStory;
@@ -21,288 +31,563 @@ class StoryHeatMapView extends StatefulWidget {
   State<StoryHeatMapView> createState() => _StoryHeatMapViewState();
 }
 
-class _StoryHeatMapViewState extends State<StoryHeatMapView>
-    with TickerProviderStateMixin {
-  late TransformationController _transformationController;
-  late AnimationController _pulseController;
-  late AnimationController _appearController;
+class _StoryHeatMapViewState extends State<StoryHeatMapView> {
+  GoogleMapController? _mapController;
 
   List<StoryCluster> clusters = [];
+  Set<Marker> _markers = {};
   StoryCluster? selectedCluster;
-  Offset? mapCenter;
-  double zoomLevel = 1.0;
+  double _currentZoom = 12.0;
+
+  // Default to a neutral position; will be adjusted when clusters load
+  static const LatLng _defaultCenter = LatLng(24.7136, 46.6753); // Riyadh
+
+  // Snapchat-style dark map theme
+  static const String _mapStyle = '''
+[
+  {"elementType":"geometry","stylers":[{"color":"#1d1d2b"}]},
+  {"elementType":"labels.text.fill","stylers":[{"color":"#8e8e9e"}]},
+  {"elementType":"labels.text.stroke","stylers":[{"color":"#1d1d2b"}]},
+  {"featureType":"administrative","elementType":"geometry","stylers":[{"visibility":"off"}]},
+  {"featureType":"administrative.country","elementType":"geometry.stroke","stylers":[{"color":"#3a3a4e"},{"visibility":"on"}]},
+  {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#1d1d2b"}]},
+  {"featureType":"poi","stylers":[{"visibility":"off"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#2a2a3d"}]},
+  {"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},
+  {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#333347"}]},
+  {"featureType":"transit","stylers":[{"visibility":"off"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#141423"}]},
+  {"featureType":"water","elementType":"labels","stylers":[{"visibility":"off"}]}
+]
+''';
 
   @override
   void initState() {
     super.initState();
-    _transformationController = TransformationController();
-
-    // Pulse animation for active clusters
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    // Appear animation for clusters
-    _appearController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    )..forward();
-
     _initializeClusters();
   }
 
   @override
+  void didUpdateWidget(StoryHeatMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.stories.length != widget.stories.length ||
+        !identical(oldWidget.stories, widget.stories)) {
+      _initializeClusters();
+    }
+  }
+
+  @override
   void dispose() {
-    _transformationController.dispose();
-    _pulseController.dispose();
-    _appearController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
   void _initializeClusters() {
-    // Create clusters with adaptive radius
-    final radius = StoryClusteringService.getAdaptiveRadius(zoomLevel);
+    final radius = StoryClusteringService.getAdaptiveRadius(_currentZoom);
     clusters = StoryClusteringService.clusterStories(
       widget.stories,
       clusterRadiusKm: radius,
     );
+    _buildMarkers();
+    _fitMapToMarkers();
     setState(() {});
+  }
+
+  /// Build Google Maps markers from clusters — each marker is a user avatar circle.
+  Future<void> _buildMarkers() async {
+    final newMarkers = <Marker>{};
+
+    for (final cluster in clusters) {
+      final markerId = MarkerId(cluster.id);
+      final position = LatLng(cluster.centerLatitude, cluster.centerLongitude);
+
+      // Generate a custom avatar marker bitmap
+      final icon = await _createAvatarMarker(cluster);
+
+      newMarkers.add(
+        Marker(
+          markerId: markerId,
+          position: position,
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          onTap: () => _onClusterTap(cluster),
+          zIndexInt: cluster.size, // Larger clusters on top
+        ),
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _markers = newMarkers;
+      });
+    }
+  }
+
+  /// Creates a circular avatar marker bitmap for a story cluster.
+  /// Single stories show the user's initial; clusters show the count.
+  Future<BitmapDescriptor> _createAvatarMarker(StoryCluster cluster) async {
+    final size = cluster.size > 1 ? 80.0 : 64.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint();
+
+    // Outer glow ring (Snapchat-style colored ring)
+    final ringColor = _getClusterColor(cluster);
+    paint
+      ..color = ringColor.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2, paint);
+
+    // Main circle background
+    paint
+      ..color = ringColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 4, paint);
+
+    // Inner white circle
+    paint.color = Colors.white;
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 7, paint);
+
+    // Center content: cluster count or user initial
+    paint.color = ringColor;
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 10, paint);
+
+    // Draw text (count or initial)
+    final text = cluster.size > 1
+        ? '${cluster.size}'
+        : (cluster.previewStories.isNotEmpty
+            ? (cluster.previewStories.first.user?.fullName ?? '?')[0]
+                .toUpperCase()
+            : '?');
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: cluster.size > 1 ? 20 : 22,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size - textPainter.width) / 2,
+        (size - textPainter.height) / 2,
+      ),
+    );
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.bytes(bytes);
+  }
+
+  /// Fits the map camera to show all markers with padding.
+  void _fitMapToMarkers() {
+    if (_mapController == null || clusters.isEmpty) return;
+
+    if (clusters.length == 1) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(clusters.first.centerLatitude, clusters.first.centerLongitude),
+          14.0,
+        ),
+      );
+      return;
+    }
+
+    // Build bounds from all cluster centers
+    double minLat = double.infinity;
+    double maxLat = -double.infinity;
+    double minLng = double.infinity;
+    double maxLng = -double.infinity;
+
+    for (final cluster in clusters) {
+      if (cluster.centerLatitude < minLat) minLat = cluster.centerLatitude;
+      if (cluster.centerLatitude > maxLat) maxLat = cluster.centerLatitude;
+      if (cluster.centerLongitude < minLng) minLng = cluster.centerLongitude;
+      if (cluster.centerLongitude > maxLng) maxLng = cluster.centerLongitude;
+    }
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        80.0, // padding
+      ),
+    );
+  }
+
+  LatLng _computeInitialCenter() {
+    if (clusters.isEmpty) return _defaultCenter;
+
+    if (clusters.length == 1) {
+      return LatLng(
+        clusters.first.centerLatitude,
+        clusters.first.centerLongitude,
+      );
+    }
+
+    double sumLat = 0, sumLng = 0;
+    for (final c in clusters) {
+      sumLat += c.centerLatitude;
+      sumLng += c.centerLongitude;
+    }
+    return LatLng(sumLat / clusters.length, sumLng / clusters.length);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+    return Stack(
+      children: [
+        // Main content — map or grid fallback
+        if (clusters.isNotEmpty)
+          _buildSnapMap()
+        else if (widget.stories.isNotEmpty)
+          _buildStoriesGrid()
+        else
+          _buildEmptyState(),
+
+        // Selected cluster preview sheet (Snapchat-style bottom card)
+        if (selectedCluster != null) _buildClusterPreview(),
+
+        // Create Story FAB
+        _buildCreateStoryButton(),
+      ],
+    );
+  }
+
+  // ── Snap Map (Google Maps with avatar markers) ──────────────
+
+  Widget _buildSnapMap() {
+    final initialCenter = _computeInitialCenter();
+
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(
+        target: initialCenter,
+        zoom: _currentZoom,
+      ),
+      style: _mapStyle,
+      markers: _markers,
+      onMapCreated: (controller) {
+        _mapController = controller;
+        // Fit to markers after map is ready
+        Future.delayed(const Duration(milliseconds: 500), _fitMapToMarkers);
+      },
+      onCameraMove: (position) {
+        _currentZoom = position.zoom;
+      },
+      onCameraIdle: () {
+        // Re-cluster at new zoom level for adaptive grouping
+        final radius = StoryClusteringService.getAdaptiveRadius(_currentZoom);
+        final newClusters = StoryClusteringService.clusterStories(
+          widget.stories,
+          clusterRadiusKm: radius,
+        );
+        if (newClusters.length != clusters.length) {
+          clusters = newClusters;
+          _buildMarkers();
+        }
+      },
+      onTap: (_) {
+        // Dismiss cluster preview when tapping empty map area
+        if (selectedCluster != null) {
+          setState(() => selectedCluster = null);
+        }
+      },
+      myLocationEnabled: true,
+      myLocationButtonEnabled: false,
+      zoomControlsEnabled: false,
+      mapToolbarEnabled: false,
+      compassEnabled: false,
+      buildingsEnabled: false,
+      indoorViewEnabled: false,
+      trafficEnabled: false,
+      liteModeEnabled: false,
+    );
+  }
+
+  // ── Empty State ─────────────────────────────────────────────
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Background gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  ColorsManager.primary.withValues(alpha: 0.1),
-                  Colors.purple.withValues(alpha: 0.05),
-                  Colors.pink.withValues(alpha: 0.05),
-                ],
-              ),
+          Icon(
+            Icons.explore_rounded,
+            size: 80,
+            color: ColorsManager.primary.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No stories yet',
+            style: StylesManager.semiBold(
+              fontSize: FontSize.large,
+              color: ColorsManager.grey,
             ),
           ),
-
-          // Interactive Map Canvas
-          InteractiveViewer(
-            transformationController: _transformationController,
-            minScale: 0.5,
-            maxScale: 4.0,
-            onInteractionUpdate: (details) {
-              setState(() {
-                final matrix = _transformationController.value;
-                zoomLevel = matrix.getMaxScaleOnAxis();
-              });
-            },
-            child: SizedBox(
-              width: Get.width * 3,
-              height: Get.height * 3,
-              child: CustomPaint(
-                painter: HeatMapPainter(
-                  clusters: clusters,
-                  selectedCluster: selectedCluster,
-                  pulseAnimation: _pulseController,
-                  appearAnimation: _appearController,
-                ),
-                child: Stack(
-                  children: clusters.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final cluster = entry.value;
-                    return _buildClusterMarker(cluster, index);
-                  }).toList(),
-                ),
-              ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap + to share your first story',
+            style: StylesManager.regular(
+              fontSize: FontSize.medium,
+              color: ColorsManager.lightGrey,
             ),
           ),
-
-          // Top Bar
-          _buildTopBar(),
-
-          // Selected Cluster Preview
-          if (selectedCluster != null) _buildClusterPreview(),
-
-          // Create Story FAB
-          _buildCreateStoryButton(),
         ],
       ),
     );
   }
 
-  Widget _buildTopBar() {
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.map, color: ColorsManager.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              '${widget.stories.length} Stories • ${clusters.length} Locations',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
+  // ── Stories Grid (fallback when no location data) ────────────
+
+  Widget _buildStoriesGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.75, // 3:4 portrait cards
       ),
-    );
-  }
-
-  Widget _buildClusterMarker(StoryCluster cluster, int index) {
-    final delay = index * 50;
-    final isSelected = selectedCluster?.id == cluster.id;
-
-    return AnimatedBuilder(
-      animation: _appearController,
-      builder: (context, child) {
-        final animation = CurvedAnimation(
-          parent: _appearController,
-          curve: Interval(
-            (delay / 1000).clamp(0.0, 0.8),
-            ((delay + 200) / 1000).clamp(0.2, 1.0),
-            curve: Curves.elasticOut,
-          ),
-        );
-
-        return Transform.scale(
-          scale: animation.value,
-          child: Positioned(
-            left: Get.width + (cluster.centerLatitude * 500),
-            top: Get.height + (cluster.centerLongitude * 500),
-            child: GestureDetector(
-              onTap: () => _onClusterTap(cluster),
-              child: _buildClusterWidget(cluster, isSelected),
-            ),
-          ),
-        );
+      itemCount: widget.stories.length,
+      itemBuilder: (context, index) {
+        return _buildStoryGridCard(widget.stories[index], index);
       },
     );
   }
 
-  Widget _buildClusterWidget(StoryCluster cluster, bool isSelected) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutBack,
-      transform: Matrix4.identity()..scale(isSelected ? 1.2 : 1.0),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Pulse effect
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + (_pulseController.value * 0.3),
-                child: Container(
-                  width: 70,
-                  height: 70,
+  Widget _buildStoryGridCard(StoryModel story, int index) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 400 + (index * 80)),
+      curve: Curves.easeOutCubic,
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        onTap: () => _openStoryViewer(story),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Story background
+                _buildStoryCardBackground(story),
+
+                // Gradient overlay
+                Container(
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _getClusterColor(cluster).withValues(alpha: 
-                      0.3 * (1 - _pulseController.value),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.6),
+                      ],
+                      stops: const [0.5, 1.0],
                     ),
                   ),
                 ),
-              );
-            },
-          ),
 
-          // Main cluster circle
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  _getClusterColor(cluster),
-                  _getClusterColor(cluster).withValues(alpha: 0.7),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _getClusterColor(cluster).withValues(alpha: 0.4),
-                  blurRadius: 15,
-                  offset: const Offset(0, 4),
+                // User info at bottom
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  right: 12,
+                  child: Row(
+                    children: [
+                      if (story.user?.imageUrl != null)
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundImage:
+                              NetworkImage(story.user!.imageUrl!),
+                        )
+                      else
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor:
+                              ColorsManager.primary.withValues(alpha: 0.7),
+                          child: Text(
+                            (story.user?.fullName ?? '?')[0].toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          story.user?.fullName ?? 'Unknown',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+
+                // Story type badge (top right)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _storyTypeIcon(story.storyType ?? StoryType.image),
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+
+                // Location badge (if available)
+                if (story.placeName != null)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            story.placeName!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
-            child: cluster.previewStories.isNotEmpty &&
-                    cluster.previewStories.first.user?.imageUrl != null
-                ? ClipOval(
-                    child: AppCachedNetworkImage(
-                      imageUrl: cluster.previewStories.first.user!.imageUrl!,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Center(
-                    child: Icon(
-                      Icons.location_on,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
           ),
-
-          // Story count badge
-          if (cluster.size > 1)
-            Positioned(
-              right: -5,
-              top: -5,
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _getClusterColor(cluster),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  '${cluster.size}',
-                  style: TextStyle(
-                    color: _getClusterColor(cluster),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
+
+  Widget _buildStoryCardBackground(StoryModel story) {
+    if (story.storyType == StoryType.image && story.storyFileUrl != null) {
+      return AppCachedNetworkImage(
+        imageUrl: story.storyFileUrl!,
+        fit: BoxFit.cover,
+      );
+    }
+
+    if (story.storyType == StoryType.video && story.storyFileUrl != null) {
+      return Container(
+        color: Colors.grey[900],
+        child: Center(
+          child: Icon(
+            Icons.play_circle_fill_rounded,
+            color: Colors.white.withValues(alpha: 0.7),
+            size: 48,
+          ),
+        ),
+      );
+    }
+
+    // Text story
+    final bgHex = story.backgroundColor ?? '#000000';
+    Color bgColor;
+    try {
+      bgColor = Color(
+        int.parse(bgHex.replaceAll('#', ''), radix: 16) + 0xFF000000,
+      );
+    } catch (_) {
+      bgColor = Colors.black;
+    }
+
+    return Container(
+      color: bgColor,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            story.storyText ?? '',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _storyTypeIcon(StoryType type) {
+    switch (type) {
+      case StoryType.image:
+        return Icons.image_rounded;
+      case StoryType.video:
+        return Icons.videocam_rounded;
+      case StoryType.text:
+        return Icons.text_fields_rounded;
+    }
+  }
+
+  // ── Cluster Preview Sheet (Snapchat-style bottom card) ──────
 
   Widget _buildClusterPreview() {
     return Positioned(
@@ -322,13 +607,13 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
         child: Container(
           height: 250,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFF1d1d2b), // Match dark map theme
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(30),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 30,
                 offset: const Offset(0, -5),
               ),
@@ -342,7 +627,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Colors.white.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -354,35 +639,49 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    Icon(Icons.place, color: ColorsManager.primary),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.place,
+                        color: ColorsManager.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             selectedCluster!.locationString,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             '${selectedCluster!.size} ${selectedCluster!.size == 1 ? 'Story' : 'Stories'} • ${selectedCluster!.uniqueUserCount} ${selectedCluster!.uniqueUserCount == 1 ? 'Person' : 'People'}',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Colors.white.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close),
+                      icon: Icon(
+                        Icons.close,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
                       onPressed: () {
-                        setState(() {
-                          selectedCluster = null;
-                        });
+                        setState(() => selectedCluster = null);
                       },
                     ),
                   ],
@@ -391,7 +690,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
 
               const SizedBox(height: 16),
 
-              // Story previews
+              // Story previews — horizontal scroll
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -430,7 +729,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -441,33 +740,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Story background
-                if (story.storyType == StoryType.image &&
-                    story.storyFileUrl != null)
-                  Image.network(
-                    story.storyFileUrl!,
-                    fit: BoxFit.cover,
-                  )
-                else if (story.storyType == StoryType.text)
-                  Container(
-                    color: Color(
-                      int.parse(story.backgroundColor?.replaceAll('#', '0xFF') ??
-                          '0xFF000000'),
-                    ),
-                    child: Center(
-                      child: Text(
-                        story.storyText ?? '',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
+                _buildStoryCardBackground(story),
 
                 // Gradient overlay
                 Container(
@@ -500,7 +773,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
                       const SizedBox(height: 4),
                       Text(
                         story.user?.fullName ?? 'Unknown',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -519,10 +792,12 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
     );
   }
 
+  // ── Create Story FAB ────────────────────────────────────────
+
   Widget _buildCreateStoryButton() {
     return Positioned(
       right: 20,
-      bottom: 20,
+      bottom: 100,
       child: TweenAnimationBuilder(
         duration: const Duration(milliseconds: 600),
         curve: Curves.elasticOut,
@@ -550,8 +825,9 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
     );
   }
 
+  // ── Helpers ─────────────────────────────────────────────────
+
   Color _getClusterColor(StoryCluster cluster) {
-    // Color intensity based on cluster size
     if (cluster.size >= 10) return Colors.red;
     if (cluster.size >= 5) return Colors.orange;
     if (cluster.size >= 3) return Colors.amber;
@@ -562,67 +838,27 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView>
     setState(() {
       selectedCluster = cluster;
     });
+
+    // Smoothly pan camera to the tapped cluster
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(
+        LatLng(cluster.centerLatitude, cluster.centerLongitude),
+      ),
+    );
   }
 
   void _openStoryViewer(StoryModel story) {
-    // Navigate to story viewer
-    Get.toNamed('/story-viewer', arguments: {
-      'story': story,
-      'cluster': selectedCluster,
-    });
+    final stories = selectedCluster?.stories ?? [story];
+    final initialIndex = stories.indexOf(story).clamp(0, stories.length - 1);
+
+    Get.to(
+      () => EpicStoryViewer(
+        stories: stories,
+        initialIndex: initialIndex,
+        cluster: selectedCluster,
+      ),
+      transition: Transition.fadeIn,
+      duration: const Duration(milliseconds: 300),
+    );
   }
-}
-
-/// Custom painter for heat map background
-class HeatMapPainter extends CustomPainter {
-  final List<StoryCluster> clusters;
-  final StoryCluster? selectedCluster;
-  final Animation<double> pulseAnimation;
-  final Animation<double> appearAnimation;
-
-  HeatMapPainter({
-    required this.clusters,
-    this.selectedCluster,
-    required this.pulseAnimation,
-    required this.appearAnimation,
-  }) : super(repaint: pulseAnimation);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Draw heat map connections
-    final paint = Paint()
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    for (var i = 0; i < clusters.length; i++) {
-      for (var j = i + 1; j < clusters.length; j++) {
-        final cluster1 = clusters[i];
-        final cluster2 = clusters[j];
-
-        final distance = StoryModel.calculateDistance(
-          StoryModel(latitude: cluster1.centerLatitude, longitude: cluster1.centerLongitude),
-          StoryModel(latitude: cluster2.centerLatitude, longitude: cluster2.centerLongitude),
-        );
-
-        if (distance < 5.0) {
-          // Draw connection line
-          paint.color = ColorsManager.primary.withValues(alpha: 0.1 * appearAnimation.value);
-
-          final p1 = Offset(
-            size.width / 2 + (cluster1.centerLatitude * 500),
-            size.height / 2 + (cluster1.centerLongitude * 500),
-          );
-          final p2 = Offset(
-            size.width / 2 + (cluster2.centerLatitude * 500),
-            size.height / 2 + (cluster2.centerLongitude * 500),
-          );
-
-          canvas.drawLine(p1, p2, paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(HeatMapPainter oldDelegate) => true;
 }

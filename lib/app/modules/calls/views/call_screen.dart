@@ -38,6 +38,9 @@ class _CallScreenState extends State<CallScreen> {
   bool _isCallReady = false;
   String? _errorMessage;
 
+  // Guard flag: prevents duplicate call-end Firestore writes
+  bool _callEndHandled = false;
+
   // Duration tracking
   Timer? _durationTimer;
   int _callDurationSeconds = 0;
@@ -148,7 +151,14 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   /// Handle call end - update Firestore and cleanup.
+  ///
+  /// Guarded by [_callEndHandled] to prevent duplicate Firestore writes
+  /// when called from both error/end handlers and dispose().
   Future<void> _handleCallEnd() async {
+    // Guard: only execute once per call lifecycle
+    if (_callEndHandled) return;
+    _callEndHandled = true;
+
     if (_callModel?.callId == null && _callId == null) return;
 
     final callId = _callModel?.callId ?? _callId;
@@ -375,6 +385,10 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   /// Handle ZEGO SDK errors.
+  ///
+  /// Instead of showing a snackbar on the call screen (which causes
+  /// disposal race conditions), we end the call and navigate back first,
+  /// then show the error message on the previous screen.
   void _handleZegoError(ZegoUIKitError error) {
     log('[CallScreen] ZEGO error: ${error.code} - ${error.message}');
 
@@ -394,40 +408,40 @@ class _CallScreenState extends State<CallScreen> {
         userMessage = 'Call error: ${error.message}';
     }
 
-    Get.snackbar(
-      'Call Error',
-      userMessage,
-      backgroundColor: ColorsManager.error,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-    );
-
-    // End call on error
+    // End call first (guarded — safe to call multiple times)
     _handleCallEnd();
-    Get.back();
+
+    // Navigate back, then show snackbar on the PREVIOUS screen
+    // This avoids the "Cannot remove entry from a disposed snackbar" error
+    if (mounted) {
+      Get.back();
+
+      // Show error after navigation completes
+      Future.delayed(const Duration(milliseconds: 300), () {
+        Get.snackbar(
+          'Call Error',
+          userMessage,
+          backgroundColor: ColorsManager.error,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+        );
+      });
+    }
   }
 
   /// Handle call end event from ZEGO.
+  ///
+  /// Uses the [_callEndHandled] guard to avoid duplicate Firestore writes.
+  /// The guard covers both this handler and the fallback in [dispose].
   void _handleZegoCallEnd(
     ZegoCallEndEvent event,
     VoidCallback defaultAction,
   ) {
     log('[CallScreen] Call ended by ZEGO: ${event.reason}');
 
-    // Update status based on end reason
-    if (_callModel?.callId != null) {
-      switch (event.reason) {
-        case ZegoCallEndReason.localHangUp:
-        case ZegoCallEndReason.remoteHangUp:
-          _callDataSources.endCall(_callModel!.callId!, _callDurationSeconds);
-          break;
-        case ZegoCallEndReason.kickOut:
-          _callDataSources.markCallAsCancelled(_callModel!.callId!);
-          break;
-        default:
-          _callDataSources.endCall(_callModel!.callId!, _callDurationSeconds);
-      }
-    }
+    // Use the guarded _handleCallEnd() which handles status updates
+    // and prevents duplicate writes from dispose()
+    _handleCallEnd();
 
     // Execute default action (navigate back)
     defaultAction();

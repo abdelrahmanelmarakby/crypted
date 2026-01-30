@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
+import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
@@ -123,6 +125,23 @@ class RegisterController extends GetxController {
         log('✅ ZEGO call service logged in');
       } catch (e) {
         log('⚠️ ZEGO login failed (calls may not work): $e');
+      }
+
+      // Login to RevenueCat and load subscription state
+      try {
+        await PremiumService.instance.loginUser();
+        await PremiumService.instance.loadSubscription();
+        log('✅ RevenueCat subscription loaded');
+      } catch (e) {
+        log('⚠️ RevenueCat login failed: $e');
+      }
+
+      // Mark user as online after registration
+      try {
+        await PresenceService().goOnline();
+        log('✅ Presence: user online');
+      } catch (e) {
+        log('⚠️ Presence online failed: $e');
       }
 
       Get.offAllNamed(Routes.NAVBAR);

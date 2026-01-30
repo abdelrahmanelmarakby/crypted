@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
+import 'package:crypted_app/app/core/services/presence_service.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
@@ -296,20 +297,16 @@ class FirestoreUserInfoRepository implements UserInfoRepository {
 
   @override
   Stream<bool> watchOnlineStatus(String userId) {
-    return _firestore
-        .collection(FirebaseCollections.users)
-        .doc(userId)
-        .snapshots()
-        .map((doc) => doc.data()?['isOnline'] ?? false);
+    return PresenceService().listenToUserOnlineStatus(userId);
   }
 
   @override
   Future<DateTime?> getLastSeen(String userId) async {
     try {
-      final doc = await _firestore.collection(FirebaseCollections.users).doc(userId).get();
-      final lastSeen = doc.data()?['lastSeen'];
-      if (lastSeen is Timestamp) {
-        return lastSeen.toDate();
+      final presence = await PresenceService().getPresence(userId);
+      final lastSeen = presence['lastSeen'];
+      if (lastSeen is int && lastSeen > 0) {
+        return DateTime.fromMillisecondsSinceEpoch(lastSeen);
       }
       return null;
     } catch (e) {

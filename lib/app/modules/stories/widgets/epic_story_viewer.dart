@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/story_cluster.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 /// Epic Story Viewer - Smoother than Snapchat! 🔥
@@ -267,6 +269,9 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                 if (widget.stories[currentStoryIndex].hasLocation)
                   _buildLocationBadge(),
 
+                // Link sticker (tappable — opens URL)
+                _buildLinkSticker(widget.stories[currentStoryIndex]),
+
                 // Long press hint
                 if (_isLongPressing) _buildPauseIndicator(),
 
@@ -307,28 +312,29 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
           )
         else if (story.storyType == StoryType.text)
           Container(
-            color: Color(
-              int.parse(
-                  story.backgroundColor?.replaceAll('#', '0xFF') ?? '0xFF000000'),
-            ),
+            color: _parseColor(story.backgroundColor ?? '#000000'),
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(40),
                 child: Text(
                   story.storyText ?? '',
                   style: TextStyle(
-                    color: Color(
-                      int.parse(
-                          story.textColor?.replaceAll('#', '0xFF') ?? '0xFFFFFFFF'),
-                    ),
+                    color: _parseColor(story.textColor ?? '#FFFFFF'),
                     fontSize: story.fontSize ?? 32,
                     fontWeight: FontWeight.w600,
+                    fontFamily: story.fontFamily,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ),
             ),
           ),
+
+        // Video text overlay (metadata-based, not composited)
+        if (story.storyType == StoryType.video &&
+            story.storyText != null &&
+            story.storyText!.isNotEmpty)
+          _buildVideoTextOverlay(story),
 
         // Blur effect when paused
         if (isPaused)
@@ -339,6 +345,51 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildVideoTextOverlay(StoryModel story) {
+    final textColor = _parseColor(story.textColor ?? '#FFFFFF');
+    final fontSize = story.fontSize ?? 20.0;
+
+    final AlignmentGeometry textAlignment;
+    switch (story.textPosition) {
+      case 'top':
+        textAlignment = const Alignment(0.0, -0.6);
+        break;
+      case 'bottom':
+        textAlignment = const Alignment(0.0, 0.6);
+        break;
+      default:
+        textAlignment = Alignment.center;
+    }
+
+    return Align(
+      alignment: textAlignment,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          story.storyText!,
+          style: TextStyle(
+            color: textColor,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            shadows: const [
+              Shadow(
+                offset: Offset(0, 1),
+                blurRadius: 4,
+                color: Colors.black54,
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 
@@ -613,5 +664,99 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
     } else {
       return '${difference.inDays}d ago';
     }
+  }
+
+  // ── Link Sticker ──────────────────────────────────────────────
+  Widget _buildLinkSticker(StoryModel story) {
+    if (story.linkUrl == null || story.linkUrl!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final displayText = story.linkDisplayText?.isNotEmpty == true
+        ? story.linkDisplayText!
+        : _extractDomainFromUrl(story.linkUrl!);
+
+    return Positioned(
+      bottom: 80,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: GestureDetector(
+          onTap: () => _openLink(story.linkUrl!),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.link, color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 200),
+                      child: Text(
+                        displayText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Iconsax.arrow_right_3,
+                        color: Colors.white70, size: 14),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openLink(String url) async {
+    try {
+      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+      _pauseStory();
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error opening link: $e');
+      Get.snackbar('Error', 'Could not open link',
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
+          colorText: Colors.white);
+    }
+  }
+
+  String _extractDomainFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+      return uri.host.replaceFirst('www.', '');
+    } catch (_) {
+      return url;
+    }
+  }
+
+  Color _parseColor(String colorString) {
+    try {
+      if (colorString.startsWith('#')) {
+        return Color(
+            int.parse(colorString.substring(1), radix: 16) + 0xFF000000);
+      }
+    } catch (_) {}
+    return Colors.white;
   }
 }

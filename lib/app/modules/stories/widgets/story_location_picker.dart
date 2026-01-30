@@ -480,19 +480,6 @@ class _StoryLocationPickerState extends State<StoryLocationPicker>
           },
         ),
 
-        const SizedBox(height: 16),
-
-        // No location option
-        _buildLocationTile(
-          icon: Icons.location_off,
-          title: 'Don\'t Share Location',
-          subtitle: 'Story won\'t appear on map',
-          onTap: () {
-            Get.back();
-          },
-          isDanger: true,
-        ),
-
         const SizedBox(height: 40),
       ],
     );

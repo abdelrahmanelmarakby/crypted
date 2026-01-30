@@ -6,6 +6,10 @@ import 'package:crypted_app/app/data/models/backup_model.dart';
 import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart' as backup_v3;
 import 'package:crypted_app/app/core/services/analytics_service.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
+import 'package:crypted_app/app/core/services/presence_service.dart';
+import 'package:crypted_app/app/core/services/fcm_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/app/widgets/bottom_sheets/custom_bottom_sheet.dart';
 import 'package:crypted_app/core/services/cache_helper.dart';
 import 'package:crypted_app/core/locale/constant.dart';
@@ -547,12 +551,44 @@ class SettingsController extends GetxController {
 
   /// Logout user
   Future<void> logout() async {
+    // Clean up presence (mark offline + remove RTDB entry)
+    try {
+      await PresenceService().cleanupPresence();
+      log('✅ Presence cleaned up');
+    } catch (e) {
+      log('⚠️ Presence cleanup failed: $e');
+    }
+
+    // Delete FCM token from Firestore to stop push notifications
+    try {
+      await FCMService().deleteFCMToken();
+      log('✅ FCM token deleted');
+    } catch (e) {
+      log('⚠️ FCM token deletion failed: $e');
+    }
+
     // Logout from ZEGO call service
     try {
       await ZegoCallService.instance.logoutUser();
       log('✅ ZEGO call service logged out');
     } catch (e) {
       log('⚠️ ZEGO logout failed: $e');
+    }
+
+    // Logout from RevenueCat
+    try {
+      await PremiumService.instance.onLogout();
+      log('✅ RevenueCat logged out');
+    } catch (e) {
+      log('⚠️ RevenueCat logout failed: $e');
+    }
+
+    // Sign out from Firebase Auth
+    try {
+      await FirebaseAuth.instance.signOut();
+      log('✅ Firebase Auth signed out');
+    } catch (e) {
+      log('⚠️ Firebase Auth sign out failed: $e');
     }
 
     CacheHelper.logout();
@@ -1396,7 +1432,29 @@ class SettingsController extends GetxController {
       // Show loading bottom sheet
       CustomBottomSheet.showLoading(message: 'Deleting account...');
 
-      // Delete account
+      // Clean up services before cascade delete
+      try {
+        await PresenceService().cleanupPresence();
+      } catch (e) {
+        log('⚠️ Presence cleanup during delete failed: $e');
+      }
+      try {
+        await FCMService().deleteFCMToken();
+      } catch (e) {
+        log('⚠️ FCM cleanup during delete failed: $e');
+      }
+      try {
+        await ZegoCallService.instance.logoutUser();
+      } catch (e) {
+        log('⚠️ Zego cleanup during delete failed: $e');
+      }
+      try {
+        await PremiumService.instance.onLogout();
+      } catch (e) {
+        log('⚠️ RevenueCat cleanup during delete failed: $e');
+      }
+
+      // Delete account (cascade deletes all Firestore/Storage/Auth data)
       await UserService.deleteUser(user.uid!);
 
       // Close loading dialog
@@ -1409,6 +1467,9 @@ class SettingsController extends GetxController {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
+
+      // Clear local storage
+      CacheHelper.logout();
 
       // Navigate to login
       Get.offAllNamed(Routes.LOGIN);

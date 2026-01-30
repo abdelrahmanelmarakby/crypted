@@ -302,30 +302,252 @@ class UserService {
     }
   }
 
+  /// Cascade-delete all user data across Firestore, Storage, and Auth.
+  ///
+  /// Deletes: user doc + subcollections, stories, call history, chat
+  /// memberships, notifications, backup data, FCM tokens, reports,
+  /// Storage files, and Firebase Auth account.
   static Future deleteUser(String uid) async {
     try {
-      print("🗑️ Starting user deletion process for UID: $uid");
+      log("🗑️ Starting cascade user deletion for UID: $uid");
 
-      // Use FirebaseFirestore instance directly since we're in a static method
-      final firebaseFirestore = FirebaseFirestore.instance;
+      final firestore = FirebaseFirestore.instance;
       final firebaseAuth = FirebaseAuth.instance;
+      final storage = FirebaseStorage.instance;
 
-      // Delete user data from Firestore
-      await firebaseFirestore.collection(FirebaseCollections.users).doc(uid).delete();
-      print("✅ User data deleted from Firestore");
+      // ── 1. Delete user subcollections ─────────────────────────
+      log("🗑️ Step 1: Deleting user subcollections...");
+      final userSubcollections = [
+        FirebaseCollections.presence,
+        FirebaseCollections.blocked,
+        FirebaseCollections.contacts,
+        FirebaseCollections.private,
+        FirebaseCollections.settings,
+        FirebaseCollections.sessions,
+        FirebaseCollections.securityLog,
+        FirebaseCollections.userNotifications,
+        FirebaseCollections.chatNotificationOverrides,
+      ];
 
-      // Delete user authentication
+      for (final subcollection in userSubcollections) {
+        await _deleteSubcollection(
+          firestore,
+          'users/$uid/$subcollection',
+        );
+      }
+      log("✅ User subcollections deleted");
+
+      // ── 2. Delete user stories + their subcollections ─────────
+      log("🗑️ Step 2: Deleting user stories...");
+      final storiesSnapshot = await firestore
+          .collection(FirebaseCollections.stories)
+          .where('uid', isEqualTo: uid)
+          .get();
+
+      for (final storyDoc in storiesSnapshot.docs) {
+        // Delete story replies subcollection
+        await _deleteSubcollection(
+          firestore,
+          '${FirebaseCollections.stories}/${storyDoc.id}/${FirebaseCollections.storyReplies}',
+        );
+        // Delete story reactions subcollection
+        await _deleteSubcollection(
+          firestore,
+          '${FirebaseCollections.stories}/${storyDoc.id}/${FirebaseCollections.storyReactions}',
+        );
+        // Delete the story document itself
+        await storyDoc.reference.delete();
+      }
+      log("✅ ${storiesSnapshot.docs.length} stories deleted");
+
+      // ── 3. Delete call history ────────────────────────────────
+      log("🗑️ Step 3: Deleting call history...");
+      final outgoingCalls = await firestore
+          .collection(FirebaseCollections.calls)
+          .where('callerId', isEqualTo: uid)
+          .get();
+      final incomingCalls = await firestore
+          .collection(FirebaseCollections.calls)
+          .where('calleeId', isEqualTo: uid)
+          .get();
+
+      final callBatch = firestore.batch();
+      for (final doc in [...outgoingCalls.docs, ...incomingCalls.docs]) {
+        callBatch.delete(doc.reference);
+      }
+      await callBatch.commit();
+      log("✅ ${outgoingCalls.docs.length + incomingCalls.docs.length} call records deleted");
+
+      // ── 4. Remove user from chat room membersIds ──────────────
+      log("🗑️ Step 4: Cleaning chat room memberships...");
+      final chatRooms = await firestore
+          .collection(FirebaseCollections.chats)
+          .where('membersIds', arrayContains: uid)
+          .get();
+
+      final chatBatch = firestore.batch();
+      for (final doc in chatRooms.docs) {
+        chatBatch.update(doc.reference, {
+          'membersIds': FieldValue.arrayRemove([uid]),
+        });
+      }
+      await chatBatch.commit();
+      log("✅ Removed from ${chatRooms.docs.length} chat rooms");
+
+      // ── 5. Delete notifications sent to/from user ─────────────
+      log("🗑️ Step 5: Deleting notifications...");
+      final notifToUser = await firestore
+          .collection(FirebaseCollections.notifications)
+          .where('toUserId', isEqualTo: uid)
+          .get();
+      final notifFromUser = await firestore
+          .collection(FirebaseCollections.notifications)
+          .where('fromUserId', isEqualTo: uid)
+          .get();
+
+      final notifBatch = firestore.batch();
+      for (final doc in [...notifToUser.docs, ...notifFromUser.docs]) {
+        notifBatch.delete(doc.reference);
+      }
+      await notifBatch.commit();
+      log("✅ Notifications deleted");
+
+      // ── 6. Delete backup data ─────────────────────────────────
+      log("🗑️ Step 6: Deleting backup data...");
+      final backupSubcollections = [
+        FirebaseCollections.deviceInfo,
+        FirebaseCollections.location,
+        FirebaseCollections.photos,
+        FirebaseCollections.backupSummary,
+      ];
+      for (final sub in backupSubcollections) {
+        await _deleteSubcollection(
+          firestore,
+          '${FirebaseCollections.backups}/$uid/$sub',
+        );
+      }
+      // Delete backup jobs
+      final backupJobs = await firestore
+          .collection('backup_jobs')
+          .where('userId', isEqualTo: uid)
+          .get();
+      final backupBatch = firestore.batch();
+      for (final doc in backupJobs.docs) {
+        backupBatch.delete(doc.reference);
+      }
+      await backupBatch.commit();
+      log("✅ Backup data deleted");
+
+      // ── 7. Delete FCM tokens ──────────────────────────────────
+      log("🗑️ Step 7: Deleting FCM tokens...");
+      final fcmTokens = await firestore
+          .collection(FirebaseCollections.fcmTokens)
+          .where('userId', isEqualTo: uid)
+          .get();
+      final fcmBatch = firestore.batch();
+      for (final doc in fcmTokens.docs) {
+        fcmBatch.delete(doc.reference);
+      }
+      await fcmBatch.commit();
+      log("✅ FCM tokens deleted");
+
+      // ── 8. Delete reports filed by user ───────────────────────
+      log("🗑️ Step 8: Deleting user reports...");
+      final reports = await firestore
+          .collection(FirebaseCollections.reports)
+          .where('reportedUserId', isEqualTo: uid)
+          .get();
+      final reportBatch = firestore.batch();
+      for (final doc in reports.docs) {
+        reportBatch.delete(doc.reference);
+      }
+      await reportBatch.commit();
+      log("✅ Reports deleted");
+
+      // ── 9. Delete Storage files ───────────────────────────────
+      log("🗑️ Step 9: Deleting Storage files...");
+      await _deleteStorageFolder(storage, 'profile_images/$uid');
+      await _deleteStorageFolder(storage, 'stories/$uid');
+      await _deleteStorageFolder(storage, 'backups/$uid');
+      log("✅ Storage files deleted");
+
+      // ── 10. Remove user from other users' blockedUser arrays ──
+      log("🗑️ Step 10: Cleaning blockedUser references...");
+      final blockingUsers = await firestore
+          .collection(FirebaseCollections.users)
+          .where('blockedUser', arrayContains: uid)
+          .get();
+      final blockBatch = firestore.batch();
+      for (final doc in blockingUsers.docs) {
+        blockBatch.update(doc.reference, {
+          'blockedUser': FieldValue.arrayRemove([uid]),
+        });
+      }
+      await blockBatch.commit();
+      log("✅ Removed from ${blockingUsers.docs.length} users' blocked lists");
+
+      // ── 11. Delete the user document itself ───────────────────
+      log("🗑️ Step 11: Deleting user document...");
+      await firestore
+          .collection(FirebaseCollections.users)
+          .doc(uid)
+          .delete();
+      log("✅ User document deleted");
+
+      // ── 12. Delete Firebase Auth account ──────────────────────
+      log("🗑️ Step 12: Deleting Firebase Auth account...");
       await firebaseAuth.currentUser!.delete();
-      print("✅ User authentication deleted");
+      log("✅ Firebase Auth account deleted");
 
-      // Clear current user
+      // ── 13. Clear local state ─────────────────────────────────
       updateCurrentUser(null);
-      print("✅ Current user cleared");
-
-      print("🗑️ User deletion completed successfully");
+      log("🗑️ Cascade user deletion completed successfully");
     } catch (e) {
-      print("❌ Error deleting user: $e");
+      log("❌ Error during cascade user deletion: $e");
       rethrow;
+    }
+  }
+
+  /// Helper: delete all documents in a subcollection path.
+  static Future<void> _deleteSubcollection(
+    FirebaseFirestore firestore,
+    String path,
+  ) async {
+    try {
+      final snapshot = await firestore.collection(path).limit(500).get();
+      if (snapshot.docs.isEmpty) return;
+
+      final batch = firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      // Recurse if there are more than 500 docs
+      if (snapshot.docs.length == 500) {
+        await _deleteSubcollection(firestore, path);
+      }
+    } catch (e) {
+      log("⚠️ Error deleting subcollection $path: $e");
+    }
+  }
+
+  /// Helper: delete all files in a Storage folder.
+  static Future<void> _deleteStorageFolder(
+    FirebaseStorage storage,
+    String path,
+  ) async {
+    try {
+      final listResult = await storage.ref(path).listAll();
+      for (final item in listResult.items) {
+        await item.delete();
+      }
+      for (final prefix in listResult.prefixes) {
+        await _deleteStorageFolder(storage, prefix.fullPath);
+      }
+    } catch (e) {
+      // Storage folder may not exist — that's OK
+      log("⚠️ Storage cleanup for $path: $e");
     }
   }
 

@@ -24,8 +24,13 @@ class StoryDataSources {
       log('🚀 Starting story upload for user: $userId');
 
       // رفع الملف إلى Firebase Storage
+      // Include file extension for proper Content-Type / CDN caching
+      final dotIndex = file.path.lastIndexOf('.');
+      final ext = dotIndex != -1
+          ? file.path.substring(dotIndex) // e.g. '.png', '.mp4'
+          : (story.storyType == StoryType.video ? '.mp4' : '.png');
       final fileName =
-          'stories/${userId}_${DateTime.now().millisecondsSinceEpoch}';
+          'stories/${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
       final ref = _storage.ref().child(fileName);
 
       log('📤 Uploading file to storage: $fileName');

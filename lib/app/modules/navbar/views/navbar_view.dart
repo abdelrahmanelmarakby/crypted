@@ -53,20 +53,12 @@ class NavbarView extends GetView<NavbarController> {
     });
   }
 
-  // Special camera icon — always styled as primary green circle
+  // Special camera icon — outlined style to avoid visual collision with notch
   Widget _buildCameraIcon() {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: ColorsManager.primary,
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.camera_alt_rounded,
-        color: Colors.white,
-        size: 16,
-      ),
+    return Icon(
+      Icons.camera_alt_rounded,
+      color: ColorsManager.primary,
+      size: 26,
     );
   }
 

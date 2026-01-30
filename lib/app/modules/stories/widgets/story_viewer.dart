@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
@@ -6,7 +9,8 @@ import 'package:crypted_app/app/modules/stories/controllers/stories_controller.d
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'dart:async';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 class StoryViewer extends StatefulWidget {
@@ -861,6 +865,9 @@ class _StoryViewerState extends State<StoryViewer>
                 ),
               ),
 
+            // Link sticker (tappable — opens URL)
+            _buildLinkSticker(currentStory),
+
             // Floating Reply Button
             _buildFloatingReplyButton(),
 
@@ -942,7 +949,7 @@ class _StoryViewerState extends State<StoryViewer>
       );
     }
 
-    return FutureBuilder(
+    final videoPlayer = FutureBuilder(
       future: _initializeVideoPlayer(story.storyFileUrl!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
@@ -979,6 +986,64 @@ class _StoryViewerState extends State<StoryViewer>
           );
         }
       },
+    );
+
+    // If no text overlay metadata, return just the video
+    final hasTextOverlay =
+        story.storyText != null && story.storyText!.isNotEmpty;
+    if (!hasTextOverlay) return videoPlayer;
+
+    // Render text overlay on top of video (can't be composited without FFmpeg)
+    final textColor = story.textColor != null
+        ? _parseColor(story.textColor!)
+        : Colors.white;
+    final fontSize = story.fontSize ?? 20.0;
+
+    // Determine vertical alignment from textPosition metadata
+    final AlignmentGeometry textAlignment;
+    switch (story.textPosition) {
+      case 'top':
+        textAlignment = const Alignment(0.0, -0.6);
+        break;
+      case 'bottom':
+        textAlignment = const Alignment(0.0, 0.6);
+        break;
+      default:
+        textAlignment = Alignment.center;
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        videoPlayer,
+        Align(
+          alignment: textAlignment,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              story.storyText!,
+              style: TextStyle(
+                color: textColor,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w600,
+                shadows: const [
+                  Shadow(
+                    offset: Offset(0, 1),
+                    blurRadius: 4,
+                    color: Colors.black54,
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1047,6 +1112,7 @@ class _StoryViewerState extends State<StoryViewer>
               color: textColor,
               fontSize: fontSize,
               fontWeight: FontWeight.bold,
+              fontFamily: story.fontFamily,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1235,6 +1301,105 @@ class _StoryViewerState extends State<StoryViewer>
       print('Error parsing color: $e');
     }
     return Colors.white;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LINK STICKER — tappable URL overlay on story
+  // ═══════════════════════════════════════════════════════════
+
+  Widget _buildLinkSticker(StoryModel story) {
+    if (story.linkUrl == null || story.linkUrl!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final displayText =
+        story.linkDisplayText?.isNotEmpty == true
+            ? story.linkDisplayText!
+            : _extractDomainFromUrl(story.linkUrl!);
+
+    return Positioned(
+      bottom: 80, // above the reply button
+      left: 0,
+      right: 0,
+      child: Center(
+        child: GestureDetector(
+          onTap: () => _openLink(story.linkUrl!),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.link,
+                        color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 200),
+                      child: Text(
+                        displayText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Iconsax.arrow_right_3,
+                        color: Colors.white70, size: 14),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _extractDomainFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+      return uri.host.replaceFirst('www.', '');
+    } catch (_) {
+      return url;
+    }
+  }
+
+  Future<void> _openLink(String url) async {
+    try {
+      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+
+      // Pause story while user views the link
+      if (_progressController.isAnimating) {
+        _progressController.stop();
+        setState(() => _isPaused = true);
+      }
+      if (_videoController != null && _videoController!.value.isPlaying) {
+        _videoController!.pause();
+      }
+
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error opening link: $e');
+      Get.snackbar('Error', 'Could not open link',
+          backgroundColor: Colors.red.withValues(alpha: 0.9),
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
 
   // بناء حقل الرد مع الأنيميشن

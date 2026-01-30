@@ -173,6 +173,21 @@ class FCMService {
         debug: kDebugMode,
       );
 
+      // Fetch and store the current FCM token so deleteFCMToken() works on logout.
+      // The static onFcmTokenHandle callback can't set our instance field,
+      // so we retrieve it directly after initialization.
+      try {
+        final token = await AwesomeNotificationsFcm().requestFirebaseAppToken();
+        _currentToken = token;
+        if (kDebugMode) {
+          developer.log('📱 FCM token captured: ${token.substring(0, 20)}...', name: 'FCMService');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          developer.log('⚠️ Could not fetch FCM token: $e', name: 'FCMService');
+        }
+      }
+
       _isInitialized = true;
       if (kDebugMode) {
         developer.log('✅ FCM Service initialized successfully', name: 'FCMService');
@@ -492,6 +507,13 @@ class FCMService {
         developer.log('❌ Error deleting FCM token: $e', name: 'FCMService');
       }
     }
+  }
+
+  /// Update the in-memory token reference.
+  /// Called from NotificationController.onFcmTokenHandle when running
+  /// in the main isolate so deleteFCMToken() stays up to date.
+  void updateToken(String token) {
+    _currentToken = token;
   }
 
   /// Get current token

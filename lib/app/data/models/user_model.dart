@@ -373,6 +373,11 @@ class SocialMediaUser {
   final ChatSettings? chatSettings;
   final NotificationModel? notificationSettings;
 
+  // Premium / subscription fields
+  final String? premiumTier;
+  final DateTime? premiumExpiresAt;
+  final String? subscriptionId;
+
   const SocialMediaUser({
     this.fullName,
     this.email,
@@ -392,6 +397,9 @@ class SocialMediaUser {
     this.privacySettings,
     this.chatSettings,
     this.notificationSettings,
+    this.premiumTier,
+    this.premiumExpiresAt,
+    this.subscriptionId,
   });
 
   // Factory constructor with default settings
@@ -464,6 +472,9 @@ class SocialMediaUser {
     PrivacySettings? privacySettings,
     ChatSettings? chatSettings,
     NotificationModel? notificationSettings,
+    String? premiumTier,
+    DateTime? premiumExpiresAt,
+    String? subscriptionId,
   }) {
     return SocialMediaUser(
       fullName: fullName ?? this.fullName,
@@ -484,6 +495,9 @@ class SocialMediaUser {
       privacySettings: privacySettings ?? this.privacySettings,
       chatSettings: chatSettings ?? this.chatSettings,
       notificationSettings: notificationSettings ?? this.notificationSettings,
+      premiumTier: premiumTier ?? this.premiumTier,
+      premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
     );
   }
 
@@ -546,6 +560,9 @@ class SocialMediaUser {
       'privacySettings': privacySettings?.toMap(),
       'chatSettings': chatSettings?.toMap(),
       'notificationSettings': notificationSettings?.toMap(),
+      'premiumTier': premiumTier,
+      'premiumExpiresAt': premiumExpiresAt?.toIso8601String(),
+      'subscriptionId': subscriptionId,
     };
   }
 
@@ -583,7 +600,24 @@ class SocialMediaUser {
       notificationSettings: map['notificationSettings'] != null
           ? NotificationModel.fromMap(Map<String, dynamic>.from(map['notificationSettings']))
           : null,
+      premiumTier: map['premiumTier'] as String?,
+      premiumExpiresAt: _parsePremiumExpiry(map['premiumExpiresAt']),
+      subscriptionId: map['subscriptionId'] as String?,
     );
+  }
+
+  /// Parse premiumExpiresAt from various formats (Timestamp, String, int).
+  static DateTime? _parsePremiumExpiry(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return DateTime.tryParse(value);
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    // Handle Firestore Timestamp dynamically to avoid hard dependency
+    if (value is Map && value['_seconds'] != null) {
+      return DateTime.fromMillisecondsSinceEpoch(
+        (value['_seconds'] as int) * 1000,
+      );
+    }
+    return null;
   }
 
   String toJson() => json.encode(toMap());
@@ -609,7 +643,7 @@ class SocialMediaUser {
 
   @override
   String toString() {
-    return 'SocialMediaUser(fullName: $fullName, email: $email, imageUrl: $imageUrl, provider: $provider, uid: $uid, phoneNumber: $phoneNumber, address: $address, bio: $bio, following: $following, followers: $followers, blockedUser: $blockedUser, fcmToken: $fcmToken, privacySettings: $privacySettings, chatSettings: $chatSettings, notificationSettings: $notificationSettings)';
+    return 'SocialMediaUser(fullName: $fullName, email: $email, imageUrl: $imageUrl, provider: $provider, uid: $uid, phoneNumber: $phoneNumber, address: $address, bio: $bio, following: $following, followers: $followers, blockedUser: $blockedUser, fcmToken: $fcmToken, privacySettings: $privacySettings, chatSettings: $chatSettings, notificationSettings: $notificationSettings, premiumTier: $premiumTier, premiumExpiresAt: $premiumExpiresAt)';
   }
 
   @override
@@ -633,7 +667,10 @@ class SocialMediaUser {
         mapEquals(other.deviceInfo, deviceInfo) &&
         other.privacySettings == privacySettings &&
         other.chatSettings == chatSettings &&
-        other.notificationSettings == notificationSettings;
+        other.notificationSettings == notificationSettings &&
+        other.premiumTier == premiumTier &&
+        other.premiumExpiresAt == premiumExpiresAt &&
+        other.subscriptionId == subscriptionId;
   }
 
   @override
@@ -655,6 +692,9 @@ class SocialMediaUser {
         deviceInfo.hashCode ^
         privacySettings.hashCode ^
         chatSettings.hashCode ^
-        notificationSettings.hashCode;
+        notificationSettings.hashCode ^
+        premiumTier.hashCode ^
+        premiumExpiresAt.hashCode ^
+        subscriptionId.hashCode;
   }
 }

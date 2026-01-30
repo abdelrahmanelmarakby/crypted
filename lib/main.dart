@@ -33,6 +33,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -85,6 +86,33 @@ Future<void> _initializeZegoCallService() async {
   } catch (e, stackTrace) {
     LoggerService.instance.logError(
       'Failed to initialize ZEGO Call Service',
+      error: e,
+      context: 'main',
+    );
+  }
+}
+
+/// Initialize RevenueCat premium subscription service.
+Future<void> _initializeRevenueCat() async {
+  try {
+    // Register PremiumService with GetX
+    if (!Get.isRegistered<PremiumService>()) {
+      Get.put(PremiumService(), permanent: true);
+    }
+
+    // Configure RevenueCat SDK
+    await PremiumService.instance.configureRevenueCat();
+
+    // If user is already authenticated, log in and load subscription
+    if (FirebaseAuth.instance.currentUser != null) {
+      await PremiumService.instance.loginUser();
+      await PremiumService.instance.loadSubscription();
+    }
+
+    LoggerService.instance.info('RevenueCat initialized successfully', context: 'main');
+  } catch (e) {
+    LoggerService.instance.logError(
+      'Failed to initialize RevenueCat',
       error: e,
       context: 'main',
     );
@@ -202,6 +230,9 @@ Future<void> main() async {
 
   // Initialize ZEGO Call Service
   await _initializeZegoCallService();
+
+  // Initialize RevenueCat (Premium/Subscription service)
+  await _initializeRevenueCat();
 
   // Initialize Backup Service
   await BackupServiceV3.instance.initialize();

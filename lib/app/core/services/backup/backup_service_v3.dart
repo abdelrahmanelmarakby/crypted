@@ -453,11 +453,27 @@ class BackupServiceV3 {
         return;
       }
 
-      // Resume the interrupted backup
       final doc = querySnapshot.docs.first;
       final job = BackupJob.fromJson(doc.data());
 
-      log('🔄 Found interrupted backup: ${job.id} (status: ${job.status.name})');
+      // Check if backup is stale (created > 1 hour ago and still running)
+      // This happens when the app was killed mid-backup — the status stays
+      // "running" in Firestore forever. Instead of re-executing the entire
+      // backup on every app start, mark it as failed and let _checkAutoBackup()
+      // handle scheduling a fresh incremental backup if 7+ days have passed.
+      final age = DateTime.now().difference(job.createdAt);
+      if (age.inHours >= 1) {
+        log('⚠️ Stale backup found: ${job.id} (${age.inHours}h old), marking as failed');
+        await _firestore.collection('backup_jobs').doc(job.id).update({
+          'status': BackupStatus.failed.name,
+          'failedAt': FieldValue.serverTimestamp(),
+          'errorMessage': 'Backup stale: app was killed during execution',
+        });
+        return; // Don't resume — let _checkAutoBackup() handle scheduling
+      }
+
+      // Only resume truly recent interruptions (< 1 hour old)
+      log('🔄 Found recent interrupted backup: ${job.id} (${age.inMinutes}m old)');
       log('   Resuming backup automatically...');
 
       // Re-execute the backup
@@ -855,6 +871,14 @@ class BackupServiceV3 {
         'startedAt': FieldValue.serverTimestamp(),
       });
 
+      // Query last completed backup date for incremental filtering
+      final lastBackupDate = await getLastBackupDate(job.userId);
+      if (lastBackupDate != null) {
+        log('📅 Last completed backup: ${lastBackupDate.toIso8601String()}');
+      } else {
+        log('📅 No previous completed backup found — full backup');
+      }
+
       int totalItems = 0;
       int processedItems = 0;
       int failedItems = 0;
@@ -876,12 +900,13 @@ class BackupServiceV3 {
             continue;
           }
 
-          // Create backup context
+          // Create backup context with last backup timestamp for incremental
           final context = BackupContext(
             userId: job.userId,
             backupId: job.id,
             options: job.options,
             firestore: _firestore,
+            lastBackupTimestamp: lastBackupDate,
           );
 
           // Subscribe to media progress if this is media backup
@@ -1362,12 +1387,14 @@ class BackupContext {
   final String backupId;
   final BackupOptions options;
   final FirebaseFirestore firestore;
+  final DateTime? lastBackupTimestamp;
 
   BackupContext({
     required this.userId,
     required this.backupId,
     required this.options,
     required this.firestore,
+    this.lastBackupTimestamp,
   });
 }
 

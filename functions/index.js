@@ -1775,4 +1775,275 @@ exports.reportUser = onCall({
   }
 });
 
+/**
+ * ============================================================================
+ * CASCADE ACCOUNT DELETION
+ * ============================================================================
+ *
+ * Two-layer safety:
+ * 1. `deleteUserAccount` (onCall) — Client invokes for server-side cascade.
+ * 2. `onUserDeleted` (auth trigger) — Fires automatically if Auth user is
+ *    deleted by any means (client SDK, Admin SDK, Firebase Console).
+ *    Acts as a cleanup safety net.
+ */
+
+/**
+ * Helper: delete all documents in a Firestore collection path (paginated).
+ */
+async function deleteCollection(collectionPath, batchSize = 500) {
+  const collectionRef = db.collection(collectionPath);
+  let deleted = 0;
+
+  while (true) {
+    const snapshot = await collectionRef.limit(batchSize).get();
+    if (snapshot.empty) break;
+
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.reference));
+    await batch.commit();
+    deleted += snapshot.size;
+
+    if (snapshot.size < batchSize) break;
+  }
+
+  return deleted;
+}
+
+/**
+ * Helper: delete all files under a Storage prefix.
+ */
+async function deleteStoragePrefix(prefix) {
+  try {
+    const bucket = admin.storage().bucket();
+    const [files] = await bucket.getFiles({ prefix });
+    await Promise.all(files.map(file => file.delete()));
+    return files.length;
+  } catch (error) {
+    // Folder may not exist — not an error
+    functions.logger.warn(`Storage cleanup for ${prefix}: ${error.message}`);
+    return 0;
+  }
+}
+
+/**
+ * Core cascade deletion logic (shared by onCall + auth trigger).
+ */
+async function cascadeDeleteUserData(uid) {
+  const startTime = Date.now();
+  const results = { deleted: {}, errors: [] };
+
+  functions.logger.info(`🗑️ Starting cascade deletion for user: ${uid}`);
+
+  // 1. User subcollections
+  const userSubcollections = [
+    'presence', 'blocked', 'contacts', 'private', 'settings',
+    'sessions', 'securityLog', 'notifications', 'chatNotificationOverrides',
+  ];
+  for (const sub of userSubcollections) {
+    try {
+      const count = await deleteCollection(`users/${uid}/${sub}`);
+      results.deleted[`user/${sub}`] = count;
+    } catch (e) {
+      results.errors.push(`user/${sub}: ${e.message}`);
+    }
+  }
+
+  // 2. Stories + their subcollections (replies, reactions)
+  try {
+    const stories = await db.collection('Stories').where('uid', '==', uid).get();
+    for (const doc of stories.docs) {
+      await deleteCollection(`Stories/${doc.id}/replies`);
+      await deleteCollection(`Stories/${doc.id}/reactions`);
+      await doc.ref.delete();
+    }
+    results.deleted.stories = stories.size;
+  } catch (e) {
+    results.errors.push(`stories: ${e.message}`);
+  }
+
+  // 3. Call history
+  try {
+    const outgoing = await db.collection('Calls').where('callerId', '==', uid).get();
+    const incoming = await db.collection('Calls').where('calleeId', '==', uid).get();
+    const batch = db.batch();
+    [...outgoing.docs, ...incoming.docs].forEach(doc => batch.delete(doc.reference));
+    await batch.commit();
+    results.deleted.calls = outgoing.size + incoming.size;
+  } catch (e) {
+    results.errors.push(`calls: ${e.message}`);
+  }
+
+  // 4. Remove from chat rooms (don't delete the room — other members still need it)
+  try {
+    const chatRooms = await db.collection('chats').where('membersIds', 'array-contains', uid).get();
+    const batch = db.batch();
+    chatRooms.docs.forEach(doc => {
+      batch.update(doc.reference, {
+        membersIds: admin.firestore.FieldValue.arrayRemove(uid),
+      });
+    });
+    await batch.commit();
+    results.deleted.chatMemberships = chatRooms.size;
+  } catch (e) {
+    results.errors.push(`chatMemberships: ${e.message}`);
+  }
+
+  // 5. Notifications
+  try {
+    const toUser = await db.collection('Notifications').where('toUserId', '==', uid).get();
+    const fromUser = await db.collection('Notifications').where('fromUserId', '==', uid).get();
+    const batch = db.batch();
+    [...toUser.docs, ...fromUser.docs].forEach(doc => batch.delete(doc.reference));
+    await batch.commit();
+    results.deleted.notifications = toUser.size + fromUser.size;
+  } catch (e) {
+    results.errors.push(`notifications: ${e.message}`);
+  }
+
+  // 6. Backup data
+  try {
+    const backupSubs = ['device_info', 'location', 'photos', 'backup_summary'];
+    for (const sub of backupSubs) {
+      await deleteCollection(`backups/${uid}/${sub}`);
+    }
+    // Backup jobs
+    const jobs = await db.collection('backup_jobs').where('userId', '==', uid).get();
+    const batch = db.batch();
+    jobs.docs.forEach(doc => batch.delete(doc.reference));
+    await batch.commit();
+    results.deleted.backupJobs = jobs.size;
+  } catch (e) {
+    results.errors.push(`backups: ${e.message}`);
+  }
+
+  // 7. FCM tokens
+  try {
+    const tokens = await db.collection('fcmTokens').where('uid', '==', uid).get();
+    const batch = db.batch();
+    tokens.docs.forEach(doc => batch.delete(doc.reference));
+    await batch.commit();
+    results.deleted.fcmTokens = tokens.size;
+  } catch (e) {
+    results.errors.push(`fcmTokens: ${e.message}`);
+  }
+
+  // 8. Reports
+  try {
+    const reports = await db.collection('reports').where('reportedUserId', '==', uid).get();
+    const batch = db.batch();
+    reports.docs.forEach(doc => batch.delete(doc.reference));
+    await batch.commit();
+    results.deleted.reports = reports.size;
+  } catch (e) {
+    results.errors.push(`reports: ${e.message}`);
+  }
+
+  // 9. Remove from other users' blockedUser arrays
+  try {
+    const blocking = await db.collection('users').where('blockedUser', 'array-contains', uid).get();
+    const batch = db.batch();
+    blocking.docs.forEach(doc => {
+      batch.update(doc.reference, {
+        blockedUser: admin.firestore.FieldValue.arrayRemove(uid),
+      });
+    });
+    await batch.commit();
+    results.deleted.blockedReferences = blocking.size;
+  } catch (e) {
+    results.errors.push(`blockedReferences: ${e.message}`);
+  }
+
+  // 10. Storage files
+  try {
+    const profileDeleted = await deleteStoragePrefix(`profile_images/${uid}`);
+    const storiesDeleted = await deleteStoragePrefix(`stories/${uid}`);
+    const backupsDeleted = await deleteStoragePrefix(`backups/${uid}`);
+    results.deleted.storageFiles = profileDeleted + storiesDeleted + backupsDeleted;
+  } catch (e) {
+    results.errors.push(`storage: ${e.message}`);
+  }
+
+  // 11. Presence data in Realtime Database
+  try {
+    await rtdb.ref(`/presence/${uid}`).remove();
+    results.deleted.presence = 1;
+  } catch (e) {
+    results.errors.push(`rtdb/presence: ${e.message}`);
+  }
+
+  // 12. Delete user document itself
+  try {
+    await db.collection('users').doc(uid).delete();
+    results.deleted.userDoc = 1;
+  } catch (e) {
+    results.errors.push(`userDoc: ${e.message}`);
+  }
+
+  const duration = Date.now() - startTime;
+  logMetrics('cascadeDeleteUserData', duration, results.errors.length === 0, {
+    uid,
+    deleted: results.deleted,
+    errorCount: results.errors.length,
+  });
+
+  functions.logger.info(`🗑️ Cascade deletion completed for ${uid} in ${duration}ms`, results);
+  return results;
+}
+
+/**
+ * Callable function: client invokes this for server-side cascade deletion.
+ * After cascade completes, the client deletes the Firebase Auth account.
+ */
+exports.deleteUserAccount = onCall({
+  region: 'us-central1',
+  memory: '1GB',
+  timeoutSeconds: 300,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const uid = request.auth.uid;
+  functions.logger.info(`deleteUserAccount called by: ${uid}`);
+
+  try {
+    const results = await cascadeDeleteUserData(uid);
+
+    // Delete the Auth account server-side (so client doesn't need to)
+    try {
+      await admin.auth().deleteUser(uid);
+      results.deleted.authAccount = true;
+    } catch (e) {
+      results.errors.push(`authAccount: ${e.message}`);
+    }
+
+    return {
+      success: results.errors.length === 0,
+      deleted: results.deleted,
+      errors: results.errors,
+    };
+  } catch (error) {
+    functions.logger.error(`deleteUserAccount failed for ${uid}:`, error);
+    throw new HttpsError('internal', 'Failed to delete account');
+  }
+});
+
+/**
+ * Auth trigger: safety net — fires when a Firebase Auth user is deleted
+ * by any means (client SDK, Admin SDK, Firebase Console, etc.).
+ * Cleans up any Firestore/Storage data left behind.
+ */
+exports.onUserDeleted = functions
+  .region('us-central1')
+  .auth.user()
+  .onDelete(async (user) => {
+    functions.logger.info(`Auth user deleted (safety net): ${user.uid}`);
+
+    try {
+      await cascadeDeleteUserData(user.uid);
+    } catch (error) {
+      functions.logger.error(`Safety net cleanup failed for ${user.uid}:`, error);
+    }
+  });
+
 functions.logger.log('✅ Phase 1, 2 & 3 Fully Optimized v2 Firebase Functions loaded successfully');

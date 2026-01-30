@@ -46,6 +46,7 @@ class PresenceService {
   bool _isOnline = false;
   bool _isInitialized = false;
   String? _deviceId;
+  Timer? _heartbeatTimer;
 
   /// Initialize presence service
   Future<void> initialize() async {
@@ -114,6 +115,15 @@ class PresenceService {
 
       _isOnline = true;
 
+      // Start heartbeat to prevent server cleanup from marking us offline.
+      // The Cloud Function cleanupStalePresence marks users offline if
+      // updatedAt is >5 min old, so we refresh every 2 minutes.
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = Timer.periodic(
+        const Duration(minutes: 2),
+        (_) => refreshPresence(),
+      );
+
       if (kDebugMode) {
         print('✅ User set online (RTDB): $userId');
       }
@@ -146,6 +156,8 @@ class PresenceService {
 
       _isOnline = false;
       _sessionId = null;
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
 
       if (kDebugMode) {
         print('✅ User set offline (RTDB): $userId');
@@ -607,6 +619,8 @@ class PresenceService {
 
   /// Dispose resources
   void dispose() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     _isInitialized = false;
     _presenceCache.clear();
 

@@ -139,6 +139,27 @@ Future<bool> _executeBackupInIsolate(BackupJob job) async {
         'retryCount': retryCount,
       });
 
+      // Query last completed backup date for incremental filtering
+      DateTime? lastBackupDate;
+      try {
+        final lastBackupQuery = await firestore
+            .collection('backup_jobs')
+            .where('userId', isEqualTo: job.userId)
+            .where('status', isEqualTo: BackupStatus.completed.name)
+            .orderBy('completedAt', descending: true)
+            .limit(1)
+            .get();
+        if (lastBackupQuery.docs.isNotEmpty) {
+          final completedAt = lastBackupQuery.docs.first.data()['completedAt'];
+          if (completedAt is Timestamp) {
+            lastBackupDate = completedAt.toDate();
+          }
+        }
+      } catch (e) {
+        log('⚠️ [Isolate] Could not get last backup date: $e');
+      }
+      log('📅 [Isolate] Last completed backup: ${lastBackupDate?.toIso8601String() ?? 'none'}');
+
       // Execute each backup type sequentially
       int totalItems = 0;
       int processedItems = 0;
@@ -152,12 +173,13 @@ Future<bool> _executeBackupInIsolate(BackupJob job) async {
         try {
           log('🔄 [Isolate] Starting ${backupType.name} backup...');
 
-          // Create backup context
+          // Create backup context with last backup timestamp for incremental
           final context = BackupContext(
             userId: job.userId,
             backupId: job.id,
             options: job.options,
             firestore: firestore,
+            lastBackupTimestamp: lastBackupDate,
           );
 
           // Get strategy and execute

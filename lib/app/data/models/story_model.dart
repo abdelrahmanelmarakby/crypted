@@ -41,6 +41,10 @@ class StoryModel {
   String? country; // e.g., "United States"
   bool? isLocationPublic; // Privacy control
 
+  // Link sticker fields
+  String? linkUrl;
+  String? linkDisplayText;
+
   StoryModel({
     this.id,
     this.uid,
@@ -64,6 +68,8 @@ class StoryModel {
     this.city,
     this.country,
     this.isLocationPublic,
+    this.linkUrl,
+    this.linkDisplayText,
   });
 
   StoryModel copyWith({
@@ -89,6 +95,8 @@ class StoryModel {
     String? city,
     String? country,
     bool? isLocationPublic,
+    String? linkUrl,
+    String? linkDisplayText,
   }) {
     return StoryModel(
       id: id ?? this.id,
@@ -113,6 +121,8 @@ class StoryModel {
       city: city ?? this.city,
       country: country ?? this.country,
       isLocationPublic: isLocationPublic ?? this.isLocationPublic,
+      linkUrl: linkUrl ?? this.linkUrl,
+      linkDisplayText: linkDisplayText ?? this.linkDisplayText,
     );
   }
 
@@ -185,6 +195,12 @@ class StoryModel {
     if (isLocationPublic != null) {
       result.addAll({'isLocationPublic': isLocationPublic});
     }
+    if (linkUrl != null) {
+      result.addAll({'linkUrl': linkUrl});
+    }
+    if (linkDisplayText != null) {
+      result.addAll({'linkDisplayText': linkDisplayText});
+    }
 
     return result;
   }
@@ -238,6 +254,8 @@ class StoryModel {
       city: map['city'],
       country: map['country'],
       isLocationPublic: map['isLocationPublic'] ?? map['is_location_public'] ?? true,
+      linkUrl: map['linkUrl'] ?? map['link_url'],
+      linkDisplayText: map['linkDisplayText'] ?? map['link_display_text'],
     );
   }
 
@@ -294,6 +312,8 @@ class StoryModel {
       city: data['city'],
       country: data['country'],
       isLocationPublic: data['isLocationPublic'] ?? data['is_location_public'] ?? true,
+      linkUrl: data['linkUrl'] ?? data['link_url'],
+      linkDisplayText: data['linkDisplayText'] ?? data['link_display_text'],
     );
   }
 

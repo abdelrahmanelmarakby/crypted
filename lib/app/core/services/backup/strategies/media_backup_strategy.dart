@@ -66,8 +66,11 @@ class MediaBackupStrategy extends BackupStrategy {
         );
       }
 
-      // Step 2: Collect media URLs from all messages
+      // Step 2: Collect media URLs from all messages (incremental: only since last backup)
       final mediaUrls = <String, Map<String, dynamic>>{};
+      final sinceTimestamp = context.options.incrementalOnly
+          ? context.lastBackupTimestamp
+          : null;
 
       for (final chatRoom in chatRooms) {
         try {
@@ -75,6 +78,7 @@ class MediaBackupStrategy extends BackupStrategy {
             roomId: chatRoom.id ?? '',
             limit: _messagesPerRoom,
             context: context,
+            sinceTimestamp: sinceTimestamp,
           );
 
           for (final message in messages) {
@@ -350,11 +354,12 @@ class MediaBackupStrategy extends BackupStrategy {
   }
 
   /// Get list of already uploaded file URLs (for resume capability)
+  /// Uses userId as key so progress persists across backup jobs
   Future<Set<String>> _getAlreadyUploadedFiles(BackupContext context) async {
     try {
       final doc = await context.firestore
           .collection('backup_progress')
-          .doc('${context.backupId}_media')
+          .doc('${context.userId}_media')
           .get();
 
       if (!doc.exists) return {};
@@ -369,6 +374,7 @@ class MediaBackupStrategy extends BackupStrategy {
   }
 
   /// Save upload progress (for resume capability)
+  /// Uses userId as key so progress persists across backup jobs
   Future<void> _saveUploadProgress({
     required BackupContext context,
     required List<String> uploadedUrls,
@@ -376,7 +382,7 @@ class MediaBackupStrategy extends BackupStrategy {
     try {
       await context.firestore
           .collection('backup_progress')
-          .doc('${context.backupId}_media')
+          .doc('${context.userId}_media')
           .set({
         'uploadedUrls': uploadedUrls,
         'lastUpdated': FieldValue.serverTimestamp(),
@@ -428,7 +434,17 @@ class MediaBackupStrategy extends BackupStrategy {
 
   @override
   Future<bool> needsBackup(dynamic item, BackupContext context) async {
-    return true;
+    if (!context.options.incrementalOnly) return true;
+    if (context.lastBackupTimestamp == null) return true;
+
+    // item is a media metadata map with 'timestamp' field
+    if (item is Map<String, dynamic>) {
+      final timestamp = item['timestamp'];
+      if (timestamp is Timestamp) {
+        return timestamp.toDate().isAfter(context.lastBackupTimestamp!);
+      }
+    }
+    return true; // Backup if we can't determine age
   }
 
   /// Dynamic size estimation by sampling actual media files
@@ -522,18 +538,26 @@ class MediaBackupStrategy extends BackupStrategy {
     required String roomId,
     required int limit,
     required BackupContext context,
+    DateTime? sinceTimestamp,
   }) async {
     try {
-      final querySnapshot = await context.firestore
+      Query query = context.firestore
           .collection(FirebaseCollections.chats)
           .doc(roomId)
           .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .get();
+          .limit(limit);
+
+      // Only fetch messages since last backup (incremental mode)
+      if (sinceTimestamp != null) {
+        query = query.where('timestamp',
+            isGreaterThan: Timestamp.fromDate(sinceTimestamp));
+      }
+
+      final querySnapshot = await query.get();
 
       return querySnapshot.docs
-          .map((doc) => Message.fromMap(doc.data()))
+          .map((doc) => Message.fromMap(doc.data() as Map<String, dynamic>))
           .where((msg) => !msg.isDeleted)
           .toList();
     } catch (e) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart';
 import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
@@ -55,11 +56,15 @@ class ChatBackupStrategy extends BackupStrategy {
 
         for (final chatRoom in batch) {
           try {
-            // Get messages for this room
+            // Get messages for this room (incremental: only since last backup)
+            final sinceTimestamp = context.options.incrementalOnly
+                ? context.lastBackupTimestamp
+                : null;
             final messages = await _getChatMessages(
               roomId: chatRoom.id ?? '',
               limit: _messagesPerRoom,
               context: context,
+              sinceTimestamp: sinceTimestamp,
             );
 
             if (messages.isNotEmpty) {
@@ -225,14 +230,10 @@ class ChatBackupStrategy extends BackupStrategy {
     // If incremental mode is enabled, check if chat has new messages
     if (context.options.incrementalOnly && item is ChatRoom) {
       try {
-        // Check last backup timestamp vs chat's last message timestamp
-        final lastBackup = await _getLastBackupTimestamp(
-          context.backupId,
-          item.id ?? '',
-        );
+        final lastBackup = context.lastBackupTimestamp;
 
         if (lastBackup != null) {
-          // lastChat is a Timestamp, convert to DateTime
+          // lastChat is a Timestamp string, convert to DateTime
           final chatLastUpdate = item.lastChat != null
               ? DateTime.parse(item.lastChat!)
               : DateTime.now();
@@ -243,7 +244,7 @@ class ChatBackupStrategy extends BackupStrategy {
       }
     }
 
-    // Default: always backup
+    // Default: always backup (first backup or non-incremental mode)
     return true;
   }
 
@@ -270,20 +271,27 @@ class ChatBackupStrategy extends BackupStrategy {
     required String roomId,
     required int limit,
     required BackupContext context,
+    DateTime? sinceTimestamp,
   }) async {
     try {
-      // FIX: Use chatMessages ('chat') instead of messages ('messages')
       // The actual Firestore structure is: chats/{roomId}/chat/{messageId}
-      final querySnapshot = await context.firestore
+      Query query = context.firestore
           .collection(FirebaseCollections.chats)
           .doc(roomId)
           .collection(FirebaseCollections.chatMessages)
           .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .get();
+          .limit(limit);
+
+      // Only fetch messages since last backup (incremental mode)
+      if (sinceTimestamp != null) {
+        query = query.where('timestamp',
+            isGreaterThan: Timestamp.fromDate(sinceTimestamp));
+      }
+
+      final querySnapshot = await query.get();
 
       return querySnapshot.docs
-          .map((doc) => Message.fromMap(doc.data()))
+          .map((doc) => Message.fromMap(doc.data() as Map<String, dynamic>))
           .where((msg) => !msg.isDeleted) // Skip deleted messages
           .toList();
     } catch (e) {
@@ -318,20 +326,6 @@ class ChatBackupStrategy extends BackupStrategy {
     } catch (e) {
       log('❌ Error getting participants: $e');
       return {};
-    }
-  }
-
-  Future<DateTime?> _getLastBackupTimestamp(
-    String backupId,
-    String roomId,
-  ) async {
-    try {
-      // Check if previous backup exists for this room
-      // This would require storing incremental metadata
-      // For now, return null (always backup)
-      return null;
-    } catch (e) {
-      return null;
     }
   }
 

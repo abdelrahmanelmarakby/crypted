@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:crypted_app/app/modules/settings/controllers/settings_controller.dart';
 import 'package:crypted_app/app/modules/about/views/about_view.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
 import 'package:crypted_app/core/locale/my_locale_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
@@ -10,6 +11,7 @@ import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Settings section — iOS-style grouped layout
 ///
@@ -58,6 +60,13 @@ class SettingsSectionWidget extends StatelessWidget {
 
           const SizedBox(height: Spacing.xl),
 
+          // ── Subscription Section ──
+          _SectionHeader('SUBSCRIPTION'),
+          const SizedBox(height: Spacing.xs),
+          const CryptedProSectionWidget(),
+
+          const SizedBox(height: Spacing.xl),
+
           // ── Support Section ──
           _SectionHeader('SUPPORT'),
           const SizedBox(height: Spacing.xs),
@@ -68,6 +77,7 @@ class SettingsSectionWidget extends StatelessWidget {
                 icon: Iconsax.quote_down,
                 onTap: () => Get.toNamed(Routes.HELP),
               ),
+              const PaidSupportTileWidget(),
               SettingTileWidget(
                 title: 'About',
                 icon: Iconsax.info_circle,
@@ -464,6 +474,242 @@ class DeleteAccountTileWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────
+// Crypted Pro Subscription Section
+// ─────────────────────────────────────────────────
+
+class CryptedProSectionWidget extends StatelessWidget {
+  const CryptedProSectionWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Get.isRegistered<PremiumService>()) {
+      return const SizedBox.shrink();
+    }
+    final premium = Get.find<PremiumService>();
+
+    return Obx(() {
+      final isPro = premium.isPremium;
+
+      return SettingsGroupCard(
+        children: [
+          // Upgrade / Status tile
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                if (isPro) {
+                  premium.presentCustomerCenter();
+                } else {
+                  premium.presentPaywall();
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.md,
+                  vertical: Spacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isPro
+                              ? [
+                                  const Color(0xFFFFD700),
+                                  const Color(0xFFFFA500),
+                                ]
+                              : [
+                                  ColorsManager.primary,
+                                  ColorsManager.primary.withValues(alpha: 0.7),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Icon(
+                        isPro ? Iconsax.crown : Iconsax.star,
+                        color: Colors.white,
+                        size: IconSizes.sm,
+                      ),
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isPro ? 'Crypted Pro' : 'Upgrade to Pro',
+                            style: StylesManager.semiBold(
+                              fontSize: FontSize.medium,
+                              color: isPro
+                                  ? const Color(0xFFD4A017)
+                                  : ColorsManager.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isPro
+                                ? 'Manage your subscription'
+                                : 'Unlock all premium features',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.xSmall,
+                              color: ColorsManager.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: ColorsManager.lightGrey,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Restore purchases tile (only for non-subscribers)
+          if (!isPro)
+            SettingTileWidget(
+              title: 'Restore Purchases',
+              icon: Iconsax.refresh,
+              onTap: () async {
+                final restored = await premium.restorePurchases();
+                Get.showSnackbar(GetSnackBar(
+                  message: restored
+                      ? 'Purchases restored successfully!'
+                      : 'No active purchases found.',
+                  duration: const Duration(seconds: 2),
+                  backgroundColor:
+                      restored ? ColorsManager.success : ColorsManager.grey,
+                  margin: const EdgeInsets.all(16),
+                  borderRadius: 12,
+                  snackPosition: SnackPosition.BOTTOM,
+                ));
+              },
+            ),
+        ],
+      );
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────
+// Paid Support Tile — opens support page (gated)
+// ─────────────────────────────────────────────────
+
+class PaidSupportTileWidget extends StatelessWidget {
+  const PaidSupportTileWidget({super.key});
+
+  static const String _supportUrl = 'https://abwabdigital.com';
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Get.isRegistered<PremiumService>()) {
+      return const SizedBox.shrink();
+    }
+    final premium = Get.find<PremiumService>();
+
+    return Obx(() {
+      final hasPrioritySupport =
+          premium.hasFeature(PremiumFeature.prioritySupport);
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            if (hasPrioritySupport) {
+              // Pro users get direct support access
+              final uri = Uri.parse(_supportUrl);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            } else {
+              // Free users see the paywall first
+              await premium.presentPaywallIfNeeded();
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: hasPrioritySupport
+                        ? const Color(0xFFFFD700).withValues(alpha: 0.15)
+                        : ColorsManager.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(
+                    Iconsax.headphone,
+                    color: hasPrioritySupport
+                        ? const Color(0xFFD4A017)
+                        : ColorsManager.primary,
+                    size: IconSizes.sm,
+                  ),
+                ),
+                const SizedBox(width: Spacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Priority Support',
+                        style: StylesManager.regular(
+                          fontSize: FontSize.medium,
+                          color: ColorsManager.black,
+                        ),
+                      ),
+                      if (!hasPrioritySupport) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Pro feature • Upgrade to access',
+                          style: StylesManager.regular(
+                            fontSize: FontSize.xSmall,
+                            color: ColorsManager.grey,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (!hasPrioritySupport)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: ColorsManager.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'PRO',
+                      style: StylesManager.semiBold(
+                        fontSize: FontSize.xXSmall,
+                        color: ColorsManager.primary,
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: ColorsManager.lightGrey,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 
