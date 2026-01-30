@@ -28,3 +28,4 @@ library;
 
 export 'zego_call_service.dart';
 export 'zego_call_config.dart';
+export 'zego_token_generator.dart';

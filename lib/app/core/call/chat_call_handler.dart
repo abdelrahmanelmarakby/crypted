@@ -123,20 +123,36 @@ class ChatCallHandler {
       // Send call message in chat
       await _sendCallMessage(callWithId);
 
-      // Send ZEGO call invitation (for push notification)
+      // Send ZEGO call invitation (for push notification).
+      // Pass the Firestore callId as the ZEGO room ID so both parties
+      // join the same room when the callee accepts the invitation.
       final invitationSent = await ZegoCallService.instance.sendCallInvitation(
         calleeId: otherUser.uid ?? '',
         calleeName: otherUser.fullName ?? '',
         isVideoCall: isVideoCall,
+        callID: callId,
         resourceID: 'zego_data',
       );
 
-      if (!invitationSent) {
-        log('[ChatCallHandler] ZEGO invitation failed, but continuing with direct call');
-      }
+      if (invitationSent) {
+        // Invitation succeeded — ZegoUIKitPrebuiltCallInvitationService
+        // handles the outgoing call UI and room joining automatically.
+        // Do NOT navigate to a custom CallScreen (avoids engine conflict).
+        log('[ChatCallHandler] ZEGO invitation sent — invitation service handles UI');
+      } else {
+        // Invitation failed — signaling plugin not connected or service not initialized.
+        // Do NOT fall back to CallScreen — ZegoUIKitPrebuiltCall conflicts with the
+        // invitation service's Express Engine and causes error 1001004 (LoginFailed).
+        log('[ChatCallHandler] ZEGO invitation failed — signaling may not be connected');
+        _showError('Call service is connecting. Please try again in a moment.');
 
-      // Navigate to call screen
-      Get.toNamed('/call', arguments: callWithId);
+        // Mark call as cancelled since invitation couldn't be sent
+        try {
+          await _callDataSource.markCallAsCancelled(callId);
+        } catch (e) {
+          log('[ChatCallHandler] Failed to cancel call record: $e');
+        }
+      }
 
       // Refresh calls list
       _refreshCallsList();

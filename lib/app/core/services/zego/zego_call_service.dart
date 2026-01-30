@@ -10,6 +10,7 @@ import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:crypted_app/core/constant.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_config.dart';
+import 'package:crypted_app/app/core/services/zego/zego_token_generator.dart';
 
 /// Centralized service for managing ZEGO Cloud video/audio calls.
 ///
@@ -46,6 +47,19 @@ class ZegoCallService extends GetxService {
   bool get isUserLoggedIn => _isUserLoggedIn.value;
   String? get currentUserId => _currentUserId.value;
   String? get currentUserName => _currentUserName.value;
+
+  /// Generate a ZEGO Token04 for the given user.
+  ///
+  /// Tokens are valid for 1 hour (3600 seconds) by default.
+  /// Used by both the invitation service and standalone CallScreen.
+  static String generateToken(String userID, {int effectiveTime = 3600}) {
+    return ZegoTokenGenerator.generateToken04(
+      appID: AppConstants.appID,
+      userID: userID,
+      serverSecret: AppConstants.serverSecret,
+      effectiveTimeInSeconds: effectiveTime,
+    );
+  }
 
   /// Initialize ZEGO SDK with navigator key.
   /// Call this in main() before runApp().
@@ -103,12 +117,27 @@ class ZegoCallService extends GetxService {
     try {
       log('[ZegoCallService] Logging in user: $userId ($userName)');
 
+      // Generate token for authentication (replaces appSign)
+      final token = generateToken(userId);
+      log('[ZegoCallService] Token generated for user: $userId');
+
       await ZegoUIKitPrebuiltCallInvitationService().init(
         appID: AppConstants.appID,
-        appSign: AppConstants.appSign,
+        token: token,
         userID: userId,
         userName: userName,
         plugins: [ZegoUIKitSignalingPlugin()],
+
+        // Token renewal callback — fired 30s before expiration
+        events: ZegoUIKitPrebuiltCallEvents(
+          room: ZegoCallRoomEvents(
+            onTokenExpired: (remainSeconds) {
+              log('[ZegoCallService] Token expiring in ${remainSeconds}s, renewing...');
+              final newToken = generateToken(_currentUserId.value ?? userId);
+              return newToken;
+            },
+          ),
+        ),
 
         // Notification configuration using new API
         notificationConfig: ZegoCallInvitationNotificationConfig(
@@ -246,10 +275,15 @@ class ZegoCallService extends GetxService {
 
   /// Send a call invitation to a user.
   /// Returns true if invitation was sent successfully.
+  ///
+  /// [callID] is the ZEGO room ID both parties will join. If provided,
+  /// ensures the caller and callee end up in the same room. Must match
+  /// the callID used in CallScreen's ZegoUIKitPrebuiltCall widget.
   Future<bool> sendCallInvitation({
     required String calleeId,
     required String calleeName,
     required bool isVideoCall,
+    String? callID,
     String? resourceID,
     int timeoutSeconds = 60,
   }) async {
@@ -259,7 +293,19 @@ class ZegoCallService extends GetxService {
     }
 
     try {
-      log('[ZegoCallService] Sending ${isVideoCall ? "video" : "audio"} call to $calleeId');
+      log('[ZegoCallService] Sending ${isVideoCall ? "video" : "audio"} call to $calleeId (room: $callID)');
+
+      // Diagnostic: log signaling state before send
+      try {
+        final signalingState = ZegoUIKit().getSignalingPlugin().getConnectionState();
+        final isServiceInit = ZegoUIKitPrebuiltCallInvitationService().isInit;
+        log('[ZegoCallService] Pre-send diagnostics: '
+            'signalingState=$signalingState, '
+            'isServiceInit=$isServiceInit, '
+            'isVideoCall=$isVideoCall');
+      } catch (e) {
+        log('[ZegoCallService] Failed to get diagnostics: $e');
+      }
 
       final invitees = [ZegoCallUser(calleeId, calleeName)];
       _currentCallInvitees = invitees; // Store for potential cancellation
@@ -267,6 +313,7 @@ class ZegoCallService extends GetxService {
       final result = await ZegoUIKitPrebuiltCallInvitationService().send(
         invitees: invitees,
         isVideoCall: isVideoCall,
+        callID: callID ?? '',
         resourceID: resourceID ?? 'zego_data',
         timeoutSeconds: timeoutSeconds,
         customData: '${isVideoCall ? "video" : "audio"}_${DateTime.now().millisecondsSinceEpoch}',
@@ -274,6 +321,8 @@ class ZegoCallService extends GetxService {
 
       if (!result) {
         _currentCallInvitees = null;
+        log('[ZegoCallService] Call invitation FAILED to send — '
+            'check signaling connection and init state above');
       }
 
       log('[ZegoCallService] Call invitation sent: $result');

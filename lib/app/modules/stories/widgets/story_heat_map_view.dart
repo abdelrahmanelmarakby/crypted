@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -39,8 +41,15 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   StoryCluster? selectedCluster;
   double _currentZoom = 12.0;
 
+  // User's current location (fetched via Geolocator)
+  LatLng? _userLocation;
+
   // Default to a neutral position; will be adjusted when clusters load
   static const LatLng _defaultCenter = LatLng(24.7136, 46.6753); // Riyadh
+
+  /// Stories that don't have location data — shown in the bottom card tray.
+  List<StoryModel> get _storiesWithoutLocation =>
+      widget.stories.where((s) => !s.hasLocation).toList();
 
   // Snapchat-style dark map theme
   static const String _mapStyle = '''
@@ -65,6 +74,46 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   void initState() {
     super.initState();
     _initializeClusters();
+    _fetchUserLocation();
+  }
+
+  /// Fetch the user's current GPS position so we can center the map on them.
+  Future<void> _fetchUserLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final requested = await Geolocator.requestPermission();
+        if (requested == LocationPermission.denied ||
+            requested == LocationPermission.deniedForever) {
+          log('⚠️ Location permission denied');
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        log('⚠️ Location permission permanently denied');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _userLocation = LatLng(position.latitude, position.longitude);
+        });
+        // If no clusters, center map on user
+        if (clusters.isEmpty) {
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(_userLocation!, 14.0),
+          );
+        }
+      }
+    } catch (e) {
+      log('⚠️ Failed to get user location: $e');
+    }
   }
 
   @override
@@ -227,7 +276,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   }
 
   LatLng _computeInitialCenter() {
-    if (clusters.isEmpty) return _defaultCenter;
+    if (clusters.isEmpty) return _userLocation ?? _defaultCenter;
 
     if (clusters.length == 1) {
       return LatLng(
@@ -248,13 +297,15 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main content — map or grid fallback
-        if (clusters.isNotEmpty)
-          _buildSnapMap()
-        else if (widget.stories.isNotEmpty)
-          _buildStoriesGrid()
-        else
-          _buildEmptyState(),
+        // Always show the Google Map — even when no stories have location
+        _buildSnapMap(),
+
+        // Empty state overlay when no stories at all
+        if (widget.stories.isEmpty) _buildEmptyState(),
+
+        // Non-geolocated stories → bottom horizontal card tray
+        if (_storiesWithoutLocation.isNotEmpty && selectedCluster == null)
+          _buildBottomStoryTray(),
 
         // Selected cluster preview sheet (Snapchat-style bottom card)
         if (selectedCluster != null) _buildClusterPreview(),
@@ -348,181 +399,6 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
     );
   }
 
-  // ── Stories Grid (fallback when no location data) ────────────
-
-  Widget _buildStoriesGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.75, // 3:4 portrait cards
-      ),
-      itemCount: widget.stories.length,
-      itemBuilder: (context, index) {
-        return _buildStoryGridCard(widget.stories[index], index);
-      },
-    );
-  }
-
-  Widget _buildStoryGridCard(StoryModel story, int index) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 400 + (index * 80)),
-      curve: Curves.easeOutCubic,
-      tween: Tween(begin: 0.0, end: 1.0),
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 30 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: GestureDetector(
-        onTap: () => _openStoryViewer(story),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Story background
-                _buildStoryCardBackground(story),
-
-                // Gradient overlay
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.6),
-                      ],
-                      stops: const [0.5, 1.0],
-                    ),
-                  ),
-                ),
-
-                // User info at bottom
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  right: 12,
-                  child: Row(
-                    children: [
-                      if (story.user?.imageUrl != null)
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundImage:
-                              NetworkImage(story.user!.imageUrl!),
-                        )
-                      else
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor:
-                              ColorsManager.primary.withValues(alpha: 0.7),
-                          child: Text(
-                            (story.user?.fullName ?? '?')[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          story.user?.fullName ?? 'Unknown',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Story type badge (top right)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      _storyTypeIcon(story.storyType ?? StoryType.image),
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                  ),
-                ),
-
-                // Location badge (if available)
-                if (story.placeName != null)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            story.placeName!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStoryCardBackground(StoryModel story) {
     if (story.storyType == StoryType.image && story.storyFileUrl != null) {
       return AppCachedNetworkImage(
@@ -576,15 +452,123 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
     );
   }
 
-  IconData _storyTypeIcon(StoryType type) {
-    switch (type) {
-      case StoryType.image:
-        return Icons.image_rounded;
-      case StoryType.video:
-        return Icons.videocam_rounded;
-      case StoryType.text:
-        return Icons.text_fields_rounded;
-    }
+  // ── Bottom Story Card Tray (non-geolocated stories) ────────
+
+  Widget _buildBottomStoryTray() {
+    final stories = _storiesWithoutLocation;
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: TweenAnimationBuilder(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        tween: Tween<double>(begin: 300, end: 0),
+        builder: (context, double offset, child) {
+          return Transform.translate(
+            offset: Offset(0, offset),
+            child: child,
+          );
+        },
+        child: Container(
+          height: 220,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1d1d2b).withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 30,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Drag handle
+              Container(
+                margin: const EdgeInsets.only(top: 10),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Header: "Stories" + count
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.auto_stories_rounded,
+                        color: ColorsManager.primary,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Stories',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${stories.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: ColorsManager.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Horizontal scrollable story cards
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: stories.length,
+                  itemBuilder: (context, index) {
+                    return _buildStoryPreviewCard(stories[index], index);
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Cluster Preview Sheet (Snapchat-style bottom card) ──────
@@ -795,9 +779,11 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   // ── Create Story FAB ────────────────────────────────────────
 
   Widget _buildCreateStoryButton() {
+    // Push FAB above the bottom tray when it's visible
+    final showTray = _storiesWithoutLocation.isNotEmpty && selectedCluster == null;
     return Positioned(
       right: 20,
-      bottom: 100,
+      bottom: showTray ? 236 : 100,
       child: TweenAnimationBuilder(
         duration: const Duration(milliseconds: 600),
         curve: Curves.elasticOut,
@@ -848,7 +834,16 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   }
 
   void _openStoryViewer(StoryModel story) {
-    final stories = selectedCluster?.stories ?? [story];
+    // Use the cluster stories if a cluster is selected, otherwise use all
+    // non-geolocated stories (for the bottom tray), or just the single story.
+    final List<StoryModel> stories;
+    if (selectedCluster != null) {
+      stories = selectedCluster!.stories;
+    } else if (_storiesWithoutLocation.contains(story)) {
+      stories = _storiesWithoutLocation;
+    } else {
+      stories = [story];
+    }
     final initialIndex = stories.indexOf(story).clamp(0, stories.length - 1);
 
     Get.to(
