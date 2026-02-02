@@ -35,6 +35,7 @@ import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
+import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -191,7 +192,7 @@ class MessageBuilder extends GetView<ChatController> {
                                   ),
                                   const SizedBox(width: Sizes.size4),
                                   Text(
-                                    'Forwarded',
+                                    Constants.kForwarded.tr,
                                     style: StylesManager.regular(
                                       fontSize: FontSize.xSmall,
                                       color: ColorsManager.grey
@@ -283,7 +284,7 @@ class MessageBuilder extends GetView<ChatController> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'This message was deleted',
+                  Constants.kThisMessageWasDeleted.tr,
                   style: TextStyle(
                     color: Colors.grey,
                     fontSize: 12,
@@ -303,7 +304,7 @@ class MessageBuilder extends GetView<ChatController> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Restore',
+                  Constants.kRestore.tr,
                   style: TextStyle(
                     color: ColorsManager.primary,
                     fontSize: 12,

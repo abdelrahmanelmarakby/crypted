@@ -8,6 +8,7 @@ import 'package:zego_uikit/zego_uikit.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 import 'package:crypted_app/core/constant.dart';
+import 'package:crypted_app/core/locale/constant.dart' as locale;
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
@@ -73,7 +74,8 @@ class _CallScreenState extends State<CallScreen> {
 
       // Check network connectivity
       final connectivityResults = await Connectivity().checkConnectivity();
-      if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
+      if (connectivityResults.contains(ConnectivityResult.none) ||
+          connectivityResults.isEmpty) {
         _setError('No internet connection');
         return;
       }
@@ -180,20 +182,20 @@ class _CallScreenState extends State<CallScreen> {
   Future<bool> _showEndCallConfirmation() async {
     final result = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('End Call'),
-        content: const Text('Are you sure you want to end this call?'),
+        title: Text(locale.Constants.kEndCall.tr),
+        content: Text(locale.Constants.kEndCallConfirmation.tr),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
             child: Text(
-              'Cancel',
+              locale.Constants.kCancel.tr,
               style: TextStyle(color: ColorsManager.grey),
             ),
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
             child: Text(
-              'End Call',
+              locale.Constants.kEndCall.tr,
               style: TextStyle(color: ColorsManager.error),
             ),
           ),

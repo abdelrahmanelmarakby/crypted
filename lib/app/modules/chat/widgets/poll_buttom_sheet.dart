@@ -149,17 +149,18 @@ class _PollBottomSheetState extends State<PollBottomSheet>
             child: SlideTransition(
               position: _slideAnimation,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(28),
                     topRight: Radius.circular(28),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black12,
+                      color: ColorsManager.textPrimaryAdaptive(context)
+                          .withValues(alpha: 0.12),
                       blurRadius: 20,
-                      offset: Offset(0, -4),
+                      offset: const Offset(0, -4),
                     ),
                   ],
                 ),
@@ -187,7 +188,8 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: ColorsManager.primary.withValues(alpha: 0.1),
+                              color:
+                                  ColorsManager.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -205,7 +207,8 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                   Constants.kCreatePoll.tr,
                                   style: StylesManager.bold(
                                     fontSize: FontSize.large,
-                                    color: ColorsManager.black,
+                                    color: ColorsManager.textPrimaryAdaptive(
+                                        context),
                                   ),
                                 ),
                                 Text(
@@ -229,7 +232,9 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                       ),
                     ),
 
-                    const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                    Divider(
+                        height: 1,
+                        color: ColorsManager.borderAdaptive(context)),
 
                     // Content
                     Expanded(
@@ -243,7 +248,8 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                               Constants.kQuestion.tr,
                               style: StylesManager.semiBold(
                                 fontSize: FontSize.medium,
-                                color: ColorsManager.black,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -252,7 +258,9 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.05),
+                                    color: ColorsManager.textPrimaryAdaptive(
+                                            context)
+                                        .withValues(alpha: 0.05),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
@@ -262,15 +270,16 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                 controller: questionController,
                                 hint: Constants.kWhatIsYourQuestion.tr,
                                 maxLines: 3,
-                                fillColor: const Color(0xFFf8f9fa),
+                                fillColor: ColorsManager.inputBg(context),
                                 borderRadius: 16,
-                                textColor: ColorsManager.black,
+                                textColor:
+                                    ColorsManager.textPrimaryAdaptive(context),
                                 prefixIcon: Container(
                                   margin: const EdgeInsets.all(12),
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color:
-                                        ColorsManager.primary.withValues(alpha: 0.1),
+                                    color: ColorsManager.primary
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
@@ -292,7 +301,8 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                   Constants.kOptions.tr,
                                   style: StylesManager.semiBold(
                                     fontSize: FontSize.medium,
-                                    color: ColorsManager.black,
+                                    color: ColorsManager.textPrimaryAdaptive(
+                                        context),
                                   ),
                                 ),
                                 Text(
@@ -317,7 +327,9 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
+                                      color: ColorsManager.textPrimaryAdaptive(
+                                              context)
+                                          .withValues(alpha: 0.05),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -326,9 +338,10 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                 child: CustomTextField(
                                   controller: controller,
                                   hint: "${Constants.kOptions.tr} ${index + 1}",
-                                  fillColor: const Color(0xFFf8f9fa),
+                                  fillColor: ColorsManager.inputBg(context),
                                   borderRadius: 16,
-                                  textColor: ColorsManager.black,
+                                  textColor: ColorsManager.textPrimaryAdaptive(
+                                      context),
                                   prefixIcon: Container(
                                     margin: const EdgeInsets.all(12),
                                     padding: const EdgeInsets.all(6),
@@ -374,8 +387,8 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                                       width: 2,
                                     ),
                                     borderRadius: BorderRadius.circular(16),
-                                    color:
-                                        ColorsManager.primary.withValues(alpha: 0.05),
+                                    color: ColorsManager.primary
+                                        .withValues(alpha: 0.05),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -408,10 +421,10 @@ class _PollBottomSheetState extends State<PollBottomSheet>
                     Container(
                       padding: const EdgeInsets.all(Paddings.large),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: ColorsManager.surfaceAdaptive(context),
                         border: Border(
                           top: BorderSide(
-                            color: Colors.grey[200]!,
+                            color: ColorsManager.dividerAdaptive(context),
                             width: 1,
                           ),
                         ),

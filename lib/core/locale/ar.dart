@@ -138,8 +138,6 @@ Map<String, String> ar = {
   Constants.kdelete: 'حذف',
   Constants.kDeleteForMe: 'حذف من عندي',
   Constants.kDeleteForEveryone: 'حذف للجميع',
-  Constants.kDeleteChatConfirmation: 'حذف المحادثة',
-  Constants.kChatDeletedSuccessfully: 'تم حذف المحادثة بنجاح',
   Constants.kTypeamessage: 'اكتب رسالة',
 
   // المكالمات
@@ -376,7 +374,6 @@ Map<String, String> ar = {
   Constants.kFailedToArchiveChat: 'فشل في أرشفة المحادثة',
   Constants.kFailedToClearChat: 'فشل في مسح المحادثة',
   Constants.kCreateNewEvent: 'أدخل تفاصيل الحدث',
-  Constants.kCreatePoll: 'إنشاء استطلاع رأي',
 
   // المفقود سابقًا - إجراءات المحادثة
   Constants.kUnarchiveChat: 'إلغاء أرشفة المحادثة',
@@ -552,4 +549,146 @@ Map<String, String> ar = {
   Constants.kLimitationOfLiability: 'حدود المسؤولية',
   Constants.kGoverningLaw: 'القانون الحاكم',
   Constants.kContactInformation: 'معلومات الاتصال',
+
+  // إجراءات الرسائل
+  Constants.kMessageActions: 'إجراءات الرسالة',
+  Constants.kTranslate: 'ترجمة',
+  Constants.kHideTranslation: 'إخفاء الترجمة',
+  Constants.kUnfavorite: 'إزالة من المفضلة',
+  Constants.kFavorite: 'مفضلة',
+  Constants.kUnpin: 'إلغاء التثبيت',
+  Constants.kPin: 'تثبيت',
+  Constants.kRestore: 'استعادة',
+
+  // إعادة التوجيه / المحذوفة
+  Constants.kForwarded: 'تمت إعادة التوجيه',
+  Constants.kThisMessageWasDeleted: 'تم حذف هذه الرسالة',
+
+  // المحادثة المحظورة
+  Constants.kYouBlockedThisContact: 'لقد حظرت جهة الاتصال هذه',
+  Constants.kMessageUnavailable: 'الرسالة غير متاحة',
+  Constants.kUnblock: 'إلغاء الحظر',
+  Constants.kUnblockThisContactToSendMessages:
+      'ألغِ حظر جهة الاتصال لإرسال الرسائل',
+  Constants.kYouCantSendMessages: 'لا يمكنك إرسال رسائل إلى هذه المحادثة',
+  Constants.kContactBlocked: 'جهة الاتصال محظورة',
+  Constants.kCannotContact: 'لا يمكن التواصل',
+  Constants.kKeepBlocked: 'إبقاء الحظر',
+
+  // القصص
+  Constants.kStoryPosted: 'تم نشر القصة!',
+  Constants.kDiscardStory: 'تجاهل القصة؟',
+
+  // المكالمات
+  Constants.kEndCall: 'إنهاء المكالمة',
+  Constants.kEndCallConfirmation: 'هل أنت متأكد من إنهاء هذه المكالمة؟',
+
+  // جدولة الرسائل
+  Constants.kScheduleMessage: 'جدولة رسالة',
+
+  // إشعارات صف المحادثة
+  Constants.kChatMutedSnack: 'تم كتم المحادثة',
+  Constants.kChatUnmutedSnack: 'تم إلغاء كتم المحادثة',
+  Constants.kChatPinnedSnack: 'تم تثبيت المحادثة',
+  Constants.kChatUnpinnedSnack: 'تم إلغاء تثبيت المحادثة',
+  Constants.kBlockingUser: 'جاري حظر المستخدم...',
+  Constants.kDeletingChat: 'جاري حذف المحادثة...',
+  Constants.kDeletingGroupChat: 'جاري حذف محادثة المجموعة...',
+  Constants.kDeleteFailed: 'فشل الحذف',
+  Constants.kFailedToDeleteChatTryAgain:
+      'فشل في حذف المحادثة. يرجى المحاولة مرة أخرى.',
+  Constants.kThisActionCanBeReversed: 'يمكن التراجع عن هذا الإجراء لاحقاً',
+  Constants.kDeleteForever: 'حذف نهائي',
+  Constants.kThisActionCannotBeUndoneWarning: 'لا يمكن التراجع عن هذا الإجراء',
+  Constants.kAllMessagesWillBeDeleted:
+      'هل أنت متأكد من حذف هذه المحادثة؟ سيتم حذف جميع الرسائل نهائياً.',
+  Constants.kBlockUserConfirmation: 'هل أنت متأكد من حظر',
+  Constants.kWontReceiveMessages: 'لن تستلم رسائل من هذا المستخدم بعد الآن.',
+  Constants.kChatRemovedFromFavorites: 'تمت إزالة المحادثة من المفضلة',
+  Constants.kChatAddedToFavorites: 'تمت إضافة المحادثة إلى المفضلة',
+  Constants.kChatUnarchivedSnack: 'تم إلغاء أرشفة المحادثة',
+  Constants.kChatArchivedSnack: 'تمت أرشفة المحادثة',
+  Constants.kFailedToToggleMute: 'فشل في تبديل الكتم',
+  Constants.kFailedToTogglePin: 'فشل في تبديل التثبيت',
+  Constants.kFailedToToggleFavorite: 'فشل في تبديل المفضلة',
+  Constants.kFailedToToggleArchive: 'فشل في تبديل الأرشفة',
+  Constants.kFailedToBlockUser: 'فشل في حظر المستخدم',
+  Constants.kUserNotFound: 'المستخدم غير موجود',
+
+  // إعدادات - الحوارات
+  Constants.kSignOut: 'تسجيل الخروج',
+  Constants.kSignOutConfirmation: 'هل أنت متأكد من تسجيل الخروج؟',
+  Constants.kDeleteAccount: 'حذف الحساب',
+  Constants.kDeleteAccountConfirmation:
+      'هل أنت متأكد من حذف حسابك نهائياً؟ لا يمكن التراجع عن هذا الإجراء.',
+  Constants.kDeletingAccount: 'جاري حذف الحساب...',
+  Constants.kAccountDeletedSuccessfully: 'تم حذف الحساب بنجاح',
+  Constants.kFailedToDeleteAccount: 'فشل في حذف الحساب',
+
+  // إعدادات - النسخ الاحتياطي
+  Constants.kFailedToStartBackup: 'فشل في بدء النسخ الاحتياطي',
+  Constants.kBackupStartedSuccessfully: 'بدأ النسخ الاحتياطي بنجاح',
+  Constants.kFailedToCancelBackup: 'فشل في إلغاء النسخ الاحتياطي',
+  Constants.kBackupSettingsSaved: 'تم حفظ إعدادات النسخ الاحتياطي بنجاح',
+  Constants.kFailedToSaveBackupSettings: 'فشل في حفظ إعدادات النسخ الاحتياطي',
+  Constants.kPermissionsGranted: 'تم منح جميع الأذونات بنجاح',
+  Constants.kPermissionsMissing: 'بعض الأذونات لا تزال مفقودة',
+  Constants.kFailedToRequestPermissions: 'فشل في طلب الأذونات',
+  Constants.kAutoBackupEnabled: 'تم تفعيل النسخ الاحتياطي التلقائي',
+  Constants.kAutoBackupDisabled: 'تم تعطيل النسخ الاحتياطي التلقائي',
+  Constants.kCloudBackup: 'النسخ الاحتياطي السحابي',
+  Constants.kCloudBackupConfig: 'إعداد النسخ الاحتياطي السحابي',
+  Constants.kBackupFrequency: 'تكرار النسخ الاحتياطي',
+  Constants.kChooseBackupFrequency: 'اختر عدد مرات النسخ الاحتياطي',
+  Constants.kDaily: 'يومي',
+  Constants.kWeekly: 'أسبوعي',
+  Constants.kMonthly: 'شهري',
+  Constants.kBackupEveryDay: 'نسخ احتياطي كل يوم',
+  Constants.kBackupOnceAWeek: 'نسخ احتياطي مرة في الأسبوع',
+  Constants.kBackupOnceAMonth: 'نسخ احتياطي مرة في الشهر',
+  Constants.kBackupFrequencySetTo: 'تم تعيين تكرار النسخ الاحتياطي إلى',
+  Constants.kRestoreFromBackup: 'الاستعادة من النسخ الاحتياطي',
+  Constants.kSelectBackupToRestore: 'اختر النسخ الاحتياطي للاستعادة',
+  Constants.kAutomaticallyBackupChats: 'نسخ المحادثات احتياطياً تلقائياً',
+  Constants.kGoogleDriveICloud: 'Google Drive / iCloud',
+  Constants.kCancelBackup: 'إلغاء النسخ الاحتياطي',
+  Constants.kInProgress: 'قيد التنفيذ',
+  Constants.kCompleted: 'مكتمل',
+  Constants.kFailed: 'فشل',
+  Constants.kPending: 'معلق',
+  Constants.kChatMessages: 'رسائل المحادثة',
+  Constants.kLocationData: 'بيانات الموقع',
+  Constants.kPhotosAndMedia: 'الصور والوسائط',
+  Constants.kDeviceInfo: 'معلومات الجهاز',
+
+  // إعدادات - خصوصية التحليلات
+  Constants.kAnalyticsPrivacy: 'خصوصية التحليلات',
+  Constants.kDeviceTrackingEnabled: 'تم تفعيل تتبع الجهاز',
+  Constants.kDeviceTrackingDisabled:
+      'تم تعطيل تتبع الجهاز. لن يتم جمع معلومات جهازك.',
+  Constants.kLocationPermission: 'إذن الموقع',
+  Constants.kLocationPermissionRequired: 'إذن الموقع مطلوب لتفعيل تتبع الموقع',
+  Constants.kLocationTrackingEnabled: 'تم تفعيل تتبع الموقع',
+  Constants.kLocationTrackingDisabled:
+      'تم تعطيل تتبع الموقع. لن يتم جمع موقعك.',
+  Constants.kFailedToUpdateTracking: 'فشل في تحديث إعدادات التتبع',
+  Constants.kCollectedData: 'البيانات المجمعة',
+  Constants.kCollectedDataDescription:
+      'نجمع المعلومات التالية لتحسين تجربتك وتقديم تحليلات أفضل:',
+  Constants.kPrivacyNote:
+      'خصوصيتك مهمة لنا. يمكنك تعطيل أي تتبع في أي وقت من صفحة الإعدادات. لا يتم جمع أي معلومات شخصية.',
+  Constants.kEnabled: 'مفعل',
+  Constants.kDisabled: 'معطل',
+  Constants.kNoDataCollected: 'لا يتم جمع بيانات لهذه الفئة',
+  Constants.kDeviceInformation: 'معلومات الجهاز',
+  Constants.kLocationInformation: 'معلومات الموقع',
+
+  // معرض الوسائط
+  Constants.kDownload: 'تنزيل',
+  Constants.kShare: 'مشاركة',
+  Constants.kSelectAll: 'تحديد الكل',
+  Constants.kSearchMedia: 'البحث في الوسائط...',
+  Constants.kSelected: 'محدد',
+  Constants.kNoItemsYet: 'بعد',
+  Constants.kOpeningLink: 'جاري فتح الرابط...',
 };

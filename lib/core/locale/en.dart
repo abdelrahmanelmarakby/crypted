@@ -230,12 +230,8 @@ Map<String, String> en = {
   Constants.kEventName: 'Event Name',
   Constants.kEventNameisrequired: 'Event Name is required',
   Constants.kCreateNewEvent: 'Enter your event details',
-  Constants.kEventName: 'Event Title',
   Constants.kEventNameExample: 'Example: Team Meeting',
-  Constants.kDescription: 'Description',
   Constants.kDateTime: 'Date and Time',
-
-  Constants.kCancel: 'Cancel',
   Constants.kSendEvent: 'Send Event',
   Constants.kEventNameRequiredPlease: 'Please enter the event title',
 
@@ -542,4 +538,149 @@ Map<String, String> en = {
   Constants.kLimitationOfLiability: 'Limitation of Liability',
   Constants.kGoverningLaw: 'Governing Law',
   Constants.kContactInformation: 'Contact Information',
+
+  // Message Actions
+  Constants.kMessageActions: 'Message Actions',
+  Constants.kTranslate: 'Translate',
+  Constants.kHideTranslation: 'Hide Translation',
+  Constants.kUnfavorite: 'Unfavorite',
+  Constants.kFavorite: 'Favorite',
+  Constants.kUnpin: 'Unpin',
+  Constants.kPin: 'Pin',
+  Constants.kRestore: 'Restore',
+
+  // Forwarded / Deleted
+  Constants.kForwarded: 'Forwarded',
+  Constants.kThisMessageWasDeleted: 'This message was deleted',
+
+  // Blocked Chat
+  Constants.kYouBlockedThisContact: 'You blocked this contact',
+  Constants.kMessageUnavailable: 'Message unavailable',
+  Constants.kUnblock: 'Unblock',
+  Constants.kUnblockThisContactToSendMessages:
+      'Unblock this contact to send messages',
+  Constants.kYouCantSendMessages:
+      "You can't send messages to this conversation",
+  Constants.kContactBlocked: 'Contact Blocked',
+  Constants.kCannotContact: 'Cannot Contact',
+  Constants.kKeepBlocked: 'Keep Blocked',
+
+  // Story
+  Constants.kStoryPosted: 'Story posted!',
+  Constants.kDiscardStory: 'Discard story?',
+
+  // Calls
+  Constants.kEndCall: 'End Call',
+  Constants.kEndCallConfirmation: 'Are you sure you want to end this call?',
+
+  // Schedule Message
+  Constants.kScheduleMessage: 'Schedule Message',
+
+  // Chat Row snackbars
+  Constants.kChatMutedSnack: 'Chat muted',
+  Constants.kChatUnmutedSnack: 'Chat unmuted',
+  Constants.kChatPinnedSnack: 'Chat pinned',
+  Constants.kChatUnpinnedSnack: 'Chat unpinned',
+  Constants.kBlockingUser: 'Blocking user...',
+  Constants.kDeletingChat: 'Deleting chat...',
+  Constants.kDeletingGroupChat: 'Deleting group chat...',
+  Constants.kDeleteFailed: 'Delete Failed',
+  Constants.kFailedToDeleteChatTryAgain:
+      'Failed to delete chat. Please try again.',
+  Constants.kThisActionCanBeReversed: 'This action can be reversed later',
+  Constants.kDeleteForever: 'Delete Forever',
+  Constants.kThisActionCannotBeUndoneWarning: 'This action cannot be undone',
+  Constants.kAllMessagesWillBeDeleted:
+      'Are you sure you want to delete this chat? All messages will be permanently removed.',
+  Constants.kBlockUserConfirmation: 'Are you sure you want to block',
+  Constants.kWontReceiveMessages:
+      "You won't receive messages from this user anymore.",
+  Constants.kChatRemovedFromFavorites: 'Chat removed from favorites',
+  Constants.kChatAddedToFavorites: 'Chat added to favorites',
+  Constants.kChatUnarchivedSnack: 'Chat unarchived',
+  Constants.kChatArchivedSnack: 'Chat archived',
+  Constants.kFailedToToggleMute: 'Failed to toggle mute',
+  Constants.kFailedToTogglePin: 'Failed to toggle pin',
+  Constants.kFailedToToggleFavorite: 'Failed to toggle favorite',
+  Constants.kFailedToToggleArchive: 'Failed to toggle archive',
+  Constants.kFailedToBlockUser: 'Failed to block user',
+  Constants.kUserNotFound: 'User not found',
+
+  // Settings Controller - Dialogs
+  Constants.kSignOut: 'Sign Out',
+  Constants.kSignOutConfirmation: 'Are you sure you want to sign out?',
+  Constants.kDeleteAccount: 'Delete Account',
+  Constants.kDeleteAccountConfirmation:
+      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+  Constants.kDeletingAccount: 'Deleting account...',
+  Constants.kAccountDeletedSuccessfully: 'Account deleted successfully',
+  Constants.kFailedToDeleteAccount: 'Failed to delete account',
+
+  // Settings Controller - Backup
+  Constants.kFailedToStartBackup: 'Failed to start backup',
+  Constants.kBackupStartedSuccessfully: 'Backup started successfully',
+  Constants.kFailedToCancelBackup: 'Failed to cancel backup',
+  Constants.kBackupSettingsSaved: 'Backup settings saved successfully',
+  Constants.kFailedToSaveBackupSettings: 'Failed to save backup settings',
+  Constants.kPermissionsGranted: 'All permissions granted successfully',
+  Constants.kPermissionsMissing: 'Some permissions are still missing',
+  Constants.kFailedToRequestPermissions: 'Failed to request permissions',
+  Constants.kAutoBackupEnabled: 'Auto backup enabled',
+  Constants.kAutoBackupDisabled: 'Auto backup disabled',
+  Constants.kCloudBackup: 'Cloud Backup',
+  Constants.kCloudBackupConfig: 'Cloud backup configuration',
+  Constants.kBackupFrequency: 'Backup Frequency',
+  Constants.kChooseBackupFrequency: 'Choose how often to backup your data',
+  Constants.kDaily: 'Daily',
+  Constants.kWeekly: 'Weekly',
+  Constants.kMonthly: 'Monthly',
+  Constants.kBackupEveryDay: 'Backup every day',
+  Constants.kBackupOnceAWeek: 'Backup once a week',
+  Constants.kBackupOnceAMonth: 'Backup once a month',
+  Constants.kBackupFrequencySetTo: 'Backup frequency set to',
+  Constants.kRestoreFromBackup: 'Restore from Backup',
+  Constants.kSelectBackupToRestore: 'Select backup to restore',
+  Constants.kAutomaticallyBackupChats: 'Automatically backup chats',
+  Constants.kGoogleDriveICloud: 'Google Drive / iCloud',
+  Constants.kCancelBackup: 'Cancel Backup',
+  Constants.kInProgress: 'In Progress',
+  Constants.kCompleted: 'Completed',
+  Constants.kFailed: 'Failed',
+  Constants.kPending: 'Pending',
+  Constants.kChatMessages: 'Chat Messages',
+  Constants.kLocationData: 'Location Data',
+  Constants.kPhotosAndMedia: 'Photos & Media',
+  Constants.kDeviceInfo: 'Device Info',
+
+  // Settings Controller - Analytics Privacy
+  Constants.kAnalyticsPrivacy: 'Analytics Privacy',
+  Constants.kDeviceTrackingEnabled: 'Device tracking enabled',
+  Constants.kDeviceTrackingDisabled:
+      'Device tracking disabled. Your device information will not be collected.',
+  Constants.kLocationPermission: 'Location Permission',
+  Constants.kLocationPermissionRequired:
+      'Location permission is required to enable location tracking',
+  Constants.kLocationTrackingEnabled: 'Location tracking enabled',
+  Constants.kLocationTrackingDisabled:
+      'Location tracking disabled. Your location will not be collected.',
+  Constants.kFailedToUpdateTracking: 'Failed to update tracking setting',
+  Constants.kCollectedData: 'Collected Data',
+  Constants.kCollectedDataDescription:
+      'We collect the following information to improve your experience and provide better analytics:',
+  Constants.kPrivacyNote:
+      'Your privacy is important to us. You can disable any tracking at any time from the settings page. No personally identifiable information is collected.',
+  Constants.kEnabled: 'Enabled',
+  Constants.kDisabled: 'Disabled',
+  Constants.kNoDataCollected: 'No data is being collected for this category',
+  Constants.kDeviceInformation: 'Device Information',
+  Constants.kLocationInformation: 'Location Information',
+
+  // Media Gallery
+  Constants.kDownload: 'Download',
+  Constants.kShare: 'Share',
+  Constants.kSelectAll: 'Select All',
+  Constants.kSearchMedia: 'Search media...',
+  Constants.kSelected: 'selected',
+  Constants.kNoItemsYet: 'yet',
+  Constants.kOpeningLink: 'Opening link...',
 };

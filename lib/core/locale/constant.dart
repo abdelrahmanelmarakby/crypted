@@ -75,8 +75,8 @@ class Constants {
   static const String kUnpinChat = 'Unpin Chat';
   static const String kResend = 'Resend';
   static const String kDocument = 'Document';
-  static const String kcopy = 'Copy';
-  static const String kdelete = 'Delete';
+  static const String kcopy = 'copy_action';
+  static const String kdelete = 'delete_action';
   static const String kOff = 'Off';
   static const String kOn = 'On';
   static const String kNone = 'None';
@@ -117,7 +117,7 @@ class Constants {
   static const String kDaysAgo = 'days ago';
 
   // Confirmation Messages
-  static const String kDeleteChatConfirmation = 'Delete Chat';
+  static const String kDeleteChatConfirmation = 'delete_chat_confirmation';
   static const String kAreYouSureToClearThisChat =
       'Are you sure you want to clear this chat? All messages will be deleted.';
   static const String kAreYouSureToDeleteThisChat =
@@ -178,24 +178,23 @@ class Constants {
   static const String kInviteFriend = 'Invite Friend';
   static const String kLanguage = 'Language';
   static const String kNewPassword = 'New Password';
-  static const String kEnteryourpassword = 'Enter your password';
+  static const String kEnteryourpassword = 'enter_your_password';
   static const String kReEnterpaswword = 'Re-enter password';
   static const String kSignUpToCrypted = 'Sign up to Crypted!';
-  static const String kEnteryourfullname = 'Enter your full name';
+  static const String kEnteryourfullname = 'enter_your_full_name';
   static const String kEnteravalidemailaddress = 'Enter a valid email address';
   static const String kFullNameisrequired = 'Full name is required';
-  static const String kEnteryouremail = 'Enter your email';
-  static const String kEmailisrequired = 'Email is required';
+  static const String kEnteryouremail = 'enter_your_email';
+  static const String kEmailisrequired = 'email_is_required';
   static const String kEnteravalidemail = 'Enter a valid email';
-  static const String kPasswordisrequired = 'Password is required';
-  static const String kPasswordmustbeatleast6characters =
-      'Password must be at least 6 characters';
+  static const String kPasswordisrequired = 'password_is_required';
+  static const String kPasswordmustbeatleast6characters = 'password_min_length';
   static const String kLogin = 'Login';
   static const String kLogInToCrypted = 'Login to Crypted!';
-  static const String kForgetPassword = 'Forgot Password?';
+  static const String kForgetPassword = 'forget_password';
   static const String kEnterOTP = 'Enter OTP';
   static const String kDidntreceivecode = 'Didn\'t receive code?';
-  static const String ksend = 'Send';
+  static const String ksend = 'send_action';
   static const String kHome = 'Home';
   static const String kCalls = 'Calls';
   static const String kInviteAFriend = 'Invite a Friend';
@@ -208,7 +207,7 @@ class Constants {
   static const String kwhatsApp = 'WhatsApp';
   static const String kTelegram = 'Telegram';
   static const String kHello = 'Hello';
-  static const String kNoChatsyet = 'No chats yet';
+  static const String kNoChatsyet = 'no_chats_yet';
   static const String kSelectUser = 'Select User';
   static const String kNousersfound = 'No users found';
   static const String kAll = 'All';
@@ -241,11 +240,11 @@ class Constants {
   static const String kPoll = 'Poll';
   static const String kContact = 'Contact';
   static const String kEvent = 'Event';
-  static const String kreplay = 'Reply';
-  static const String kforward = 'Forward';
+  static const String kreplay = 'reply_action';
+  static const String kforward = 'forward_action';
   static const String kstar = 'Star';
-  static const String kpin = 'Pin';
-  static const String kreport = 'Report';
+  static const String kpin = 'pin_bubble_action';
+  static const String kreport = 'report_action';
   static const String kTypeamessage = 'Type a message';
   static const String kInComing = 'Incoming';
   static const String kUpComing = 'Upcoming';
@@ -256,19 +255,19 @@ class Constants {
   static const String kstarredmessages = 'Starred Messages';
   static const String kAddtofavourite = 'Add to Favourite';
   static const String kAddtolist = 'Add to List';
-  static const String kexportchat = 'Export Chat';
-  static const String knotification = 'Notifications';
+  static const String kexportchat = 'export_chat_action';
+  static const String knotification = 'notifications_setting';
   static const String kchattheme = 'Chat Theme';
   static const String kEncryption = 'Encryption';
   static const String klockchat = 'Lock Chat';
-  static const String kDisappearingmessages = 'Disappearing Messages';
+  static const String kDisappearingmessages = 'disappearing_messages_setting';
   static const String kJustenjoyingthelittlethingsinlife =
       'Just enjoying the little things in life.';
   static const String kGroupInfo = 'Group Info';
   static const String kMembers = 'Members';
   static const String kExitgroup = 'Exit Group';
   static const String kReportgroup = 'Report Group';
-  static const String kExportchat = 'Export Chat';
+  static const String kExportchat = 'export_chat_group';
   static const String kAdmin = 'Admin';
   static const String kMessagenotification = 'Message Notifications';
   static const String kLastSeenOnline = 'Last Seen & Online';
@@ -405,7 +404,7 @@ class Constants {
   static const String kUpdate = 'Update';
   static const String kSearch = 'Search...';
   static const String kNoResults = 'No results found';
-  static const String kNoInternet = 'No internet connection';
+  static const String kNoInternet = 'no_internet';
   // static const String kTryAgain = 'Try Again';
   static const String kUnknownError = 'An unknown error occurred';
   static const String kPermissionDenied = 'Permission denied';
@@ -417,7 +416,7 @@ class Constants {
   static const String kAlways = 'Always';
   static const String kAllow = 'Allow';
   static const String kDeny = 'Deny';
-  static const String kSettings = 'Settings';
+  static const String kSettings = 'settings_page';
   static const String kHelp = 'Help';
   static const String kFeedback = 'Feedback';
   static const String kReport = 'Report';
@@ -429,7 +428,7 @@ class Constants {
   static const String kLogoutConfirm = 'Are you sure you want to logout?';
   static const String kExitApp = 'Press back again to exit';
   static const String kNoData = 'No data available';
-  static const String kNoConnection = 'No internet connection';
+  static const String kNoConnection = 'no_connection';
   static const String kCheckConnection =
       'Please check your internet connection and try again';
   static const String kServerError = 'Server error. Please try again later';
@@ -500,7 +499,7 @@ class Constants {
   static const String kAndThe = 'and the';
   static const String kPleaseAcceptTermsAndConditions =
       'Please accept the Terms and Conditions to continue';
-  static const String kTermsOfService = 'Terms of Service';
+  static const String kTermsOfService = 'terms_of_service_page';
   static const String kLastUpdated = 'Last Updated';
   static const String kAcceptance = 'Acceptance';
   static const String kUserAccounts = 'User Accounts';
@@ -513,4 +512,152 @@ class Constants {
   static const String kLimitationOfLiability = 'Limitation of Liability';
   static const String kGoverningLaw = 'Governing Law';
   static const String kContactInformation = 'Contact Information';
+
+  // Message Actions
+  static const String kMessageActions = 'Message Actions';
+  static const String kTranslate = 'Translate';
+  static const String kHideTranslation = 'Hide Translation';
+  static const String kUnfavorite = 'Unfavorite';
+  static const String kFavorite = 'Favorite';
+  static const String kUnpin = 'Unpin';
+  static const String kPin = 'pin_action';
+  static const String kRestore = 'Restore';
+
+  // Forwarded / Deleted
+  static const String kForwarded = 'Forwarded';
+  static const String kThisMessageWasDeleted = 'This message was deleted';
+
+  // Blocked Chat
+  static const String kYouBlockedThisContact = 'You blocked this contact';
+  static const String kMessageUnavailable = 'Message unavailable';
+  static const String kUnblock = 'Unblock';
+  static const String kUnblockThisContactToSendMessages =
+      'Unblock this contact to send messages';
+  static const String kYouCantSendMessages =
+      "You can't send messages to this conversation";
+  static const String kContactBlocked = 'Contact Blocked';
+  static const String kCannotContact = 'Cannot Contact';
+  static const String kKeepBlocked = 'Keep Blocked';
+
+  // Story
+  static const String kStoryPosted = 'Story posted!';
+  static const String kDiscardStory = 'Discard story?';
+
+  // Calls
+  static const String kEndCall = 'End Call';
+  static const String kEndCallConfirmation =
+      'Are you sure you want to end this call?';
+
+  // Schedule Message
+  static const String kScheduleMessage = 'Schedule Message';
+
+  // Chat Row snackbars
+  static const String kChatMutedSnack = 'chat_muted_snack';
+  static const String kChatUnmutedSnack = 'chat_unmuted_snack';
+  static const String kChatPinnedSnack = 'chat_pinned_snack';
+  static const String kChatUnpinnedSnack = 'chat_unpinned_snack';
+  static const String kBlockingUser = 'Blocking user...';
+  static const String kDeletingChat = 'Deleting chat...';
+  static const String kDeletingGroupChat = 'Deleting group chat...';
+  static const String kDeleteFailed = 'Delete Failed';
+  static const String kFailedToDeleteChatTryAgain =
+      'Failed to delete chat. Please try again.';
+  static const String kThisActionCanBeReversed =
+      'This action can be reversed later';
+  static const String kDeleteForever = 'Delete Forever';
+  static const String kThisActionCannotBeUndoneWarning =
+      'action_cannot_be_undone_warning';
+  static const String kAllMessagesWillBeDeleted =
+      'Are you sure you want to delete this chat? All messages will be permanently removed.';
+  static const String kBlockUserConfirmation = 'Are you sure you want to block';
+  static const String kWontReceiveMessages =
+      "You won't receive messages from this user anymore.";
+  static const String kChatRemovedFromFavorites = 'Chat removed from favorites';
+  static const String kChatAddedToFavorites = 'Chat added to favorites';
+  static const String kChatUnarchivedSnack = 'chat_unarchived_snack';
+  static const String kChatArchivedSnack = 'chat_archived_snack';
+  static const String kFailedToToggleMute = 'Failed to toggle mute';
+  static const String kFailedToTogglePin = 'Failed to toggle pin';
+  static const String kFailedToToggleFavorite = 'Failed to toggle favorite';
+  static const String kFailedToToggleArchive = 'Failed to toggle archive';
+  static const String kFailedToBlockUser = 'Failed to block user';
+  static const String kUserNotFound = 'User not found';
+
+  // Settings Controller - Dialogs
+  static const String kSignOut = 'sign_out';
+  static const String kSignOutConfirmation = 'sign_out_confirmation';
+  static const String kDeleteAccount = 'delete_account';
+  static const String kDeleteAccountConfirmation =
+      'delete_account_confirmation';
+  static const String kDeletingAccount = 'deleting_account';
+  static const String kAccountDeletedSuccessfully =
+      'account_deleted_successfully';
+  static const String kFailedToDeleteAccount = 'failed_to_delete_account';
+
+  // Settings Controller - Backup
+  static const String kFailedToStartBackup = 'failed_to_start_backup';
+  static const String kBackupStartedSuccessfully =
+      'backup_started_successfully';
+  static const String kFailedToCancelBackup = 'failed_to_cancel_backup';
+  static const String kBackupSettingsSaved = 'backup_settings_saved';
+  static const String kFailedToSaveBackupSettings =
+      'failed_to_save_backup_settings';
+  static const String kPermissionsGranted = 'permissions_granted';
+  static const String kPermissionsMissing = 'permissions_missing';
+  static const String kFailedToRequestPermissions =
+      'failed_to_request_permissions';
+  static const String kAutoBackupEnabled = 'auto_backup_enabled';
+  static const String kAutoBackupDisabled = 'auto_backup_disabled';
+  static const String kCloudBackup = 'cloud_backup';
+  static const String kCloudBackupConfig = 'cloud_backup_config';
+  static const String kBackupFrequency = 'backup_frequency';
+  static const String kChooseBackupFrequency = 'choose_backup_frequency';
+  static const String kDaily = 'daily';
+  static const String kWeekly = 'weekly';
+  static const String kMonthly = 'monthly';
+  static const String kBackupEveryDay = 'backup_every_day';
+  static const String kBackupOnceAWeek = 'backup_once_a_week';
+  static const String kBackupOnceAMonth = 'backup_once_a_month';
+  static const String kBackupFrequencySetTo = 'backup_frequency_set_to';
+  static const String kRestoreFromBackup = 'restore_from_backup';
+  static const String kSelectBackupToRestore = 'select_backup_to_restore';
+  static const String kAutomaticallyBackupChats = 'automatically_backup_chats';
+  static const String kGoogleDriveICloud = 'google_drive_icloud';
+  static const String kCancelBackup = 'cancel_backup';
+  static const String kInProgress = 'in_progress';
+  static const String kCompleted = 'completed_status';
+  static const String kFailed = 'failed_status';
+  static const String kPending = 'pending_status';
+  static const String kChatMessages = 'chat_messages';
+  static const String kLocationData = 'location_data';
+  static const String kPhotosAndMedia = 'photos_and_media';
+  static const String kDeviceInfo = 'device_info';
+
+  // Settings Controller - Analytics Privacy
+  static const String kAnalyticsPrivacy = 'analytics_privacy';
+  static const String kDeviceTrackingEnabled = 'device_tracking_enabled';
+  static const String kDeviceTrackingDisabled = 'device_tracking_disabled';
+  static const String kLocationPermission = 'location_permission';
+  static const String kLocationPermissionRequired =
+      'location_permission_required';
+  static const String kLocationTrackingEnabled = 'location_tracking_enabled';
+  static const String kLocationTrackingDisabled = 'location_tracking_disabled';
+  static const String kFailedToUpdateTracking = 'failed_to_update_tracking';
+  static const String kCollectedData = 'collected_data';
+  static const String kCollectedDataDescription = 'collected_data_description';
+  static const String kPrivacyNote = 'privacy_note';
+  static const String kEnabled = 'enabled';
+  static const String kDisabled = 'disabled';
+  static const String kNoDataCollected = 'no_data_collected';
+  static const String kDeviceInformation = 'device_information';
+  static const String kLocationInformation = 'location_information';
+
+  // Media Gallery
+  static const String kDownload = 'download';
+  static const String kShare = 'share';
+  static const String kSelectAll = 'select_all';
+  static const String kSearchMedia = 'search_media';
+  static const String kSelected = 'selected';
+  static const String kNoItemsYet = 'no_items_yet';
+  static const String kOpeningLink = 'opening_link';
 }

@@ -33,16 +33,18 @@ class _ChatRowState extends State<ChatRow> {
     try {
       await chatDataSource.toggleMuteChat(widget.chatRoom?.id ?? '');
       Get.snackbar(
-        'Success',
-        widget.chatRoom?.isMuted == true ? 'Chat unmuted' : 'Chat muted',
+        Constants.kSuccess.tr,
+        widget.chatRoom?.isMuted == true
+            ? Constants.kChatUnmutedSnack.tr
+            : Constants.kChatMutedSnack.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.primary,
         colorText: ColorsManager.white,
       );
     } catch (e) {
       Get.snackbar(
-        'Error',
-        'Failed to toggle mute: ${e.toString()}',
+        Constants.kError.tr,
+        '${Constants.kFailedToToggleMute.tr}: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
@@ -54,16 +56,18 @@ class _ChatRowState extends State<ChatRow> {
     try {
       await chatDataSource.togglePinChat(widget.chatRoom?.id ?? '');
       Get.snackbar(
-        'Success',
-        widget.chatRoom?.isPinned == true ? 'Chat unpinned' : 'Chat pinned',
+        Constants.kSuccess.tr,
+        widget.chatRoom?.isPinned == true
+            ? Constants.kChatUnpinnedSnack.tr
+            : Constants.kChatPinnedSnack.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.primary,
         colorText: ColorsManager.white,
       );
     } catch (e) {
       Get.snackbar(
-        'Error',
-        'Failed to toggle pin: ${e.toString()}',
+        Constants.kError.tr,
+        '${Constants.kFailedToTogglePin.tr}: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
@@ -77,8 +81,8 @@ class _ChatRowState extends State<ChatRow> {
     final otherUser = _getChatDisplayUser();
     if (otherUser == null) {
       Get.snackbar(
-        'Error',
-        'User not found',
+        Constants.kError.tr,
+        Constants.kUserNotFound.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
@@ -88,12 +92,12 @@ class _ChatRowState extends State<ChatRow> {
 
     // Show confirmation bottom sheet for blocking
     final confirmResult = await CustomBottomSheets.showConfirmation(
-      title: 'Block User',
+      title: Constants.kBlockUser.tr,
       message:
-          'Are you sure you want to block ${otherUser.fullName}? You won\'t receive messages from this user anymore.',
-      subtitle: 'This action can be reversed later',
-      confirmText: 'Block',
-      cancelText: 'Cancel',
+          '${Constants.kBlockUserConfirmation.tr} ${otherUser.fullName}? ${Constants.kWontReceiveMessages.tr}',
+      subtitle: Constants.kThisActionCanBeReversed.tr,
+      confirmText: Constants.kBlockUser.tr,
+      cancelText: Constants.kCancel.tr,
       icon: Icons.block,
       isDanger: true,
     );
@@ -103,7 +107,7 @@ class _ChatRowState extends State<ChatRow> {
     setState(() => _isLoading = true);
 
     // Show loading bottom sheet
-    CustomBottomSheets.showLoading(message: 'Blocking user...');
+    CustomBottomSheets.showLoading(message: Constants.kBlockingUser.tr);
 
     try {
       await chatDataSource.blockUser(
@@ -121,8 +125,8 @@ class _ChatRowState extends State<ChatRow> {
 
       if (mounted) {
         Get.snackbar(
-          'Error',
-          'Failed to block user: ${e.toString()}',
+          Constants.kError.tr,
+          '${Constants.kFailedToBlockUser.tr}: ${e.toString()}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.red,
           colorText: ColorsManager.white,
@@ -144,10 +148,10 @@ class _ChatRowState extends State<ChatRow> {
 
       if (mounted) {
         Get.snackbar(
-          'Success',
+          Constants.kSuccess.tr,
           widget.chatRoom?.isFavorite == true
-              ? 'Chat removed from favorites'
-              : 'Chat added to favorites',
+              ? Constants.kChatRemovedFromFavorites.tr
+              : Constants.kChatAddedToFavorites.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.primary,
           colorText: ColorsManager.white,
@@ -158,8 +162,8 @@ class _ChatRowState extends State<ChatRow> {
     } catch (e) {
       if (mounted) {
         Get.snackbar(
-          'Error',
-          'Failed to toggle favorite: ${e.toString()}',
+          Constants.kError.tr,
+          '${Constants.kFailedToToggleFavorite.tr}: ${e.toString()}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.red,
           colorText: ColorsManager.white,
@@ -180,10 +184,10 @@ class _ChatRowState extends State<ChatRow> {
 
       if (mounted) {
         Get.snackbar(
-          'Success',
+          Constants.kSuccess.tr,
           widget.chatRoom?.isArchived == true
-              ? 'Chat unarchived'
-              : 'Chat archived',
+              ? Constants.kChatUnarchivedSnack.tr
+              : Constants.kChatArchivedSnack.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.primary,
           colorText: ColorsManager.white,
@@ -194,8 +198,8 @@ class _ChatRowState extends State<ChatRow> {
     } catch (e) {
       if (mounted) {
         Get.snackbar(
-          'Error',
-          'Failed to toggle archive: ${e.toString()}',
+          Constants.kError.tr,
+          '${Constants.kFailedToToggleArchive.tr}: ${e.toString()}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.red,
           colorText: ColorsManager.white,
@@ -212,12 +216,11 @@ class _ChatRowState extends State<ChatRow> {
 
     // Enhanced confirmation bottom sheet for delete
     final confirmResult = await CustomBottomSheets.showConfirmation(
-      title: 'Delete Chat',
-      message:
-          'Are you sure you want to delete this chat? All messages will be permanently removed.',
-      subtitle: '⚠️ This action cannot be undone',
-      confirmText: 'Delete Forever',
-      cancelText: 'Cancel',
+      title: Constants.kDeleteChat.tr,
+      message: Constants.kAllMessagesWillBeDeleted.tr,
+      subtitle: Constants.kThisActionCannotBeUndoneWarning.tr,
+      confirmText: Constants.kDeleteForever.tr,
+      cancelText: Constants.kCancel.tr,
       icon: Icons.delete_forever,
       isDanger: true,
     );
@@ -229,8 +232,8 @@ class _ChatRowState extends State<ChatRow> {
     // Show loading bottom sheet
     CustomBottomSheets.showLoading(
       message: widget.chatRoom?.isGroupChat == true
-          ? 'Deleting group chat...'
-          : 'Deleting chat...',
+          ? Constants.kDeletingGroupChat.tr
+          : Constants.kDeletingChat.tr,
     );
 
     try {
@@ -255,8 +258,8 @@ class _ChatRowState extends State<ChatRow> {
 
       if (mounted) {
         Get.snackbar(
-          'Delete Failed',
-          'Failed to delete chat. Please try again.',
+          Constants.kDeleteFailed.tr,
+          Constants.kFailedToDeleteChatTryAgain.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.red,
           colorText: ColorsManager.white,
@@ -281,7 +284,7 @@ class _ChatRowState extends State<ChatRow> {
 
     // Pin/Unpin action
     actions.add(BottomSheetAction(
-      title: isPinned ? 'Unpin Chat' : 'Pin Chat',
+      title: isPinned ? Constants.kUnpinChat.tr : Constants.kPinChat.tr,
       icon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
       iconColor: ColorsManager.primary,
       onTap: _togglePin,
@@ -289,7 +292,7 @@ class _ChatRowState extends State<ChatRow> {
 
     // Mute action (available for all chat types)
     actions.add(BottomSheetAction(
-      title: isMuted ? 'Unmute Chat' : 'Mute Chat',
+      title: isMuted ? Constants.kUnmuteChat.tr : Constants.kMuteChat.tr,
       icon: isMuted ? Icons.notifications_active : Icons.notifications_off,
       iconColor: ColorsManager.primary,
       onTap: _toggleMute,
@@ -297,7 +300,9 @@ class _ChatRowState extends State<ChatRow> {
 
     // Favorite action
     actions.add(BottomSheetAction(
-      title: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+      title: isFavorite
+          ? Constants.kRemoveFromFavorites.tr
+          : Constants.kAddToFavorites.tr,
       icon: isFavorite ? Icons.favorite : Icons.favorite_border,
       iconColor: ColorsManager.red,
       onTap: _toggleFavorite,
@@ -305,7 +310,8 @@ class _ChatRowState extends State<ChatRow> {
 
     // Archive action
     actions.add(BottomSheetAction(
-      title: isArchived ? 'Unarchive Chat' : 'Archive Chat',
+      title:
+          isArchived ? Constants.kUnarchiveChat.tr : Constants.kArchiveChat.tr,
       icon: isArchived ? Icons.unarchive : Icons.archive,
       iconColor: ColorsManager.grey,
       onTap: _toggleArchive,
@@ -314,7 +320,7 @@ class _ChatRowState extends State<ChatRow> {
     // Block action (only for private chats)
     if (!isGroupChat) {
       actions.add(BottomSheetAction(
-        title: 'Block User',
+        title: Constants.kBlockUser.tr,
         icon: Icons.block,
         iconColor: ColorsManager.red,
         onTap: _blockUser,
@@ -324,7 +330,7 @@ class _ChatRowState extends State<ChatRow> {
 
     // Delete action
     actions.add(BottomSheetAction(
-      title: 'Delete Chat',
+      title: Constants.kDeleteChat.tr,
       icon: Icons.delete_forever,
       iconColor: ColorsManager.red,
       onTap: _deleteChat,
@@ -332,7 +338,7 @@ class _ChatRowState extends State<ChatRow> {
     ));
 
     CustomBottomSheets.showActionSheet(
-      title: isGroupChat ? 'Group Chat Actions' : 'Chat Actions',
+      title: isGroupChat ? Constants.kGroupInfo.tr : Constants.kChats.tr,
       subtitle: _getChatDisplayName(),
       actions: actions,
     );
@@ -355,7 +361,8 @@ class _ChatRowState extends State<ChatRow> {
               _togglePin();
             },
             trailingIcon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
-            child: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
+            child: Text(
+                isPinned ? Constants.kUnpinChat.tr : Constants.kPinChat.tr),
           ),
           CupertinoContextMenuAction(
             onPressed: () {
@@ -364,7 +371,8 @@ class _ChatRowState extends State<ChatRow> {
             },
             trailingIcon:
                 isMuted ? Icons.notifications_active : Icons.notifications_off,
-            child: Text(isMuted ? 'Unmute Chat' : 'Mute Chat'),
+            child: Text(
+                isMuted ? Constants.kUnmuteChat.tr : Constants.kMuteChat.tr),
           ),
           CupertinoContextMenuAction(
             onPressed: () {
@@ -372,8 +380,9 @@ class _ChatRowState extends State<ChatRow> {
               _toggleFavorite();
             },
             trailingIcon: isFavorite ? Icons.favorite : Icons.favorite_border,
-            child:
-                Text(isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
+            child: Text(isFavorite
+                ? Constants.kRemoveFromFavorites.tr
+                : Constants.kAddToFavorites.tr),
           ),
           CupertinoContextMenuAction(
             onPressed: () {
@@ -381,7 +390,9 @@ class _ChatRowState extends State<ChatRow> {
               _toggleArchive();
             },
             trailingIcon: isArchived ? Icons.unarchive : Icons.archive,
-            child: Text(isArchived ? 'Unarchive Chat' : 'Archive Chat'),
+            child: Text(isArchived
+                ? Constants.kUnarchiveChat.tr
+                : Constants.kArchiveChat.tr),
           ),
           if (!isGroupChat)
             CupertinoContextMenuAction(
@@ -391,7 +402,7 @@ class _ChatRowState extends State<ChatRow> {
               },
               trailingIcon: Icons.block,
               isDestructiveAction: true,
-              child: const Text('Block User'),
+              child: Text(Constants.kBlockUser.tr),
             ),
           CupertinoContextMenuAction(
             onPressed: () {
@@ -400,7 +411,7 @@ class _ChatRowState extends State<ChatRow> {
             },
             trailingIcon: Icons.delete_forever,
             isDestructiveAction: true,
-            child: const Text('Delete Chat'),
+            child: Text(Constants.kDeleteChat.tr),
           ),
         ],
         child: SizedBox(

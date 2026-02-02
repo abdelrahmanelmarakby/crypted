@@ -3,9 +3,11 @@ import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/reaction_picker.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:crypted_app/core/locale/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
 
 class MessageActionsBottomSheet extends StatelessWidget {
   const MessageActionsBottomSheet({
@@ -156,7 +158,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'Message Actions',
+                  Constants.kMessageActions.tr,
                   style: TextStyle(
                     fontSize: FontSize.large,
                     fontWeight: FontWeight.w600,
@@ -211,7 +213,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/fi_9630774.svg',
-                      title: 'Reply',
+                      title: Constants.kReply.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onReply();
@@ -222,7 +224,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       context: context,
                       iconPath:
                           'assets/icons/fi_3648797.svg', // Using edit icon
-                      title: 'Edit',
+                      title: Constants.kEdit.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onEdit!();
@@ -233,7 +235,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/export.svg',
-                      title: 'Forward',
+                      title: Constants.kForward.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onForward();
@@ -243,7 +245,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/copy.svg',
-                      title: 'Copy',
+                      title: Constants.kCopy.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onCopy();
@@ -253,7 +255,9 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/icons8-language.svg',
-                      title: isTranslated ? 'Hide Translation' : 'Translate',
+                      title: isTranslated
+                          ? Constants.kHideTranslation.tr
+                          : Constants.kTranslate.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onTranslate!();
@@ -264,7 +268,9 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/star.svg',
-                      title: isFavorite ? 'Unfavorite' : 'Favorite',
+                      title: isFavorite
+                          ? Constants.kUnfavorite.tr
+                          : Constants.kFavorite.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onFavorite();
@@ -275,7 +281,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/fi_3648797.svg',
-                      title: isPinned ? 'Unpin' : 'Pin',
+                      title: isPinned ? Constants.kUnpin.tr : Constants.kPin.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onPin();
@@ -286,7 +292,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/fi_7689567.svg',
-                      title: 'Report',
+                      title: Constants.kReport.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onReport();
@@ -298,7 +304,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/fi_8114095.svg',
-                      title: 'Restore',
+                      title: Constants.kRestore.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onRestore!();
@@ -310,7 +316,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                     _buildActionItem(
                       context: context,
                       iconPath: 'assets/icons/trash.svg',
-                      title: 'Delete',
+                      title: Constants.kDelete.tr,
                       onTap: () {
                         Navigator.pop(context);
                         onDelete();

@@ -25,7 +25,7 @@ class BackupSectionWidget extends StatelessWidget {
                 Constants.kBackup.tr,
                 style: StylesManager.bold(
                   fontSize: FontSize.xLarge,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               IconButton(
@@ -184,7 +184,7 @@ class BackupStatsCardWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ColorsManager.white,
+        color: ColorsManager.cardAdaptive(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: ColorsManager.borderColor,
@@ -192,7 +192,8 @@ class BackupStatsCardWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: ColorsManager.black.withValues(alpha: 0.05),
+            color: ColorsManager.textPrimaryAdaptive(context)
+                .withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -316,7 +317,7 @@ class BackupOptionTileWidget extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: ColorsManager.white,
+          color: ColorsManager.cardAdaptive(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: ColorsManager.borderColor,
@@ -324,7 +325,8 @@ class BackupOptionTileWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorsManager.black.withValues(alpha: 0.05),
+              color: ColorsManager.textPrimaryAdaptive(context)
+                  .withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -390,7 +392,7 @@ class AutoBackupToggleWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ColorsManager.white,
+        color: ColorsManager.cardAdaptive(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: ColorsManager.borderColor,
@@ -398,7 +400,8 @@ class AutoBackupToggleWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: ColorsManager.black.withValues(alpha: 0.05),
+            color: ColorsManager.textPrimaryAdaptive(context)
+                .withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -474,7 +477,7 @@ class AutoBackupToggleWidget extends StatelessWidget {
         snackPosition: SnackPosition.BOTTOM,
         icon: Icon(
           color == ColorsManager.success ? Icons.check_circle : Icons.info,
-          color: ColorsManager.white,
+          color: Colors.white,
         ),
       ),
     );

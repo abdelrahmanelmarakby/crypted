@@ -25,9 +25,9 @@ class GroupInfoView extends GetView<GroupInfoController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.navbarAdaptive(context),
         title: Text(
           Constants.kGroupInfo.tr,
           style: StylesManager.regular(fontSize: FontSize.xLarge),
@@ -35,7 +35,9 @@ class GroupInfoView extends GetView<GroupInfoController> {
         actions: [
           // Refresh button
           IconButton(
-            onPressed: controller.isRefreshing.value ? null : controller.refreshGroupData,
+            onPressed: controller.isRefreshing.value
+                ? null
+                : controller.refreshGroupData,
             icon: controller.isRefreshing.value
                 ? SizedBox(
                     width: 20,
@@ -72,14 +74,17 @@ class GroupInfoView extends GetView<GroupInfoController> {
                         Expanded(
                           child: Text(
                             controller.displayMemberCount,
-                            style: StylesManager.regular(fontSize: FontSize.small),
+                            style:
+                                StylesManager.regular(fontSize: FontSize.small),
                           ),
                         ),
                         // Add member button (admin only)
                         Obx(() {
-                          if (!controller.isCurrentUserAdmin) return const SizedBox.shrink();
+                          if (!controller.isCurrentUserAdmin)
+                            return const SizedBox.shrink();
                           return IconButton(
-                            icon: Icon(Icons.person_add, color: ColorsManager.primary, size: 22),
+                            icon: Icon(Icons.person_add,
+                                color: ColorsManager.primary, size: 22),
                             onPressed: () => _showAddMemberSheet(context),
                             tooltip: 'Add member',
                           );
@@ -102,16 +107,22 @@ class GroupInfoView extends GetView<GroupInfoController> {
                             onChanged: controller.updateMemberSearch,
                             decoration: InputDecoration(
                               hintText: 'Search members...',
-                              hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                              prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20),
-                              suffixIcon: controller.memberSearchQuery.value.isNotEmpty
+                              hintStyle: TextStyle(
+                                  color: Colors.grey.shade500, fontSize: 14),
+                              prefixIcon: Icon(Icons.search,
+                                  color: Colors.grey.shade500, size: 20),
+                              suffixIcon: controller
+                                      .memberSearchQuery.value.isNotEmpty
                                   ? IconButton(
-                                      icon: Icon(Icons.clear, color: Colors.grey.shade500, size: 20),
+                                      icon: Icon(Icons.clear,
+                                          color: Colors.grey.shade500,
+                                          size: 20),
                                       onPressed: controller.clearMemberSearch,
                                     )
                                   : null,
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
                             ),
                           ),
                         );
@@ -131,12 +142,14 @@ class GroupInfoView extends GetView<GroupInfoController> {
                       Obx(() {
                         final members = controller.filteredMembers;
 
-                        if (members.isEmpty && controller.memberSearchQuery.value.isNotEmpty) {
+                        if (members.isEmpty &&
+                            controller.memberSearchQuery.value.isNotEmpty) {
                           return Container(
                             padding: const EdgeInsets.all(32),
                             child: Column(
                               children: [
-                                Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
+                                Icon(Icons.search_off,
+                                    size: 48, color: Colors.grey.shade400),
                                 const SizedBox(height: 12),
                                 Text(
                                   'No members found',
@@ -154,10 +167,14 @@ class GroupInfoView extends GetView<GroupInfoController> {
                           children: [
                             // Dynamic member list with admin actions
                             ...members.map((member) {
-                              final isAdmin = controller.isUserAdmin(member.uid ?? '');
-                              final isCreator = controller.isUserCreator(member.uid ?? '');
-                              final isCurrentUser = member.uid == controller.currentUser?.uid;
-                              final canManage = controller.isCurrentUserAdmin && !isCreator;
+                              final isAdmin =
+                                  controller.isUserAdmin(member.uid ?? '');
+                              final isCreator =
+                                  controller.isUserCreator(member.uid ?? '');
+                              final isCurrentUser =
+                                  member.uid == controller.currentUser?.uid;
+                              final canManage =
+                                  controller.isCurrentUserAdmin && !isCreator;
 
                               return Column(
                                 children: [
@@ -171,18 +188,26 @@ class GroupInfoView extends GetView<GroupInfoController> {
                                       if (!isCurrentUser) {
                                         Get.toNamed(
                                           Routes.OTHER_USER_INFO,
-                                          arguments: {'userId': member.uid, 'user': member},
+                                          arguments: {
+                                            'userId': member.uid,
+                                            'user': member
+                                          },
                                         );
                                       }
                                     },
                                     onMakeAdmin: canManage && !isAdmin
-                                        ? () => controller.makeAdmin(member.uid!)
+                                        ? () =>
+                                            controller.makeAdmin(member.uid!)
                                         : null,
-                                    onRemoveAdmin: canManage && isAdmin && !isCreator
-                                        ? () => controller.removeAdmin(member.uid!)
+                                    onRemoveAdmin: canManage &&
+                                            isAdmin &&
+                                            !isCreator
+                                        ? () =>
+                                            controller.removeAdmin(member.uid!)
                                         : null,
                                     onRemoveMember: canManage
-                                        ? () => controller.removeMember(member.uid!)
+                                        ? () =>
+                                            controller.removeMember(member.uid!)
                                         : null,
                                   ),
                                   if (member != members.last) buildDivider(),
@@ -203,7 +228,8 @@ class GroupInfoView extends GetView<GroupInfoController> {
 
                     // Group Permissions (admin only)
                     Obx(() {
-                      if (!controller.isCurrentUserAdmin) return const SizedBox.shrink();
+                      if (!controller.isCurrentUserAdmin)
+                        return const SizedBox.shrink();
                       return Column(
                         children: [
                           PermissionsSummaryTile(
@@ -235,11 +261,13 @@ class GroupInfoView extends GetView<GroupInfoController> {
                         children: [
                           Text(
                             'Created by group admin',
-                            style: StylesManager.medium(fontSize: FontSize.xXSmall),
+                            style: StylesManager.medium(
+                                fontSize: FontSize.xXSmall),
                           ),
                           Text(
                             'Group created',
-                            style: StylesManager.medium(fontSize: FontSize.xXSmall),
+                            style: StylesManager.medium(
+                                fontSize: FontSize.xXSmall),
                           ),
                         ],
                       ),
@@ -349,19 +377,23 @@ class GroupInfoView extends GetView<GroupInfoController> {
               children: [
                 if (hasLink)
                   IconButton(
-                    icon: Icon(Iconsax.copy, size: 18, color: ColorsManager.primary),
+                    icon: Icon(Iconsax.copy,
+                        size: 18, color: ColorsManager.primary),
                     onPressed: controller.copyInviteLink,
                     tooltip: 'Copy link',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
                 if (hasLink)
                   IconButton(
-                    icon: Icon(Iconsax.share, size: 18, color: ColorsManager.primary),
+                    icon: Icon(Iconsax.share,
+                        size: 18, color: ColorsManager.primary),
                     onPressed: controller.shareInviteLink,
                     tooltip: 'Share link',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
                 Icon(
                   Icons.chevron_right,

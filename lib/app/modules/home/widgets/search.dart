@@ -15,7 +15,8 @@ import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 
 import 'package:crypted_app/app/modules/home/controllers/message_search_controller.dart';
-export 'package:crypted_app/app/modules/home/controllers/message_search_controller.dart' show MessageTypeFilter;
+export 'package:crypted_app/app/modules/home/controllers/message_search_controller.dart'
+    show MessageTypeFilter;
 import 'package:crypted_app/app/modules/home/widgets/search_result_items.dart';
 import 'package:crypted_app/app/widgets/custom_loading.dart';
 import 'package:crypted_app/app/widgets/custom_text_field.dart';
@@ -40,20 +41,22 @@ class Search extends StatelessWidget {
 
     return GetBuilder<MessageSearchController>(
       builder: (controller) => Scaffold(
-        backgroundColor: ColorsManager.white,
+        backgroundColor: ColorsManager.scaffoldBg(context),
         body: Container(
-          color: ColorsManager.navbarColor,
+          color: ColorsManager.scaffoldBg(context),
           child: Column(
             children: [
               // Enhanced Search Header
               Container(
-                margin: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                margin: const EdgeInsets.only(
+                    top: 50, left: 20, right: 20, bottom: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: ColorsManager.surfaceAdaptive(context),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: ColorsManager.navbarColor,
+                    color: ColorsManager.dividerAdaptive(context),
                     width: 2,
                   ),
                 ),
@@ -69,7 +72,9 @@ class Search extends StatelessWidget {
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         child: Icon(
-                          controller.searchQuery.isNotEmpty ? Iconsax.search_status_1 : Iconsax.search_normal,
+                          controller.searchQuery.isNotEmpty
+                              ? Iconsax.search_status_1
+                              : Iconsax.search_normal,
                           key: ValueKey(controller.searchQuery.isNotEmpty),
                           color: Colors.white,
                           size: 24,
@@ -87,9 +92,9 @@ class Search extends StatelessWidget {
                         prefixIcon: null,
                         hint: Constants.kSearch.tr,
                         fillColor: ColorsManager.offWhite,
-                        borderColor: ColorsManager.navbarColor,
+                        borderColor: ColorsManager.dividerAdaptive(context),
                         hintColor: ColorsManager.grey,
-                        textColor: ColorsManager.black,
+                        textColor: ColorsManager.textPrimaryAdaptive(context),
                         onChange: (value) {
                           controller.searchMessages(value);
                         },
@@ -102,7 +107,8 @@ class Search extends StatelessWidget {
                     GestureDetector(
                       onTap: () => Get.back(),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: ColorsManager.primary,
                           borderRadius: BorderRadius.circular(16),
@@ -122,7 +128,8 @@ class Search extends StatelessWidget {
 
               // Filter Chips (shown when there are search results)
               Obx(() {
-                if (controller.searchQuery.isNotEmpty && !controller.isSearching) {
+                if (controller.searchQuery.isNotEmpty &&
+                    !controller.isSearching) {
                   return _buildFilterChips(controller);
                 }
                 return const SizedBox.shrink();
@@ -133,8 +140,9 @@ class Search extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    color: ColorsManager.surfaceAdaptive(context),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(32)),
                   ),
                   child: Obx(() {
                     if (controller.isSearching) {
@@ -145,7 +153,8 @@ class Search extends StatelessWidget {
                       return _buildRecentSearches(controller);
                     }
 
-                    if (controller.searchResults.isEmpty && controller.userResults.isEmpty) {
+                    if (controller.searchResults.isEmpty &&
+                        controller.userResults.isEmpty) {
                       return _buildNoResults();
                     }
 
@@ -163,15 +172,43 @@ class Search extends StatelessWidget {
   static Widget _buildFilterChips(MessageSearchController controller) {
     final filters = [
       {'type': MessageTypeFilter.all, 'label': 'All', 'icon': Iconsax.message},
-      {'type': MessageTypeFilter.text, 'label': 'Text', 'icon': Iconsax.message_text},
-      {'type': MessageTypeFilter.photo, 'label': 'Photos', 'icon': Iconsax.gallery},
-      {'type': MessageTypeFilter.video, 'label': 'Videos', 'icon': Iconsax.video_play},
-      {'type': MessageTypeFilter.audio, 'label': 'Audio', 'icon': Iconsax.music},
-      {'type': MessageTypeFilter.file, 'label': 'Files', 'icon': Iconsax.document_text},
+      {
+        'type': MessageTypeFilter.text,
+        'label': 'Text',
+        'icon': Iconsax.message_text
+      },
+      {
+        'type': MessageTypeFilter.photo,
+        'label': 'Photos',
+        'icon': Iconsax.gallery
+      },
+      {
+        'type': MessageTypeFilter.video,
+        'label': 'Videos',
+        'icon': Iconsax.video_play
+      },
+      {
+        'type': MessageTypeFilter.audio,
+        'label': 'Audio',
+        'icon': Iconsax.music
+      },
+      {
+        'type': MessageTypeFilter.file,
+        'label': 'Files',
+        'icon': Iconsax.document_text
+      },
       {'type': MessageTypeFilter.poll, 'label': 'Polls', 'icon': Iconsax.chart},
       {'type': MessageTypeFilter.call, 'label': 'Calls', 'icon': Iconsax.call},
-      {'type': MessageTypeFilter.contact, 'label': 'Contacts', 'icon': Iconsax.user},
-      {'type': MessageTypeFilter.location, 'label': 'Location', 'icon': Iconsax.location},
+      {
+        'type': MessageTypeFilter.contact,
+        'label': 'Contacts',
+        'icon': Iconsax.user
+      },
+      {
+        'type': MessageTypeFilter.location,
+        'label': 'Location',
+        'icon': Iconsax.location
+      },
     ];
 
     return Container(
@@ -182,50 +219,55 @@ class Search extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         itemCount: filters.length,
         itemBuilder: (context, index) {
-
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Obx(() {
-                        final filter = filters[index];
-          final filterType = filter['type'] as MessageTypeFilter;
-          final isSelected = controller.selectedFilter == filterType;
+              final filter = filters[index];
+              final filterType = filter['type'] as MessageTypeFilter;
+              final isSelected = controller.selectedFilter == filterType;
 
               return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              child: FilterChip(
-                selected: isSelected,
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      filter['icon'] as IconData,
-                      size: 18,
-                      color: isSelected ? Colors.white : ColorsManager.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      filter['label'] as String,
-                      style: StylesManager.semiBold(
-                        fontSize: FontSize.small,
-                        color: isSelected ? Colors.white : ColorsManager.black,
+                duration: const Duration(milliseconds: 200),
+                child: FilterChip(
+                  selected: isSelected,
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        filter['icon'] as IconData,
+                        size: 18,
+                        color:
+                            isSelected ? Colors.white : ColorsManager.primary,
                       ),
-                    ),
-                  ],
-                ),
-                onSelected: (_) => controller.selectFilter(filterType),
-                backgroundColor: Colors.white,
-                selectedColor: ColorsManager.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(
-                    color: isSelected ? ColorsManager.primary : ColorsManager.navbarColor,
-                    width: 2,
+                      const SizedBox(width: 6),
+                      Text(
+                        filter['label'] as String,
+                        style: StylesManager.semiBold(
+                          fontSize: FontSize.small,
+                          color: isSelected
+                              ? Colors.white
+                              : ColorsManager.textPrimaryAdaptive(context),
+                        ),
+                      ),
+                    ],
                   ),
+                  onSelected: (_) => controller.selectFilter(filterType),
+                  backgroundColor: ColorsManager.surfaceAdaptive(context),
+                  selectedColor: ColorsManager.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected
+                          ? ColorsManager.primary
+                          : ColorsManager.dividerAdaptive(context),
+                      width: 2,
+                    ),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  showCheckmark: false,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                showCheckmark: false,
-              ),
-            );
+              );
             }),
           );
         },
@@ -263,7 +305,6 @@ class Search extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Sizes.size16),
-
           Expanded(
             child: Obx(() {
               if (controller.recentSearches.isEmpty) {
@@ -285,7 +326,8 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildRecentSearchItem(String search, MessageSearchController controller) {
+  static Widget _buildRecentSearchItem(
+      String search, MessageSearchController controller) {
     return Container(
       margin: const EdgeInsets.only(bottom: Sizes.size8),
       decoration: BoxDecoration(
@@ -342,7 +384,6 @@ class Search extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Sizes.size24),
-
           Expanded(
             child: ListView(
               physics: const BouncingScrollPhysics(),
@@ -572,7 +613,8 @@ class Search extends StatelessWidget {
         // Message Results
         if (controller.searchResults.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Paddings.large, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+                horizontal: Paddings.large, vertical: 8),
             child: Row(
               children: [
                 Text(
@@ -581,7 +623,8 @@ class Search extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: ColorsManager.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -598,13 +641,15 @@ class Search extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...controller.searchResults.map((message) => _buildMessageResultItem(message)),
+          ...controller.searchResults
+              .map((message) => _buildMessageResultItem(message)),
         ],
 
         // User Results
         if (controller.userResults.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Paddings.large, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+                horizontal: Paddings.large, vertical: 8),
             child: Row(
               children: [
                 Text(
@@ -613,7 +658,8 @@ class Search extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: ColorsManager.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -630,7 +676,8 @@ class Search extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...controller.userResults.map((user) => UserSearchResultItem(user: user)),
+          ...controller.userResults
+              .map((user) => UserSearchResultItem(user: user)),
         ],
 
         const SizedBox(height: 20),
@@ -675,7 +722,8 @@ class Search extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: _getMessageTypeColor(message).withValues(alpha: 0.15),
+                      color:
+                          _getMessageTypeColor(message).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
@@ -704,9 +752,11 @@ class Search extends StatelessWidget {
                         const SizedBox(height: 4),
                         // Type badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: _getMessageTypeColor(message).withValues(alpha: 0.15),
+                            color: _getMessageTypeColor(message)
+                                .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -870,7 +920,9 @@ class Search extends StatelessWidget {
     } else if (message is PollMessage) {
       return 'Poll';
     } else if (message is CallMessage) {
-      return message.callModel.callType == CallType.video ? 'Video Call' : 'Voice Call';
+      return message.callModel.callType == CallType.video
+          ? 'Video Call'
+          : 'Voice Call';
     } else {
       return 'Message';
     }
@@ -884,7 +936,8 @@ class Search extends StatelessWidget {
 
       // For immediate display, try to get cached data first
       // In a production app, you'd want to cache this data
-      _resolveChatName(chatDataSource, message.roomId, currentUserId).then((chatName) {
+      _resolveChatName(chatDataSource, message.roomId, currentUserId)
+          .then((chatName) {
         // Update the UI with the resolved name
         // This would require state management, so for now we'll use a placeholder
         return chatName;
@@ -901,7 +954,8 @@ class Search extends StatelessWidget {
     }
   }
 
-  static Future<String> _resolveChatName(ChatDataSources chatDataSource, String roomId, String currentUserId) async {
+  static Future<String> _resolveChatName(ChatDataSources chatDataSource,
+      String roomId, String currentUserId) async {
     try {
       final chatRoom = await chatDataSource.getChatRoomById(roomId);
 
@@ -910,18 +964,23 @@ class Search extends StatelessWidget {
       }
 
       // Handle group chats
-      if (chatRoom.isGroupChat == true && chatRoom.name != null && chatRoom.name!.isNotEmpty) {
+      if (chatRoom.isGroupChat == true &&
+          chatRoom.name != null &&
+          chatRoom.name!.isNotEmpty) {
         return chatRoom.name!;
       }
 
       // Handle private chats (1-on-1)
       if (chatRoom.membersIds != null && chatRoom.membersIds!.length == 2) {
         // Find the other user (not current user)
-        final otherUserId = chatRoom.membersIds!.firstWhere((id) => id != currentUserId);
+        final otherUserId =
+            chatRoom.membersIds!.firstWhere((id) => id != currentUserId);
         if (otherUserId.isNotEmpty) {
           // Get the other user's profile
           final otherUser = await UserService().getProfile(otherUserId);
-          if (otherUser != null && otherUser.fullName != null && otherUser.fullName!.isNotEmpty) {
+          if (otherUser != null &&
+              otherUser.fullName != null &&
+              otherUser.fullName!.isNotEmpty) {
             return otherUser.fullName!;
           }
         }
@@ -941,6 +1000,8 @@ class Search extends StatelessWidget {
   }
 
   static String _getFallbackChatName(String roomId) {
-    return roomId.isNotEmpty ? 'Chat ${roomId.substring(0, 8)}...' : 'Unknown Chat';
+    return roomId.isNotEmpty
+        ? 'Chat ${roomId.substring(0, 8)}...'
+        : 'Unknown Chat';
   }
 }

@@ -124,12 +124,15 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isClosed ? ColorsManager.grey : ColorsManager.primary).withValues(alpha: 0.1),
+                    color:
+                        (isClosed ? ColorsManager.grey : ColorsManager.primary)
+                            .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     isClosed ? Iconsax.archive_minus_copy : Iconsax.chart_copy,
-                    color: isClosed ? ColorsManager.grey : ColorsManager.primary,
+                    color:
+                        isClosed ? ColorsManager.grey : ColorsManager.primary,
                     size: 20,
                   ),
                 ),
@@ -139,13 +142,15 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                     isClosed ? 'Poll (Closed)' : 'Poll',
                     style: StylesManager.semiBold(
                       fontSize: FontSize.medium,
-                      color: isClosed ? ColorsManager.grey : ColorsManager.primary,
+                      color:
+                          isClosed ? ColorsManager.grey : ColorsManager.primary,
                     ),
                   ),
                 ),
                 if (totalVotes > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: ColorsManager.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -185,7 +190,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                   Icon(
                     Iconsax.message_question_copy,
                     size: 18,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -193,7 +198,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                       widget.message.question,
                       style: StylesManager.medium(
                         fontSize: FontSize.medium,
-                        color: ColorsManager.black,
+                        color: ColorsManager.textPrimaryAdaptive(context),
                       ),
                     ),
                   ),
@@ -206,9 +211,15 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
             Row(
               children: [
                 Icon(
-                  userVote != null ? Iconsax.tick_circle_copy : (isClosed ? Iconsax.lock_copy : Iconsax.information_copy),
+                  userVote != null
+                      ? Iconsax.tick_circle_copy
+                      : (isClosed
+                          ? Iconsax.lock_copy
+                          : Iconsax.information_copy),
                   size: 16,
-                  color: userVote != null ? ColorsManager.success : (isClosed ? ColorsManager.grey : ColorsManager.grey),
+                  color: userVote != null
+                      ? ColorsManager.success
+                      : (isClosed ? ColorsManager.grey : ColorsManager.grey),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -220,7 +231,11 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                             : Constants.kSelectOption.tr),
                     style: StylesManager.regular(
                       fontSize: FontSize.xSmall,
-                      color: userVote != null ? ColorsManager.success : (isClosed ? ColorsManager.grey : ColorsManager.grey),
+                      color: userVote != null
+                          ? ColorsManager.success
+                          : (isClosed
+                              ? ColorsManager.grey
+                              : ColorsManager.grey),
                     ),
                   ),
                 ),
@@ -496,8 +511,8 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                           borderRadius: BorderRadius.circular(8),
                           child: LinearProgressIndicator(
                             value: totalVotes > 0 ? voteCount / totalVotes : 0,
-                            backgroundColor:
-                                ColorsManager.navbarColor.withValues(alpha: 0.3),
+                            backgroundColor: ColorsManager.navbarColor
+                                .withValues(alpha: 0.3),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               userVoted
                                   ? ColorsManager.primary
@@ -622,7 +637,6 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
   }
 }
 
-
 class OptionTile extends StatelessWidget {
   final String label;
   final int votes;
@@ -724,7 +738,8 @@ class OptionTile extends StatelessWidget {
               // Vote count badge
               if (votes > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
@@ -793,5 +808,4 @@ class OptionTile extends StatelessWidget {
       ),
     );
   }
-
 }

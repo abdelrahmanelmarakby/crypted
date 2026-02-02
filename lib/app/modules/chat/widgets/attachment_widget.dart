@@ -129,7 +129,7 @@ class AttachmentWidget extends GetView<ChatController> {
                   Expanded(
                     child: CustomTextField(
                       height: Sizes.size50,
-                      fillColor: ColorsManager.navbarColor,
+                      fillColor: ColorsManager.inputBg(context),
                       borderRadius: Sizes.size10,
                       suffixIcon: GestureDetector(
                         onTapDown: (TapDownDetails details) {
@@ -149,7 +149,7 @@ class AttachmentWidget extends GetView<ChatController> {
                         _sendSanitizedMessage(controller);
                       },
                       hint: Constants.kSendamessage.tr,
-                      textColor: ColorsManager.black,
+                      textColor: ColorsManager.textPrimaryAdaptive(context),
                       controller: controller.messageController,
                       onChange: controller.onMessageTextChanged,
                     ),
@@ -958,7 +958,7 @@ class AttachmentWidget extends GetView<ChatController> {
               label,
               style: StylesManager.medium(
                 fontSize: FontSize.xSmall,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
               textAlign: TextAlign.center,
             ),

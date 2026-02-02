@@ -26,7 +26,7 @@ class HeaderSectionWidget extends StatelessWidget {
             Constants.kSetting.tr,
             style: StylesManager.bold(
               fontSize: FontSize.xXlarge,
-              color: ColorsManager.black,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
           ),
           const SizedBox(height: Spacing.md),
@@ -50,7 +50,7 @@ class UserProfileCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: ColorsManager.white,
+        color: ColorsManager.surfaceAdaptive(context),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       clipBehavior: Clip.antiAlias,
@@ -74,12 +74,11 @@ class UserProfileCardWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: ColorsManager.border,
+                        color: ColorsManager.dividerAdaptive(context),
                         width: 2,
                       ),
                     ),
-                    child: user?.imageUrl != null &&
-                            user!.imageUrl!.isNotEmpty
+                    child: user?.imageUrl != null && user!.imageUrl!.isNotEmpty
                         ? ClipOval(
                             child: AppCachedNetworkImage(
                               imageUrl: user.imageUrl!,
@@ -109,7 +108,7 @@ class UserProfileCardWidget extends StatelessWidget {
                                 Constants.kUser.tr,
                             style: StylesManager.semiBold(
                               fontSize: FontSize.large,
-                              color: ColorsManager.black,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                           )),
                       const SizedBox(height: Spacing.xxxs),

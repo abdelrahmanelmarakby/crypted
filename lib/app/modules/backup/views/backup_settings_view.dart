@@ -18,17 +18,18 @@ class BackupSettingsView extends GetView<BackupController> {
 
   @override
   Widget build(BuildContext context) {
-    // Set status bar to dark for white background
+    // Set status bar based on theme
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
       ),
     );
 
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -127,17 +128,17 @@ class BackupSettingsView extends GetView<BackupController> {
       children: [
         // Enable Auto Backup
         Obx(() => _buildSettingRow(
-          icon: Icons.schedule_rounded,
-          title: 'Enable Auto Backup',
-          subtitle: Platform.isIOS
-              ? 'Not available on iOS'
-              : 'Backup periodically in the background',
-          trailing: _buildSwitch(
-            value: controller.autoBackupEnabled.value,
-            onChanged: Platform.isIOS ? null : controller.toggleAutoBackup,
-          ),
-          enabled: !Platform.isIOS,
-        )),
+              icon: Icons.schedule_rounded,
+              title: 'Enable Auto Backup',
+              subtitle: Platform.isIOS
+                  ? 'Not available on iOS'
+                  : 'Backup periodically in the background',
+              trailing: _buildSwitch(
+                value: controller.autoBackupEnabled.value,
+                onChanged: Platform.isIOS ? null : controller.toggleAutoBackup,
+              ),
+              enabled: !Platform.isIOS,
+            )),
 
         // Interval Picker (only if auto backup enabled)
         Obx(() {
@@ -177,14 +178,14 @@ class BackupSettingsView extends GetView<BackupController> {
 
   Widget _buildNotificationSettings() {
     return Obx(() => _buildSettingRow(
-      icon: Icons.notifications_outlined,
-      title: 'Show Notifications',
-      subtitle: 'Get notified about backup status',
-      trailing: _buildSwitch(
-        value: controller.showNotifications.value,
-        onChanged: controller.toggleNotifications,
-      ),
-    ));
+          icon: Icons.notifications_outlined,
+          title: 'Show Notifications',
+          subtitle: 'Get notified about backup status',
+          trailing: _buildSwitch(
+            value: controller.showNotifications.value,
+            onChanged: controller.toggleNotifications,
+          ),
+        ));
   }
 
   Widget _buildBackupContentsInfo() {
@@ -263,25 +264,25 @@ class BackupSettingsView extends GetView<BackupController> {
           ),
           const SizedBox(height: 16),
           ...infoItems.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  item.$2,
-                  size: 16,
-                  color: ColorsManager.zenGray,
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      item.$2,
+                      size: 16,
+                      color: ColorsManager.zenGray,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item.$1,
+                        style: StylesManager.zenBody(),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    item.$1,
-                    style: StylesManager.zenBody(),
-                  ),
-                ),
-              ],
-            ),
-          )),
+              )),
         ],
       ),
     );
@@ -398,7 +399,8 @@ class BackupSettingsView extends GetView<BackupController> {
           children: [
             Icon(
               icon,
-              color: enabled ? ColorsManager.zenCharcoal : ColorsManager.zenMuted,
+              color:
+                  enabled ? ColorsManager.zenCharcoal : ColorsManager.zenMuted,
               size: 22,
             ),
             const SizedBox(width: 14),
@@ -410,7 +412,9 @@ class BackupSettingsView extends GetView<BackupController> {
                     title,
                     style: StylesManager.dmSansMedium(
                       fontSize: 15,
-                      color: enabled ? ColorsManager.zenCharcoal : ColorsManager.zenMuted,
+                      color: enabled
+                          ? ColorsManager.zenCharcoal
+                          : ColorsManager.zenMuted,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -577,7 +581,8 @@ class BackupSettingsView extends GetView<BackupController> {
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: BoxDecoration(
                     border: Border(
                       top: hours == intervals.first

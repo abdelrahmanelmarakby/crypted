@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:crypted_app/app/core/services/chat_privacy_helper.dart';
+import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:get/get.dart';
 
 /// Banner displayed in chat when communication is blocked
 /// Shows appropriate message and action button based on blocking state
@@ -46,8 +48,8 @@ class BlockedChatBanner extends StatelessWidget {
                 children: [
                   Text(
                     blockInfo.blockedByMe
-                        ? 'You blocked this contact'
-                        : 'Message unavailable',
+                        ? Constants.kYouBlockedThisContact.tr
+                        : Constants.kMessageUnavailable.tr,
                     style: TextStyle(
                       color: Colors.red.shade700,
                       fontWeight: FontWeight.w600,
@@ -72,7 +74,7 @@ class BlockedChatBanner extends StatelessWidget {
                   foregroundColor: Colors.red.shade700,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
-                child: const Text('Unblock'),
+                child: Text(Constants.kUnblock.tr),
               ),
           ],
         ),
@@ -118,8 +120,8 @@ class BlockedChatInputBar extends StatelessWidget {
             Flexible(
               child: Text(
                 blockInfo.blockedByMe
-                    ? 'Unblock this contact to send messages'
-                    : 'You can\'t send messages to this conversation',
+                    ? Constants.kUnblockThisContactToSendMessages.tr
+                    : Constants.kYouCantSendMessages.tr,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 13,
@@ -133,13 +135,14 @@ class BlockedChatInputBar extends StatelessWidget {
                 onPressed: onUnblock,
                 style: TextButton.styleFrom(
                   foregroundColor: ColorsManager.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text('Unblock'),
+                child: Text(Constants.kUnblock.tr),
               ),
             ],
           ],
@@ -195,7 +198,7 @@ class BlockedUserBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            'Blocked',
+            Constants.kBlocked.tr,
             style: TextStyle(
               color: Colors.red.shade600,
               fontSize: 10,
@@ -281,7 +284,9 @@ class BlockedUserDialog extends StatelessWidget {
 
           // Title
           Text(
-            blockedByMe ? 'Contact Blocked' : 'Cannot Contact',
+            blockedByMe
+                ? Constants.kContactBlocked.tr
+                : Constants.kCannotContact.tr,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -318,9 +323,10 @@ class BlockedUserDialog extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Unblock',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                child: Text(
+                  Constants.kUnblock.tr,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -338,8 +344,9 @@ class BlockedUserDialog extends StatelessWidget {
                 ),
               ),
               child: Text(
-                blockedByMe ? 'Keep Blocked' : 'OK',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                blockedByMe ? Constants.kKeepBlocked.tr : Constants.kOK.tr,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ),
           ),
@@ -453,7 +460,7 @@ class UnblockConfirmationSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Cancel'),
+                    child: Text(Constants.kCancel.tr),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -468,7 +475,7 @@ class UnblockConfirmationSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Unblock'),
+                    child: Text(Constants.kUnblock.tr),
                   ),
                 ),
               ],

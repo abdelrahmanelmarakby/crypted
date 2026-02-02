@@ -547,4 +547,159 @@ Map<String, String> fr = {
   Constants.kLimitationOfLiability: 'Limitation de responsabilite',
   Constants.kGoverningLaw: 'Loi applicable',
   Constants.kContactInformation: 'Coordonnees',
+
+  // Actions de message
+  Constants.kMessageActions: 'Actions du message',
+  Constants.kTranslate: 'Traduire',
+  Constants.kHideTranslation: 'Masquer la traduction',
+  Constants.kUnfavorite: 'Retirer des favoris',
+  Constants.kFavorite: 'Favori',
+  Constants.kUnpin: 'Desepingler',
+  Constants.kPin: 'Epingler',
+  Constants.kRestore: 'Restaurer',
+
+  // Transfere / Supprime
+  Constants.kForwarded: 'Transfere',
+  Constants.kThisMessageWasDeleted: 'Ce message a ete supprime',
+
+  // Chat bloque
+  Constants.kYouBlockedThisContact: 'Vous avez bloque ce contact',
+  Constants.kMessageUnavailable: 'Message indisponible',
+  Constants.kUnblock: 'Debloquer',
+  Constants.kUnblockThisContactToSendMessages:
+      'Debloquez ce contact pour envoyer des messages',
+  Constants.kYouCantSendMessages:
+      'Vous ne pouvez pas envoyer de messages a cette conversation',
+  Constants.kContactBlocked: 'Contact bloque',
+  Constants.kCannotContact: 'Impossible de contacter',
+  Constants.kKeepBlocked: 'Garder bloque',
+
+  // Story
+  Constants.kStoryPosted: 'Story publiee !',
+  Constants.kDiscardStory: 'Abandonner la story ?',
+
+  // Appels
+  Constants.kEndCall: 'Terminer l\'appel',
+  Constants.kEndCallConfirmation:
+      'Etes-vous sur de vouloir terminer cet appel ?',
+
+  // Message programme
+  Constants.kScheduleMessage: 'Programmer un message',
+
+  // Notifications de ligne de chat
+  Constants.kChatMutedSnack: 'Conversation mise en sourdine',
+  Constants.kChatUnmutedSnack: 'Sourdine desactivee',
+  Constants.kChatPinnedSnack: 'Conversation epinglee',
+  Constants.kChatUnpinnedSnack: 'Conversation desepinglee',
+  Constants.kBlockingUser: 'Blocage de l\'utilisateur...',
+  Constants.kDeletingChat: 'Suppression de la conversation...',
+  Constants.kDeletingGroupChat: 'Suppression de la conversation de groupe...',
+  Constants.kDeleteFailed: 'Echec de la suppression',
+  Constants.kFailedToDeleteChatTryAgain:
+      'Echec de la suppression. Veuillez reessayer.',
+  Constants.kThisActionCanBeReversed:
+      'Cette action peut etre annulee plus tard',
+  Constants.kDeleteForever: 'Supprimer definitivement',
+  Constants.kThisActionCannotBeUndoneWarning: 'Cette action est irreversible',
+  Constants.kAllMessagesWillBeDeleted:
+      'Etes-vous sur de vouloir supprimer cette conversation ? Tous les messages seront definitivement supprimes.',
+  Constants.kBlockUserConfirmation: 'Etes-vous sur de vouloir bloquer',
+  Constants.kWontReceiveMessages:
+      'Vous ne recevrez plus de messages de cet utilisateur.',
+  Constants.kChatRemovedFromFavorites: 'Conversation retiree des favoris',
+  Constants.kChatAddedToFavorites: 'Conversation ajoutee aux favoris',
+  Constants.kChatUnarchivedSnack: 'Conversation desarchivee',
+  Constants.kChatArchivedSnack: 'Conversation archivee',
+  Constants.kFailedToToggleMute: 'Echec du basculement de la sourdine',
+  Constants.kFailedToTogglePin: 'Echec du basculement de l\'epingle',
+  Constants.kFailedToToggleFavorite: 'Echec du basculement du favori',
+  Constants.kFailedToToggleArchive: 'Echec du basculement de l\'archive',
+  Constants.kFailedToBlockUser: 'Echec du blocage de l\'utilisateur',
+  Constants.kUserNotFound: 'Utilisateur introuvable',
+
+  // Parametres - Dialogues
+  Constants.kSignOut: 'Deconnexion',
+  Constants.kSignOutConfirmation: 'Etes-vous sur de vouloir vous deconnecter ?',
+  Constants.kDeleteAccount: 'Supprimer le compte',
+  Constants.kDeleteAccountConfirmation:
+      'Etes-vous sur de vouloir supprimer definitivement votre compte ? Cette action est irreversible.',
+  Constants.kDeletingAccount: 'Suppression du compte...',
+  Constants.kAccountDeletedSuccessfully: 'Compte supprime avec succes',
+  Constants.kFailedToDeleteAccount: 'Echec de la suppression du compte',
+
+  // Parametres - Sauvegarde
+  Constants.kFailedToStartBackup: 'Echec du demarrage de la sauvegarde',
+  Constants.kBackupStartedSuccessfully: 'Sauvegarde demarree avec succes',
+  Constants.kFailedToCancelBackup: 'Echec de l\'annulation de la sauvegarde',
+  Constants.kBackupSettingsSaved:
+      'Parametres de sauvegarde enregistres avec succes',
+  Constants.kFailedToSaveBackupSettings:
+      'Echec de l\'enregistrement des parametres de sauvegarde',
+  Constants.kPermissionsGranted:
+      'Toutes les autorisations accordees avec succes',
+  Constants.kPermissionsMissing:
+      'Certaines autorisations sont encore manquantes',
+  Constants.kFailedToRequestPermissions: 'Echec de la demande d\'autorisations',
+  Constants.kAutoBackupEnabled: 'Sauvegarde automatique activee',
+  Constants.kAutoBackupDisabled: 'Sauvegarde automatique desactivee',
+  Constants.kCloudBackup: 'Sauvegarde cloud',
+  Constants.kCloudBackupConfig: 'Configuration de la sauvegarde cloud',
+  Constants.kBackupFrequency: 'Frequence de sauvegarde',
+  Constants.kChooseBackupFrequency:
+      'Choisissez la frequence de sauvegarde de vos donnees',
+  Constants.kDaily: 'Quotidien',
+  Constants.kWeekly: 'Hebdomadaire',
+  Constants.kMonthly: 'Mensuel',
+  Constants.kBackupEveryDay: 'Sauvegarde tous les jours',
+  Constants.kBackupOnceAWeek: 'Sauvegarde une fois par semaine',
+  Constants.kBackupOnceAMonth: 'Sauvegarde une fois par mois',
+  Constants.kBackupFrequencySetTo: 'Frequence de sauvegarde definie a',
+  Constants.kRestoreFromBackup: 'Restaurer a partir de la sauvegarde',
+  Constants.kSelectBackupToRestore: 'Selectionnez la sauvegarde a restaurer',
+  Constants.kAutomaticallyBackupChats:
+      'Sauvegarder automatiquement les conversations',
+  Constants.kGoogleDriveICloud: 'Google Drive / iCloud',
+  Constants.kCancelBackup: 'Annuler la sauvegarde',
+  Constants.kInProgress: 'En cours',
+  Constants.kCompleted: 'Termine',
+  Constants.kFailed: 'Echoue',
+  Constants.kPending: 'En attente',
+  Constants.kChatMessages: 'Messages de chat',
+  Constants.kLocationData: 'Donnees de localisation',
+  Constants.kPhotosAndMedia: 'Photos et medias',
+  Constants.kDeviceInfo: 'Infos de l\'appareil',
+
+  // Parametres - Confidentialite analytique
+  Constants.kAnalyticsPrivacy: 'Confidentialite analytique',
+  Constants.kDeviceTrackingEnabled: 'Suivi de l\'appareil active',
+  Constants.kDeviceTrackingDisabled:
+      'Suivi de l\'appareil desactive. Les informations de votre appareil ne seront pas collectees.',
+  Constants.kLocationPermission: 'Autorisation de localisation',
+  Constants.kLocationPermissionRequired:
+      'L\'autorisation de localisation est requise pour activer le suivi de localisation',
+  Constants.kLocationTrackingEnabled: 'Suivi de localisation active',
+  Constants.kLocationTrackingDisabled:
+      'Suivi de localisation desactive. Votre localisation ne sera pas collectee.',
+  Constants.kFailedToUpdateTracking:
+      'Echec de la mise a jour du parametre de suivi',
+  Constants.kCollectedData: 'Donnees collectees',
+  Constants.kCollectedDataDescription:
+      'Nous collectons les informations suivantes pour ameliorer votre experience et fournir de meilleures analyses :',
+  Constants.kPrivacyNote:
+      'Votre vie privee est importante pour nous. Vous pouvez desactiver tout suivi a tout moment depuis la page des parametres. Aucune information personnelle n\'est collectee.',
+  Constants.kEnabled: 'Active',
+  Constants.kDisabled: 'Desactive',
+  Constants.kNoDataCollected:
+      'Aucune donnee n\'est collectee pour cette categorie',
+  Constants.kDeviceInformation: 'Informations sur l\'appareil',
+  Constants.kLocationInformation: 'Informations de localisation',
+
+  // Galerie de medias
+  Constants.kDownload: 'Telecharger',
+  Constants.kShare: 'Partager',
+  Constants.kSelectAll: 'Tout selectionner',
+  Constants.kSearchMedia: 'Rechercher des medias...',
+  Constants.kSelected: 'selectionne(s)',
+  Constants.kNoItemsYet: 'encore',
+  Constants.kOpeningLink: 'Ouverture du lien...',
 };

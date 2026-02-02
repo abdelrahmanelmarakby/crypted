@@ -3,6 +3,7 @@
 import 'package:crypted_app/app/data/models/help_message_model.dart';
 import 'package:crypted_app/app/modules/help/controllers/help_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -15,21 +16,18 @@ class HelpView extends GetView<HelpController> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         elevation: 0,
         title: Text(
           'Help & Support',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-            letterSpacing: -0.5,
-          ),
+          style:
+              StylesManager.zenTitle(context: context).copyWith(fontSize: 28),
         ),
-        iconTheme: IconThemeData(color: Colors.black87),
+        iconTheme:
+            IconThemeData(color: ColorsManager.textPrimaryAdaptive(context)),
       ),
       body: Container(
-        color: Color(0xFFFAFAFA),
+        color: ColorsManager.scaffoldBg(context),
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -40,9 +38,10 @@ class HelpView extends GetView<HelpController> {
                 Container(
                   padding: EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: ColorsManager.surfaceAdaptive(context),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Color(0xFFE5E5E5), width: 1),
+                    border: Border.all(
+                        color: ColorsManager.borderAdaptive(context), width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.08),
@@ -73,7 +72,7 @@ class HelpView extends GetView<HelpController> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black87,
+                          color: ColorsManager.textPrimaryAdaptive(context),
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -82,7 +81,7 @@ class HelpView extends GetView<HelpController> {
                         'We\'re here to help you with any questions or issues you may have. Our team typically responds within 24 hours.',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Color(0xFF6B7280),
+                          color: ColorsManager.textSecondaryAdaptive(context),
                           height: 1.5,
                         ),
                       ),
@@ -95,9 +94,10 @@ class HelpView extends GetView<HelpController> {
                 // Contact Form
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: ColorsManager.surfaceAdaptive(context),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Color(0xFFE5E5E5), width: 1),
+                    border: Border.all(
+                        color: ColorsManager.borderAdaptive(context), width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.08),
@@ -116,7 +116,7 @@ class HelpView extends GetView<HelpController> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black87,
+                            color: ColorsManager.textPrimaryAdaptive(context),
                             letterSpacing: -0.5,
                           ),
                         ),
@@ -131,18 +131,19 @@ class HelpView extends GetView<HelpController> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: ColorsManager.surfaceAdaptive(context),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: controller.fullNameError.value != null
                                       ? Color(0xFFEF4444)
-                                      : Color(0xFFE5E5E5),
+                                      : ColorsManager.borderAdaptive(context),
                                   width: 1.5,
                                 ),
                               ),
@@ -150,27 +151,34 @@ class HelpView extends GetView<HelpController> {
                                 decoration: InputDecoration(
                                   hintText: 'Enter your full name',
                                   hintStyle: TextStyle(
-                                    color: Color(0xFF9CA3AF),
+                                    color: ColorsManager.textTertiaryAdaptive(
+                                        context),
                                     fontSize: 16,
                                   ),
                                   prefixIcon: Container(
-                                    margin: EdgeInsets.only(left: 16, right: 12),
+                                    margin:
+                                        EdgeInsets.only(left: 16, right: 12),
                                     child: Icon(
                                       Iconsax.user,
-                                      color: Color(0xFF6B7280),
+                                      color:
+                                          ColorsManager.textSecondaryAdaptive(
+                                              context),
                                       size: 20,
                                     ),
                                   ),
                                   border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 16),
                                 ),
-                                controller: TextEditingController(text: controller.fullNameController.value),
+                                controller: TextEditingController(
+                                    text: controller.fullNameController.value),
                                 onChanged: controller.updateFullName,
                               ),
                             ),
                             Obx(() => controller.fullNameError.value != null
                                 ? Padding(
-                                    padding: const EdgeInsets.only(top: 6, left: 4),
+                                    padding:
+                                        const EdgeInsets.only(top: 6, left: 4),
                                     child: Text(
                                       controller.fullNameError.value!,
                                       style: TextStyle(
@@ -195,18 +203,19 @@ class HelpView extends GetView<HelpController> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: ColorsManager.surfaceAdaptive(context),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: controller.emailError.value != null
                                       ? Color(0xFFEF4444)
-                                      : Color(0xFFE5E5E5),
+                                      : ColorsManager.borderAdaptive(context),
                                   width: 1.5,
                                 ),
                               ),
@@ -214,27 +223,34 @@ class HelpView extends GetView<HelpController> {
                                 decoration: InputDecoration(
                                   hintText: 'Enter your email address',
                                   hintStyle: TextStyle(
-                                    color: Color(0xFF9CA3AF),
+                                    color: ColorsManager.textTertiaryAdaptive(
+                                        context),
                                     fontSize: 16,
                                   ),
                                   prefixIcon: Container(
-                                    margin: EdgeInsets.only(left: 16, right: 12),
+                                    margin:
+                                        EdgeInsets.only(left: 16, right: 12),
                                     child: Icon(
                                       Icons.email_outlined,
-                                      color: Color(0xFF6B7280),
+                                      color:
+                                          ColorsManager.textSecondaryAdaptive(
+                                              context),
                                       size: 20,
                                     ),
                                   ),
                                   border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 16),
                                 ),
-                                controller: TextEditingController(text: controller.emailController.value),
+                                controller: TextEditingController(
+                                    text: controller.emailController.value),
                                 onChanged: controller.updateEmail,
                               ),
                             ),
                             Obx(() => controller.emailError.value != null
                                 ? Padding(
-                                    padding: const EdgeInsets.only(top: 6, left: 4),
+                                    padding:
+                                        const EdgeInsets.only(top: 6, left: 4),
                                     child: Text(
                                       controller.emailError.value!,
                                       style: TextStyle(
@@ -259,56 +275,66 @@ class HelpView extends GetView<HelpController> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: ColorsManager.surfaceAdaptive(context),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: controller.messageError.value != null
                                       ? Color(0xFFEF4444)
-                                      : Color(0xFFE5E5E5),
+                                      : ColorsManager.borderAdaptive(context),
                                   width: 1.5,
                                 ),
                               ),
                               child: TextField(
                                 maxLines: 5,
                                 decoration: InputDecoration(
-                                  hintText: 'Describe your issue or question in detail...',
+                                  hintText:
+                                      'Describe your issue or question in detail...',
                                   hintStyle: TextStyle(
-                                    color: Color(0xFF9CA3AF),
+                                    color: ColorsManager.textTertiaryAdaptive(
+                                        context),
                                     fontSize: 16,
                                   ),
                                   prefixIcon: Container(
-                                    margin: EdgeInsets.only(left: 16, right: 12, top: 16),
+                                    margin: EdgeInsets.only(
+                                        left: 16, right: 12, top: 16),
                                     child: Icon(
                                       Iconsax.message,
-                                      color: Color(0xFF6B7280),
+                                      color:
+                                          ColorsManager.textSecondaryAdaptive(
+                                              context),
                                       size: 20,
                                     ),
                                   ),
                                   border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 16),
                                 ),
-                                controller: TextEditingController(text: controller.messageController.value),
+                                controller: TextEditingController(
+                                    text: controller.messageController.value),
                                 onChanged: controller.updateMessage,
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.only(top: 8, left: 4),
                               child: Obx(() => Text(
-                                '${controller.messageController.value.length}/500',
-                                style: TextStyle(
-                                  color: controller.messageController.value.length > 450
-                                      ? Color(0xFFEF4444)
-                                      : Color(0xFF6B7280),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )),
+                                    '${controller.messageController.value.length}/500',
+                                    style: TextStyle(
+                                      color: controller.messageController.value
+                                                  .length >
+                                              450
+                                          ? Color(0xFFEF4444)
+                                          : Color(0xFF6B7280),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  )),
                             ),
                           ],
                         ),
@@ -324,60 +350,71 @@ class HelpView extends GetView<HelpController> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: ColorsManager.surfaceAdaptive(context),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(0xFFE5E5E5), width: 1.5),
+                                border: Border.all(
+                                    color:
+                                        ColorsManager.borderAdaptive(context),
+                                    width: 1.5),
                               ),
                               child: Obx(() => DropdownButton<RequestType>(
-                                value: controller.selectedRequestType.value,
-                                onChanged: (RequestType? newValue) {
-                                  if (newValue != null) {
-                                    controller.updateRequestType(newValue);
-                                  }
-                                },
-                                items: RequestType.values.map((RequestType type) {
-                                  return DropdownMenuItem<RequestType>(
-                                    value: type,
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: _getRequestTypeColor(type),
-                                            shape: BoxShape.circle,
-                                          ),
+                                    value: controller.selectedRequestType.value,
+                                    onChanged: (RequestType? newValue) {
+                                      if (newValue != null) {
+                                        controller.updateRequestType(newValue);
+                                      }
+                                    },
+                                    items: RequestType.values
+                                        .map((RequestType type) {
+                                      return DropdownMenuItem<RequestType>(
+                                        value: type,
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    _getRequestTypeColor(type),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text(
+                                              type.displayName,
+                                              style: TextStyle(
+                                                color: ColorsManager
+                                                    .textPrimaryAdaptive(
+                                                        context),
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          type.displayName,
-                                          style: TextStyle(
-                                            color: Colors.black87,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
+                                      );
+                                    }).toList(),
+                                    isExpanded: true,
+                                    underline: SizedBox(),
+                                    dropdownColor:
+                                        ColorsManager.surfaceAdaptive(context),
+                                    icon: Icon(Icons.arrow_drop_down_rounded,
+                                        color: Color(0xFF6B7280)),
+                                    style: TextStyle(
+                                      color: ColorsManager.textPrimaryAdaptive(
+                                          context),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                  );
-                                }).toList(),
-                                isExpanded: true,
-                                underline: SizedBox(),
-                                dropdownColor: Colors.white,
-                                icon: Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF6B7280)),
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )),
+                                  )),
                             ),
                           ],
                         ),
@@ -393,60 +430,71 @@ class HelpView extends GetView<HelpController> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: ColorsManager.surfaceAdaptive(context),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(0xFFE5E5E5), width: 1.5),
+                                border: Border.all(
+                                    color:
+                                        ColorsManager.borderAdaptive(context),
+                                    width: 1.5),
                               ),
                               child: Obx(() => DropdownButton<String>(
-                                value: controller.selectedPriority.value,
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
-                                    controller.updatePriority(newValue);
-                                  }
-                                },
-                                items: ['low', 'medium', 'high', 'urgent'].map((String priority) {
-                                  return DropdownMenuItem<String>(
-                                    value: priority,
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: _getPriorityColor(priority),
-                                            shape: BoxShape.circle,
-                                          ),
+                                    value: controller.selectedPriority.value,
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        controller.updatePriority(newValue);
+                                      }
+                                    },
+                                    items: ['low', 'medium', 'high', 'urgent']
+                                        .map((String priority) {
+                                      return DropdownMenuItem<String>(
+                                        value: priority,
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    _getPriorityColor(priority),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text(
+                                              priority.toUpperCase(),
+                                              style: TextStyle(
+                                                color: ColorsManager
+                                                    .textPrimaryAdaptive(
+                                                        context),
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          priority.toUpperCase(),
-                                          style: TextStyle(
-                                            color: Colors.black87,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
+                                      );
+                                    }).toList(),
+                                    isExpanded: true,
+                                    underline: SizedBox(),
+                                    dropdownColor:
+                                        ColorsManager.surfaceAdaptive(context),
+                                    icon: Icon(Icons.arrow_drop_down_rounded,
+                                        color: Color(0xFF6B7280)),
+                                    style: TextStyle(
+                                      color: ColorsManager.textPrimaryAdaptive(
+                                          context),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                  );
-                                }).toList(),
-                                isExpanded: true,
-                                underline: SizedBox(),
-                                dropdownColor: Colors.white,
-                                icon: Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF6B7280)),
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )),
+                                  )),
                             ),
                           ],
                         ),
@@ -462,7 +510,8 @@ class HelpView extends GetView<HelpController> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
@@ -473,41 +522,60 @@ class HelpView extends GetView<HelpController> {
                                     margin: EdgeInsets.only(bottom: 16),
                                     padding: EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: Color(0xFFF8FAFC),
+                                      color:
+                                          ColorsManager.surfaceVariantAdaptive(
+                                              context),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Color(0xFFE2E8F0), width: 1),
+                                      border: Border.all(
+                                          color: ColorsManager.borderAdaptive(
+                                              context),
+                                          width: 1),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
-                                            Icon(Iconsax.document_cloud, color: ColorsManager.primary, size: 20),
+                                            Icon(Iconsax.document_cloud,
+                                                color: ColorsManager.primary,
+                                                size: 20),
                                             SizedBox(width: 8),
                                             Text(
                                               'Selected Files',
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: Color(0xFF374151),
+                                                color: ColorsManager
+                                                    .textPrimaryAdaptive(
+                                                        context),
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
                                           ],
                                         ),
                                         SizedBox(height: 12),
-                                        ...controller.attachmentFiles.asMap().entries.map((entry) {
+                                        ...controller.attachmentFiles
+                                            .asMap()
+                                            .entries
+                                            .map((entry) {
                                           final index = entry.key;
                                           final filePath = entry.value;
                                           return Container(
                                             margin: EdgeInsets.only(bottom: 8),
                                             padding: EdgeInsets.all(12),
                                             decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: Color(0xFFE5E7EB)),
+                                              color:
+                                                  ColorsManager.surfaceAdaptive(
+                                                      context),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                  color: ColorsManager
+                                                      .borderAdaptive(context)),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.05),
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.05),
                                                   blurRadius: 4,
                                                   offset: Offset(0, 2),
                                                 ),
@@ -519,12 +587,16 @@ class HelpView extends GetView<HelpController> {
                                                   width: 32,
                                                   height: 32,
                                                   decoration: BoxDecoration(
-                                                    color: ColorsManager.primary.withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(6),
+                                                    color: ColorsManager.primary
+                                                        .withValues(alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            6),
                                                   ),
                                                   child: Icon(
                                                     Iconsax.image,
-                                                    color: ColorsManager.primary,
+                                                    color:
+                                                        ColorsManager.primary,
                                                     size: 16,
                                                   ),
                                                 ),
@@ -534,15 +606,23 @@ class HelpView extends GetView<HelpController> {
                                                     filePath.split('/').last,
                                                     style: TextStyle(
                                                       fontSize: 14,
-                                                      color: Colors.black87,
-                                                      fontWeight: FontWeight.w500,
+                                                      color: ColorsManager
+                                                          .textPrimaryAdaptive(
+                                                              context),
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                     ),
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                                 IconButton(
-                                                  onPressed: () => controller.removeAttachment(index),
-                                                  icon: Icon(Icons.close_rounded, color: Color(0xFFEF4444), size: 18),
+                                                  onPressed: () => controller
+                                                      .removeAttachment(index),
+                                                  icon: Icon(
+                                                      Icons.close_rounded,
+                                                      color: Color(0xFFEF4444),
+                                                      size: 18),
                                                   padding: EdgeInsets.zero,
                                                   constraints: BoxConstraints(),
                                                 ),
@@ -562,13 +642,19 @@ class HelpView extends GetView<HelpController> {
                                   child: Container(
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: ColorsManager.surfaceAdaptive(
+                                          context),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Color(0xFFE5E5E5), width: 1.5),
+                                      border: Border.all(
+                                          color: ColorsManager.borderAdaptive(
+                                              context),
+                                          width: 1.5),
                                     ),
                                     child: ElevatedButton.icon(
                                       onPressed: controller.pickFiles,
-                                      icon: Icon(Iconsax.document_cloud, size: 18, color: ColorsManager.primary),
+                                      icon: Icon(Iconsax.document_cloud,
+                                          size: 18,
+                                          color: ColorsManager.primary),
                                       label: Text(
                                         'Select Files',
                                         style: TextStyle(
@@ -582,7 +668,8 @@ class HelpView extends GetView<HelpController> {
                                         foregroundColor: ColorsManager.primary,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                       ),
                                     ),
@@ -593,13 +680,18 @@ class HelpView extends GetView<HelpController> {
                                   child: Container(
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: ColorsManager.surfaceAdaptive(
+                                          context),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Color(0xFFE5E5E5), width: 1.5),
+                                      border: Border.all(
+                                          color: ColorsManager.borderAdaptive(
+                                              context),
+                                          width: 1.5),
                                     ),
                                     child: ElevatedButton.icon(
                                       onPressed: controller.pickImages,
-                                      icon: Icon(Iconsax.image, size: 18, color: Color(0xFF059669)),
+                                      icon: Icon(Iconsax.image,
+                                          size: 18, color: Color(0xFF059669)),
                                       label: Text(
                                         'Select Images',
                                         style: TextStyle(
@@ -613,7 +705,8 @@ class HelpView extends GetView<HelpController> {
                                         foregroundColor: Color(0xFF059669),
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                       ),
                                     ),
@@ -628,72 +721,81 @@ class HelpView extends GetView<HelpController> {
 
                         // Submit Button
                         Obx(() => Container(
-                          width: double.infinity,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: controller.isLoading.value ? Color(0xFF9CA3AF) : ColorsManager.primary,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: controller.isLoading.value
-                                ? []
-                                : [
-                                    BoxShadow(
-                                      color: ColorsManager.primary.withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: controller.isLoading.value ? null : () async {
-                              await controller.submitHelpMessage();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
+                              width: double.infinity,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: controller.isLoading.value
+                                    ? Color(0xFF9CA3AF)
+                                    : ColorsManager.primary,
                                 borderRadius: BorderRadius.circular(16),
+                                boxShadow: controller.isLoading.value
+                                    ? []
+                                    : [
+                                        BoxShadow(
+                                          color: ColorsManager.primary
+                                              .withValues(alpha: 0.3),
+                                          blurRadius: 12,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
                               ),
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: controller.isLoading.value
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Submitting...',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Iconsax.send_1, size: 20),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Submit Request',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
+                              child: ElevatedButton(
+                                onPressed: controller.isLoading.value
+                                    ? null
+                                    : () async {
+                                        await controller.submitHelpMessage();
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                          ),
-                        )),
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                ),
+                                child: controller.isLoading.value
+                                    ? Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.white),
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Text(
+                                            'Submitting...',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Iconsax.send_1, size: 20),
+                                          SizedBox(width: 12),
+                                          Text(
+                                            'Submit Request',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            )),
 
                         // Success Message
                         Obx(() => controller.isSubmitted.value
@@ -703,10 +805,12 @@ class HelpView extends GetView<HelpController> {
                                 decoration: BoxDecoration(
                                   color: Color(0xFFECFDF5),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Color(0xFFD1FAE5), width: 1.5),
+                                  border: Border.all(
+                                      color: Color(0xFFD1FAE5), width: 1.5),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Color(0xFF10B981).withValues(alpha: 0.1),
+                                      color: Color(0xFF10B981)
+                                          .withValues(alpha: 0.1),
                                       blurRadius: 12,
                                       offset: Offset(0, 4),
                                     ),
@@ -724,12 +828,16 @@ class HelpView extends GetView<HelpController> {
                                             color: Color(0xFF10B981),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                          child: Icon(
+                                              Icons.check_circle_rounded,
+                                              color: Colors.white,
+                                              size: 20),
                                         ),
                                         SizedBox(width: 16),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 'Request Submitted Successfully!',
@@ -752,7 +860,9 @@ class HelpView extends GetView<HelpController> {
                                         ),
                                         IconButton(
                                           onPressed: controller.resetSubmission,
-                                          icon: Icon(Icons.close_rounded, color: Color(0xFF10B981), size: 20),
+                                          icon: Icon(Icons.close_rounded,
+                                              color: Color(0xFF10B981),
+                                              size: 20),
                                           padding: EdgeInsets.zero,
                                           constraints: BoxConstraints(),
                                         ),
@@ -775,226 +885,349 @@ class HelpView extends GetView<HelpController> {
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w700,
-                                      color: Colors.black87,
+                                      color: ColorsManager.textPrimaryAdaptive(
+                                          context),
                                       letterSpacing: -0.5,
                                     ),
                                   ),
                                   SizedBox(height: 20),
-                                  ...controller.userHelpMessages.map((message) => Container(
-                                        margin: EdgeInsets.only(bottom: 16),
-                                        padding: EdgeInsets.all(20),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(color: Color(0xFFE5E5E5), width: 1),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.08),
-                                              blurRadius: 20,
-                                              offset: Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            // Header with request type and priority
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: _getRequestTypeColor(message.requestType),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                  ),
-                                                  child: Text(
-                                                    message.requestType.displayName,
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: _getPriorityColor(message.priority),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                  ),
-                                                  child: Text(
-                                                    (message.priority ?? 'medium').toUpperCase(),
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: _getStatusColor(message.status),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                  ),
-                                                  child: Text(
-                                                    message.status.toUpperCase(),
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.w500,
-                                                    ),
-                                                  ),
+                                  ...controller.userHelpMessages
+                                      .map((message) => Container(
+                                            margin: EdgeInsets.only(bottom: 16),
+                                            padding: EdgeInsets.all(20),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              border: Border.all(
+                                                  color: ColorsManager
+                                                      .borderAdaptive(context),
+                                                  width: 1),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.08),
+                                                  blurRadius: 20,
+                                                  offset: Offset(0, 4),
                                                 ),
                                               ],
                                             ),
-
-                                            SizedBox(height: 16),
-
-                                            // User message
-                                            Text(
-                                              message.message,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                color: Colors.black87,
-                                                height: 1.6,
-                                              ),
-                                            ),
-
-                                            if (message.attachmentUrls != null && message.attachmentUrls!.isNotEmpty) ...[
-                                              SizedBox(height: 16),
-                                              Text(
-                                                'Attachments',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Color(0xFF6B7280),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 8),
-                                              ...message.attachmentUrls!.map((url) => Container(
-                                                margin: EdgeInsets.only(bottom: 8),
-                                                padding: EdgeInsets.all(12),
-                                                decoration: BoxDecoration(
-                                                  color: Color(0xFFF9FAFB),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  border: Border.all(color: Color(0xFFE5E7EB)),
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Iconsax.document_cloud, size: 16, color: ColorsManager.primary),
-                                                    SizedBox(width: 12),
-                                                    Expanded(
-                                                      child: Text(
-                                                        url.split('/').last,
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.black87,
-                                                          fontWeight: FontWeight.w500,
-                                                        ),
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              )),
-                                            ],
-
-                                            SizedBox(height: 16),
-
-                                            // Admin response if available
-                                            if (message.response != null && message.response!.isNotEmpty) ...[
-                                              Divider(height: 24, color: Color(0xFFE5E7EB)),
-                                              Container(
-                                                padding: EdgeInsets.all(16),
-                                                decoration: BoxDecoration(
-                                                  color: Color(0xFFEFF6FF),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(color: Color(0xFFBFDBFE), width: 1),
-                                                ),
-                                                child: Row(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                // Header with request type and priority
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
                                                   children: [
                                                     Container(
-                                                      width: 32,
-                                                      height: 32,
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 6),
                                                       decoration: BoxDecoration(
-                                                        color: ColorsManager.primary,
-                                                        shape: BoxShape.circle,
+                                                        color:
+                                                            _getRequestTypeColor(
+                                                                message
+                                                                    .requestType),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
                                                       ),
-                                                      child: Icon(Iconsax.directbox_receive, size: 16, color: Colors.white),
+                                                      child: Text(
+                                                        message.requestType
+                                                            .displayName,
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
                                                     ),
-                                                    SizedBox(width: 12),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            'App Team Response',
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              color: ColorsManager.primary,
-                                                              fontWeight: FontWeight.w600,
-                                                            ),
-                                                          ),
-                                                          SizedBox(height: 8),
-                                                          Text(
-                                                            message.response!,
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              color: Colors.black87,
-                                                              height: 1.6,
-                                                            ),
-                                                          ),
-                                                          if (message.adminId != null) ...[
-                                                            SizedBox(height: 8),
-                                                            Text(
-                                                              'Responded by: Admin ${message.adminId}',
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                color: Color(0xFF6B7280),
-                                                                fontStyle: FontStyle.italic,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ],
+                                                    Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 6),
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            _getPriorityColor(
+                                                                message
+                                                                    .priority),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                      ),
+                                                      child: Text(
+                                                        (message.priority ??
+                                                                'medium')
+                                                            .toUpperCase(),
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 6),
+                                                      decoration: BoxDecoration(
+                                                        color: _getStatusColor(
+                                                            message.status),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                      ),
+                                                      child: Text(
+                                                        message.status
+                                                            .toUpperCase(),
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
                                                 ),
-                                              ),
-                                            ],
 
-                                            SizedBox(height: 16),
+                                                SizedBox(height: 16),
 
-                                            // Date
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.end,
-                                              children: [
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: Color(0xFFF3F4F6),
-                                                    borderRadius: BorderRadius.circular(12),
+                                                // User message
+                                                Text(
+                                                  message.message,
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    color: ColorsManager
+                                                        .textPrimaryAdaptive(
+                                                            context),
+                                                    height: 1.6,
                                                   ),
-                                                  child: Text(
-                                                    '${message.createdAt.day}/${message.createdAt.month}/${message.createdAt.year}',
+                                                ),
+
+                                                if (message.attachmentUrls !=
+                                                        null &&
+                                                    message.attachmentUrls!
+                                                        .isNotEmpty) ...[
+                                                  SizedBox(height: 16),
+                                                  Text(
+                                                    'Attachments',
                                                     style: TextStyle(
-                                                      color: Color(0xFF6B7280),
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w500,
+                                                      fontSize: 14,
+                                                      color: ColorsManager
+                                                          .textSecondaryAdaptive(
+                                                              context),
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                     ),
                                                   ),
+                                                  SizedBox(height: 8),
+                                                  ...message.attachmentUrls!
+                                                      .map((url) => Container(
+                                                            margin:
+                                                                EdgeInsets.only(
+                                                                    bottom: 8),
+                                                            padding:
+                                                                EdgeInsets.all(
+                                                                    12),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Color(
+                                                                  0xFFF9FAFB),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                              border: Border.all(
+                                                                  color: Color(
+                                                                      0xFFE5E7EB)),
+                                                            ),
+                                                            child: Row(
+                                                              children: [
+                                                                Icon(
+                                                                    Iconsax
+                                                                        .document_cloud,
+                                                                    size: 16,
+                                                                    color: ColorsManager
+                                                                        .primary),
+                                                                SizedBox(
+                                                                    width: 12),
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    url
+                                                                        .split(
+                                                                            '/')
+                                                                        .last,
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontSize:
+                                                                          14,
+                                                                      color: Colors
+                                                                          .black87,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w500,
+                                                                    ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          )),
+                                                ],
+
+                                                SizedBox(height: 16),
+
+                                                // Admin response if available
+                                                if (message.response != null &&
+                                                    message.response!
+                                                        .isNotEmpty) ...[
+                                                  Divider(
+                                                      height: 24,
+                                                      color: ColorsManager
+                                                          .borderAdaptive(
+                                                              context)),
+                                                  Container(
+                                                    padding: EdgeInsets.all(16),
+                                                    decoration: BoxDecoration(
+                                                      color: Color(0xFFEFF6FF),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                      border: Border.all(
+                                                          color:
+                                                              Color(0xFFBFDBFE),
+                                                          width: 1),
+                                                    ),
+                                                    child: Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Container(
+                                                          width: 32,
+                                                          height: 32,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: ColorsManager
+                                                                .primary,
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                          child: Icon(
+                                                              Iconsax
+                                                                  .directbox_receive,
+                                                              size: 16,
+                                                              color:
+                                                                  Colors.white),
+                                                        ),
+                                                        SizedBox(width: 12),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              Text(
+                                                                'App Team Response',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: ColorsManager
+                                                                      .primary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                              ),
+                                                              SizedBox(
+                                                                  height: 8),
+                                                              Text(
+                                                                message
+                                                                    .response!,
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                      .black87,
+                                                                  height: 1.6,
+                                                                ),
+                                                              ),
+                                                              if (message
+                                                                      .adminId !=
+                                                                  null) ...[
+                                                                SizedBox(
+                                                                    height: 8),
+                                                                Text(
+                                                                  'Responded by: Admin ${message.adminId}',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        12,
+                                                                    color: Color(
+                                                                        0xFF6B7280),
+                                                                    fontStyle:
+                                                                        FontStyle
+                                                                            .italic,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+
+                                                SizedBox(height: 16),
+
+                                                // Date
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.end,
+                                                  children: [
+                                                    Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            Color(0xFFF3F4F6),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                      ),
+                                                      child: Text(
+                                                        '${message.createdAt.day}/${message.createdAt.month}/${message.createdAt.year}',
+                                                        style: TextStyle(
+                                                          color:
+                                                              Color(0xFF6B7280),
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                          ],
-                                        ),
-                                      )),
-                                  ],
-                                )
-                              : SizedBox.shrink()),
+                                          )),
+                                ],
+                              )
+                            : SizedBox.shrink()),
                       ],
                     ),
                   ),

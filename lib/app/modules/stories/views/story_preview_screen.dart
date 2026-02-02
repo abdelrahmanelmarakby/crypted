@@ -6,6 +6,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/modules/stories/controllers/stories_controller.dart';
 import 'package:crypted_app/app/modules/stories/widgets/story_location_picker.dart';
+import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
@@ -421,7 +422,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
       if (mounted) {
         HapticFeedback.heavyImpact();
         Get.back();
-        Get.snackbar('Success', 'Story posted!',
+        Get.snackbar(Constants.kSuccess.tr, Constants.kStoryPosted.tr,
             backgroundColor: ColorsManager.primary.withValues(alpha: 0.9),
             colorText: Colors.white,
             snackPosition: SnackPosition.TOP);
@@ -430,7 +431,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
       if (mounted) {
         setState(() => _isUploading = false);
         _uploadProgressController.stop();
-        Get.snackbar('Error', 'Failed to post story',
+        Get.snackbar(Constants.kError.tr, Constants.kSomethingWentWrong.tr,
             backgroundColor: Colors.red.withValues(alpha: 0.9),
             colorText: Colors.white);
       }
@@ -443,7 +444,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
       context: context,
       dialogType: DialogType.warning,
       animType: AnimType.scale,
-      title: 'Discard story?',
+      title: Constants.kDiscardStory.tr,
       desc: 'Your changes will be lost.',
       btnCancelText: 'Keep Editing',
       btnOkText: 'Discard',

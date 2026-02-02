@@ -36,7 +36,7 @@ class PrivateChatScreen extends GetView<ChatController> {
       builder: (controller) {
         if (controller.members.isEmpty || controller.roomId.isEmpty) {
           return Scaffold(
-            backgroundColor: ColorsManager.navbarColor,
+            backgroundColor: ColorsManager.scaffoldBg(context),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -77,7 +77,7 @@ class PrivateChatScreen extends GetView<ChatController> {
         // Wait for chatDataSource to be initialized
         if (!controller.isChatDataSourceReady.value) {
           return Scaffold(
-            backgroundColor: ColorsManager.navbarColor,
+            backgroundColor: ColorsManager.scaffoldBg(context),
             body: const Center(
               child: CircularProgressIndicator(),
             ),
@@ -123,7 +123,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                   "📨 Total messages: ${messages.length} (${localUploadingMessages.length} uploading + ${firestoreMessages.length} from Firestore)");
 
               return Scaffold(
-                backgroundColor: ColorsManager.navbarColor,
+                backgroundColor: ColorsManager.scaffoldBg(context),
                 extendBodyBehindAppBar: false,
                 appBar: controller.isSearchMode.value
                     ? null
@@ -384,7 +384,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                               color: ColorsManager.darkGrey,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: ColorsManager.navbarColor,
+                                color: ColorsManager.dividerAdaptive(context),
                                 width: 2,
                               ),
                             ),
@@ -1138,7 +1138,7 @@ class PrivateChatScreen extends GetView<ChatController> {
                             "Change Group Photo",
                             style: StylesManager.bold(
                               fontSize: FontSize.large,
-                              color: ColorsManager.black,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                           ),
                         ],
@@ -1332,7 +1332,7 @@ class _EditFieldSheetState extends State<_EditFieldSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? ColorsManager.darkBottomSheet : Colors.white,
+        color: ColorsManager.bottomSheetAdaptive(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),

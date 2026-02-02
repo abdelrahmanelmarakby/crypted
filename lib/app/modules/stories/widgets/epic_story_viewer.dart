@@ -40,6 +40,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   VideoPlayerController? _videoController;
   Timer? _progressTimer;
   VoidCallback? _videoListener;
+  late List<StoryModel> _stories; // Local copy to avoid mutating _stories
 
   // Gesture tracking
   Offset? _longPressStart;
@@ -48,6 +49,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   @override
   void initState() {
     super.initState();
+    _stories = List.from(_stories);
     currentStoryIndex = widget.initialIndex;
     _pageController = PageController(initialPage: currentStoryIndex);
 
@@ -83,7 +85,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   }
 
   void _startStory() async {
-    final story = widget.stories[currentStoryIndex];
+    final story = _stories[currentStoryIndex];
 
     // Cancel previous timer
     _progressTimer?.cancel();
@@ -137,7 +139,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   }
 
   void _nextStory() {
-    if (currentStoryIndex < widget.stories.length - 1) {
+    if (currentStoryIndex < _stories.length - 1) {
       setState(() {
         currentStoryIndex++;
       });
@@ -184,7 +186,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
 
     // Restart timer for remaining time
     if (_videoController == null) {
-      final story = widget.stories[currentStoryIndex];
+      final story = _stories[currentStoryIndex];
       final remainingDuration = Duration(
         milliseconds:
             ((1 - _progressController.value) * (story.duration ?? 5) * 1000)
@@ -252,9 +254,9 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                 PageView.builder(
                   controller: _pageController,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: widget.stories.length,
+                  itemCount: _stories.length,
                   itemBuilder: (context, index) {
-                    return _buildStoryContent(widget.stories[index]);
+                    return _buildStoryContent(_stories[index]);
                   },
                 ),
 
@@ -285,11 +287,11 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                 _buildTopBar(),
 
                 // Location badge (if available)
-                if (widget.stories[currentStoryIndex].hasLocation)
+                if (_stories[currentStoryIndex].hasLocation)
                   _buildLocationBadge(),
 
                 // Link sticker (tappable — opens URL)
-                _buildLinkSticker(widget.stories[currentStoryIndex]),
+                _buildLinkSticker(_stories[currentStoryIndex]),
 
                 // Long press hint
                 if (_isLongPressing) _buildPauseIndicator(),
@@ -574,7 +576,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
     if (uid == null || story.id == null) return;
 
     // Optimistically update local story
-    final storyIndex = widget.stories.indexOf(story);
+    final storyIndex = _stories.indexOf(story);
     final updatedAttendees = List<String>.from(story.attendeeIds ?? []);
 
     if (hasJoined) {
@@ -590,8 +592,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
 
     setState(() {
       if (storyIndex != -1) {
-        widget.stories[storyIndex] =
-            story.copyWith(attendeeIds: updatedAttendees);
+        _stories[storyIndex] = story.copyWith(attendeeIds: updatedAttendees);
       }
     });
 
@@ -607,7 +608,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
       // Revert on failure
       if (storyIndex != -1) {
         setState(() {
-          widget.stories[storyIndex] = story;
+          _stories[storyIndex] = story;
         });
       }
       Get.snackbar('Error', 'Failed to update event. Please try again.');
@@ -620,7 +621,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
           children: List.generate(
-            widget.stories.length,
+            _stories.length,
             (index) {
               return Expanded(
                 child: Container(
@@ -668,7 +669,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   }
 
   Widget _buildTopBar() {
-    final story = widget.stories[currentStoryIndex];
+    final story = _stories[currentStoryIndex];
 
     return SafeArea(
       child: Padding(
@@ -748,7 +749,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   }
 
   Widget _buildLocationBadge() {
-    final story = widget.stories[currentStoryIndex];
+    final story = _stories[currentStoryIndex];
 
     return Positioned(
       bottom: 100,

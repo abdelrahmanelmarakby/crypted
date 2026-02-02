@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
+import 'package:crypted_app/core/locale/constant.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/app/data/data_source/scheduled_message_data_source.dart';
@@ -53,15 +54,18 @@ class ScheduleMessageSheet extends StatefulWidget {
 class _ScheduleMessageSheetState extends State<ScheduleMessageSheet> {
   DateTime? _selectedDateTime;
   bool _isScheduling = false;
+  late final List<_QuickOption> _quickOptions;
 
-  // Quick-pick options
-  List<_QuickOption> get _quickOptions {
+  @override
+  void initState() {
+    super.initState();
+    // Cache quick options at init so DateTime.now() doesn't shift on rebuild
     final now = DateTime.now();
     final tonight = DateTime(now.year, now.month, now.day, 21, 0);
     final tomorrowMorning = DateTime(now.year, now.month, now.day + 1, 9, 0);
     final tomorrowAfternoon = DateTime(now.year, now.month, now.day + 1, 14, 0);
 
-    return [
+    _quickOptions = [
       _QuickOption(
         label: 'In 1 hour',
         icon: Icons.schedule,
@@ -127,7 +131,7 @@ class _ScheduleMessageSheetState extends State<ScheduleMessageSheet> {
         DateTime(date.year, date.month, date.day, time.hour, time.minute);
 
     if (combined.isBefore(DateTime.now())) {
-      Get.snackbar('Invalid Time', 'Please select a time in the future');
+      Get.snackbar(Constants.kError.tr, Constants.kSomethingWentWrong.tr);
       return;
     }
 
@@ -139,7 +143,7 @@ class _ScheduleMessageSheetState extends State<ScheduleMessageSheet> {
 
     final uid = UserService.currentUser.value?.uid;
     if (uid == null) {
-      Get.snackbar('Error', 'Please log in first');
+      Get.snackbar(Constants.kError.tr, Constants.kPleaseLoginFirst.tr);
       setState(() => _isScheduling = false);
       return;
     }
@@ -167,7 +171,7 @@ class _ScheduleMessageSheetState extends State<ScheduleMessageSheet> {
       HapticFeedback.mediumImpact();
       Navigator.of(context).pop(true);
       Get.snackbar(
-        'Message Scheduled',
+        Constants.kScheduleMessage.tr,
         'Will be sent ${_formatDateTime(scheduledFor)}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: ColorsManager.primary.withAlpha(230),
@@ -176,7 +180,7 @@ class _ScheduleMessageSheetState extends State<ScheduleMessageSheet> {
         duration: const Duration(seconds: 3),
       );
     } else {
-      Get.snackbar('Error', 'Failed to schedule message. Please try again.');
+      Get.snackbar(Constants.kError.tr, Constants.kFailedToSendMessage.tr);
     }
   }
 
@@ -235,7 +239,7 @@ class _ScheduleMessageSheetState extends State<ScheduleMessageSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Schedule Message',
+                        Constants.kScheduleMessage.tr,
                         style: TextStyle(
                           fontSize: FontSize.xLarge,
                           fontWeight: FontWeight.bold,

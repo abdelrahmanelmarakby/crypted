@@ -18,7 +18,7 @@ class BackupSettingsSheetWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: ColorsManager.white,
+        color: ColorsManager.surfaceAdaptive(context),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -32,7 +32,7 @@ class BackupSettingsSheetWidget extends StatelessWidget {
                 Constants.kBackupSettings.tr,
                 style: StylesManager.bold(
                   fontSize: FontSize.xLarge,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               const Spacer(),
@@ -52,7 +52,7 @@ class BackupSettingsSheetWidget extends StatelessWidget {
             'Include in Backup',
             style: StylesManager.semiBold(
               fontSize: FontSize.medium,
-              color: ColorsManager.black,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
           ),
           SizedBox(height: Sizes.size16),
@@ -91,7 +91,7 @@ class BackupSettingsSheetWidget extends StatelessWidget {
                     Constants.kMaxImages.tr,
                     style: StylesManager.semiBold(
                       fontSize: FontSize.medium,
-                      color: ColorsManager.black,
+                      color: ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   SizedBox(height: Sizes.size12),
@@ -159,48 +159,50 @@ class BackupSettingsSheetWidget extends StatelessWidget {
     required bool value,
     required Function(bool) onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ColorsManager.scaffoldBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: ColorsManager.borderColor,
-          width: 1,
+    return Builder(builder: (context) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: ColorsManager.scaffoldBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ColorsManager.borderColor,
+            width: 1,
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: StylesManager.semiBold(
-                    fontSize: FontSize.medium,
-                    color: ColorsManager.black,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.medium,
+                      color: ColorsManager.textPrimaryAdaptive(context),
+                    ),
                   ),
-                ),
-                SizedBox(height: Sizes.size4),
-                Text(
-                  subtitle,
-                  style: StylesManager.regular(
-                    fontSize: FontSize.small,
-                    color: ColorsManager.grey,
+                  SizedBox(height: Sizes.size4),
+                  Text(
+                    subtitle,
+                    style: StylesManager.regular(
+                      fontSize: FontSize.small,
+                      color: ColorsManager.grey,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: ColorsManager.primary,
-          ),
-        ],
-      ),
-    );
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeThumbColor: ColorsManager.primary,
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -215,7 +217,7 @@ class BackupProgressSheetWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: ColorsManager.white,
+        color: ColorsManager.bottomSheetAdaptive(context),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -228,7 +230,7 @@ class BackupProgressSheetWidget extends StatelessWidget {
                 Constants.kBackupProgress.tr,
                 style: StylesManager.bold(
                   fontSize: FontSize.xLarge,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               const Spacer(),
@@ -287,7 +289,7 @@ class BackupProgressSheetWidget extends StatelessWidget {
                 controller.currentBackupTask.value,
                 style: StylesManager.semiBold(
                   fontSize: FontSize.medium,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
                 textAlign: TextAlign.center,
               )),
@@ -366,7 +368,7 @@ class LogoutConfirmationDialogWidget extends StatelessWidget {
               'Sign Out',
               style: StylesManager.bold(
                 fontSize: FontSize.xLarge,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
             SizedBox(height: Sizes.size8),
@@ -397,7 +399,7 @@ class LogoutConfirmationDialogWidget extends StatelessWidget {
                       Constants.kCancel.tr,
                       style: StylesManager.semiBold(
                         fontSize: FontSize.medium,
-                        color: ColorsManager.black,
+                        color: ColorsManager.textPrimaryAdaptive(context),
                       ),
                     ),
                   ),
@@ -467,7 +469,7 @@ class DeleteAccountConfirmationDialogWidget extends StatelessWidget {
               'Delete Account',
               style: StylesManager.bold(
                 fontSize: FontSize.xLarge,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
             SizedBox(height: Sizes.size8),
@@ -498,7 +500,7 @@ class DeleteAccountConfirmationDialogWidget extends StatelessWidget {
                       Constants.kCancel.tr,
                       style: StylesManager.semiBold(
                         fontSize: FontSize.medium,
-                        color: ColorsManager.black,
+                        color: ColorsManager.textPrimaryAdaptive(context),
                       ),
                     ),
                   ),

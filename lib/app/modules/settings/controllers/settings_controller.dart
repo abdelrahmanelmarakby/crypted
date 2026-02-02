@@ -3,7 +3,8 @@ import 'dart:developer';
 import 'package:crypted_app/app/data/data_source/backup_data_source.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/backup_model.dart';
-import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart' as backup_v3;
+import 'package:crypted_app/app/core/services/backup/backup_service_v3.dart'
+    as backup_v3;
 import 'package:crypted_app/app/core/services/analytics_service.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 import 'package:crypted_app/app/core/services/premium_service.dart';
@@ -135,7 +136,6 @@ class SettingsController extends GetxController {
         backgroundColor: Colors.blue,
         colorText: Colors.white,
       );
-
     } catch (e) {
       log('❌ Error starting quick backup: $e');
       isBackupInProgress.value = false;
@@ -144,7 +144,7 @@ class SettingsController extends GetxController {
 
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to start backup: $e',
+        '${Constants.kFailedToStartBackup.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -205,13 +205,12 @@ class SettingsController extends GetxController {
         backgroundColor: Colors.blue,
         colorText: Colors.white,
       );
-
     } catch (e) {
       log('❌ Error starting full backup: $e');
       _resetBackupState();
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to start full backup: $e',
+        '${Constants.kFailedToStartBackup.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -238,7 +237,7 @@ class SettingsController extends GetxController {
   Future<void> startChatBackup() async {
     await _startSpecificBackup(
       types: {backup_v3.BackupType.chats},
-      backupName: 'Chat Messages',
+      backupName: Constants.kChatMessages.tr,
     );
   }
 
@@ -246,7 +245,7 @@ class SettingsController extends GetxController {
   Future<void> startLocationBackup() async {
     await _startSpecificBackup(
       types: {backup_v3.BackupType.deviceInfo},
-      backupName: 'Location Data',
+      backupName: Constants.kLocationData.tr,
     );
   }
 
@@ -271,7 +270,7 @@ class SettingsController extends GetxController {
       await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
       Get.snackbar(
         Constants.kSuccess.tr,
-        'Permissions requested successfully',
+        Constants.kPermissionsGranted.tr,
         backgroundColor: ColorsManager.success,
         colorText: ColorsManager.white,
       );
@@ -279,7 +278,7 @@ class SettingsController extends GetxController {
       log('❌ Error requesting permissions: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to request permissions: $e',
+        '${Constants.kFailedToRequestPermissions.tr}: $e',
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
       );
@@ -317,8 +316,7 @@ class SettingsController extends GetxController {
       backupStatus.value = BackupStatus.inProgress;
 
       // Set initial progress with detailed task description
-      String initialTask = 'Preparing ${backupName.toLowerCase()} backup...';
-      currentBackupTask.value = initialTask;
+      currentBackupTask.value = Constants.kPreparingBackup.tr;
 
       // Start backup with specified types
       _activeBackupId = await backup_v3.BackupServiceV3.instance.startBackup(
@@ -336,17 +334,16 @@ class SettingsController extends GetxController {
 
       Get.snackbar(
         backupName,
-        'Backup started successfully',
+        Constants.kBackupStartedSuccessfully.tr,
         backgroundColor: Colors.blue,
         colorText: Colors.white,
       );
-
     } catch (e) {
       log('❌ Error starting $backupName: $e');
       _resetBackupState();
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to start $backupName: $e',
+        '${Constants.kFailedToStartBackup.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -371,7 +368,7 @@ class SettingsController extends GetxController {
       log('❌ Error cancelling backup: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to cancel backup: $e',
+        '${Constants.kFailedToCancelBackup.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -384,15 +381,15 @@ class SettingsController extends GetxController {
     _eventsSubscription?.cancel();
 
     // Listen to progress stream
-    _progressSubscription = backup_v3.BackupServiceV3.instance.progressStream.listen(
+    _progressSubscription =
+        backup_v3.BackupServiceV3.instance.progressStream.listen(
       (progress) {
         // Only update if this is our active backup
         if (_activeBackupId != null && progress.backupId == _activeBackupId) {
           backupProgress.value = progress.percentage / 100.0;
-          currentBackupTask.value =
-            progress.currentType != null
-              ? 'Backing up ${progress.currentType!.name}...'
-              : 'In progress...';
+          currentBackupTask.value = progress.currentType != null
+              ? '${Constants.kBackupInProgress.tr} (${progress.currentType!.name})'
+              : Constants.kBackupInProgress.tr;
 
           if (progress.percentage >= 100) {
             _onBackupCompleted();
@@ -442,9 +439,9 @@ class SettingsController extends GetxController {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Backup Settings',
-              style: TextStyle(
+            Text(
+              Constants.kBackupSettings.tr,
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -452,50 +449,56 @@ class SettingsController extends GetxController {
             const SizedBox(height: 20),
             ListTile(
               leading: const Icon(Icons.backup),
-              title: const Text('Auto Backup'),
-              subtitle: const Text('Automatically backup chats'),
+              title: Text(Constants.kAutoBackup.tr),
+              subtitle: Text(Constants.kAutomaticallyBackupChats.tr),
               trailing: Switch(
                 value: true,
                 onChanged: (value) {
-                  Get.snackbar('Backup', 'Auto backup ${value ? "enabled" : "disabled"}');
+                  Get.snackbar(
+                    Constants.kBackup.tr,
+                    value
+                        ? Constants.kAutoBackupEnabled.tr
+                        : Constants.kAutoBackupDisabled.tr,
+                  );
                 },
               ),
             ),
             ListTile(
               leading: const Icon(Icons.cloud_upload),
-              title: const Text('Backup to Cloud'),
-              subtitle: const Text('Google Drive / iCloud'),
+              title: Text(Constants.kCloudBackup.tr),
+              subtitle: Text(Constants.kGoogleDriveICloud.tr),
               onTap: () {
                 Get.back();
-                Get.snackbar('Cloud Backup', 'Cloud backup configuration');
+                Get.snackbar(
+                    Constants.kCloudBackup.tr, Constants.kCloudBackupConfig.tr);
               },
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
-              title: const Text('Backup Frequency'),
-              subtitle: const Text('Daily'),
+              title: Text(Constants.kBackupFrequency.tr),
+              subtitle: Text(Constants.kDaily.tr),
               onTap: () async {
                 Get.back();
 
                 final selected = await CustomBottomSheet.showOptions<String>(
-                  title: 'Backup Frequency',
-                  subtitle: 'Choose how often to backup your data',
+                  title: Constants.kBackupFrequency.tr,
+                  subtitle: Constants.kChooseBackupFrequency.tr,
                   options: [
                     BottomSheetOption(
-                      title: 'Daily',
-                      subtitle: 'Backup every day',
+                      title: Constants.kDaily.tr,
+                      subtitle: Constants.kBackupEveryDay.tr,
                       icon: Icons.today,
                       value: 'daily',
                     ),
                     BottomSheetOption(
-                      title: 'Weekly',
-                      subtitle: 'Backup once a week',
+                      title: Constants.kWeekly.tr,
+                      subtitle: Constants.kBackupOnceAWeek.tr,
                       icon: Icons.date_range,
                       value: 'weekly',
                     ),
                     BottomSheetOption(
-                      title: 'Monthly',
-                      subtitle: 'Backup once a month',
+                      title: Constants.kMonthly.tr,
+                      subtitle: Constants.kBackupOnceAMonth.tr,
                       icon: Icons.calendar_month,
                       value: 'monthly',
                     ),
@@ -503,16 +506,18 @@ class SettingsController extends GetxController {
                 );
 
                 if (selected != null) {
-                  Get.snackbar('Settings', 'Backup frequency set to ${selected.capitalize}');
+                  Get.snackbar(Constants.kSetting.tr,
+                      '${Constants.kBackupFrequencySetTo.tr} ${selected.capitalize}');
                 }
               },
             ),
             ListTile(
               leading: const Icon(Icons.restore),
-              title: const Text('Restore from Backup'),
+              title: Text(Constants.kRestoreFromBackup.tr),
               onTap: () {
                 Get.back();
-                Get.snackbar('Restore', 'Select backup to restore');
+                Get.snackbar(Constants.kRestoreBackup.tr,
+                    Constants.kSelectBackupToRestore.tr);
               },
             ),
             const SizedBox(height: 10),
@@ -526,9 +531,9 @@ class SettingsController extends GetxController {
   /// Show logout confirmation bottom sheet
   void showLogoutConfirmationDialog() {
     CustomBottomSheet.showConfirmation(
-      title: 'Sign Out',
-      message: 'Are you sure you want to sign out?',
-      confirmText: 'Sign Out',
+      title: Constants.kSignOut.tr,
+      message: Constants.kSignOutConfirmation.tr,
+      confirmText: Constants.kSignOut.tr,
       confirmColor: Colors.red,
       icon: Icons.logout,
       iconColor: Colors.red,
@@ -539,9 +544,22 @@ class SettingsController extends GetxController {
   /// Show delete account confirmation bottom sheet
   void showDeleteAccountConfirmationDialog() {
     CustomBottomSheet.showConfirmation(
-      title: 'Delete Account',
-      message: 'Are you sure you want to permanently delete your account? This action cannot be undone.',
-      confirmText: 'Delete',
+      title: Constants.kDeleteAccount.tr,
+      message: Constants.kDeleteAccountConfirmation.tr,
+      confirmText: Constants.kDelete.tr,
+      confirmColor: Colors.red,
+      icon: Icons.warning_rounded,
+      iconColor: Colors.red,
+      onConfirm: deleteAccount,
+    );
+  }
+
+  /// Show delete account confirmation (legacy - kept for compatibility)
+  void _showDeleteAccountConfirmationDialogLegacy() {
+    CustomBottomSheet.showConfirmation(
+      title: Constants.kDeleteAccount.tr,
+      message: Constants.kDeleteAccountConfirmation.tr,
+      confirmText: Constants.kDelete.tr,
       confirmColor: Colors.red,
       icon: Icons.warning_rounded,
       iconColor: Colors.red,
@@ -594,6 +612,7 @@ class SettingsController extends GetxController {
     CacheHelper.logout();
     Get.offAllNamed(Routes.LOGIN);
   }
+
   void _onBackupCompleted() {
     isBackupInProgress.value = false;
     backupStatus.value = BackupStatus.completed;
@@ -731,7 +750,7 @@ class SettingsController extends GetxController {
 
       Get.snackbar(
         Constants.kSuccess.tr,
-        'Backup settings saved successfully',
+        Constants.kBackupSettingsSaved.tr,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -739,7 +758,7 @@ class SettingsController extends GetxController {
       log('❌ Error saving backup settings: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to save backup settings: $e',
+        '${Constants.kFailedToSaveBackupSettings.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -750,7 +769,8 @@ class SettingsController extends GetxController {
   Future<Map<String, dynamic>> getBackupReadiness() async {
     try {
       // Get readiness status from BackupServiceV3
-      final permissions = await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
+      final permissions =
+          await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
       return {
         'isOnline': true, // Assume online
         'permissions': permissions,
@@ -786,7 +806,8 @@ class SettingsController extends GetxController {
   /// Request backup permissions
   Future<void> requestBackupPermissions() async {
     try {
-      final permissions = await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
+      final permissions =
+          await backup_v3.BackupServiceV3.instance.requestBackupPermissions();
 
       final missingPermissions = permissions.entries
           .where((entry) => !entry.value)
@@ -796,14 +817,14 @@ class SettingsController extends GetxController {
       if (missingPermissions.isNotEmpty) {
         Get.snackbar(
           Constants.kWarning.tr,
-          'Some permissions are still missing: ${missingPermissions.join(', ')}',
+          '${Constants.kPermissionsMissing.tr}: ${missingPermissions.join(', ')}',
           backgroundColor: Colors.orange,
           colorText: Colors.white,
         );
       } else {
         Get.snackbar(
           Constants.kSuccess.tr,
-          'All permissions granted successfully',
+          Constants.kPermissionsGranted.tr,
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
@@ -812,7 +833,7 @@ class SettingsController extends GetxController {
       log('❌ Error requesting backup permissions: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to request permissions: $e',
+        '${Constants.kFailedToRequestPermissions.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -831,7 +852,8 @@ class SettingsController extends GetxController {
     if (autoBackup != null) autoBackupEnabled.value = autoBackup;
     if (includeImages != null) this.includeImages.value = includeImages;
     if (includeContacts != null) this.includeContacts.value = includeContacts;
-    if (includeDeviceInfo != null) this.includeDeviceInfo.value = includeDeviceInfo;
+    if (includeDeviceInfo != null)
+      this.includeDeviceInfo.value = includeDeviceInfo;
     if (maxImages != null) this.maxImages.value = maxImages;
     if (backupQuality != null) this.backupQuality.value = backupQuality;
   }
@@ -849,7 +871,8 @@ class SettingsController extends GetxController {
         estimatedSize += 100 * 1024; // 100KB for device info
       }
       if (includeImages.value) {
-        estimatedSize += maxImages.value * 2 * 1024 * 1024; // 2MB per image average
+        estimatedSize +=
+            maxImages.value * 2 * 1024 * 1024; // 2MB per image average
       }
 
       return {'estimatedSize': estimatedSize};
@@ -885,7 +908,7 @@ class SettingsController extends GetxController {
       case BackupStatus.inProgress:
         return '${Constants.kBackupInProgress.tr} (${(backupProgress.value * 100).toStringAsFixed(0)}%)';
       case BackupStatus.paused:
-        return 'Backup Paused';
+        return Constants.kBackupPaused.tr;
       case BackupStatus.completed:
         return Constants.kBackupCompleted.tr;
       case BackupStatus.failed:
@@ -904,13 +927,13 @@ class SettingsController extends GetxController {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Today';
+      return Constants.kToday.tr;
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return Constants.kYesterday.tr;
     } else if (difference.inDays < 7) {
       return '${difference.inDays} ${Constants.kDaysSinceLastBackup.tr}';
     } else {
-      return '${difference.inDays} days ago';
+      return '${difference.inDays} ${Constants.kDaysAgo.tr}';
     }
   }
 
@@ -942,7 +965,7 @@ class SettingsController extends GetxController {
             Row(
               children: [
                 Text(
-                  'Backup Progress',
+                  Constants.kBackupProgress.tr,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -976,8 +999,10 @@ class SettingsController extends GetxController {
                             CircularProgressIndicator(
                               strokeWidth: 8,
                               value: backupProgress.value,
-                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-                              backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.blue),
+                              backgroundColor:
+                                  Colors.blue.withValues(alpha: 0.2),
                             ),
                             Column(
                               mainAxisSize: MainAxisSize.min,
@@ -992,12 +1017,14 @@ class SettingsController extends GetxController {
                                 ),
                                 Text(
                                   backupStatus.value == BackupStatus.inProgress
-                                      ? 'In Progress'
-                                      : backupStatus.value == BackupStatus.completed
-                                          ? 'Completed'
-                                          : backupStatus.value == BackupStatus.failed
-                                              ? 'Failed'
-                                              : 'Pending',
+                                      ? Constants.kInProgress.tr
+                                      : backupStatus.value ==
+                                              BackupStatus.completed
+                                          ? Constants.kCompleted.tr
+                                          : backupStatus.value ==
+                                                  BackupStatus.failed
+                                              ? Constants.kFailed.tr
+                                              : Constants.kPending.tr,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[600],
@@ -1060,7 +1087,7 @@ class SettingsController extends GetxController {
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
                               ),
-                              child: const Text('Cancel Backup'),
+                              child: Text(Constants.kCancelBackup.tr),
                             ),
                           ),
                         ],
@@ -1075,7 +1102,7 @@ class SettingsController extends GetxController {
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
                               ),
-                              child: const Text('Close'),
+                              child: Text(Constants.kClose.tr),
                             ),
                           ),
                         ],
@@ -1096,7 +1123,8 @@ class SettingsController extends GetxController {
       return Icons.location_on;
     } else if (task.toLowerCase().contains('contact')) {
       return Icons.contacts;
-    } else if (task.toLowerCase().contains('image') || task.toLowerCase().contains('photo')) {
+    } else if (task.toLowerCase().contains('image') ||
+        task.toLowerCase().contains('photo')) {
       return Icons.photo_library;
     } else if (task.toLowerCase().contains('device')) {
       return Icons.phone_android;
@@ -1113,19 +1141,19 @@ class SettingsController extends GetxController {
   String _getTaskTitle(String task) {
     final taskLower = task.toLowerCase();
     if (taskLower.contains('location')) {
-      return 'Location Data';
+      return Constants.kLocationData.tr;
     } else if (taskLower.contains('contact')) {
-      return 'Contacts';
+      return Constants.kContacts.tr;
     } else if (taskLower.contains('image') || taskLower.contains('photo')) {
-      return 'Photos & Media';
+      return Constants.kPhotosAndMedia.tr;
     } else if (taskLower.contains('device')) {
-      return 'Device Info';
+      return Constants.kDeviceInfo.tr;
     } else if (taskLower.contains('chat')) {
-      return 'Chat Messages';
+      return Constants.kChatMessages.tr;
     } else if (taskLower.contains('setting')) {
-      return 'Settings';
+      return Constants.kSetting.tr;
     }
-    return 'Backup';
+    return Constants.kBackup.tr;
   }
 
   // ============================================
@@ -1136,8 +1164,10 @@ class SettingsController extends GetxController {
   Future<void> _loadAnalyticsSettings() async {
     try {
       final analyticsService = Get.find<AnalyticsService>();
-      analyticsDeviceTrackingEnabled.value = analyticsService.isDeviceTrackingEnabled;
-      analyticsLocationTrackingEnabled.value = analyticsService.isLocationTrackingEnabled;
+      analyticsDeviceTrackingEnabled.value =
+          analyticsService.isDeviceTrackingEnabled;
+      analyticsLocationTrackingEnabled.value =
+          analyticsService.isLocationTrackingEnabled;
     } catch (e) {
       log('❌ Error loading analytics settings: $e');
     }
@@ -1151,10 +1181,10 @@ class SettingsController extends GetxController {
       analyticsDeviceTrackingEnabled.value = value;
 
       Get.snackbar(
-        'Analytics Privacy',
+        Constants.kAnalyticsPrivacy.tr,
         value
-            ? 'Device tracking enabled'
-            : 'Device tracking disabled. Your device information will not be collected.',
+            ? Constants.kDeviceTrackingEnabled.tr
+            : Constants.kDeviceTrackingDisabled.tr,
         backgroundColor: value ? ColorsManager.success : ColorsManager.warning,
         colorText: ColorsManager.white,
       );
@@ -1162,7 +1192,7 @@ class SettingsController extends GetxController {
       log('❌ Error toggling device tracking: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to update device tracking setting',
+        Constants.kFailedToUpdateTracking.tr,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
       );
@@ -1174,23 +1204,25 @@ class SettingsController extends GetxController {
     try {
       final analyticsService = Get.find<AnalyticsService>();
       await analyticsService.setLocationTrackingEnabled(value);
-      analyticsLocationTrackingEnabled.value = analyticsService.isLocationTrackingEnabled;
+      analyticsLocationTrackingEnabled.value =
+          analyticsService.isLocationTrackingEnabled;
 
       if (value && !analyticsLocationTrackingEnabled.value) {
         // Permission was denied
         Get.snackbar(
-          'Location Permission',
-          'Location permission is required to enable location tracking',
+          Constants.kLocationPermission.tr,
+          Constants.kLocationPermissionRequired.tr,
           backgroundColor: ColorsManager.warning,
           colorText: ColorsManager.white,
         );
       } else {
         Get.snackbar(
-          'Analytics Privacy',
+          Constants.kAnalyticsPrivacy.tr,
           value
-              ? 'Location tracking enabled'
-              : 'Location tracking disabled. Your location will not be collected.',
-          backgroundColor: value ? ColorsManager.success : ColorsManager.warning,
+              ? Constants.kLocationTrackingEnabled.tr
+              : Constants.kLocationTrackingDisabled.tr,
+          backgroundColor:
+              value ? ColorsManager.success : ColorsManager.warning,
           colorText: ColorsManager.white,
         );
       }
@@ -1198,7 +1230,7 @@ class SettingsController extends GetxController {
       log('❌ Error toggling location tracking: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to update location tracking setting',
+        Constants.kFailedToUpdateTracking.tr,
         backgroundColor: ColorsManager.red,
         colorText: ColorsManager.white,
       );
@@ -1229,12 +1261,13 @@ class SettingsController extends GetxController {
                 // Header
                 Row(
                   children: [
-                    const Icon(Icons.info_outline, color: ColorsManager.primary, size: 28),
+                    const Icon(Icons.info_outline,
+                        color: ColorsManager.primary, size: 28),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Collected Data',
-                        style: TextStyle(
+                        Constants.kCollectedData.tr,
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1249,7 +1282,7 @@ class SettingsController extends GetxController {
                 const SizedBox(height: 16),
                 // Description
                 Text(
-                  'We collect the following information to improve your experience and provide better analytics:',
+                  Constants.kCollectedDataDescription.tr,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -1258,7 +1291,7 @@ class SettingsController extends GetxController {
                 const SizedBox(height: 24),
                 // Device Context Section
                 _buildDataSection(
-                  title: 'Device Information',
+                  title: Constants.kDeviceInformation.tr,
                   icon: Icons.phone_android,
                   enabled: analyticsDeviceTrackingEnabled.value,
                   data: exampleData['device_context'] as Map<String, dynamic>,
@@ -1266,7 +1299,7 @@ class SettingsController extends GetxController {
                 const SizedBox(height: 16),
                 // Location Context Section
                 _buildDataSection(
-                  title: 'Location Information',
+                  title: Constants.kLocationInformation.tr,
                   icon: Icons.location_on,
                   enabled: analyticsLocationTrackingEnabled.value,
                   data: exampleData['location_context'] as Map<String, dynamic>,
@@ -1282,11 +1315,12 @@ class SettingsController extends GetxController {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.privacy_tip, color: ColorsManager.primary),
+                      const Icon(Icons.privacy_tip,
+                          color: ColorsManager.primary),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Your privacy is important to us. You can disable any tracking at any time from the settings page. No personally identifiable information is collected.',
+                          Constants.kPrivacyNote.tr,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[700],
@@ -1339,13 +1373,15 @@ class SettingsController extends GetxController {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: enabled ? ColorsManager.success : ColorsManager.warning,
+                  color:
+                      enabled ? ColorsManager.success : ColorsManager.warning,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  enabled ? 'Enabled' : 'Disabled',
+                  enabled ? Constants.kEnabled.tr : Constants.kDisabled.tr,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -1376,7 +1412,8 @@ class SettingsController extends GetxController {
                             children: [
                               TextSpan(
                                 text: '${entry.key.replaceAll('_', ' ')}: ',
-                                style: const TextStyle(fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500),
                               ),
                               TextSpan(text: '${entry.value}'),
                             ],
@@ -1390,7 +1427,7 @@ class SettingsController extends GetxController {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
-                'No data is being collected for this category',
+                Constants.kNoDataCollected.tr,
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.grey[600],
@@ -1419,9 +1456,9 @@ class SettingsController extends GetxController {
 
       // Show confirmation bottom sheet
       final confirmed = await CustomBottomSheet.showConfirmation(
-        title: 'Delete Account',
-        message: 'Are you sure you want to permanently delete your account? This action cannot be undone.',
-        confirmText: 'Delete',
+        title: Constants.kDeleteAccount.tr,
+        message: Constants.kDeleteAccountConfirmation.tr,
+        confirmText: Constants.kDelete.tr,
         confirmColor: Colors.red,
         icon: Icons.warning_rounded,
         iconColor: Colors.red,
@@ -1430,7 +1467,7 @@ class SettingsController extends GetxController {
       if (confirmed != true) return;
 
       // Show loading bottom sheet
-      CustomBottomSheet.showLoading(message: 'Deleting account...');
+      CustomBottomSheet.showLoading(message: Constants.kDeletingAccount.tr);
 
       // Clean up services before cascade delete
       try {
@@ -1463,7 +1500,7 @@ class SettingsController extends GetxController {
       // Show success message
       Get.snackbar(
         Constants.kSuccess.tr,
-        'Account deleted successfully',
+        Constants.kAccountDeletedSuccessfully.tr,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -1473,15 +1510,15 @@ class SettingsController extends GetxController {
 
       // Navigate to login
       Get.offAllNamed(Routes.LOGIN);
-
     } catch (e) {
       Get.back(); // Close loading dialog
       log('❌ Error deleting account: $e');
       Get.snackbar(
         Constants.kError.tr,
-        'Failed to delete account: $e',
+        '${Constants.kFailedToDeleteAccount.tr}: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
     }
-  }}
+  }
+}

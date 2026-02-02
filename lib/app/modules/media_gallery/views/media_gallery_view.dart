@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:crypted_app/app/modules/media_gallery/controllers/media_gallery_controller.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
+import 'package:crypted_app/core/locale/constant.dart';
 
 /// Media Gallery View - displays photos, videos, files, links, and audio
 class MediaGalleryView extends GetView<MediaGalleryController> {
@@ -68,7 +69,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
             controller: controller.searchController,
             autofocus: true,
             decoration: InputDecoration(
-              hintText: 'Search media...',
+              hintText: Constants.kSearchMedia.tr,
               border: InputBorder.none,
               hintStyle: TextStyle(color: ColorsManager.lightGrey),
             ),
@@ -77,7 +78,8 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           );
         }
         if (controller.isSelectionMode.value) {
-          return Text('${controller.selectedIds.length} selected');
+          return Text(
+              '${controller.selectedIds.length} ${Constants.kSelected.tr}');
         }
         return Text(controller.roomName ?? 'Media');
       }),
@@ -111,52 +113,54 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
   }
 
   Widget _buildTabBar() {
-    return Container(
-      color: ColorsManager.white,
-      child: TabBar(
-        controller: controller.tabController,
-        isScrollable: true,
-        labelColor: ColorsManager.primary,
-        unselectedLabelColor: ColorsManager.grey,
-        indicatorColor: ColorsManager.primary,
-        tabs: MediaType.values.map((type) {
-          return Obx(() {
-            final count = controller.getCountForType(type);
-            return Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_getIconForType(type), size: 18),
-                  const SizedBox(width: 4),
-                  Text(_getLabelForType(type)),
-                  if (count > 0) ...[
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+    return Builder(
+        builder: (context) => Container(
+              color: ColorsManager.surfaceAdaptive(context),
+              child: TabBar(
+                controller: controller.tabController,
+                isScrollable: true,
+                labelColor: ColorsManager.primary,
+                unselectedLabelColor: ColorsManager.grey,
+                indicatorColor: ColorsManager.primary,
+                tabs: MediaType.values.map((type) {
+                  return Obx(() {
+                    final count = controller.getCountForType(type);
+                    return Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_getIconForType(type), size: 18),
+                          const SizedBox(width: 4),
+                          Text(_getLabelForType(type)),
+                          if (count > 0) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: ColorsManager.primary
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                count.toString(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: ColorsManager.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      decoration: BoxDecoration(
-                        color: ColorsManager.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        count.toString(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: ColorsManager.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                    );
+                  });
+                }).toList(),
               ),
-            );
-          });
-        }).toList(),
-      ),
-    );
+            ));
   }
 
   Widget _buildMediaGrid(MediaType type) {
@@ -473,7 +477,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
       Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: ColorsManager.white,
+          color: ColorsManager.surfaceAdaptive(Get.context!),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         child: Column(
@@ -481,7 +485,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           children: [
             ListTile(
               leading: const Icon(Icons.download),
-              title: const Text('Download'),
+              title: Text(Constants.kDownload.tr),
               onTap: () {
                 Get.back();
                 controller.downloadMedia(item);
@@ -489,7 +493,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
             ),
             ListTile(
               leading: const Icon(Icons.share),
-              title: const Text('Share'),
+              title: Text(Constants.kShare.tr),
               onTap: () {
                 Get.back();
                 controller.shareMedia(item, type);
@@ -497,8 +501,8 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
             ),
             ListTile(
               leading: Icon(Icons.delete, color: ColorsManager.error),
-              title:
-                  Text('Delete', style: TextStyle(color: ColorsManager.error)),
+              title: Text(Constants.kDelete.tr,
+                  style: TextStyle(color: ColorsManager.error)),
               onTap: () async {
                 Get.back();
                 controller.toggleSelection(item.messageId ?? '');
@@ -514,7 +518,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
   void _openItem(MessageModel item, MediaType type) {
     if (type == MediaType.links) {
       // Open link in browser
-      Get.snackbar('Info', 'Opening link...');
+      Get.snackbar(Constants.kInfo.tr, Constants.kOpeningLink.tr);
     } else {
       // Open in viewer
       controller.openMediaViewer(item, 0);
@@ -533,7 +537,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No ${_getLabelForType(type).toLowerCase()} yet',
+            '${_getLabelForType(type)} - ${Constants.kNoItemsYet.tr}',
             style: TextStyle(
               fontSize: 16,
               color: ColorsManager.textSecondary,
@@ -560,7 +564,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           ElevatedButton.icon(
             onPressed: controller.refresh,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(Constants.kRetry.tr),
           ),
         ],
       ),
@@ -568,42 +572,43 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
   }
 
   Widget _buildSelectionActions() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: ColorsManager.white,
-        boxShadow: [
-          BoxShadow(
-            color: ColorsManager.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            TextButton.icon(
-              onPressed: controller.shareSelected,
-              icon: const Icon(Icons.share),
-              label: const Text('Share'),
-            ),
-            TextButton.icon(
-              onPressed: controller.selectAll,
-              icon: const Icon(Icons.select_all),
-              label: const Text('Select All'),
-            ),
-            TextButton.icon(
-              onPressed: controller.deleteSelected,
-              icon: Icon(Icons.delete, color: ColorsManager.error),
-              label:
-                  Text('Delete', style: TextStyle(color: ColorsManager.error)),
-            ),
-          ],
-        ),
-      ),
-    );
+    return Builder(
+        builder: (context) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: ColorsManager.surfaceAdaptive(context),
+                boxShadow: [
+                  BoxShadow(
+                    color: ColorsManager.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    TextButton.icon(
+                      onPressed: controller.shareSelected,
+                      icon: const Icon(Icons.share),
+                      label: Text(Constants.kShare.tr),
+                    ),
+                    TextButton.icon(
+                      onPressed: controller.selectAll,
+                      icon: const Icon(Icons.select_all),
+                      label: Text(Constants.kSelectAll.tr),
+                    ),
+                    TextButton.icon(
+                      onPressed: controller.deleteSelected,
+                      icon: Icon(Icons.delete, color: ColorsManager.error),
+                      label: Text(Constants.kDelete.tr,
+                          style: TextStyle(color: ColorsManager.error)),
+                    ),
+                  ],
+                ),
+              ),
+            ));
   }
 
   IconData _getIconForType(MediaType type) {

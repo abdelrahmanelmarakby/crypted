@@ -21,17 +21,18 @@ class BackupView extends GetView<BackupController> {
 
   @override
   Widget build(BuildContext context) {
-    // Set status bar to dark for white background
+    // Set status bar based on theme
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
       ),
     );
 
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -274,7 +275,8 @@ class BackupView extends GetView<BackupController> {
                 value: progress,
                 strokeWidth: 3,
                 backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(ColorsManager.primary),
               ),
             ),
             Text(
@@ -371,12 +373,12 @@ class BackupView extends GetView<BackupController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Obx(() => Text(
-                  controller.backupStatus.value,
-                  style: StylesManager.dmSansMedium(
-                    fontSize: 13,
-                    color: ColorsManager.zenCharcoal,
-                  ),
-                )),
+                      controller.backupStatus.value,
+                      style: StylesManager.dmSansMedium(
+                        fontSize: 13,
+                        color: ColorsManager.zenCharcoal,
+                      ),
+                    )),
                 const SizedBox(height: 2),
                 Text(
                   'This backup will complete even if you close the app',
@@ -398,10 +400,17 @@ class BackupView extends GetView<BackupController> {
         color: ColorsManager.warning,
         shape: BoxShape.circle,
       ),
-    ).animate(onPlay: (c) => c.repeat())
-      .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2), duration: 600.ms)
-      .then()
-      .scale(begin: const Offset(1.2, 1.2), end: const Offset(1, 1), duration: 600.ms);
+    )
+        .animate(onPlay: (c) => c.repeat())
+        .scale(
+            begin: const Offset(1, 1),
+            end: const Offset(1.2, 1.2),
+            duration: 600.ms)
+        .then()
+        .scale(
+            begin: const Offset(1.2, 1.2),
+            end: const Offset(1, 1),
+            duration: 600.ms);
   }
 
   Widget _buildCompleteContent() {
@@ -421,12 +430,12 @@ class BackupView extends GetView<BackupController> {
           const SizedBox(width: 10),
           Expanded(
             child: Obx(() => Text(
-              'Last backup: ${controller.lastBackupDateFormatted}',
-              style: StylesManager.dmSansMedium(
-                fontSize: 13,
-                color: ColorsManager.primary,
-              ),
-            )),
+                  'Last backup: ${controller.lastBackupDateFormatted}',
+                  style: StylesManager.dmSansMedium(
+                    fontSize: 13,
+                    color: ColorsManager.primary,
+                  ),
+                )),
           ),
           GestureDetector(
             onTap: () => controller.refreshBackupHistory(),
@@ -473,9 +482,9 @@ class BackupView extends GetView<BackupController> {
           ),
           const SizedBox(height: 8),
           Obx(() => Text(
-            controller.errorMessage.value,
-            style: StylesManager.zenBody(color: ColorsManager.zenGray),
-          )),
+                controller.errorMessage.value,
+                style: StylesManager.zenBody(color: ColorsManager.zenGray),
+              )),
           const SizedBox(height: 12),
           // Troubleshooting tips
           _buildTroubleshootingTip('Check your internet connection'),
@@ -535,7 +544,8 @@ class BackupView extends GetView<BackupController> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.zenMuted),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ColorsManager.zenMuted),
                 ),
               )
             else
@@ -603,7 +613,8 @@ class BackupView extends GetView<BackupController> {
           icon: Icons.chat_bubble_outline_rounded,
           iconColor: Colors.blue,
           title: 'Chats & Messages',
-          description: 'All conversations, text messages, and message attachments',
+          description:
+              'All conversations, text messages, and message attachments',
           sizeEstimate: '~2.5 GB',
           value: controller.backupChats,
           isExpanded: true,
@@ -655,7 +666,9 @@ class BackupView extends GetView<BackupController> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isEnabled ? ColorsManager.white : ColorsManager.zenBorder.withValues(alpha: 0.5),
+          color: isEnabled
+              ? ColorsManager.white
+              : ColorsManager.zenBorder.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isEnabled ? ColorsManager.zenBorder : Colors.transparent,
@@ -727,7 +740,8 @@ class BackupView extends GetView<BackupController> {
             if (isEnabled) ...[
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: ColorsManager.zenBorder.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
@@ -756,48 +770,50 @@ class BackupView extends GetView<BackupController> {
 
   Widget _buildAnimatedToggle(RxBool value) {
     return Obx(() => GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        value.value = !value.value;
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 52,
-        height: 32,
-        decoration: BoxDecoration(
-          color: value.value ? ColorsManager.primary : ColorsManager.zenBorder,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: AnimatedAlign(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutBack,
-          alignment: value.value ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 26,
-            height: 26,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            value.value = !value.value;
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 52,
+            height: 32,
             decoration: BoxDecoration(
-              color: ColorsManager.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+              color:
+                  value.value ? ColorsManager.primary : ColorsManager.zenBorder,
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: value.value
-                ? Icon(
-                    Icons.check_rounded,
-                    color: ColorsManager.primary,
-                    size: 16,
-                  )
-                : null,
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              alignment:
+                  value.value ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: 26,
+                height: 26,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: ColorsManager.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: value.value
+                    ? Icon(
+                        Icons.check_rounded,
+                        color: ColorsManager.primary,
+                        size: 16,
+                      )
+                    : null,
+              ),
+            ),
           ),
-        ),
-      ),
-    ));
+        ));
   }
 
   Widget _buildStatsSection() {
@@ -816,7 +832,8 @@ class BackupView extends GetView<BackupController> {
               const Spacer(),
               if (hasStats)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: ColorsManager.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -862,7 +879,8 @@ class BackupView extends GetView<BackupController> {
             Obx(() {
               final count = controller.backupHistory.length;
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: ColorsManager.zenBorder,
                   borderRadius: BorderRadius.circular(12),
@@ -1124,8 +1142,8 @@ class BackupView extends GetView<BackupController> {
 
 /// Backup state enumeration
 enum BackupState {
-  empty,      // No backup yet
+  empty, // No backup yet
   inProgress, // Backup running
-  complete,   // Backup successful
-  error,      // Backup failed
+  complete, // Backup successful
+  error, // Backup failed
 }

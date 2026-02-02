@@ -51,7 +51,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
         decoration: BoxDecoration(
-          color: ColorsManager.white,
+          color: ColorsManager.surfaceAdaptive(context),
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(Radiuss.xLarge),
             topRight: Radius.circular(Radiuss.xLarge),
@@ -103,7 +103,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
                 Constants.kCreateNewEvent.tr,
                 style: StylesManager.bold(
                   fontSize: FontSize.large,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               const SizedBox(height: Sizes.size4),
@@ -144,7 +144,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
           Constants.kEventName.tr,
           style: StylesManager.medium(
             fontSize: FontSize.medium,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         const SizedBox(height: Sizes.size8),
@@ -172,7 +172,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
             ),
             style: StylesManager.medium(
               fontSize: FontSize.medium,
-              color: ColorsManager.black,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
           ),
         ),
@@ -188,7 +188,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
           Constants.kDescription.tr,
           style: StylesManager.medium(
             fontSize: FontSize.medium,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         const SizedBox(height: Sizes.size8),
@@ -220,7 +220,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
             ),
             style: StylesManager.regular(
               fontSize: FontSize.small,
-              color: ColorsManager.black,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
           ),
         ),
@@ -236,7 +236,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
           Constants.kDateTime.tr,
           style: StylesManager.medium(
             fontSize: FontSize.medium,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         const SizedBox(height: Sizes.size12),
@@ -286,7 +286,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Radiuss.normal),
           border: Border.all(color: Colors.grey[300]!),
-          color: Colors.white,
+          color: ColorsManager.surfaceAdaptive(context),
         ),
         child: Row(
           children: [
@@ -301,7 +301,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
                 '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
                 style: StylesManager.medium(
                   fontSize: FontSize.small,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
             ),
@@ -339,7 +339,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Radiuss.normal),
           border: Border.all(color: Colors.grey[300]!),
-          color: Colors.white,
+          color: ColorsManager.surfaceAdaptive(context),
         ),
         child: Row(
           children: [
@@ -354,7 +354,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
                 '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
                 style: StylesManager.medium(
                   fontSize: FontSize.small,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
             ),
@@ -375,7 +375,7 @@ class _EventBottomSheetState extends State<EventBottomSheet>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(Radiuss.normal),
                 border: Border.all(color: Colors.grey[300]!),
-                color: Colors.white,
+                color: ColorsManager.surfaceAdaptive(context),
               ),
               child: Text(
                 Constants.kCancel.tr,
