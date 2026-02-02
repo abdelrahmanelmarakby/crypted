@@ -73,6 +73,10 @@ class FirebaseCollections {
   /// Structure: user_locations/{userId}
   static const String userLocations = 'user_locations';
 
+  /// Scheduled messages collection - stores messages to be sent at a future time
+  /// Structure: scheduled_messages/{messageId}
+  static const String scheduledMessages = 'scheduled_messages';
+
   /// Chat rooms collection (capital C) - legacy variant
   @Deprecated('Use FirebaseCollections.chats instead')
   static const String chatsLegacyCapital = 'Chats';

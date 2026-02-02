@@ -13,6 +13,7 @@ import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/sticker_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/gif_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/nudge_message_model.dart';
 
 abstract class Message {
   final String id;
@@ -69,6 +70,8 @@ abstract class Message {
         return StickerMessage.fromMap(map);
       case 'gif':
         return GifMessage.fromMap(map);
+      case 'nudge':
+        return NudgeMessage.fromMap(map);
       default:
         throw Exception('Unknown message type');
     }

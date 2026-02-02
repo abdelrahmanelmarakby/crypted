@@ -22,6 +22,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:crypted_app/app/modules/chat/widgets/scheduled_messages_list_sheet.dart';
+import 'package:crypted_app/app/data/data_source/scheduled_message_data_source.dart';
+import 'package:crypted_app/app/modules/chat/widgets/icebreaker_prompts.dart';
 // ARCH-004: Removed provider import - using GetX observables only
 
 class PrivateChatScreen extends GetView<ChatController> {
@@ -191,35 +194,16 @@ class PrivateChatScreen extends GetView<ChatController> {
                                     top: Radius.circular(24),
                                   ),
                                   child: messages.isEmpty
-                                      ? Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.chat_bubble_outline,
-                                                size: 64,
-                                                color: ColorsManager.grey
-                                                    .withValues(alpha: 0.5),
-                                              ),
-                                              const SizedBox(height: 16),
-                                              Text(
-                                                'No messages yet',
-                                                style: StylesManager.medium(
-                                                  fontSize: FontSize.medium,
-                                                  color: ColorsManager.grey,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Start a conversation!',
-                                                style: StylesManager.regular(
-                                                  fontSize: FontSize.small,
-                                                  color: ColorsManager.grey
-                                                      .withValues(alpha: 0.7),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                      ? IcebreakerPrompts(
+                                          otherUserName:
+                                              _getOtherUserForAppBar()
+                                                  ?.fullName,
+                                          isGroupChat:
+                                              controller.isGroupChat.value,
+                                          onPromptSelected: (text) {
+                                            controller.sendQuickTextMessage(
+                                                text, controller.roomId);
+                                          },
                                         )
                                       : ListView.builder(
                                           // FIX: Attach ScrollController for search navigation
@@ -297,9 +281,11 @@ class PrivateChatScreen extends GetView<ChatController> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context, dynamic otherUser) {
     return AppBar(
-      backgroundColor: ColorsManager.navbarColor,
+      backgroundColor: ColorsManager.surfaceAdaptive(context),
       elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      systemOverlayStyle: Theme.of(context).brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
       leading: Container(
         margin: const EdgeInsets.only(left: 8),
         child: IconButton(
@@ -464,6 +450,9 @@ class PrivateChatScreen extends GetView<ChatController> {
           tooltip: 'Search messages',
         ),
 
+        // Scheduled messages button
+        _buildScheduledMessagesButton(context),
+
         // Show different actions based on chat type
         if (controller.isGroupChat.value) ...[
           // Group management button
@@ -557,6 +546,48 @@ class PrivateChatScreen extends GetView<ChatController> {
         ),
         child: icon,
       ),
+    );
+  }
+
+  /// Scheduled messages button with live badge count.
+  /// Tapping opens a list sheet showing all pending scheduled messages
+  /// for this chat room, with options to cancel or reschedule.
+  Widget _buildScheduledMessagesButton(BuildContext context) {
+    return FutureBuilder<int>(
+      future: ScheduledMessageDataSource()
+          .getPendingCountForRoom(controller.roomId),
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 0;
+        // Only show the button if there are pending scheduled messages
+        if (count == 0) return const SizedBox.shrink();
+
+        return IconButton(
+          onPressed: () => ScheduledMessagesListSheet.show(
+            context: context,
+            chatRoomId: controller.roomId,
+          ),
+          tooltip: 'Scheduled messages',
+          icon: Badge(
+            label: Text(
+              '$count',
+              style: const TextStyle(fontSize: 10, color: Colors.white),
+            ),
+            backgroundColor: ColorsManager.primary,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ColorsManager.primary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Iconsax.clock,
+                color: ColorsManager.primary,
+                size: 20,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

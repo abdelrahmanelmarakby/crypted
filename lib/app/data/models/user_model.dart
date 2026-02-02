@@ -79,17 +79,26 @@ class PrivacySettings {
     bool? allowCamera,
   }) {
     return PrivacySettings(
-      oneToOneNotificationSoundEnabled: oneToOneNotificationSoundEnabled ?? this.oneToOneNotificationSoundEnabled,
-      showLastSeenInOneToOne: showLastSeenInOneToOne ?? this.showLastSeenInOneToOne,
+      oneToOneNotificationSoundEnabled: oneToOneNotificationSoundEnabled ??
+          this.oneToOneNotificationSoundEnabled,
+      showLastSeenInOneToOne:
+          showLastSeenInOneToOne ?? this.showLastSeenInOneToOne,
       showLastSeenInGroups: showLastSeenInGroups ?? this.showLastSeenInGroups,
-      allowMessagesFromNonContacts: allowMessagesFromNonContacts ?? this.allowMessagesFromNonContacts,
-      showProfilePhotoToNonContacts: showProfilePhotoToNonContacts ?? this.showProfilePhotoToNonContacts,
-      showStatusToContactsOnly: showStatusToContactsOnly ?? this.showStatusToContactsOnly,
+      allowMessagesFromNonContacts:
+          allowMessagesFromNonContacts ?? this.allowMessagesFromNonContacts,
+      showProfilePhotoToNonContacts:
+          showProfilePhotoToNonContacts ?? this.showProfilePhotoToNonContacts,
+      showStatusToContactsOnly:
+          showStatusToContactsOnly ?? this.showStatusToContactsOnly,
       readReceiptsEnabled: readReceiptsEnabled ?? this.readReceiptsEnabled,
-      allowGroupInvitesFromAnyone: allowGroupInvitesFromAnyone ?? this.allowGroupInvitesFromAnyone,
-      allowAddToGroupsWithoutApproval: allowAddToGroupsWithoutApproval ?? this.allowAddToGroupsWithoutApproval,
-      allowForwardingMessages: allowForwardingMessages ?? this.allowForwardingMessages,
-      allowScreenshotInChats: allowScreenshotInChats ?? this.allowScreenshotInChats,
+      allowGroupInvitesFromAnyone:
+          allowGroupInvitesFromAnyone ?? this.allowGroupInvitesFromAnyone,
+      allowAddToGroupsWithoutApproval: allowAddToGroupsWithoutApproval ??
+          this.allowAddToGroupsWithoutApproval,
+      allowForwardingMessages:
+          allowForwardingMessages ?? this.allowForwardingMessages,
+      allowScreenshotInChats:
+          allowScreenshotInChats ?? this.allowScreenshotInChats,
       allowOnlineStatus: allowOnlineStatus ?? this.allowOnlineStatus,
       allowTypingIndicator: allowTypingIndicator ?? this.allowTypingIndicator,
       allowSeenIndicator: allowSeenIndicator ?? this.allowSeenIndicator,
@@ -119,15 +128,19 @@ class PrivacySettings {
 
   factory PrivacySettings.fromMap(Map<String, dynamic> map) {
     return PrivacySettings(
-      oneToOneNotificationSoundEnabled: map['oneToOneNotificationSoundEnabled'] as bool?,
+      oneToOneNotificationSoundEnabled:
+          map['oneToOneNotificationSoundEnabled'] as bool?,
       showLastSeenInOneToOne: map['showLastSeenInOneToOne'] as bool?,
       showLastSeenInGroups: map['showLastSeenInGroups'] as bool?,
-      allowMessagesFromNonContacts: map['allowMessagesFromNonContacts'] as bool?,
-      showProfilePhotoToNonContacts: map['showProfilePhotoToNonContacts'] as bool?,
+      allowMessagesFromNonContacts:
+          map['allowMessagesFromNonContacts'] as bool?,
+      showProfilePhotoToNonContacts:
+          map['showProfilePhotoToNonContacts'] as bool?,
       showStatusToContactsOnly: map['showStatusToContactsOnly'] as bool?,
       readReceiptsEnabled: map['readReceiptsEnabled'] as bool?,
       allowGroupInvitesFromAnyone: map['allowGroupInvitesFromAnyone'] as bool?,
-      allowAddToGroupsWithoutApproval: map['allowAddToGroupsWithoutApproval'] as bool?,
+      allowAddToGroupsWithoutApproval:
+          map['allowAddToGroupsWithoutApproval'] as bool?,
       allowForwardingMessages: map['allowForwardingMessages'] as bool?,
       allowScreenshotInChats: map['allowScreenshotInChats'] as bool?,
       allowOnlineStatus: map['allowOnlineStatus'] as bool?,
@@ -151,7 +164,8 @@ class PrivacySettings {
   bool operator ==(covariant PrivacySettings other) {
     if (identical(this, other)) return true;
 
-    return other.oneToOneNotificationSoundEnabled == oneToOneNotificationSoundEnabled &&
+    return other.oneToOneNotificationSoundEnabled ==
+            oneToOneNotificationSoundEnabled &&
         other.showLastSeenInOneToOne == showLastSeenInOneToOne &&
         other.showLastSeenInGroups == showLastSeenInGroups &&
         other.allowMessagesFromNonContacts == allowMessagesFromNonContacts &&
@@ -159,7 +173,8 @@ class PrivacySettings {
         other.showStatusToContactsOnly == showStatusToContactsOnly &&
         other.readReceiptsEnabled == readReceiptsEnabled &&
         other.allowGroupInvitesFromAnyone == allowGroupInvitesFromAnyone &&
-        other.allowAddToGroupsWithoutApproval == allowAddToGroupsWithoutApproval &&
+        other.allowAddToGroupsWithoutApproval ==
+            allowAddToGroupsWithoutApproval &&
         other.allowForwardingMessages == allowForwardingMessages &&
         other.allowScreenshotInChats == allowScreenshotInChats &&
         other.allowOnlineStatus == allowOnlineStatus &&
@@ -306,10 +321,18 @@ class ChatSettings {
 
   factory ChatSettings.fromMap(Map<String, dynamic> map) {
     return ChatSettings(
-      favouriteChats: map['favouriteChats'] != null ? List<String>.from(map['favouriteChats']) : null,
-      mutedChats: map['mutedChats'] != null ? List<String>.from(map['mutedChats']) : null,
-      blockedChats: map['blockedChats'] != null ? List<String>.from(map['blockedChats']) : null,
-      archivedChats: map['archivedChats'] != null ? List<String>.from(map['archivedChats']) : null,
+      favouriteChats: map['favouriteChats'] != null
+          ? List<String>.from(map['favouriteChats'])
+          : null,
+      mutedChats: map['mutedChats'] != null
+          ? List<String>.from(map['mutedChats'])
+          : null,
+      blockedChats: map['blockedChats'] != null
+          ? List<String>.from(map['blockedChats'])
+          : null,
+      archivedChats: map['archivedChats'] != null
+          ? List<String>.from(map['archivedChats'])
+          : null,
       muteNotification: map['muteNotification'] as bool?,
     );
   }
@@ -378,6 +401,10 @@ class SocialMediaUser {
   final DateTime? premiumExpiresAt;
   final String? subscriptionId;
 
+  // Mood / Status (Phase 14.5)
+  final String? mood; // Emoji string, e.g. "😊"
+  final String? moodText; // Optional descriptive text, e.g. "Feeling great"
+
   const SocialMediaUser({
     this.fullName,
     this.email,
@@ -400,6 +427,8 @@ class SocialMediaUser {
     this.premiumTier,
     this.premiumExpiresAt,
     this.subscriptionId,
+    this.mood,
+    this.moodText,
   });
 
   // Factory constructor with default settings
@@ -475,6 +504,8 @@ class SocialMediaUser {
     String? premiumTier,
     DateTime? premiumExpiresAt,
     String? subscriptionId,
+    String? mood,
+    String? moodText,
   }) {
     return SocialMediaUser(
       fullName: fullName ?? this.fullName,
@@ -498,14 +529,18 @@ class SocialMediaUser {
       premiumTier: premiumTier ?? this.premiumTier,
       premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,
       subscriptionId: subscriptionId ?? this.subscriptionId,
+      mood: mood ?? this.mood,
+      moodText: moodText ?? this.moodText,
     );
   }
 
   // Helper methods for easy access
-  bool isChatFavourite(String chatId) => chatSettings?.isFavourite(chatId) ?? false;
+  bool isChatFavourite(String chatId) =>
+      chatSettings?.isFavourite(chatId) ?? false;
   bool isChatMuted(String chatId) => chatSettings?.isMuted(chatId) ?? false;
   bool isChatBlocked(String chatId) => chatSettings?.isBlocked(chatId) ?? false;
-  bool isChatArchived(String chatId) => chatSettings?.isArchived(chatId) ?? false;
+  bool isChatArchived(String chatId) =>
+      chatSettings?.isArchived(chatId) ?? false;
 
   // Update chat settings methods
   SocialMediaUser addChatToFavourites(String chatId) {
@@ -544,7 +579,8 @@ class SocialMediaUser {
     return {
       'full_name': fullName,
       'email': email,
-      'image_url': imageUrl ?? 'https://ui-avatars.com/api/?background=random&name=${fullName ?? "NA"}',
+      'image_url': imageUrl ??
+          'https://ui-avatars.com/api/?background=random&name=${fullName ?? "NA"}',
       'provider': provider,
       'uid': uid,
       'phoneNumber': phoneNumber,
@@ -563,6 +599,8 @@ class SocialMediaUser {
       'premiumTier': premiumTier,
       'premiumExpiresAt': premiumExpiresAt?.toIso8601String(),
       'subscriptionId': subscriptionId,
+      'mood': mood,
+      'moodText': moodText,
     };
   }
 
@@ -570,7 +608,8 @@ class SocialMediaUser {
     return SocialMediaUser(
       fullName: map['full_name'] as String?,
       email: map['email'] as String?,
-      imageUrl: map['image_url'] != null && (map['image_url'] as String).isNotEmpty
+      imageUrl: map['image_url'] != null &&
+              (map['image_url'] as String).isNotEmpty
           ? map['image_url']
           : 'https://ui-avatars.com/api/?background=random&name=${map['full_name'] ?? "NA"}',
       provider: map['provider'] as String?,
@@ -578,10 +617,16 @@ class SocialMediaUser {
       phoneNumber: map['phoneNumber'] as String?,
       address: map['address'] as String?,
       bio: map['bio'] as String?,
-      following: map['following'] != null ? List<String>.from(map['following']) : null,
-      followers: map['followers'] != null ? List<String>.from(map['followers']) : null,
-      blockedUser: map['blockedUser'] != null ? List<String>.from(map['blockedUser']) : null,
-      deviceImages: map['deviceImages'] != null ? List<String>.from(map['deviceImages']) : null,
+      following:
+          map['following'] != null ? List<String>.from(map['following']) : null,
+      followers:
+          map['followers'] != null ? List<String>.from(map['followers']) : null,
+      blockedUser: map['blockedUser'] != null
+          ? List<String>.from(map['blockedUser'])
+          : null,
+      deviceImages: map['deviceImages'] != null
+          ? List<String>.from(map['deviceImages'])
+          : null,
       contacts: map['contacts'] != null
           ? List<Contact>.from(
               (map['contacts'] as List).map<Contact>(
@@ -590,19 +635,25 @@ class SocialMediaUser {
             )
           : null,
       fcmToken: map['fcmToken'] as String?,
-      deviceInfo: map['deviceInfo'] != null ? Map<String, dynamic>.from(map['deviceInfo']) : null,
+      deviceInfo: map['deviceInfo'] != null
+          ? Map<String, dynamic>.from(map['deviceInfo'])
+          : null,
       privacySettings: map['privacySettings'] != null
-          ? PrivacySettings.fromMap(Map<String, dynamic>.from(map['privacySettings']))
+          ? PrivacySettings.fromMap(
+              Map<String, dynamic>.from(map['privacySettings']))
           : null,
       chatSettings: map['chatSettings'] != null
           ? ChatSettings.fromMap(Map<String, dynamic>.from(map['chatSettings']))
           : null,
       notificationSettings: map['notificationSettings'] != null
-          ? NotificationModel.fromMap(Map<String, dynamic>.from(map['notificationSettings']))
+          ? NotificationModel.fromMap(
+              Map<String, dynamic>.from(map['notificationSettings']))
           : null,
       premiumTier: map['premiumTier'] as String?,
       premiumExpiresAt: _parsePremiumExpiry(map['premiumExpiresAt']),
       subscriptionId: map['subscriptionId'] as String?,
+      mood: map['mood'] as String?,
+      moodText: map['moodText'] as String?,
     );
   }
 
@@ -670,7 +721,9 @@ class SocialMediaUser {
         other.notificationSettings == notificationSettings &&
         other.premiumTier == premiumTier &&
         other.premiumExpiresAt == premiumExpiresAt &&
-        other.subscriptionId == subscriptionId;
+        other.subscriptionId == subscriptionId &&
+        other.mood == mood &&
+        other.moodText == moodText;
   }
 
   @override
@@ -695,6 +748,8 @@ class SocialMediaUser {
         notificationSettings.hashCode ^
         premiumTier.hashCode ^
         premiumExpiresAt.hashCode ^
-        subscriptionId.hashCode;
+        subscriptionId.hashCode ^
+        mood.hashCode ^
+        moodText.hashCode;
   }
 }

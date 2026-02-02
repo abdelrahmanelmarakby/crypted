@@ -13,6 +13,7 @@ import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/sticker_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/gif_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/nudge_message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/animated_message_item.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/audio_message.dart';
@@ -28,6 +29,7 @@ import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/video_m
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/sticker_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/gif_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/uploading_message.dart';
+import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/nudge_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_reactions_display.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -379,10 +381,14 @@ class MessageBuilder extends GetView<ChatController> {
         );
 
       case TextMessage():
-        return TextMessageWidget(
-          key: key,
-          message: msg,
-        );
+        return Obx(() => TextMessageWidget(
+              key: key,
+              message: msg,
+              translatedText: controller.translatedMessages[msg.id]?['text'],
+              translationSourceLang: controller.translatedMessages[msg.id]
+                  ?['sourceLang'],
+              isTranslating: controller.translatingMessageIds.contains(msg.id),
+            ));
 
       case image.PhotoMessage():
         return ImageMessageWidget(
@@ -423,6 +429,12 @@ class MessageBuilder extends GetView<ChatController> {
 
       case GifMessage():
         return GifMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case NudgeMessage():
+        return NudgeMessageWidget(
           key: key,
           message: msg,
         );

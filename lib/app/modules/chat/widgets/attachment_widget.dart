@@ -33,6 +33,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:crypted_app/app/data/models/messages/sticker_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/gif_message_model.dart';
 import 'package:crypted_app/app/modules/chat/widgets/giphy_picker_sheet.dart';
+import 'package:crypted_app/app/modules/chat/widgets/schedule_message_sheet.dart';
 
 class AttachmentWidget extends GetView<ChatController> {
   const AttachmentWidget({super.key});
@@ -63,6 +64,44 @@ class AttachmentWidget extends GetView<ChatController> {
     controller.sendQuickTextMessage(result.sanitized, controller.roomId);
   }
 
+  /// Open the schedule-message sheet (triggered by long-pressing send button).
+  void _showScheduleSheet(ChatController controller) {
+    final text = controller.messageController.text;
+    if (text.isEmpty) return;
+
+    // Validate the message first
+    final result = _sanitizer.validateMessage(text);
+    if (!result.isValid) {
+      Get.snackbar(
+        'Invalid Message',
+        result.error ?? 'Message contains invalid content',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.error.withValues(alpha: 0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    // Serialize members for the scheduled message document
+    final members = controller.members
+        .map((m) => m.toMap())
+        .toList()
+        .cast<Map<String, dynamic>>();
+
+    ScheduleMessageSheet.show(
+      context: Get.context!,
+      messageText: result.sanitized,
+      chatRoomId: controller.roomId,
+      members: members,
+    ).then((scheduled) {
+      if (scheduled) {
+        controller.messageController.clear();
+        controller.update(); // Refresh GetBuilder to toggle mic/send
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ChatController>(
@@ -74,7 +113,7 @@ class AttachmentWidget extends GetView<ChatController> {
             right: Paddings.small,
           ),
           decoration: BoxDecoration(
-            color: ColorsManager.white,
+            color: ColorsManager.surfaceAdaptive(context),
           ),
           child: Column(children: [
             // FIX: Reply Preview UI
@@ -384,6 +423,10 @@ class AttachmentWidget extends GetView<ChatController> {
                                   HapticFeedback.lightImpact();
                                   _sendSanitizedMessage(controller);
                                 },
+                                onLongPress: () {
+                                  HapticFeedback.mediumImpact();
+                                  _showScheduleSheet(controller);
+                                },
                                 child: Container(
                                   width: Sizes.size50,
                                   height: Sizes.size50,
@@ -495,7 +538,7 @@ class AttachmentWidget extends GetView<ChatController> {
         ),
         Offset.zero & overlay.size,
       ),
-      color: Colors.white,
+      color: ColorsManager.surfaceAdaptive(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radiuss.xLarge),
       ),

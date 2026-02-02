@@ -403,178 +403,201 @@ class _ChatRowState extends State<ChatRow> {
             child: const Text('Delete Chat'),
           ),
         ],
-        child: Material(
-          color: ColorsManager.white,
-          child: InkWell(
-            onTap: () {
-              Map<String, dynamic> arg = {
-                'members': widget.chatRoom?.members,
-                "blockingUserId": widget.chatRoom?.blockingUserId,
-                "roomId": widget.chatRoom?.id,
-                "isGroupChat": widget.chatRoom?.isGroupChat,
-              };
-              Get.toNamed(Routes.CHAT, arguments: arg);
-            },
-            child: Container(
-              // Fix #3: Better padding (8→16 horizontal, 12→14 vertical)
-              padding: const EdgeInsets.symmetric(
-                horizontal: Paddings.large,
-                vertical: Paddings.medium,
-              ),
-              // Fix #3: Cleaner bottom divider using theme border color
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: ColorsManager.border,
-                    width: 0.5,
+        child: SizedBox(
+            width: MediaQuery.of(context).size.width,
+            child: Material(
+              color: ColorsManager.surfaceAdaptive(context),
+              child: InkWell(
+                onTap: () {
+                  Map<String, dynamic> arg = {
+                    'members': widget.chatRoom?.members,
+                    "blockingUserId": widget.chatRoom?.blockingUserId,
+                    "roomId": widget.chatRoom?.id,
+                    "isGroupChat": widget.chatRoom?.isGroupChat,
+                  };
+                  Get.toNamed(Routes.CHAT, arguments: arg);
+                },
+                child: Container(
+                  // Fix #3: Better padding (8→16 horizontal, 12→14 vertical)
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Paddings.large,
+                    vertical: Paddings.medium,
+                  ),
+                  // Fix #3: Cleaner bottom divider using theme border color
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: ColorsManager.border,
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Avatar with online status for private chats
+                      SizedBox(
+                        width: Sizes.size48,
+                        height: Sizes.size48,
+                        child: widget.chatRoom?.isGroupChat == true
+                            ? ClipOval(child: _buildGroupAvatar())
+                            : _buildPrivateAvatarWithStatus(),
+                      ),
+                      const SizedBox(width: Spacing.sm),
+
+                      // Fix #4: Use Expanded instead of ConstrainedBox
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Top row: Name + status icons | Timestamp
+                            Row(
+                              children: [
+                                // Name + icons (flexible)
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          _getChatDisplayName(),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                          // Fix #1 & #2: Stronger hierarchy + StylesManager
+                                          style: StylesManager.semiBold(
+                                            fontSize: FontSize.medium,
+                                            color: ColorsManager
+                                                .textPrimaryAdaptive(context),
+                                          ),
+                                        ),
+                                      ),
+                                      // Mood emoji (Phase 14.5)
+                                      if (widget.chatRoom?.isGroupChat != true)
+                                        Builder(builder: (_) {
+                                          final otherUser =
+                                              _getChatDisplayUser();
+                                          final mood = otherUser?.mood;
+                                          if (mood != null && mood.isNotEmpty) {
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: Spacing.xxs),
+                                              child: Text(mood,
+                                                  style: const TextStyle(
+                                                      fontSize: 14)),
+                                            );
+                                          }
+                                          return const SizedBox.shrink();
+                                        }),
+                                      // Status icons with consistent spacing
+                                      if (widget.chatRoom?.isGroupChat == true)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: Spacing.xxs),
+                                          child: Icon(
+                                            Icons.group,
+                                            size: 14,
+                                            color: ColorsManager.primary,
+                                          ),
+                                        ),
+                                      if (isPinned)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: Spacing.xxs),
+                                          child: Icon(
+                                            Icons.push_pin,
+                                            size: 12,
+                                            color: ColorsManager.primary,
+                                          ),
+                                        ),
+                                      if (isArchived)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: Spacing.xxs),
+                                          child: Icon(
+                                            Icons.archive,
+                                            size: 12,
+                                            color: ColorsManager.grey,
+                                          ),
+                                        ),
+                                      if (isFavorite)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: Spacing.xxs),
+                                          child: Icon(
+                                            Icons.favorite,
+                                            size: 12,
+                                            color: ColorsManager.red,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: Spacing.xs),
+                                // Fix #1 & #2: Timestamp with better size + StylesManager
+                                Text(
+                                  timeago.format(_parseDateSafely(
+                                          widget.chatRoom?.lastChat) ??
+                                      DateTime.now()),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: StylesManager.regular(
+                                    fontSize: FontSize.xSmall,
+                                    color: ColorsManager.lightGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: Spacing.xxs),
+
+                            // Bottom row: Subtitle | Unread badge
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _getChatSubtitle(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    // Fix #1 & #2: Better subtitle contrast + StylesManager
+                                    style: StylesManager.regular(
+                                      fontSize: FontSize.small,
+                                      color: ColorsManager.grey,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: Spacing.xs),
+                                // UX-009: Unread count badge or pulse indicator
+                                Builder(builder: (context) {
+                                  final myUid =
+                                      UserService.currentUser.value?.uid;
+                                  final unread = (myUid != null)
+                                      ? (widget.chatRoom
+                                              ?.unreadCountFor(myUid) ??
+                                          0)
+                                      : 0;
+                                  if (unread > 0) {
+                                    return UnreadCountBadge(
+                                      count: unread,
+                                      showPulse: false,
+                                    );
+                                  } else if (widget.chatRoom?.lastSender !=
+                                      myUid) {
+                                    // Fallback: green dot when we don't have counts yet
+                                    return const UnreadPulseBadge(
+                                      size: 8,
+                                      enablePulse: true,
+                                    );
+                                  }
+                                  return const SizedBox(width: Sizes.size20);
+                                }),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              child: Row(
-                children: [
-                  // Avatar with online status for private chats
-                  SizedBox(
-                    width: Sizes.size48,
-                    height: Sizes.size48,
-                    child: widget.chatRoom?.isGroupChat == true
-                        ? ClipOval(child: _buildGroupAvatar())
-                        : _buildPrivateAvatarWithStatus(),
-                  ),
-                  const SizedBox(width: Spacing.sm),
-
-                  // Fix #4: Use Expanded instead of ConstrainedBox
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Top row: Name + status icons | Timestamp
-                        Row(
-                          children: [
-                            // Name + icons (flexible)
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      _getChatDisplayName(),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                      // Fix #1 & #2: Stronger hierarchy + StylesManager
-                                      style: StylesManager.semiBold(
-                                        fontSize: FontSize.medium,
-                                        color: ColorsManager.black,
-                                      ),
-                                    ),
-                                  ),
-                                  // Status icons with consistent spacing
-                                  if (widget.chatRoom?.isGroupChat == true)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: Spacing.xxs),
-                                      child: Icon(
-                                        Icons.group,
-                                        size: 14,
-                                        color: ColorsManager.primary,
-                                      ),
-                                    ),
-                                  if (isPinned)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: Spacing.xxs),
-                                      child: Icon(
-                                        Icons.push_pin,
-                                        size: 12,
-                                        color: ColorsManager.primary,
-                                      ),
-                                    ),
-                                  if (isArchived)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: Spacing.xxs),
-                                      child: Icon(
-                                        Icons.archive,
-                                        size: 12,
-                                        color: ColorsManager.grey,
-                                      ),
-                                    ),
-                                  if (isFavorite)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: Spacing.xxs),
-                                      child: Icon(
-                                        Icons.favorite,
-                                        size: 12,
-                                        color: ColorsManager.red,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: Spacing.xs),
-                            // Fix #1 & #2: Timestamp with better size + StylesManager
-                            Text(
-                              timeago.format(
-                                  _parseDateSafely(widget.chatRoom?.lastChat) ??
-                                      DateTime.now()),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: StylesManager.regular(
-                                fontSize: FontSize.xSmall,
-                                color: ColorsManager.lightGrey,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: Spacing.xxs),
-
-                        // Bottom row: Subtitle | Unread badge
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _getChatSubtitle(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                // Fix #1 & #2: Better subtitle contrast + StylesManager
-                                style: StylesManager.regular(
-                                  fontSize: FontSize.small,
-                                  color: ColorsManager.grey,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: Spacing.xs),
-                            // UX-009: Unread count badge or pulse indicator
-                            Builder(builder: (context) {
-                              final myUid = UserService.currentUser.value?.uid;
-                              final unread = (myUid != null)
-                                  ? (widget.chatRoom?.unreadCountFor(myUid) ??
-                                      0)
-                                  : 0;
-                              if (unread > 0) {
-                                return UnreadCountBadge(
-                                  count: unread,
-                                  showPulse: false,
-                                );
-                              } else if (widget.chatRoom?.lastSender != myUid) {
-                                // Fallback: green dot when we don't have counts yet
-                                return const UnreadPulseBadge(
-                                  size: 8,
-                                  enablePulse: true,
-                                );
-                              }
-                              return const SizedBox(width: Sizes.size20);
-                            }),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ));
+            )));
   }
 
   /// Get the appropriate display name for the chat

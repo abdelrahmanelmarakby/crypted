@@ -6,7 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/services/notification_controller.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/services/notification_settings_service.dart';
-import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart' as settings_model;
+import 'package:crypted_app/app/modules/settings_v2/core/models/notification_settings_model.dart'
+    as settings_model;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -141,11 +142,13 @@ class FCMService {
       );
 
       if (kDebugMode) {
-        developer.log('✅ Awesome Notifications initialized', name: 'FCMService');
+        developer.log('✅ Awesome Notifications initialized',
+            name: 'FCMService');
       }
     } catch (e) {
       if (kDebugMode) {
-        developer.log('❌ Error initializing Awesome Notifications: $e', name: 'FCMService');
+        developer.log('❌ Error initializing Awesome Notifications: $e',
+            name: 'FCMService');
       }
     }
   }
@@ -160,7 +163,8 @@ class FCMService {
 
       if (!isAllowed) {
         if (kDebugMode) {
-          developer.log('⚠️ Notification permissions not granted', name: 'FCMService');
+          developer.log('⚠️ Notification permissions not granted',
+              name: 'FCMService');
         }
         return;
       }
@@ -181,11 +185,15 @@ class FCMService {
         if (token.isNotEmpty) {
           _currentToken = token;
           if (kDebugMode) {
-            final preview = token.length > 20 ? '${token.substring(0, 20)}...' : token;
-            developer.log('📱 FCM token captured: $preview', name: 'FCMService');
+            final preview =
+                token.length > 20 ? '${token.substring(0, 20)}...' : token;
+            developer.log('📱 FCM token captured: $preview',
+                name: 'FCMService');
           }
         } else if (kDebugMode) {
-          developer.log('⚠️ FCM token is empty — push notifications may not work', name: 'FCMService');
+          developer.log(
+              '⚠️ FCM token is empty — push notifications may not work',
+              name: 'FCMService');
         }
       } catch (e) {
         if (kDebugMode) {
@@ -195,11 +203,13 @@ class FCMService {
 
       _isInitialized = true;
       if (kDebugMode) {
-        developer.log('✅ FCM Service initialized successfully', name: 'FCMService');
+        developer.log('✅ FCM Service initialized successfully',
+            name: 'FCMService');
       }
     } catch (e) {
       if (kDebugMode) {
-        developer.log('❌ Error initializing FCM Service: $e', name: 'FCMService');
+        developer.log('❌ Error initializing FCM Service: $e',
+            name: 'FCMService');
       }
     }
   }
@@ -285,7 +295,9 @@ class FCMService {
 
       if (!decision.shouldDeliver) {
         if (kDebugMode) {
-          developer.log('🔕 Notification blocked: ${decision.blockReason?.displayMessage}', name: 'FCMService');
+          developer.log(
+              '🔕 Notification blocked: ${decision.blockReason?.displayMessage}',
+              name: 'FCMService');
         }
         return;
       }
@@ -341,7 +353,8 @@ class FCMService {
   }
 
   /// Handle incoming call notification
-  Future<void> _handleIncomingCallNotification(Map<String, dynamic> data) async {
+  Future<void> _handleIncomingCallNotification(
+      Map<String, dynamic> data) async {
     final callId = data['callId'] as String?;
     final callerId = data['callerId'] as String?;
     final callerName = data['callerName'] as String?;
@@ -421,7 +434,9 @@ class FCMService {
 
       if (!decision.shouldDeliver) {
         if (kDebugMode) {
-          developer.log('🔕 Story notification blocked: ${decision.blockReason?.displayMessage}', name: 'FCMService');
+          developer.log(
+              '🔕 Story notification blocked: ${decision.blockReason?.displayMessage}',
+              name: 'FCMService');
         }
         return;
       }
@@ -432,7 +447,11 @@ class FCMService {
         id: storyId.hashCode,
         channelKey: 'stories',
         title: '$userName posted a story',
-        body: storyType == 'video' ? '🎥 Video Story' : '📷 Photo Story',
+        body: storyType == 'event'
+            ? '📅 New Event'
+            : storyType == 'video'
+                ? '🎥 Video Story'
+                : '📷 Photo Story',
         largeIcon: userAvatar,
         category: NotificationCategory.Social,
         displayOnForeground: true,
@@ -485,7 +504,8 @@ class FCMService {
         category: NotificationCategory.Message,
         displayOnForeground: true,
         displayOnBackground: true,
-        payload: data.map((key, value) => MapEntry(key, value?.toString() ?? '')),
+        payload:
+            data.map((key, value) => MapEntry(key, value?.toString() ?? '')),
       ),
     );
   }

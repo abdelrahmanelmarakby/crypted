@@ -32,6 +32,9 @@ class MessageActionsBottomSheet extends StatelessWidget {
     this.canCopy = true,
     this.canReport = true,
     this.canEdit = false,
+    this.onTranslate,
+    this.canTranslate = false,
+    this.isTranslated = false,
   });
 
   final Message message;
@@ -45,6 +48,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
   final VoidCallback onDelete;
   final Function(String emoji)? onReaction;
   final VoidCallback? onEdit;
+  final VoidCallback? onTranslate;
   final bool isPinned;
   final bool isFavorite;
   final bool canPin;
@@ -56,6 +60,8 @@ class MessageActionsBottomSheet extends StatelessWidget {
   final bool canCopy;
   final bool canReport;
   final bool canEdit;
+  final bool canTranslate;
+  final bool isTranslated;
 
   static void show(
     BuildContext context, {
@@ -81,6 +87,9 @@ class MessageActionsBottomSheet extends StatelessWidget {
     bool canCopy = true,
     bool canReport = true,
     bool canEdit = false,
+    VoidCallback? onTranslate,
+    bool canTranslate = false,
+    bool isTranslated = false,
   }) {
     HapticFeedback.mediumImpact();
 
@@ -100,6 +109,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
         onRestore: onRestore,
         onReaction: onReaction,
         onEdit: onEdit,
+        onTranslate: onTranslate,
         isPinned: isPinned,
         isFavorite: isFavorite,
         canPin: canPin,
@@ -111,6 +121,8 @@ class MessageActionsBottomSheet extends StatelessWidget {
         canCopy: canCopy,
         canReport: canReport,
         canEdit: canEdit,
+        canTranslate: canTranslate,
+        isTranslated: isTranslated,
       ),
     );
   }
@@ -118,9 +130,9 @@ class MessageActionsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: ColorsManager.surfaceAdaptive(context),
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(20),
         ),
       ),
@@ -148,7 +160,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
                   style: TextStyle(
                     fontSize: FontSize.large,
                     fontWeight: FontWeight.w600,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                 ),
                 const Spacer(),
@@ -205,11 +217,11 @@ class MessageActionsBottomSheet extends StatelessWidget {
                         onReply();
                       },
                     ),
-
                   if (canEdit && onEdit != null)
                     _buildActionItem(
                       context: context,
-                      iconPath: 'assets/icons/fi_3648797.svg', // Using edit icon
+                      iconPath:
+                          'assets/icons/fi_3648797.svg', // Using edit icon
                       title: 'Edit',
                       onTap: () {
                         Navigator.pop(context);
@@ -217,7 +229,6 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       },
                       iconColor: ColorsManager.primary,
                     ),
-
                   if (canForward)
                     _buildActionItem(
                       context: context,
@@ -228,7 +239,6 @@ class MessageActionsBottomSheet extends StatelessWidget {
                         onForward();
                       },
                     ),
-
                   if (canCopy && message is TextMessage)
                     _buildActionItem(
                       context: context,
@@ -239,7 +249,17 @@ class MessageActionsBottomSheet extends StatelessWidget {
                         onCopy();
                       },
                     ),
-
+                  if (canTranslate && onTranslate != null)
+                    _buildActionItem(
+                      context: context,
+                      iconPath: 'assets/icons/icons8-language.svg',
+                      title: isTranslated ? 'Hide Translation' : 'Translate',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onTranslate!();
+                      },
+                      iconColor: isTranslated ? ColorsManager.primary : null,
+                    ),
                   if (canFavorite)
                     _buildActionItem(
                       context: context,
@@ -251,7 +271,6 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       },
                       iconColor: isFavorite ? ColorsManager.star : null,
                     ),
-
                   if (canPin)
                     _buildActionItem(
                       context: context,
@@ -263,7 +282,6 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       },
                       iconColor: isPinned ? ColorsManager.primary : null,
                     ),
-
                   if (canReport)
                     _buildActionItem(
                       context: context,
@@ -276,7 +294,6 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       textColor: ColorsManager.error2,
                       iconColor: ColorsManager.error2,
                     ),
-
                   if (canRestore && onRestore != null)
                     _buildActionItem(
                       context: context,
@@ -289,7 +306,6 @@ class MessageActionsBottomSheet extends StatelessWidget {
                       textColor: ColorsManager.primary,
                       iconColor: ColorsManager.primary,
                     ),
-
                   if (canDelete)
                     _buildActionItem(
                       context: context,
@@ -311,7 +327,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
           // Bottom padding for safe area
           Container(
             height: MediaQuery.of(context).padding.bottom,
-            color: Colors.white,
+            color: ColorsManager.surfaceAdaptive(context),
           ),
         ],
       ),
@@ -330,7 +346,9 @@ class MessageActionsBottomSheet extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
-        color: isDestructive ? ColorsManager.error2.withValues(alpha: 0.1) : Colors.transparent,
+        color: isDestructive
+            ? ColorsManager.error2.withValues(alpha: 0.1)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -356,7 +374,7 @@ class MessageActionsBottomSheet extends StatelessWidget {
           style: TextStyle(
             fontSize: FontSize.medium,
             fontWeight: FontWeight.w500,
-            color: textColor ?? ColorsManager.black,
+            color: textColor ?? ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         trailing: const Icon(

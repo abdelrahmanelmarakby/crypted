@@ -28,10 +28,10 @@ enum PremiumTier {
 
 /// Features that can be gated behind premium tiers.
 enum PremiumFeature {
-  /// Max file upload size (free: 100MB, basic: 1GB, premium: 4GB)
+  /// Max file upload size (all tiers: 4GB)
   largeFileUpload,
 
-  /// Extended backup storage (free: 1GB, basic: 10GB, premium: 50GB)
+  /// Extended backup storage (all tiers: 50GB)
   extendedBackupStorage,
 
   /// Custom chat themes and wallpapers
@@ -43,7 +43,7 @@ enum PremiumFeature {
   /// No ads
   noAds,
 
-  /// Extended story duration (premium: 60s vs free: 30s)
+  /// Extended story duration (all tiers: 60s)
   extendedStoryDuration,
 
   /// Advanced privacy: hide read receipts per-chat

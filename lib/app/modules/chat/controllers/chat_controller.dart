@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:crypted_app/app/core/services/chat_session_manager.dart';
@@ -43,6 +44,7 @@ import 'package:crypted_app/app/data/models/messages/contact_message_model.dart'
 import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/event_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/nudge_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/message_controller.dart';
@@ -107,6 +109,12 @@ class ChatController extends GetxController
   final Rx<ChatWallpaper> chatWallpaper = ChatWallpaper.none.obs;
 
   String? blockingUserId;
+
+  // Translation: in-memory cache { messageId: { text, sourceLang, targetLang } }
+  final RxMap<String, Map<String, String>> translatedMessages =
+      <String, Map<String, String>>{}.obs;
+  // Track which messages are currently being translated
+  final RxSet<String> translatingMessageIds = <String>{}.obs;
 
   // Blocked chat state
   final Rx<BlockedChatInfo> blockedChatInfo = const BlockedChatInfo(
@@ -2797,6 +2805,7 @@ class ChatController extends GetxController
       onRestore: message.isDeleted ? () => restoreMessage(message) : null,
       onReaction: (emoji) => toggleReaction(message, emoji),
       onEdit: canEditMsg ? () => showEditMessageSheet(message) : null,
+      onTranslate: isTextMessage ? () => translateMessage(message) : null,
       isPinned: message.isPinned,
       isFavorite: message.isFavorite,
       canPin: true,
@@ -2811,7 +2820,102 @@ class ChatController extends GetxController
       canCopy: isTextMessage,
       canReport: true,
       canEdit: canEditMsg,
+      canTranslate: isTextMessage,
+      isTranslated: translatedMessages.containsKey(message.id),
     );
+  }
+
+  /// Translate a message to the user's device locale.
+  /// Uses the Cloud Function `translateMessage` which calls Google Cloud Translation API.
+  /// Results are cached in [translatedMessages] for the session lifetime.
+  Future<void> translateMessage(Message message) async {
+    if (message is! TextMessage) {
+      _showToast('Only text messages can be translated');
+      return;
+    }
+
+    final msgId = message.id;
+    if (msgId.isEmpty) return;
+
+    // If already translated, toggle it off (remove translation)
+    if (translatedMessages.containsKey(msgId)) {
+      translatedMessages.remove(msgId);
+      update();
+      return;
+    }
+
+    // Determine target language from device locale
+    final deviceLocale = Get.locale?.languageCode ?? 'en';
+    // If the message is in the user's language already, translate to the "other" language
+    // Default: translate to device locale
+    final targetLang = deviceLocale;
+
+    // Mark as translating
+    translatingMessageIds.add(msgId);
+    update();
+
+    try {
+      final callable = FirebaseFunctions.instanceFor(region: 'us-central1')
+          .httpsCallable('translateMessage');
+
+      final result = await callable.call<Map<String, dynamic>>({
+        'text': message.text,
+        'targetLanguage': targetLang,
+      });
+
+      final data = result.data;
+      final translatedText = data?['translatedText'] as String? ?? '';
+      final detectedSource = data?['detectedSourceLanguage'] as String? ?? '';
+
+      if (translatedText.isNotEmpty && translatedText != message.text) {
+        translatedMessages[msgId] = {
+          'text': translatedText,
+          'sourceLang': detectedSource,
+          'targetLang': targetLang,
+        };
+      } else {
+        // Same language — let the user know
+        _showToast('Message is already in your language');
+      }
+    } catch (e) {
+      log('[Translation] Error: $e');
+      Get.snackbar(
+        'Translation Failed',
+        'Could not translate this message. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: ColorsManager.error.withValues(alpha: 0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+    } finally {
+      translatingMessageIds.remove(msgId);
+      update();
+    }
+  }
+
+  /// Send a nudge / "Thinking of you" message.
+  ///
+  /// Quick action to ping someone with a special animated card.
+  /// [nudgeText] and [nudgeEmoji] customize the nudge content.
+  Future<void> sendNudge({
+    String nudgeText = 'Thinking of you',
+    String nudgeEmoji = '💭',
+  }) async {
+    try {
+      final nudge = NudgeMessage(
+        id: '',
+        roomId: roomId,
+        senderId: currentUser?.uid ?? '',
+        timestamp: DateTime.now(),
+        nudgeText: nudgeText,
+        nudgeEmoji: nudgeEmoji,
+      );
+      await sendMessage(nudge);
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      log('[Nudge] Error sending nudge: $e');
+      Get.snackbar('Error', 'Failed to send nudge');
+    }
   }
 
   /// Test method for sending a test message

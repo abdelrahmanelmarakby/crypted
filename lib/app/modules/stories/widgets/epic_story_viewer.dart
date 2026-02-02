@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/data/data_source/story_data_sources.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/story_cluster.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
@@ -37,6 +39,7 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   bool isPaused = false;
   VideoPlayerController? _videoController;
   Timer? _progressTimer;
+  VoidCallback? _videoListener;
 
   // Gesture tracking
   Offset? _longPressStart;
@@ -69,6 +72,11 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
     _progressController.dispose();
     _scaleController.dispose();
     _pageController.dispose();
+    // Remove video listener before disposing to prevent memory leak
+    if (_videoListener != null && _videoController != null) {
+      _videoController!.removeListener(_videoListener!);
+      _videoListener = null;
+    }
     _videoController?.dispose();
     _progressTimer?.cancel();
     super.dispose();
@@ -77,13 +85,24 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
   void _startStory() async {
     final story = widget.stories[currentStoryIndex];
 
+    // Cancel previous timer
+    _progressTimer?.cancel();
+    _progressTimer = null;
+
+    // Remove previous video listener
+    if (_videoListener != null && _videoController != null) {
+      _videoController!.removeListener(_videoListener!);
+      _videoListener = null;
+    }
+
     // Reset progress
     _progressController.reset();
 
     // Handle video stories
     if (story.storyType == StoryType.video && story.storyFileUrl != null) {
       _videoController?.dispose();
-      _videoController = VideoPlayerController.network(story.storyFileUrl!);
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(story.storyFileUrl!));
 
       try {
         await _videoController!.initialize();
@@ -92,24 +111,25 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
         _progressController.duration = _videoController!.value.duration;
         _progressController.forward();
 
-        _videoController!.addListener(() {
-          if (_videoController!.value.position ==
+        // Track the listener so we can remove it later
+        _videoListener = () {
+          if (_videoController!.value.position >=
               _videoController!.value.duration) {
             _nextStory();
           }
-        });
+        };
+        _videoController!.addListener(_videoListener!);
       } catch (e) {
         print('Error loading video: $e');
         _nextStory();
       }
     } else {
-      // Image or text story
+      // Image or text story — use only AnimationController (no duplicate Timer)
       final duration = Duration(seconds: story.duration ?? 5);
       _progressController.duration = duration;
-      _progressController.forward();
 
-      _progressTimer = Timer(duration, () {
-        if (!isPaused) _nextStory();
+      _progressController.forward().then((_) {
+        if (!isPaused && mounted) _nextStory();
       });
     }
 
@@ -342,36 +362,84 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
               ),
             ),
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.event, color: Colors.white70, size: 40),
-                  const SizedBox(height: 12),
-                  Text(
-                    story.eventTitle ?? 'Event',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  if (story.eventDescription != null &&
-                      story.eventDescription!.isNotEmpty)
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(top: 8, left: 24, right: 24),
-                      child: Text(story.eventDescription!,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 14)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B35).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color:
+                                const Color(0xFFFF6B35).withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.event,
+                              color: Color(0xFFFF6B35), size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            story.eventCategory?.toUpperCase() ?? 'EVENT',
+                            style: const TextStyle(
+                              color: Color(0xFFFF6B35),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  const SizedBox(height: 12),
-                  Text('${story.attendeeCount} going',
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 13)),
-                ],
+                    const SizedBox(height: 16),
+                    Text(
+                      story.eventTitle ?? 'Event',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    if (story.eventDescription != null &&
+                        story.eventDescription!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(story.eventDescription!,
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14)),
+                      ),
+                    const SizedBox(height: 16),
+                    // Event info chips
+                    if (story.eventDate != null)
+                      _buildEventInfoChip(
+                        Icons.access_time,
+                        _formatEventDate(story.eventDate!),
+                      ),
+                    if (story.eventVenue != null &&
+                        story.eventVenue!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: _buildEventInfoChip(
+                          Icons.place,
+                          story.eventVenue!,
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Text('${story.attendeeCount} going',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 13)),
+                    const SizedBox(height: 20),
+                    // Join/Leave button
+                    _buildEventJoinButton(story),
+                  ],
+                ),
               ),
             ),
           ),
@@ -437,6 +505,113 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
         ),
       ),
     );
+  }
+
+  // ── Event helpers ──────────────────────────────────────────
+
+  Widget _buildEventInfoChip(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: Colors.white54),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            text,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatEventDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final eventDay = DateTime(date.year, date.month, date.day);
+    final dayDiff = eventDay.difference(today).inDays;
+    final time =
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+
+    if (dayDiff == 0) return 'Today at $time';
+    if (dayDiff == 1) return 'Tomorrow at $time';
+    return '${date.day}/${date.month}/${date.year} at $time';
+  }
+
+  Widget _buildEventJoinButton(StoryModel story) {
+    final currentUid = UserService.currentUser.value?.uid;
+    final hasJoined = currentUid != null &&
+        (story.attendeeIds?.contains(currentUid) ?? false);
+
+    return SizedBox(
+      width: 200,
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: () => _toggleEventJoin(story, hasJoined),
+        icon: Icon(hasJoined ? Icons.check_circle : Icons.add_circle_outline,
+            size: 18),
+        label: Text(
+          hasJoined ? 'Joined' : 'Join Event',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: hasJoined
+              ? Colors.white.withValues(alpha: 0.15)
+              : const Color(0xFFFF6B35),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleEventJoin(StoryModel story, bool hasJoined) async {
+    final uid = UserService.currentUser.value?.uid;
+    if (uid == null || story.id == null) return;
+
+    // Optimistically update local story
+    final storyIndex = widget.stories.indexOf(story);
+    final updatedAttendees = List<String>.from(story.attendeeIds ?? []);
+
+    if (hasJoined) {
+      updatedAttendees.remove(uid);
+    } else {
+      if (story.isEventFull) {
+        Get.snackbar(
+            'Event Full', 'This event has reached its maximum capacity');
+        return;
+      }
+      updatedAttendees.add(uid);
+    }
+
+    setState(() {
+      if (storyIndex != -1) {
+        widget.stories[storyIndex] =
+            story.copyWith(attendeeIds: updatedAttendees);
+      }
+    });
+
+    // Persist to Firestore
+    final dataSource = StoryDataSources();
+    try {
+      if (hasJoined) {
+        await dataSource.leaveEvent(story.id!);
+      } else {
+        await dataSource.joinEvent(story.id!);
+      }
+    } catch (e) {
+      // Revert on failure
+      if (storyIndex != -1) {
+        setState(() {
+          widget.stories[storyIndex] = story;
+        });
+      }
+      Get.snackbar('Error', 'Failed to update event. Please try again.');
+    }
   }
 
   Widget _buildProgressBars() {

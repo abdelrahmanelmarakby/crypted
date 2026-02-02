@@ -7,8 +7,6 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/controllers/privacy_settings_controller.dart';
-import 'package:crypted_app/app/core/services/premium_service.dart';
-import 'package:crypted_app/app/widgets/premium_gate_dialog.dart';
 
 /// Privacy Checkup Wizard
 /// Guides users through reviewing and improving their privacy settings
@@ -489,13 +487,6 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
             onChanged: (value) {
               _controller.toggleTypingIndicator(value);
             },
-          ),
-          _buildToggleCard(
-            title: 'Typing Indicator',
-            subtitle: 'Show others when you\'re typing',
-            value: settings.communication.typingIndicator,
-            icon: Iconsax.edit,
-            onChanged: (value) => _controller.toggleTypingIndicator(value),
           ),
         ],
       ),

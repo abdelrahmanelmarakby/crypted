@@ -130,7 +130,19 @@ class _StoryViewerState extends State<StoryViewer>
         // The video will load when displayed
         print('📹 Next story is video - will load on display');
         break;
-      default:
+      case StoryType.event:
+        // Preload event cover image if present
+        if (story.storyFileUrl != null &&
+            story.storyFileUrl!.isNotEmpty &&
+            mounted) {
+          precacheImage(
+            CachedNetworkImageProvider(story.storyFileUrl!),
+            context,
+          ).catchError((_) {});
+        }
+        break;
+      case StoryType.text:
+      case null:
         // Text stories don't need preloading
         break;
     }
@@ -141,6 +153,12 @@ class _StoryViewerState extends State<StoryViewer>
     final currentUser = UserService.currentUser.value;
 
     print('🔄 Initializing story viewer...');
+
+    // Initialize unconditionally to prevent LateInitializationError in dispose()
+    _progressController = AnimationController(
+      duration: const Duration(seconds: 5),
+      vsync: this,
+    );
 
     // التحقق من نوع الفتح - هل هو للمستخدم الحالي أم لمستخدم آخر
     final isViewingCurrentUserStories =
@@ -161,12 +179,6 @@ class _StoryViewerState extends State<StoryViewer>
 
       print('📱 Current user stories: ${_currentUserStories.length}');
       print('📱 Current story index: $_currentStoryIndex');
-
-      // تهيئة AnimationController
-      _progressController = AnimationController(
-        duration: Duration(seconds: 5),
-        vsync: this,
-      );
 
       if (_currentUserStories.isNotEmpty) {
         print('✅ Starting story progress...');
@@ -195,12 +207,6 @@ class _StoryViewerState extends State<StoryViewer>
         print('👤 Other user: ${currentUser.fullName}');
         print('📱 Other user stories: ${_currentUserStories.length}');
         print('📱 Current story index: $_currentStoryIndex');
-
-        // تهيئة AnimationController
-        _progressController = AnimationController(
-          duration: Duration(seconds: 5),
-          vsync: this,
-        );
 
         if (_currentUserStories.isNotEmpty) {
           print('✅ Starting story progress...');
@@ -1102,40 +1108,66 @@ class _StoryViewerState extends State<StoryViewer>
 
   String _formatEventDate(DateTime date) {
     final now = DateTime.now();
-    final diff = date.difference(now);
+    final today = DateTime(now.year, now.month, now.day);
+    final eventDay = DateTime(date.year, date.month, date.day);
+    final dayDiff = eventDay.difference(today).inDays;
     final day = '${date.day}/${date.month}/${date.year}';
     final time =
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 
-    if (diff.inDays == 0) {
+    if (dayDiff == 0) {
       return 'Today at $time';
-    } else if (diff.inDays == 1) {
+    } else if (dayDiff == 1) {
       return 'Tomorrow at $time';
     }
     return '$day at $time';
   }
 
   String? get _currentUserId {
-    try {
-      return Get.find<dynamic>().currentUser?.uid as String?;
-    } catch (_) {
-      return null;
-    }
+    return UserService.currentUser.value?.uid;
   }
 
   Future<void> _toggleEventJoin(StoryModel story, bool hasJoined) async {
-    final dataSource = StoryDataSources();
-    if (hasJoined) {
-      await dataSource.leaveEvent(story.id!);
-    } else {
-      if (story.isEventFull) {
-        Get.snackbar(
-            'Event Full', 'This event has reached its maximum capacity');
-        return;
+    final uid = _currentUserId;
+    if (uid == null || story.id == null) return;
+
+    // Optimistically update the local story model
+    final storyIndex = _currentUserStories.indexOf(story);
+    if (storyIndex != -1) {
+      final updatedAttendees = List<String>.from(story.attendeeIds ?? []);
+      if (hasJoined) {
+        updatedAttendees.remove(uid);
+      } else {
+        if (story.isEventFull) {
+          Get.snackbar(
+              'Event Full', 'This event has reached its maximum capacity');
+          return;
+        }
+        updatedAttendees.add(uid);
       }
-      await dataSource.joinEvent(story.id!);
+      setState(() {
+        _currentUserStories[storyIndex] =
+            story.copyWith(attendeeIds: updatedAttendees);
+      });
     }
-    // The UI will update via the stream
+
+    // Persist to Firestore
+    final dataSource = StoryDataSources();
+    try {
+      if (hasJoined) {
+        await dataSource.leaveEvent(story.id!);
+      } else {
+        await dataSource.joinEvent(story.id!);
+      }
+    } catch (e) {
+      // Revert on failure
+      if (storyIndex != -1) {
+        setState(() {
+          _currentUserStories[storyIndex] = story;
+        });
+      }
+      Get.snackbar('Error', 'Failed to update event. Please try again.');
+    }
   }
 
   Widget _buildImageStory(StoryModel story) {
@@ -1405,8 +1437,8 @@ class _StoryViewerState extends State<StoryViewer>
   }
 
   Widget _buildUserInfo(SocialMediaUser user, StoryModel story) {
-    final controller = Get.find<StoriesController>();
-    final currentUser = controller.currentUser;
+    // Use the passed-in `user` (story owner), NOT controller.currentUser
+    final storyOwner = user;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1418,11 +1450,11 @@ class _StoryViewerState extends State<StoryViewer>
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: currentUser?.imageUrl != null &&
-                    currentUser!.imageUrl!.isNotEmpty
-                ? NetworkImage(currentUser.imageUrl!)
-                : const AssetImage('assets/images/Profile Image111.png')
-                    as ImageProvider,
+            backgroundImage:
+                storyOwner.imageUrl != null && storyOwner.imageUrl!.isNotEmpty
+                    ? NetworkImage(storyOwner.imageUrl!)
+                    : const AssetImage('assets/images/Profile Image111.png')
+                        as ImageProvider,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1430,7 +1462,7 @@ class _StoryViewerState extends State<StoryViewer>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  currentUser?.fullName ?? 'Unknown',
+                  storyOwner.fullName ?? 'Unknown',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,

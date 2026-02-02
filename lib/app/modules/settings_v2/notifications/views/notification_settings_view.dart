@@ -23,9 +23,9 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.backgroundIconSetting,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.surfaceAdaptive(context),
         elevation: 0,
         centerTitle: false,
         title: Text(
@@ -294,7 +294,8 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
   Widget _buildReminderSection(NotificationSettingsService service) {
     return SettingsSection(
       title: 'Reminders',
-      subtitle: 'Get occasional reminders about messages or status updates you haven\'t seen',
+      subtitle:
+          'Get occasional reminders about messages or status updates you haven\'t seen',
       children: [
         Obx(() => SettingsSwitch(
               icon: Icons.alarm_rounded,
@@ -400,77 +401,85 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
 
   void _showDNDScheduleSettings() {
     Get.bottomSheet(
-      Container(
-        height: Get.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            _buildBottomSheetHandle(),
-            Padding(
-              padding: const EdgeInsets.all(Paddings.large),
-              child: Row(
-                children: [
-                  Text(
-                    'DND Schedules',
-                    style: StylesManager.semiBold(fontSize: FontSize.large),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () async {
-                      Get.back(); // Close current sheet
-                      final schedule = await DNDScheduleEditor.show(
-                        context: Get.context!,
-                      );
-                      if (schedule != null) {
-                        controller.addDNDSchedule(schedule);
-                        _showDNDScheduleSettings(); // Reopen
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: Obx(() {
-                final schedules =
-                    Get.find<NotificationSettingsService>().settings.value.dnd.schedules;
+      Builder(
+          builder: (context) => Container(
+                height: Get.height * 0.7,
+                decoration: BoxDecoration(
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  children: [
+                    _buildBottomSheetHandle(),
+                    Padding(
+                      padding: const EdgeInsets.all(Paddings.large),
+                      child: Row(
+                        children: [
+                          Text(
+                            'DND Schedules',
+                            style: StylesManager.semiBold(
+                                fontSize: FontSize.large),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () async {
+                              Get.back(); // Close current sheet
+                              final schedule = await DNDScheduleEditor.show(
+                                context: Get.context!,
+                              );
+                              if (schedule != null) {
+                                controller.addDNDSchedule(schedule);
+                                _showDNDScheduleSettings(); // Reopen
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: Obx(() {
+                        final schedules =
+                            Get.find<NotificationSettingsService>()
+                                .settings
+                                .value
+                                .dnd
+                                .schedules;
 
-                if (schedules.isEmpty) {
-                  return SettingsEmptyState(
-                    icon: Icons.schedule,
-                    title: 'No Schedules',
-                    subtitle: 'Add a schedule to automatically enable DND',
-                    actionLabel: 'Add Schedule',
-                    onAction: () async {
-                      Get.back(); // Close current sheet
-                      final schedule = await DNDScheduleEditor.show(
-                        context: Get.context!,
-                      );
-                      if (schedule != null) {
-                        controller.addDNDSchedule(schedule);
-                        _showDNDScheduleSettings(); // Reopen
-                      }
-                    },
-                  );
-                }
+                        if (schedules.isEmpty) {
+                          return SettingsEmptyState(
+                            icon: Icons.schedule,
+                            title: 'No Schedules',
+                            subtitle:
+                                'Add a schedule to automatically enable DND',
+                            actionLabel: 'Add Schedule',
+                            onAction: () async {
+                              Get.back(); // Close current sheet
+                              final schedule = await DNDScheduleEditor.show(
+                                context: Get.context!,
+                              );
+                              if (schedule != null) {
+                                controller.addDNDSchedule(schedule);
+                                _showDNDScheduleSettings(); // Reopen
+                              }
+                            },
+                          );
+                        }
 
-                return ListView.builder(
-                  itemCount: schedules.length,
-                  itemBuilder: (context, index) {
-                    final schedule = schedules[index];
-                    return _buildScheduleItem(schedule);
-                  },
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
+                        return ListView.builder(
+                          itemCount: schedules.length,
+                          itemBuilder: (context, index) {
+                            final schedule = schedules[index];
+                            return _buildScheduleItem(schedule);
+                          },
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              )),
       isScrollControlled: true,
     );
   }
@@ -487,21 +496,23 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
       ),
       confirmDismiss: (direction) async {
         return await Get.dialog<bool>(
-          AlertDialog(
-            title: const Text('Delete Schedule'),
-            content: Text('Delete "${schedule.name}" schedule?'),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text('Cancel'),
+              AlertDialog(
+                title: const Text('Delete Schedule'),
+                content: Text('Delete "${schedule.name}" schedule?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: const Text('Delete',
+                        style: TextStyle(color: Colors.red)),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Get.back(result: true),
-                child: const Text('Delete', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        ) ?? false;
+            ) ??
+            false;
       },
       onDismissed: (direction) {
         controller.deleteDNDSchedule(schedule.id);
@@ -567,14 +578,22 @@ class NotificationSettingsView extends GetView<NotificationSettingsController> {
     }
     return days.map((d) {
       switch (d) {
-        case DateTime.monday: return 'Mon';
-        case DateTime.tuesday: return 'Tue';
-        case DateTime.wednesday: return 'Wed';
-        case DateTime.thursday: return 'Thu';
-        case DateTime.friday: return 'Fri';
-        case DateTime.saturday: return 'Sat';
-        case DateTime.sunday: return 'Sun';
-        default: return '';
+        case DateTime.monday:
+          return 'Mon';
+        case DateTime.tuesday:
+          return 'Tue';
+        case DateTime.wednesday:
+          return 'Wed';
+        case DateTime.thursday:
+          return 'Thu';
+        case DateTime.friday:
+          return 'Fri';
+        case DateTime.saturday:
+          return 'Sat';
+        case DateTime.sunday:
+          return 'Sun';
+        default:
+          return '';
       }
     }).join(', ');
   }

@@ -23,9 +23,9 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.backgroundIconSetting,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.surfaceAdaptive(context),
         elevation: 0,
         centerTitle: false,
         title: Text(
@@ -128,7 +128,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 title: 'Profile Photo',
                 subtitle: _getExceptionText(
                     service.settings.value.profileVisibility.profilePhoto),
-                value: service.settings.value.profileVisibility.profilePhoto.level,
+                value:
+                    service.settings.value.profileVisibility.profilePhoto.level,
                 options: _visibilityOptions,
                 onChanged: controller.updateProfilePhotoVisibility,
               )),
@@ -146,7 +147,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 icon: Icons.circle_rounded,
                 iconColor: Colors.green,
                 title: 'Online Status',
-                value: service.settings.value.profileVisibility.onlineStatus.level,
+                value:
+                    service.settings.value.profileVisibility.onlineStatus.level,
                 options: _visibilityOptions,
                 onChanged: controller.updateOnlineStatusVisibility,
               )),
@@ -189,7 +191,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 icon: Icons.group_add_rounded,
                 iconColor: ColorsManager.primary,
                 title: 'Add to Groups',
-                value: service.settings.value.communication.whoCanAddToGroups.level,
+                value: service
+                    .settings.value.communication.whoCanAddToGroups.level,
                 options: _visibilityOptions,
                 onChanged: controller.updateWhoCanAddToGroups,
               )),
@@ -225,7 +228,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 iconColor: Colors.orange,
                 title: 'Allow Screenshots',
                 subtitle: 'Others can screenshot your messages',
-                value: service.settings.value.contentProtection.allowScreenshots,
+                value:
+                    service.settings.value.contentProtection.allowScreenshots,
                 onChanged: controller.toggleScreenshots,
               )),
           Obx(() => SettingsSwitch(
@@ -240,7 +244,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 icon: Icons.timer_rounded,
                 iconColor: Colors.purple,
                 title: 'Default Disappearing Messages',
-                value: service.settings.value.contentProtection.defaultDisappearingDuration,
+                value: service.settings.value.contentProtection
+                    .defaultDisappearingDuration,
                 options: DisappearingDuration.values
                     .map((d) => DropdownOption(
                           value: d,
@@ -262,13 +267,15 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
         children: [
           Obx(() => SettingsTile(
                 icon: Icons.lock_rounded,
-                iconColor: service.settings.value.security.twoStepVerification.enabled
-                    ? Colors.green
-                    : Colors.grey,
+                iconColor:
+                    service.settings.value.security.twoStepVerification.enabled
+                        ? Colors.green
+                        : Colors.grey,
                 title: 'Two-Step Verification',
-                subtitle: service.settings.value.security.twoStepVerification.enabled
-                    ? 'Enabled'
-                    : 'Add extra security to your account',
+                subtitle:
+                    service.settings.value.security.twoStepVerification.enabled
+                        ? 'Enabled'
+                        : 'Add extra security to your account',
                 onTap: () => _showTwoStepSettings(),
               )),
           Obx(() => SettingsTile(
@@ -286,7 +293,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
             icon: Icons.lock_outline_rounded,
             iconColor: Colors.purple,
             title: 'Chat Lock',
-            subtitle: '${service.settings.value.security.lockedChats.length} locked chats',
+            subtitle:
+                '${service.settings.value.security.lockedChats.length} locked chats',
             onTap: () => _showLockedChats(),
           ),
           Obx(() => SettingsTile(
@@ -317,7 +325,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 icon: Icons.block_rounded,
                 iconColor: Colors.red,
                 title: 'Blocked Users',
-                subtitle: '${service.settings.value.blockedUsers.length} contacts',
+                subtitle:
+                    '${service.settings.value.blockedUsers.length} contacts',
                 onTap: () => _showBlockedUsers(),
               )),
         ],
@@ -334,7 +343,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                 icon: Icons.location_on_rounded,
                 iconColor: Colors.green,
                 title: 'Live Location',
-                subtitle: service.settings.value.activeLiveLocationShares.isEmpty
+                subtitle: service
+                        .settings.value.activeLiveLocationShares.isEmpty
                     ? 'Not sharing with anyone'
                     : 'Sharing with ${service.settings.value.activeLiveLocationShares.length} chats',
                 onTap: () => _showLiveLocationShares(),
@@ -353,8 +363,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
             title: 'Content Protection',
             children: [
               Obx(() {
-                final duration = service
-                    .settings.value.contentProtection.defaultDisappearingDuration;
+                final duration = service.settings.value.contentProtection
+                    .defaultDisappearingDuration;
                 return SettingsTile(
                   icon: Icons.timer_outlined,
                   iconColor: duration != DisappearingDuration.off
@@ -364,14 +374,16 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
                   subtitle: duration != DisappearingDuration.off
                       ? 'Default: ${duration.displayName}'
                       : 'Off - Messages stay permanently',
-                  onTap: () => DefaultDisappearingMessagesSettings.show(Get.context!),
+                  onTap: () =>
+                      DefaultDisappearingMessagesSettings.show(Get.context!),
                 );
               }),
               Obx(() => SettingsSwitch(
                     icon: Icons.photo_library_rounded,
                     title: 'Hide Media in Gallery',
                     subtitle: 'Media won\'t appear in device gallery',
-                    value: service.settings.value.contentProtection.hideMediaInGallery,
+                    value: service
+                        .settings.value.contentProtection.hideMediaInGallery,
                     onChanged: controller.toggleHideMediaInGallery,
                   )),
             ],
@@ -427,7 +439,8 @@ class PrivacySettingsView extends GetView<PrivacySettingsController> {
 
   void _showTwoStepSettings() async {
     final service = Get.find<PrivacySettingsService>();
-    final isEnabled = service.settings.value.security.twoStepVerification.enabled;
+    final isEnabled =
+        service.settings.value.security.twoStepVerification.enabled;
 
     final result = await TwoStepVerificationSetup.show(
       Get.context!,
@@ -490,9 +503,9 @@ class _PrivacyCheckupSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: Get.height * 0.8,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: ColorsManager.surfaceAdaptive(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -541,7 +554,8 @@ class _PrivacyCheckupSheet extends StatelessWidget {
               future: controller.runPrivacyCheckup(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator.adaptive());
+                  return const Center(
+                      child: CircularProgressIndicator.adaptive());
                 }
 
                 if (snapshot.hasError) {
@@ -560,7 +574,8 @@ class _PrivacyCheckupSheet extends StatelessWidget {
                       const SizedBox(height: Sizes.size16),
                       Text(
                         'Issues Found',
-                        style: StylesManager.semiBold(fontSize: FontSize.medium),
+                        style:
+                            StylesManager.semiBold(fontSize: FontSize.medium),
                       ),
                       const SizedBox(height: Sizes.size8),
                       ...result.issues.map((issue) => _buildIssueCard(issue)),
@@ -569,10 +584,12 @@ class _PrivacyCheckupSheet extends StatelessWidget {
                       const SizedBox(height: Sizes.size16),
                       Text(
                         'Recommendations',
-                        style: StylesManager.semiBold(fontSize: FontSize.medium),
+                        style:
+                            StylesManager.semiBold(fontSize: FontSize.medium),
                       ),
                       const SizedBox(height: Sizes.size8),
-                      ...result.recommendations.map((rec) => _buildRecommendationCard(rec)),
+                      ...result.recommendations
+                          .map((rec) => _buildRecommendationCard(rec)),
                     ],
                   ],
                 );
@@ -687,9 +704,9 @@ class _AppLockSettingsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: ColorsManager.surfaceAdaptive(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
         child: Column(
@@ -770,9 +787,9 @@ class _LockedChatsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: Get.height * 0.6,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: ColorsManager.surfaceAdaptive(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -848,9 +865,9 @@ class _ActiveSessionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: Get.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: ColorsManager.surfaceAdaptive(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -986,9 +1003,9 @@ class _BlockedUsersSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: Get.height * 0.6,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: ColorsManager.surfaceAdaptive(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -1052,7 +1069,8 @@ class _BlockedUsersSheet extends StatelessWidget {
                           : null,
                       child: user.userPhotoUrl == null
                           ? Text(
-                              user.userName?.substring(0, 1).toUpperCase() ?? '?',
+                              user.userName?.substring(0, 1).toUpperCase() ??
+                                  '?',
                               style: StylesManager.semiBold(
                                 color: ColorsManager.primary,
                               ),

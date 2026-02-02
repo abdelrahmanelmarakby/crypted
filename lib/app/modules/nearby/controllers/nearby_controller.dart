@@ -1,16 +1,12 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:crypted_app/app/data/data_source/nearby_data_source.dart';
-import 'package:crypted_app/app/data/data_source/user_services.dart';
-import 'package:crypted_app/core/themes/color_manager.dart';
 
 /// Controller for the Nearby People feature.
 ///
@@ -71,7 +67,10 @@ class NearbyController extends GetxController {
   Future<void> fetchCurrentLocation() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
       );
       myLocation.value = LatLng(position.latitude, position.longitude);
       await refreshNearbyUsers();

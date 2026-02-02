@@ -10,7 +10,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:crypted_app/app/data/data_source/nearby_data_source.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/story_cluster.dart';
+import 'package:crypted_app/app/data/models/user_model.dart';
+import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:crypted_app/app/core/services/chat_service.dart';
+import 'package:crypted_app/app/core/services/chat_session_manager.dart';
 import 'package:crypted_app/app/modules/nearby/controllers/nearby_controller.dart';
+import 'package:crypted_app/app/routes/app_pages.dart';
 import 'package:crypted_app/app/services/story_clustering_service.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -49,6 +54,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   // Nearby People integration
   late NearbyController _nearbyController;
   NearbyUser? _selectedNearbyUser;
+  Worker? _nearbyUsersWorker;
 
   // Default to a neutral position; will be adjusted when clusters load
   static const LatLng _defaultCenter = LatLng(24.7136, 46.6753); // Riyadh
@@ -86,9 +92,9 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
     }
     _nearbyController = Get.find<NearbyController>();
 
-    // Listen to nearby users changes
-    ever(_nearbyController.nearbyUsers, (_) {
-      _buildMarkers();
+    // Listen to nearby users changes — store worker for disposal
+    _nearbyUsersWorker = ever(_nearbyController.nearbyUsers, (_) {
+      if (mounted) _buildMarkers();
     });
 
     _initializeClusters();
@@ -145,6 +151,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
 
   @override
   void dispose() {
+    _nearbyUsersWorker?.dispose();
     _mapController?.dispose();
     super.dispose();
   }
@@ -691,14 +698,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
                       child: SizedBox(
                         height: 46,
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() => _selectedNearbyUser = null);
-                            Get.toNamed('/chat', arguments: {
-                              'userId': user.uid,
-                              'userName': user.fullName,
-                              'userImage': user.imageUrl,
-                            });
-                          },
+                          onPressed: () => _startChatWithUser(user),
                           icon: const Icon(Icons.waving_hand, size: 18),
                           label: const Text('Say Hi',
                               style: TextStyle(
@@ -775,9 +775,12 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
         }
       },
       onTap: (_) {
-        // Dismiss cluster preview when tapping empty map area
-        if (selectedCluster != null) {
-          setState(() => selectedCluster = null);
+        // Dismiss any open preview sheets when tapping empty map area
+        if (selectedCluster != null || _selectedNearbyUser != null) {
+          setState(() {
+            selectedCluster = null;
+            _selectedNearbyUser = null;
+          });
         }
       },
       myLocationEnabled: true,
@@ -1276,12 +1279,79 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
 
   // ── Helpers ─────────────────────────────────────────────────
 
-  Color _getClusterColor(StoryCluster cluster) {
-    // Check if cluster contains events
-    final hasEvents =
-        cluster.stories.any((s) => s.storyType == StoryType.event);
-    if (hasEvents) return const Color(0xFFFF6B35); // Orange
-    return const Color(0xFF31A354); // Green for regular stories
+  /// Navigate to chat with a nearby user.
+  /// Replicates the same flow as HomeController.startPrivateChat():
+  /// 1. Build SocialMediaUser from NearbyUser
+  /// 2. Find or create chat room
+  /// 3. Navigate with proper arguments
+  Future<void> _startChatWithUser(NearbyUser nearbyUser) async {
+    setState(() => _selectedNearbyUser = null);
+
+    final currentUser = UserService.currentUser.value;
+    if (currentUser == null) {
+      Get.snackbar('Error', 'Please log in first');
+      return;
+    }
+
+    // Build a SocialMediaUser from the NearbyUser data
+    final otherUser = SocialMediaUser(
+      uid: nearbyUser.uid,
+      fullName: nearbyUser.fullName,
+      imageUrl: nearbyUser.imageUrl,
+    );
+
+    final members = [currentUser, otherUser];
+    final memberIds = [currentUser.uid!, otherUser.uid!];
+
+    try {
+      // Check for existing chat room
+      ChatService.instance.initializeChatDataSource(members);
+      final existingRoom =
+          await ChatService.instance.findExistingChatRoom(memberIds);
+
+      if (existingRoom != null) {
+        // Navigate to existing chat
+        Get.toNamed(
+          Routes.CHAT,
+          arguments: {
+            'useSessionManager': true,
+            'roomId': existingRoom.id!,
+            'members': members,
+            'isGroupChat': false,
+          },
+        );
+        return;
+      }
+
+      // Create new chat session and room
+      ChatSessionManager.instance.startChatSession(
+        sender: currentUser,
+        receiver: otherUser,
+      );
+      ChatService.instance.initializeChatDataSource(members);
+
+      final chatRoom = await ChatService.instance.createChatRoom(
+        members: members,
+        isGroupChat: false,
+        customRoomId: ChatSessionManager.instance.roomId,
+      );
+
+      if (chatRoom != null) {
+        Get.toNamed(
+          Routes.CHAT,
+          arguments: {
+            'useSessionManager': true,
+            'roomId': chatRoom.id!,
+            'members': members,
+            'isGroupChat': false,
+          },
+        );
+      } else {
+        Get.snackbar('Error', 'Failed to create chat. Please try again.');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to start chat: $e');
+    }
   }
 
   void _onNearbyUserTap(NearbyUser user) {
@@ -1294,6 +1364,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   void _onClusterTap(StoryCluster cluster) {
     setState(() {
       selectedCluster = cluster;
+      _selectedNearbyUser = null;
     });
 
     // Smoothly pan camera to the tapped cluster

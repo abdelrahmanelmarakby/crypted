@@ -164,6 +164,39 @@ class StoryDataSources {
     }
   }
 
+  // Upload event story WITH a cover image
+  // Unlike generic uploadStory(), this preserves event-specific expiry,
+  // auto-joins the creator, and creates the attendees subcollection entry.
+  Future<bool> uploadEventStoryWithCover(
+      StoryModel story, File coverFile) async {
+    try {
+      final userId = UserService.currentUser.value?.uid;
+      if (userId == null) {
+        log('User ID is null');
+        return false;
+      }
+
+      // Upload cover image to Firebase Storage
+      final dotIndex = coverFile.path.lastIndexOf('.');
+      final ext = dotIndex != -1 ? coverFile.path.substring(dotIndex) : '.jpg';
+      final fileName =
+          'stories/${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
+      final ref = _storage.ref().child(fileName);
+      final snapshot = await ref.putFile(coverFile);
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      log('Event cover image uploaded: $downloadUrl');
+
+      // Now create the event story with the cover URL
+      return await uploadEventStory(
+        story.copyWith(storyFileUrl: downloadUrl),
+      );
+    } catch (e) {
+      log('Error uploading event story with cover: $e');
+      return false;
+    }
+  }
+
   // Join an event
   Future<bool> joinEvent(String storyId) async {
     try {
@@ -399,6 +432,24 @@ class StoryDataSources {
           } catch (e) {
             log('⚠️ Could not delete file from storage: $e');
           }
+        }
+      }
+
+      // Clean up attendees subcollection for event stories
+      final storyType = doc.data()?['storyType'];
+      if (storyType == 'event' || storyType == 'evt') {
+        try {
+          final attendeesSnapshot = await storiesCollection
+              .doc(storyId)
+              .collection(FirebaseCollections.eventAttendees)
+              .get();
+          final batch = FirebaseFirestore.instance.batch();
+          for (final attendeeDoc in attendeesSnapshot.docs) {
+            batch.delete(attendeeDoc.reference);
+          }
+          await batch.commit();
+        } catch (e) {
+          log('⚠️ Could not clean up attendees subcollection: $e');
         }
       }
 

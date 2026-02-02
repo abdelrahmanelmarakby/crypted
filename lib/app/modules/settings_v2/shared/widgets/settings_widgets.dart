@@ -53,7 +53,7 @@ class SettingsSection extends StatelessWidget {
           ],
           Container(
             decoration: BoxDecoration(
-              color: ColorsManager.white,
+              color: ColorsManager.surfaceAdaptive(context),
               borderRadius: BorderRadius.circular(Radiuss.medium),
               boxShadow: [
                 BoxShadow(
@@ -174,7 +174,9 @@ class SettingsTile extends StatelessWidget {
                       title,
                       style: StylesManager.regular(
                         fontSize: FontSize.medium,
-                        color: enabled ? Colors.black87 : ColorsManager.grey,
+                        color: enabled
+                            ? ColorsManager.textPrimaryAdaptive(context)
+                            : ColorsManager.grey,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -244,9 +246,7 @@ class SettingsSwitch extends StatelessWidget {
         onChanged: enabled ? onChanged : null,
         activeColor: ColorsManager.primary,
       ),
-      onTap: enabled && onChanged != null
-          ? () => onChanged!(!value)
-          : null,
+      onTap: enabled && onChanged != null ? () => onChanged!(!value) : null,
     );
   }
 }
@@ -350,30 +350,33 @@ class SettingsDropdown<T> extends StatelessWidget {
 
   void _showOptionsPicker(BuildContext context) {
     Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHandle(),
-              Padding(
-                padding: const EdgeInsets.all(Paddings.large),
-                child: Text(
-                  title,
-                  style: StylesManager.semiBold(fontSize: FontSize.large),
+      Builder(
+          builder: (ctx) => Container(
+                decoration: BoxDecoration(
+                  color: ColorsManager.surfaceAdaptive(ctx),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-              ),
-              const Divider(height: 1),
-              ...options.map((option) => _buildOption(option)),
-              const SizedBox(height: Paddings.large),
-            ],
-          ),
-        ),
-      ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildHandle(),
+                      Padding(
+                        padding: const EdgeInsets.all(Paddings.large),
+                        child: Text(
+                          title,
+                          style:
+                              StylesManager.semiBold(fontSize: FontSize.large),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ...options.map((option) => _buildOption(option)),
+                      const SizedBox(height: Paddings.large),
+                    ],
+                  ),
+                ),
+              )),
       isScrollControlled: true,
     );
   }
@@ -420,7 +423,8 @@ class SettingsDropdown<T> extends StatelessWidget {
                     option.label,
                     style: StylesManager.medium(
                       fontSize: FontSize.medium,
-                      color: isSelected ? ColorsManager.primary : Colors.black87,
+                      color:
+                          isSelected ? ColorsManager.primary : Colors.black87,
                     ),
                   ),
                   if (option.description != null) ...[

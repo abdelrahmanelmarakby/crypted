@@ -2457,4 +2457,201 @@ exports.resetUnreadCount = onCall(
   }
 );
 
-functions.logger.log('✅ Phase 1, 2, 3, 7 & 8 Fully Optimized v2 Firebase Functions loaded successfully');
+// ──────────────────────────────────────────────
+// Phase 14.1: Scheduled Messages Processing
+// ──────────────────────────────────────────────
+
+/**
+ * Process pending scheduled messages every minute.
+ *
+ * Queries `scheduled_messages` where status == 'pending' and scheduledFor <= now.
+ * For each match:
+ *   1. Writes the stored messageData to `chats/{roomId}/chat/{auto-id}`
+ *   2. Updates the room's lastMessage fields
+ *   3. Marks the scheduled message as 'sent'
+ *   4. On error: marks as 'failed' with error message
+ *
+ * Processes in batches of 50 to avoid timeouts.
+ */
+exports.processScheduledMessages = onSchedule(
+  {
+    schedule: 'every 1 minutes',
+    region: LOCATION,
+    timeoutSeconds: 120,
+    memory: '256MiB',
+  },
+  async () => {
+    const now = admin.firestore.Timestamp.now();
+
+    try {
+      // Query all pending messages whose scheduledFor has passed
+      const snapshot = await db
+        .collection('scheduled_messages')
+        .where('status', '==', 'pending')
+        .where('scheduledFor', '<=', now)
+        .limit(50)
+        .get();
+
+      if (snapshot.empty) {
+        functions.logger.log('[ScheduledMessages] No pending messages to process');
+        return;
+      }
+
+      functions.logger.log(
+        `[ScheduledMessages] Processing ${snapshot.size} scheduled message(s)`
+      );
+
+      const results = { sent: 0, failed: 0 };
+
+      // Process each scheduled message
+      const promises = snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const { chatRoomId, messageData, senderId, senderName, members } = data;
+
+        try {
+          if (!chatRoomId || !messageData) {
+            throw new Error('Missing chatRoomId or messageData');
+          }
+
+          // 1. Write the message to the chat subcollection
+          const messageRef = db
+            .collection('chats')
+            .doc(chatRoomId)
+            .collection('chat')
+            .doc(); // auto-ID
+
+          const finalMessageData = {
+            ...messageData,
+            id: messageRef.id,
+            roomId: chatRoomId,
+            timestamp: admin.firestore.Timestamp.now(),
+            _scheduledMessageId: doc.id, // Traceability back to the schedule doc
+          };
+
+          await messageRef.set(finalMessageData);
+
+          // 2. Update the chat room's lastMessage + lastMessageTime
+          const roomRef = db.collection('chats').doc(chatRoomId);
+          const roomUpdate = {
+            lastMessage: messageData.text || messageData.type || 'Scheduled message',
+            lastMessageTime: admin.firestore.Timestamp.now(),
+            lastMessageSenderId: senderId || '',
+            lastMessageSenderName: senderName || '',
+          };
+          await roomRef.update(roomUpdate);
+
+          // 3. Mark the scheduled message as sent
+          await doc.ref.update({
+            status: 'sent',
+            sentAt: admin.firestore.Timestamp.now(),
+          });
+
+          results.sent++;
+          functions.logger.log(
+            `[ScheduledMessages] Sent message ${doc.id} to room ${chatRoomId}`
+          );
+        } catch (error) {
+          // 4. Mark as failed with error message
+          results.failed++;
+          functions.logger.error(
+            `[ScheduledMessages] Failed to process ${doc.id}:`,
+            error
+          );
+
+          try {
+            await doc.ref.update({
+              status: 'failed',
+              errorMessage: error.message || 'Unknown error',
+              failedAt: admin.firestore.Timestamp.now(),
+            });
+          } catch (updateError) {
+            functions.logger.error(
+              `[ScheduledMessages] Could not mark ${doc.id} as failed:`,
+              updateError
+            );
+          }
+        }
+      });
+
+      await Promise.all(promises);
+
+      functions.logger.log(
+        `[ScheduledMessages] Done — sent: ${results.sent}, failed: ${results.failed}`
+      );
+    } catch (error) {
+      functions.logger.error('[ScheduledMessages] Top-level error:', error);
+    }
+  }
+);
+
+// ──────────────────────────────────────────────
+// Phase 14.2: Message Translation
+// ──────────────────────────────────────────────
+
+/**
+ * Translate a message to the user's target language.
+ *
+ * Callable function: receives { text, targetLanguage }.
+ * Returns { translatedText, detectedSourceLanguage }.
+ *
+ * Uses Google Cloud Translation API v2.
+ * Requires the Cloud Translation API to be enabled in the GCP console.
+ */
+exports.translateMessage = onCall(
+  {
+    region: LOCATION,
+    memory: '256MiB',
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+
+    const { text, targetLanguage } = request.data || {};
+
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      throw new HttpsError('invalid-argument', 'text is required');
+    }
+
+    if (!targetLanguage || typeof targetLanguage !== 'string') {
+      throw new HttpsError('invalid-argument', 'targetLanguage is required (e.g. "en", "ar")');
+    }
+
+    // Limit text length to prevent abuse
+    if (text.length > 5000) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Text too long. Maximum 5000 characters.'
+      );
+    }
+
+    try {
+      const { Translate } = require('@google-cloud/translate').v2;
+      const translate = new Translate({ projectId: PROJECT_ID });
+
+      const [translation, metadata] = await translate.translate(text, targetLanguage);
+
+      const detectedSource =
+        metadata?.data?.translations?.[0]?.detectedSourceLanguage || 'unknown';
+
+      functions.logger.log(
+        `[Translation] Translated ${text.length} chars from ${detectedSource} to ${targetLanguage} for user ${uid}`
+      );
+
+      return {
+        translatedText: translation,
+        detectedSourceLanguage: detectedSource,
+        targetLanguage: targetLanguage,
+      };
+    } catch (error) {
+      functions.logger.error('[Translation] Error:', error);
+      throw new HttpsError(
+        'internal',
+        'Translation failed. Please try again later.'
+      );
+    }
+  }
+);
+
+functions.logger.log('✅ Phase 1, 2, 3, 7, 8 & 14 Fully Optimized v2 Firebase Functions loaded successfully');

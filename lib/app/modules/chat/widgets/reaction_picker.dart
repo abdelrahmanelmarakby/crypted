@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:crypted_app/app/core/services/premium_service.dart';
-import 'package:crypted_app/app/widgets/premium_gate_dialog.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';

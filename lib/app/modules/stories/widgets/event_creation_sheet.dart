@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/data/data_source/story_data_sources.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
+import 'package:crypted_app/app/modules/stories/controllers/stories_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -146,7 +146,10 @@ class _EventCreationSheetState extends State<EventCreationSheet> {
           permission == LocationPermission.deniedForever) return;
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
       );
       _latitude = position.latitude;
       _longitude = position.longitude;
@@ -175,6 +178,16 @@ class _EventCreationSheetState extends State<EventCreationSheet> {
       return;
     }
 
+    // Validate end date is after start date
+    final eventDateTime = _combineDateAndTime(_eventDate, _eventTime);
+    final eventEndDateTime = _combineDateAndTime(_eventEndDate, _eventEndTime);
+    if (eventDateTime != null &&
+        eventEndDateTime != null &&
+        eventEndDateTime.isBefore(eventDateTime)) {
+      Get.snackbar('Invalid Date', 'End date must be after start date');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -182,10 +195,6 @@ class _EventCreationSheetState extends State<EventCreationSheet> {
       if (_useCurrentLocation) {
         await _fetchLocation();
       }
-
-      final eventDateTime = _combineDateAndTime(_eventDate, _eventTime);
-      final eventEndDateTime =
-          _combineDateAndTime(_eventEndDate, _eventEndTime);
 
       final maxAttendees = _maxAttendeesController.text.isNotEmpty
           ? int.tryParse(_maxAttendeesController.text)
@@ -216,11 +225,9 @@ class _EventCreationSheetState extends State<EventCreationSheet> {
       bool success;
 
       if (_coverImage != null) {
-        // Upload with cover image
-        success = await dataSource.uploadStory(
-          story.copyWith(storyType: StoryType.event),
-          _coverImage!,
-        );
+        // Upload cover image to Storage first, then create event story
+        success =
+            await dataSource.uploadEventStoryWithCover(story, _coverImage!);
       } else {
         // Upload as event story (no cover image)
         success = await dataSource.uploadEventStory(story);
@@ -228,6 +235,11 @@ class _EventCreationSheetState extends State<EventCreationSheet> {
 
       if (success) {
         HapticFeedback.mediumImpact();
+        // Refresh stories controller if available
+        try {
+          final storiesController = Get.find<StoriesController>();
+          storiesController.fetchAllStories();
+        } catch (_) {}
         Get.back();
         Get.snackbar(
           'Event Created',

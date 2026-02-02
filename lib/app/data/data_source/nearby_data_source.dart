@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypted_app/app/core/constants/firebase_collections.dart';
@@ -11,9 +12,6 @@ import 'package:crypted_app/app/data/data_source/user_services.dart';
 class NearbyDataSource {
   final CollectionReference<Map<String, dynamic>> _locationsCollection =
       FirebaseFirestore.instance.collection(FirebaseCollections.userLocations);
-
-  final CollectionReference<Map<String, dynamic>> _usersCollection =
-      FirebaseFirestore.instance.collection(FirebaseCollections.users);
 
   /// Update current user's location for discoverability.
   Future<void> updateMyLocation({
@@ -83,7 +81,7 @@ class NearbyDataSource {
 
     // Calculate bounding box
     final latDelta = radiusKm / 111.0;
-    final lngDelta = radiusKm / (111.0 * _cos(latitude * 3.14159 / 180));
+    final lngDelta = radiusKm / (111.0 * math.cos(latitude * math.pi / 180));
 
     final minLat = latitude - latDelta;
     final maxLat = latitude + latDelta;
@@ -169,62 +167,15 @@ class NearbyDataSource {
   double _haversineDistance(
       double lat1, double lng1, double lat2, double lng2) {
     const R = 6371.0; // Earth radius in km
-    final dLat = _toRadians(lat2 - lat1);
-    final dLng = _toRadians(lng2 - lng1);
-    final a = _sin(dLat / 2) * _sin(dLat / 2) +
-        _cos(_toRadians(lat1)) *
-            _cos(_toRadians(lat2)) *
-            _sin(dLng / 2) *
-            _sin(dLng / 2);
-    final c = 2 * _atan2(_sqrt(a), _sqrt(1 - a));
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLng = (lng2 - lng1) * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
-  }
-
-  // Math helpers using dart:math would be better, but matching existing codebase pattern
-  static double _toRadians(double d) => d * 3.141592653589793 / 180;
-  static double _sin(double x) {
-    // Taylor series approximation — accurate enough for distances
-    x = x % (2 * 3.141592653589793);
-    if (x > 3.141592653589793) x -= 2 * 3.141592653589793;
-    if (x < -3.141592653589793) x += 2 * 3.141592653589793;
-    double result = x;
-    double term = x;
-    for (int i = 1; i <= 7; i++) {
-      term *= -x * x / ((2 * i) * (2 * i + 1));
-      result += term;
-    }
-    return result;
-  }
-
-  static double _cos(double x) => _sin(x + 3.141592653589793 / 2);
-  static double _sqrt(double x) {
-    if (x <= 0) return 0;
-    double guess = x / 2;
-    for (int i = 0; i < 15; i++) {
-      guess = (guess + x / guess) / 2;
-    }
-    return guess;
-  }
-
-  static double _atan2(double y, double x) {
-    if (x > 0) return _atan(y / x);
-    if (x < 0 && y >= 0) return _atan(y / x) + 3.141592653589793;
-    if (x < 0 && y < 0) return _atan(y / x) - 3.141592653589793;
-    if (x == 0 && y > 0) return 3.141592653589793 / 2;
-    if (x == 0 && y < 0) return -3.141592653589793 / 2;
-    return 0;
-  }
-
-  static double _atan(double x) {
-    // Padé approximation for atan
-    if (x.abs() > 1) {
-      final sign = x > 0 ? 1.0 : -1.0;
-      return sign * 3.141592653589793 / 2 - _atan(1 / x);
-    }
-    return x -
-        (x * x * x) / 3 +
-        (x * x * x * x * x) / 5 -
-        (x * x * x * x * x * x * x) / 7;
   }
 }
 
