@@ -1,5 +1,6 @@
 import 'package:crypted_app/core/locale/ar.dart';
 import 'package:crypted_app/core/locale/en.dart';
+import 'package:crypted_app/core/locale/fr.dart';
 import 'package:get/get_navigation/src/root/internacionalization.dart';
 
 class MyLocale implements Translations {
@@ -7,5 +8,6 @@ class MyLocale implements Translations {
   Map<String, Map<String, String>> get keys => {
         'en': en,
         'ar': ar,
+        'fr': fr,
       };
 }

@@ -135,6 +135,7 @@ Future<void> main() async {
 
   await initializeDateFormatting('ar', 'null');
   await initializeDateFormatting('en', 'null');
+  await initializeDateFormatting('fr', 'null');
 
   // Initialize Logger Service (must be first for logging other initializations)
   LoggerService.instance.initialize(

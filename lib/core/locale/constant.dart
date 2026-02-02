@@ -22,7 +22,8 @@ class Constants {
   static const String kEmailRequired = 'Email is required';
   static const String kValidEmail = 'Please enter a valid email';
   static const String kPasswordRequired = 'Password is required';
-  static const String kPasswordMinLength = 'Password must be at least 6 characters';
+  static const String kPasswordMinLength =
+      'Password must be at least 6 characters';
   static const String kNameRequired = 'Name is required';
   static const String kPhoneRequired = 'Phone number is required';
 
@@ -81,10 +82,12 @@ class Constants {
   static const String kNone = 'None';
   static const String kDisappearingMessages = 'Disappearing Messages';
   static const String kAppLock = 'App Lock';
-  static const String kRequireFaceIDtounlockCrypted = 'Require Face ID to unlock Crypted';
+  static const String kRequireFaceIDtounlockCrypted =
+      'Require Face ID to unlock Crypted';
   static const String kChatLock = 'Chat Lock';
   static const String kAllowCameraEffects = 'Allow Camera Effects';
-  static const String kUseeffectsinthecameraandvideocalls = 'Use effects in the camera and video calls';
+  static const String kUseeffectsinthecameraandvideocalls =
+      'Use effects in the camera and video calls';
   static const String kLearnmore = 'Learn more';
   static const String kAdvanced = 'Advanced';
   static const String kPrivacyCheckup = 'Privacy Checkup';
@@ -100,7 +103,7 @@ class Constants {
   static const String kEventName = 'Event Name';
   static const String kEventNameisrequired = 'Event name is required';
   static const String kCreateNewEvent = 'Create New Event';
-  
+
   // Status Messages
   static const String kMessageBlocked = 'You cannot send messages to this user';
   static const String kNew = 'New';
@@ -112,18 +115,23 @@ class Constants {
   static const String kMinutesAgo = 'minutes ago';
   static const String kHoursAgo = 'hours ago';
   static const String kDaysAgo = 'days ago';
-  
+
   // Confirmation Messages
   static const String kDeleteChatConfirmation = 'Delete Chat';
-  static const String kAreYouSureToClearThisChat = 'Are you sure you want to clear this chat? All messages will be deleted.';
-  static const String kAreYouSureToDeleteThisChat = 'Are you sure you want to delete this chat? This action cannot be undone.';
-  static const String kAreYouSureToBlockThisUser = 'Are you sure you want to block this user? You will not receive messages from them.';
-  static const String kAreYouSureToUnblockThisUser = 'Are you sure you want to unblock this user?';
-  static const String kAreYouSureToDeleteThisMessage = 'Are you sure you want to delete this message?';
+  static const String kAreYouSureToClearThisChat =
+      'Are you sure you want to clear this chat? All messages will be deleted.';
+  static const String kAreYouSureToDeleteThisChat =
+      'Are you sure you want to delete this chat? This action cannot be undone.';
+  static const String kAreYouSureToBlockThisUser =
+      'Are you sure you want to block this user? You will not receive messages from them.';
+  static const String kAreYouSureToUnblockThisUser =
+      'Are you sure you want to unblock this user?';
+  static const String kAreYouSureToDeleteThisMessage =
+      'Are you sure you want to delete this message?';
   static const String kDeleteForMe = 'Delete for me';
   static const String kDeleteForEveryone = 'Delete for everyone';
   static const String kChatDeletedSuccessfully = 'Chat deleted successfully';
-  
+
   // Success Messages
   static const String kAddedToFavorites = 'Added to favorites';
   static const String kRemovedFromFavorites = 'Removed from favorites';
@@ -137,13 +145,14 @@ class Constants {
   static const String kChatUnmuted = 'Chat unmuted';
   static const String kChatPinned = 'Chat pinned';
   static const String kChatUnpinned = 'Chat unpinned';
-  
+
   // Error Messages
   static const String kError = 'Error';
   static const String kSomethingWentWrong = 'Something went wrong';
   static const String kNoInternetConnection = 'No internet connection';
   static const String kTryAgain = 'Please try again';
-  static const String kFailedToUpdateFavorite = 'Failed to update favorite status';
+  static const String kFailedToUpdateFavorite =
+      'Failed to update favorite status';
   static const String kFailedToUpdateMute = 'Failed to update mute status';
   static const String kFailedToUpdateBlock = 'Failed to update block status';
   static const String kFailedToArchiveChat = 'Failed to archive chat';
@@ -179,7 +188,8 @@ class Constants {
   static const String kEmailisrequired = 'Email is required';
   static const String kEnteravalidemail = 'Enter a valid email';
   static const String kPasswordisrequired = 'Password is required';
-  static const String kPasswordmustbeatleast6characters = 'Password must be at least 6 characters';
+  static const String kPasswordmustbeatleast6characters =
+      'Password must be at least 6 characters';
   static const String kLogin = 'Login';
   static const String kLogInToCrypted = 'Login to Crypted!';
   static const String kForgetPassword = 'Forgot Password?';
@@ -252,7 +262,8 @@ class Constants {
   static const String kEncryption = 'Encryption';
   static const String klockchat = 'Lock Chat';
   static const String kDisappearingmessages = 'Disappearing Messages';
-  static const String kJustenjoyingthelittlethingsinlife = 'Just enjoying the little things in life.';
+  static const String kJustenjoyingthelittlethingsinlife =
+      'Just enjoying the little things in life.';
   static const String kGroupInfo = 'Group Info';
   static const String kMembers = 'Members';
   static const String kExitgroup = 'Exit Group';
@@ -267,24 +278,33 @@ class Constants {
   static const String kGroupnotification = 'Group Notifications';
   static const String kStatusnotification = 'Status Notifications';
   static const String kReminders = 'Reminders';
-  static const String kGetoccasionalremindersaboutmessageorstatusupdatesyouhaventseen = 'Get occasional reminders about message or status updates you haven\'t seen';
+  static const String
+      kGetoccasionalremindersaboutmessageorstatusupdatesyouhaventseen =
+      'Get occasional reminders about message or status updates you haven\'t seen';
   static const String khomescreennotification = 'Home Screen Notifications';
   static const String kShowPreview = 'Show Preview';
   static const String kresetnotificationsetting = 'Reset Notification Settings';
-  static const String kResetallnotificationsettingsincludingcustomnotificationsettingsforyourchats = 'Reset all notification settings including custom notification settings for your chats';
+  static const String
+      kResetallnotificationsettingsincludingcustomnotificationsettingsforyourchats =
+      'Reset all notification settings including custom notification settings for your chats';
   static const String kNobody = 'Nobody';
   static const String kProfilePicture = 'Profile Picture';
   static const String kExcluded = 'Excluded';
   static const String kEveryOne = 'Everyone';
   static const String kMyContacts = 'My Contacts';
   static const String kLiveLocation = 'Live Location';
-  static const String kListofchatswhereyouaresharingyourlivelocation = 'List of chats where you are sharing your live location';
+  static const String kListofchatswhereyouaresharingyourlivelocation =
+      'List of chats where you are sharing your live location';
   static const String kBlocked = 'Blocked';
-  static const String kListofcontactsyouhaveblocked = 'List of contacts you have blocked';
+  static const String kListofcontactsyouhaveblocked =
+      'List of contacts you have blocked';
   static const String kDefaultMessageTimer = 'Default Message Timer';
-  static const String kStartnewchatwithdisappearingmessagessettoyourtimer = 'Start new chat with disappearing messages set to your timer';
+  static const String kStartnewchatwithdisappearingmessagessettoyourtimer =
+      'Start new chat with disappearing messages set to your timer';
   static const String kReadReceipts = 'Read Receipts';
-  static const String kIfyouturnoffreadreceiptsyouwontbeabletoseereadreceiptsfromotherpeople = 'If you turn off read receipts, you won\'t be able to see read receipts from other people';
+  static const String
+      kIfyouturnoffreadreceiptsyouwontbeabletoseereadreceiptsfromotherpeople =
+      'If you turn off read receipts, you won\'t be able to see read receipts from other people';
   static const String kSelectOption = 'Select Option';
   static const String kChangeOption = 'Change Option';
   static const String kViewResults = 'View Results';
@@ -300,7 +320,8 @@ class Constants {
   static const String kEventNameExample = 'e.g., Team Meeting';
   static const String kDateTime = 'Date & Time';
   static const String kSendEvent = 'Send Event';
-  static const String kEventNameRequiredPlease = 'Event name is required. Please enter a name.';
+  static const String kEventNameRequiredPlease =
+      'Event name is required. Please enter a name.';
   static const String kAtLeastTwoOptions = 'Please add at least two options';
   static const String kCreatePoll = 'Create Poll';
   static const String kPollSubtitle = 'Create a poll for your group';
@@ -309,25 +330,34 @@ class Constants {
   static const String kOptions = 'Options';
   static const String kAddNewOption = 'Add New Option';
   static const String kSubmitPoll = 'Submit Poll';
-  static const String kSelectUserToStartChat = 'Select a user to start chatting';
+  static const String kSelectUserToStartChat =
+      'Select a user to start chatting';
   static const String kArabic = 'Arabic';
   static const String kEnglish = 'English';
-  
+  static const String kFrench = 'French';
+
   // Error Messages
   static const String kFailedToLoadUserProfile = 'Failed to load user profile';
   static const String kImageUploadError = 'Image upload error';
-  static const String kAccountCreatedButImageUploadFailed = 'Account created but image upload failed';
+  static const String kAccountCreatedButImageUploadFailed =
+      'Account created but image upload failed';
   static const String kRegistrationError = 'Registration error';
   static const String kFailedToPickImage = 'Failed to pick image';
-  static const String kAnErrorOccurredWhileSavingChanges = 'An error occurred while saving changes';
-  static const String kProfileUpdatedSuccessfully = 'Profile updated successfully';
-  static const String kProfilePictureUpdatedSuccessfully = 'Profile picture updated successfully';
-  static const String kFailedToUpdateProfilePicture = 'Failed to update profile picture';
-  static const String kFailedToUploadProfilePicture = 'Failed to upload profile picture';
+  static const String kAnErrorOccurredWhileSavingChanges =
+      'An error occurred while saving changes';
+  static const String kProfileUpdatedSuccessfully =
+      'Profile updated successfully';
+  static const String kProfilePictureUpdatedSuccessfully =
+      'Profile picture updated successfully';
+  static const String kFailedToUpdateProfilePicture =
+      'Failed to update profile picture';
+  static const String kFailedToUploadProfilePicture =
+      'Failed to upload profile picture';
   // static const String kFailedToUpdateProfile = 'Failed to update profile';
-  
+
   // Confirmation Messages
-  static const String kAreYouSureYouWantToDeleteThisChat = 'Are you sure you want to delete this chat?';
+  static const String kAreYouSureYouWantToDeleteThisChat =
+      'Are you sure you want to delete this chat?';
   static const String kNoName = 'No Name';
   static const String kWelcome = 'Welcome';
   static const String kPrevious = 'Previous';
@@ -335,7 +365,8 @@ class Constants {
   static const String kNoKeep = 'No, Keep';
   static const String kDeleteConfirmation = 'Delete Confirmation';
   static const String kAreYouSure = 'Are you sure?';
-  static const String kThisActionCannotBeUndone = 'This action cannot be undone';
+  static const String kThisActionCannotBeUndone =
+      'This action cannot be undone';
   static const String kChatRoomDeleted = 'Chat room deleted';
   static const String kFailedToDeleteChatRoom = 'Failed to delete chat room';
   static const String kMessagesDeleted = 'Messages deleted';
@@ -343,7 +374,7 @@ class Constants {
   static const String kFilesDeleted = 'Files deleted';
   static const String kFailedToDeleteFiles = 'Failed to delete files';
   static const String kAddDescription = 'Add description';
-  
+
   // Call Related
   static const String kNoCallsFound = 'No calls found';
   static const String kCallHistory = 'Call History';
@@ -399,9 +430,11 @@ class Constants {
   static const String kExitApp = 'Press back again to exit';
   static const String kNoData = 'No data available';
   static const String kNoConnection = 'No internet connection';
-  static const String kCheckConnection = 'Please check your internet connection and try again';
+  static const String kCheckConnection =
+      'Please check your internet connection and try again';
   static const String kServerError = 'Server error. Please try again later';
-  static const String kTimeoutError = 'Connection timeout. Please check your internet connection';
+  static const String kTimeoutError =
+      'Connection timeout. Please check your internet connection';
   static const String kUnknownUser = 'Unknown User';
   static const String kUnknown = 'Unknown';
 
@@ -437,19 +470,25 @@ class Constants {
   static const String kTotalFiles = 'Total Files';
   static const String kBackupDate = 'Backup Date';
   static const String kDeleteBackup = 'Delete Backup';
-  static const String kDeleteBackupConfirm = 'Are you sure you want to delete this backup?';
+  static const String kDeleteBackupConfirm =
+      'Are you sure you want to delete this backup?';
   static const String kRestoreBackup = 'Restore Backup';
-  static const String kRestoreBackupConfirm = 'Are you sure you want to restore from this backup?';
+  static const String kRestoreBackupConfirm =
+      'Are you sure you want to restore from this backup?';
   static const String kBackupPermissions = 'Backup Permissions';
   static const String kPermissionsRequired = 'Permissions Required';
   static const String kGrantPermissions = 'Grant Permissions';
-  static const String kEnableContactsPermission = 'Enable contacts permission to backup contacts';
-  static const String kEnablePhotosPermission = 'Enable photos permission to backup images';
-  static const String kEnableStoragePermission = 'Enable storage permission to save backup files';
+  static const String kEnableContactsPermission =
+      'Enable contacts permission to backup contacts';
+  static const String kEnablePhotosPermission =
+      'Enable photos permission to backup images';
+  static const String kEnableStoragePermission =
+      'Enable storage permission to save backup files';
   static const String kBackupRecommendations = 'Backup Recommendations';
   static const String kNoBackupsFound = 'No backups found';
   static const String kCreateFirstBackup = 'Create your first backup';
-  static const String kRegularBackupsRecommended = 'Regular backups are recommended';
+  static const String kRegularBackupsRecommended =
+      'Regular backups are recommended';
   static const String kDaysSinceLastBackup = 'days since last backup';
   static const String kBackupReady = 'Ready for backup';
   static const String kCheckingPermissions = 'Checking permissions...';
@@ -459,7 +498,8 @@ class Constants {
   static const String kIAgreeToThe = 'I agree to the';
   static const String kTermsAndConditions = 'Terms and Conditions';
   static const String kAndThe = 'and the';
-  static const String kPleaseAcceptTermsAndConditions = 'Please accept the Terms and Conditions to continue';
+  static const String kPleaseAcceptTermsAndConditions =
+      'Please accept the Terms and Conditions to continue';
   static const String kTermsOfService = 'Terms of Service';
   static const String kLastUpdated = 'Last Updated';
   static const String kAcceptance = 'Acceptance';

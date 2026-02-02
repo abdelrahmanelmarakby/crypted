@@ -137,6 +137,16 @@ class SettingsSectionWidget extends StatelessWidget {
                           'Language changed to English', ColorsManager.success);
                     },
                   )),
+              Obx(() => LanguageTileWidget(
+                    title: Constants.kFrench.tr,
+                    isSelected:
+                        myLocaleController.locale.value.languageCode == 'fr',
+                    onTap: () {
+                      myLocaleController.changeLocale('fr');
+                      _showFeedbackSnackBar(
+                          'Langue changee en francais', ColorsManager.success);
+                    },
+                  )),
             ],
           ),
 
@@ -364,15 +374,21 @@ class LanguageTileWidget extends StatelessWidget {
               ),
               const SizedBox(width: Spacing.sm),
               Expanded(
-                child: Text(
-                  title,
-                  style: StylesManager.medium(
-                    fontSize: FontSize.medium,
-                    color: isSelected
-                        ? ColorsManager.primary
-                        : ColorsManager.black,
-                  ),
-                ),
+                child: Builder(builder: (context) {
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+                  return Text(
+                    title,
+                    style: StylesManager.medium(
+                      fontSize: FontSize.medium,
+                      color: isSelected
+                          ? ColorsManager.primary
+                          : isDark
+                              ? ColorsManager.darkTextPrimary
+                              : ColorsManager.black,
+                    ),
+                  );
+                }),
               ),
               if (isSelected)
                 Icon(
@@ -569,13 +585,15 @@ class PaidSupportTileWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Priority Support',
-                        style: StylesManager.regular(
-                          fontSize: FontSize.medium,
-                          color: ColorsManager.black,
-                        ),
-                      ),
+                      Builder(builder: (context) {
+                        return Text(
+                          'Priority Support',
+                          style: StylesManager.regular(
+                            fontSize: FontSize.medium,
+                            color: ColorsManager.textPrimaryAdaptive(context),
+                          ),
+                        );
+                      }),
                       if (!hasPrioritySupport) ...[
                         const SizedBox(height: 2),
                         Text(
@@ -660,13 +678,15 @@ class AnalyticsDeviceTrackingTileWidget extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Device Tracking',
-                          style: StylesManager.regular(
-                            fontSize: FontSize.medium,
-                            color: ColorsManager.black,
-                          ),
-                        ),
+                        Builder(builder: (context) {
+                          return Text(
+                            'Device Tracking',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.medium,
+                              color: ColorsManager.textPrimaryAdaptive(context),
+                            ),
+                          );
+                        }),
                         const SizedBox(height: 2),
                         Text(
                           'Collect device info for analytics',
@@ -741,13 +761,15 @@ class AnalyticsLocationTrackingTileWidget extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Location Tracking',
-                          style: StylesManager.regular(
-                            fontSize: FontSize.medium,
-                            color: ColorsManager.black,
-                          ),
-                        ),
+                        Builder(builder: (context) {
+                          return Text(
+                            'Location Tracking',
+                            style: StylesManager.regular(
+                              fontSize: FontSize.medium,
+                              color: ColorsManager.textPrimaryAdaptive(context),
+                            ),
+                          );
+                        }),
                         const SizedBox(height: 2),
                         Text(
                           'Collect location for stories & sessions',

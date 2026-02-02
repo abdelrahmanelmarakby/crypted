@@ -338,7 +338,7 @@ Map<String, String> ar = {
   'story_text_color': 'لون نص القصة',
   'story_font_size': 'حجم الخط',
   'story_text_position': 'موضع النص',
-  
+
   // Chat Actions
   Constants.kChatMuted: 'تم كتم المحادثة',
   Constants.kChatUnmuted: 'تم إلغاء كتم المحادثة',
@@ -349,15 +349,18 @@ Map<String, String> ar = {
   Constants.kArchiveChat: 'أرشفة المحادثة',
   Constants.kBlockUser: 'حظر المستخدم',
   Constants.kUnblockUser: 'إلغاء حظر المستخدم',
-  
+
   // Status Messages
   Constants.kMessageBlocked: 'لا يمكنك إرسال رسائل إلى هذا المستخدم',
-  
+
   // Confirmation Messages
-  Constants.kAreYouSureToClearThisChat: 'هل أنت متأكد من مسح هذه المحادثة؟ سيتم حذف جميع الرسائل.',
-  Constants.kAreYouSureToBlockThisUser: 'هل أنت متأكد من حظر هذا المستخدم؟ لن تستلم رسائله بعد الآن.',
-  Constants.kAreYouSureToUnblockThisUser: 'هل أنت متأكد من إلغاء حظر هذا المستخدم؟',
-  
+  Constants.kAreYouSureToClearThisChat:
+      'هل أنت متأكد من مسح هذه المحادثة؟ سيتم حذف جميع الرسائل.',
+  Constants.kAreYouSureToBlockThisUser:
+      'هل أنت متأكد من حظر هذا المستخدم؟ لن تستلم رسائله بعد الآن.',
+  Constants.kAreYouSureToUnblockThisUser:
+      'هل أنت متأكد من إلغاء حظر هذا المستخدم؟',
+
   // Success Messages
   Constants.kAddedToFavorites: 'تمت الإضافة إلى المفضلة',
   Constants.kRemovedFromFavorites: 'تمت الإزالة من المفضلة',
@@ -365,7 +368,7 @@ Map<String, String> ar = {
   Constants.kChatClearedSuccessfully: 'تم مسح المحادثة بنجاح',
   Constants.kUserBlocked: 'تم حظر المستخدم',
   Constants.kUserUnblocked: 'تم إلغاء حظر المستخدم',
-  
+
   // Error Messages
   Constants.kFailedToUpdateFavorite: 'فشل تحديث حالة المفضلة',
   Constants.kFailedToUpdateMute: 'فشل تحديث حالة الكتم',
@@ -375,11 +378,167 @@ Map<String, String> ar = {
   Constants.kCreateNewEvent: 'أدخل تفاصيل الحدث',
   Constants.kCreatePoll: 'إنشاء استطلاع رأي',
 
-  // Terms and Conditions
+  // المفقود سابقًا - إجراءات المحادثة
+  Constants.kUnarchiveChat: 'إلغاء أرشفة المحادثة',
+  Constants.kMarkAsRead: 'تعيين كمقروءة',
+  Constants.kMarkAsUnread: 'تعيين كغير مقروءة',
+  Constants.kPinChat: 'تثبيت المحادثة',
+  Constants.kUnpinChat: 'إلغاء تثبيت المحادثة',
+  Constants.kPhoto: 'صورة',
+  Constants.kVideo: 'فيديو',
+  Constants.kStartConversation: 'ابدأ محادثة',
+  Constants.kArchived: 'الأرشيف',
+  Constants.kSearchChats: 'البحث في المحادثات...',
+  Constants.kOnline: 'متصل',
+  Constants.kOffline: 'غير متصل',
+  Constants.kTyping: 'يكتب...',
+  Constants.kSend: 'إرسال',
+  Constants.kReply: 'رد',
+  Constants.kForward: 'إعادة توجيه',
+  Constants.kCopy: 'نسخ',
+  Constants.kInfo: 'معلومات',
+  Constants.kMedia: 'الوسائط',
+  Constants.kDocuments: 'المستندات',
+  Constants.kLinks: 'الروابط',
+  Constants.kVoiceMessages: 'الرسائل الصوتية',
+  Constants.kNoMedia: 'لا توجد وسائط مشتركة',
+  Constants.kNoDocuments: 'لا توجد مستندات مشتركة',
+  Constants.kNoLinks: 'لا توجد روابط مشتركة',
+  Constants.kNoVoiceMessages: 'لا توجد رسائل صوتية',
+  Constants.kNoChats: 'لا توجد محادثات',
+
+  // المفقود - رسائل الحالة
+  Constants.kNew: 'جديد',
+  Constants.kThisWeek: 'هذا الأسبوع',
+  Constants.kOlder: 'أقدم',
+  Constants.kJustNow: 'الآن',
+  Constants.kMinutesAgo: 'دقائق',
+  Constants.kHoursAgo: 'ساعات',
+  Constants.kDaysAgo: 'أيام',
+
+  // المفقود - رسائل التأكيد
+  Constants.kAreYouSureToDeleteThisMessage: 'هل أنت متأكد من حذف هذه الرسالة؟',
+
+  // المفقود - رسائل النجاح
+  Constants.kChatUnarchived: 'تم إلغاء أرشفة المحادثة',
+  Constants.kMessageDeleted: 'تم حذف الرسالة',
+  Constants.kChatPinned: 'تم تثبيت المحادثة',
+  Constants.kChatUnpinned: 'تم إلغاء تثبيت المحادثة',
+
+  // المفقود - رسائل الخطأ
+  Constants.kSomethingWentWrong: 'حدث خطأ ما',
+  Constants.kNoInternetConnection: 'لا يوجد اتصال بالإنترنت',
+  Constants.kTryAgain: 'يرجى المحاولة مرة أخرى',
+  Constants.kFailedToSendMessage: 'فشل في إرسال الرسالة',
+  Constants.kFailedToLoadMessages: 'فشل في تحميل الرسائل',
+  Constants.kFailedToLoadChats: 'فشل في تحميل المحادثات',
+  Constants.kFailedToLoadUsers: 'فشل في تحميل المستخدمين',
+  Constants.kFailedToLoadProfile: 'فشل في تحميل الملف الشخصي',
+  Constants.kFailedToUploadFile: 'فشل في رفع الملف',
+  Constants.kFileTooLarge: 'الملف كبير جداً',
+  Constants.kUnsupportedFileType: 'نوع ملف غير مدعوم',
+
+  // المفقود - واجهة المستخدم العامة
+  Constants.kEmail: 'البريد الإلكتروني',
+  Constants.kPassword: 'كلمة المرور',
+  Constants.kLoginHere: 'سجل الدخول هنا',
+  Constants.kForgotPassword: 'نسيت كلمة المرور؟',
+  Constants.kWarning: 'تحذير',
+  Constants.kRetry: 'إعادة المحاولة',
+  Constants.kContinue: 'متابعة',
+  Constants.kSelect: 'اختيار',
+  Constants.kRemove: 'إزالة',
+  Constants.kAdd: 'إضافة',
+  Constants.kCreate: 'إنشاء',
+  Constants.kUpdate: 'تحديث',
+  Constants.kNoResults: 'لم يتم العثور على نتائج',
+  Constants.kNoInternet: 'لا يوجد اتصال بالإنترنت',
+  Constants.kUnknownError: 'حدث خطأ غير معروف',
+  Constants.kPermissionDenied: 'تم رفض الإذن',
+  Constants.kPermissionRequired: 'الإذن مطلوب',
+  Constants.kGoToSettings: 'الذهاب إلى الإعدادات',
+  Constants.kNotNow: 'ليس الآن',
+  Constants.kLater: 'لاحقاً',
+  Constants.kNever: 'أبداً',
+  Constants.kAlways: 'دائماً',
+  Constants.kAllow: 'السماح',
+  Constants.kDeny: 'رفض',
+  Constants.kSettings: 'الإعدادات',
+  Constants.kFeedback: 'ملاحظات',
+  Constants.kReport: 'بلاغ',
+  Constants.kTerms: 'شروط الخدمة',
+  Constants.kVersion: 'الإصدار',
+  Constants.kLogoutConfirm: 'هل أنت متأكد من تسجيل الخروج؟',
+  Constants.kExitApp: 'اضغط مرة أخرى للخروج',
+  Constants.kNoData: 'لا توجد بيانات متاحة',
+  Constants.kNoConnection: 'لا يوجد اتصال بالإنترنت',
+  Constants.kCheckConnection:
+      'يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى',
+  Constants.kServerError: 'خطأ في الخادم. يرجى المحاولة لاحقاً',
+  Constants.kTimeoutError:
+      'انتهت مهلة الاتصال. يرجى التحقق من اتصالك بالإنترنت',
+  Constants.kUnknownUser: 'مستخدم غير معروف',
+  Constants.kUnknown: 'غير معروف',
+  Constants.kFrench: 'فرنسي',
+
+  // المفقود - النسخ الاحتياطي
+  Constants.kBackupNow: 'نسخ احتياطي الآن',
+  Constants.kBackupProgress: 'تقدم النسخ الاحتياطي',
+  Constants.kBackupCompleted: 'اكتمل النسخ الاحتياطي',
+  Constants.kBackupFailed: 'فشل النسخ الاحتياطي',
+  Constants.kBackupCancelled: 'تم إلغاء النسخ الاحتياطي',
+  Constants.kBackupPaused: 'النسخ الاحتياطي متوقف',
+  Constants.kBackupSettings: 'إعدادات النسخ الاحتياطي',
+  Constants.kAutoBackup: 'نسخ احتياطي تلقائي',
+  Constants.kFullBackup: 'نسخ احتياطي كامل',
+  Constants.kQuickBackup: 'نسخ احتياطي سريع',
+  Constants.kDeviceInfoBackup: 'نسخ احتياطي لمعلومات الجهاز',
+  Constants.kContactsBackup: 'نسخ احتياطي لجهات الاتصال',
+  Constants.kImagesBackup: 'نسخ احتياطي للصور',
+  Constants.kSettingsBackup: 'نسخ احتياطي للإعدادات',
+  Constants.kIncludePhotos: 'تضمين الصور',
+  Constants.kIncludeGroups: 'تضمين المجموعات',
+  Constants.kIncludeAccounts: 'تضمين الحسابات',
+  Constants.kIncludeMetadata: 'تضمين البيانات الوصفية',
+  Constants.kMaxImages: 'الحد الأقصى للصور',
+  Constants.kBackupSize: 'حجم النسخ الاحتياطي',
+  Constants.kEstimatedSize: 'الحجم التقديري',
+  Constants.kLastBackup: 'آخر نسخ احتياطي',
+  Constants.kBackupInProgress: 'النسخ الاحتياطي قيد التنفيذ...',
+  Constants.kPreparingBackup: 'جاري تحضير النسخ الاحتياطي...',
+  Constants.kUploadingFiles: 'جاري رفع الملفات...',
+  Constants.kBackupValidation: 'جاري التحقق من النسخ الاحتياطي...',
+  Constants.kSelectImages: 'اختيار الصور',
+  Constants.kBackupSummary: 'ملخص النسخ الاحتياطي',
+  Constants.kTotalFiles: 'إجمالي الملفات',
+  Constants.kBackupDate: 'تاريخ النسخ الاحتياطي',
+  Constants.kDeleteBackup: 'حذف النسخ الاحتياطي',
+  Constants.kDeleteBackupConfirm: 'هل أنت متأكد من حذف هذا النسخ الاحتياطي؟',
+  Constants.kRestoreBackup: 'استعادة النسخ الاحتياطي',
+  Constants.kRestoreBackupConfirm:
+      'هل أنت متأكد من الاستعادة من هذا النسخ الاحتياطي؟',
+  Constants.kBackupPermissions: 'أذونات النسخ الاحتياطي',
+  Constants.kPermissionsRequired: 'الأذونات مطلوبة',
+  Constants.kGrantPermissions: 'منح الأذونات',
+  Constants.kEnableContactsPermission: 'فعّل إذن جهات الاتصال لنسخها احتياطياً',
+  Constants.kEnablePhotosPermission: 'فعّل إذن الصور لنسخها احتياطياً',
+  Constants.kEnableStoragePermission:
+      'فعّل إذن التخزين لحفظ ملفات النسخ الاحتياطي',
+  Constants.kBackupRecommendations: 'توصيات النسخ الاحتياطي',
+  Constants.kNoBackupsFound: 'لا توجد نسخ احتياطية',
+  Constants.kCreateFirstBackup: 'أنشئ أول نسخة احتياطية',
+  Constants.kRegularBackupsRecommended: 'يُوصى بالنسخ الاحتياطي المنتظم',
+  Constants.kDaysSinceLastBackup: 'أيام منذ آخر نسخ احتياطي',
+  Constants.kBackupReady: 'جاهز للنسخ الاحتياطي',
+  Constants.kCheckingPermissions: 'جاري التحقق من الأذونات...',
+  Constants.kCalculatingSize: 'جاري حساب الحجم...',
+
+  // الشروط والأحكام
   Constants.kIAgreeToThe: 'أوافق على',
   Constants.kTermsAndConditions: 'الشروط والأحكام',
   Constants.kAndThe: 'و',
-  Constants.kPleaseAcceptTermsAndConditions: 'يرجى قبول الشروط والأحكام للمتابعة',
+  Constants.kPleaseAcceptTermsAndConditions:
+      'يرجى قبول الشروط والأحكام للمتابعة',
   Constants.kTermsOfService: 'شروط الخدمة',
   Constants.kLastUpdated: 'آخر تحديث',
   Constants.kAcceptance: 'القبول',
