@@ -22,43 +22,53 @@ class NavbarView extends GetView<NavbarController> {
     required String assetPath,
     required bool isActive,
     required int barIndex,
+    required String semanticLabel,
   }) {
     return Obx(() {
       final isCurrentlyActive = controller.selectedIndex.value == barIndex;
 
-      return TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutBack,
-        tween: Tween(begin: 0.0, end: isCurrentlyActive ? 1.0 : 0.0),
-        builder: (context, value, child) {
-          return Transform.scale(
-            scale: 1.0 + (value * 0.15), // Scale up by 15% when active
-            child: Transform.rotate(
-              angle: value * 0.05, // Slight rotation for effect
-              child: SvgPicture.asset(
-                assetPath,
-                colorFilter: ColorFilter.mode(
-                  Color.lerp(
-                    ColorsManager.lightGrey,
-                    ColorsManager.primary,
-                    value,
-                  )!,
-                  BlendMode.srcIn,
+      return Semantics(
+        label: semanticLabel,
+        button: true,
+        selected: isCurrentlyActive,
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutBack,
+          tween: Tween(begin: 0.0, end: isCurrentlyActive ? 1.0 : 0.0),
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: 1.0 + (value * 0.15), // Scale up by 15% when active
+              child: Transform.rotate(
+                angle: value * 0.05, // Slight rotation for effect
+                child: SvgPicture.asset(
+                  assetPath,
+                  colorFilter: ColorFilter.mode(
+                    Color.lerp(
+                      ColorsManager.lightGrey,
+                      ColorsManager.primary,
+                      value,
+                    )!,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       );
     });
   }
 
   // Special camera icon — outlined style to avoid visual collision with notch
   Widget _buildCameraIcon() {
-    return Icon(
-      Icons.camera_alt_rounded,
-      color: ColorsManager.primary,
-      size: 26,
+    return Semantics(
+      label: 'Camera',
+      button: true,
+      child: Icon(
+        Icons.camera_alt_rounded,
+        color: ColorsManager.primary,
+        size: 26,
+      ),
     );
   }
 
@@ -105,98 +115,108 @@ class NavbarView extends GetView<NavbarController> {
           ],
         ),
         extendBody: true,
-        bottomNavigationBar: AnimatedNotchBottomBar(
-          notchBottomBarController: NotchBottomBarController(
-            index: controller.selectedIndex.value,
-          ),
-          color: ColorsManager.navbarColor,
-
-          showLabel: true,
-          textOverflow: TextOverflow.visible,
-          maxLine: 1,
-          shadowElevation: 5,
-          kBottomRadius: 5,
-          notchColor: ColorsManager.navbarColor,
-          removeMargins: true,
-          showShadow: true,
-          durationInMilliSeconds: 300,
-          itemLabelStyle: const TextStyle(fontSize: FontSize.xXSmall),
-          elevation: 1,
-          kIconSize: Sizes.size24,
-          bottomBarItems: [
-            // Index 0: Home
-            BottomBarItem(
-              inActiveItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/home-01.svg',
-                isActive: false,
-                barIndex: 0,
-              ),
-              activeItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/home-01.svg',
-                isActive: true,
-                barIndex: 0,
-              ),
-              itemLabelWidget: _buildAnimatedLabel(Constants.kHome.tr, 0),
+        bottomNavigationBar: Semantics(
+          label: 'Main navigation',
+          child: AnimatedNotchBottomBar(
+            notchBottomBarController: NotchBottomBarController(
+              index: controller.selectedIndex.value,
             ),
-            // Index 1: Calls
-            BottomBarItem(
-              inActiveItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/call-calling.svg',
-                isActive: false,
-                barIndex: 1,
+            color: ColorsManager.navbarColor,
+            showLabel: true,
+            textOverflow: TextOverflow.visible,
+            maxLine: 1,
+            shadowElevation: 5,
+            kBottomRadius: 5,
+            notchColor: ColorsManager.navbarColor,
+            removeMargins: true,
+            showShadow: true,
+            durationInMilliSeconds: 300,
+            itemLabelStyle: const TextStyle(fontSize: FontSize.xXSmall),
+            elevation: 1,
+            kIconSize: Sizes.size24,
+            bottomBarItems: [
+              // Index 0: Home
+              BottomBarItem(
+                inActiveItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/home-01.svg',
+                  isActive: false,
+                  barIndex: 0,
+                  semanticLabel: 'Home tab',
+                ),
+                activeItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/home-01.svg',
+                  isActive: true,
+                  barIndex: 0,
+                  semanticLabel: 'Home tab',
+                ),
+                itemLabelWidget: _buildAnimatedLabel(Constants.kHome.tr, 0),
               ),
-              activeItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/call-calling.svg',
-                isActive: true,
-                barIndex: 1,
+              // Index 1: Calls
+              BottomBarItem(
+                inActiveItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/call-calling.svg',
+                  isActive: false,
+                  barIndex: 1,
+                  semanticLabel: 'Calls tab',
+                ),
+                activeItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/call-calling.svg',
+                  isActive: true,
+                  barIndex: 1,
+                  semanticLabel: 'Calls tab',
+                ),
+                itemLabelWidget: _buildAnimatedLabel(Constants.kCalls.tr, 1),
               ),
-              itemLabelWidget: _buildAnimatedLabel(Constants.kCalls.tr, 1),
-            ),
-            // Index 2: Camera (virtual — opens fullscreen route)
-            BottomBarItem(
-              inActiveItem: _buildCameraIcon(),
-              activeItem: _buildCameraIcon(),
-              itemLabelWidget: Text(
-                Constants.kCamera.tr,
-                style: StylesManager.regular(
-                  fontSize: FontSize.xSmall,
-                  color: ColorsManager.primary,
+              // Index 2: Camera (virtual — opens fullscreen route)
+              BottomBarItem(
+                inActiveItem: _buildCameraIcon(),
+                activeItem: _buildCameraIcon(),
+                itemLabelWidget: Text(
+                  Constants.kCamera.tr,
+                  style: StylesManager.regular(
+                    fontSize: FontSize.xSmall,
+                    color: ColorsManager.primary,
+                  ),
                 ),
               ),
-            ),
-            // Index 3: Stories
-            BottomBarItem(
-              inActiveItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/story.svg',
-                isActive: false,
-                barIndex: 3,
+              // Index 3: Stories
+              BottomBarItem(
+                inActiveItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/story.svg',
+                  isActive: false,
+                  barIndex: 3,
+                  semanticLabel: 'Stories tab',
+                ),
+                activeItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/story.svg',
+                  isActive: true,
+                  barIndex: 3,
+                  semanticLabel: 'Stories tab',
+                ),
+                itemLabelWidget: _buildAnimatedLabel(Constants.kStories.tr, 3),
               ),
-              activeItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/story.svg',
-                isActive: true,
-                barIndex: 3,
+              // Index 4: Settings
+              BottomBarItem(
+                inActiveItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/setting-2.svg',
+                  isActive: false,
+                  barIndex: 4,
+                  semanticLabel: 'Settings tab',
+                ),
+                activeItem: _buildAnimatedIcon(
+                  assetPath: 'assets/icons/setting-2.svg',
+                  isActive: true,
+                  barIndex: 4,
+                  semanticLabel: 'Settings tab',
+                ),
+                itemLabelWidget: _buildAnimatedLabel(Constants.kSetting.tr, 4),
               ),
-              itemLabelWidget: _buildAnimatedLabel(Constants.kStories.tr, 3),
-            ),
-            // Index 4: Settings
-            BottomBarItem(
-              inActiveItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/setting-2.svg',
-                isActive: false,
-                barIndex: 4,
-              ),
-              activeItem: _buildAnimatedIcon(
-                assetPath: 'assets/icons/setting-2.svg',
-                isActive: true,
-                barIndex: 4,
-              ),
-              itemLabelWidget: _buildAnimatedLabel(Constants.kSetting.tr, 4),
-            ),
-          ],
-          onTap: (index) {
-            HapticFeedback.lightImpact();
-            controller.changePage(index);
-          },
+            ],
+            onTap: (index) {
+              HapticFeedback.lightImpact();
+              controller.changePage(index);
+            },
+          ),
         ),
       ),
     );

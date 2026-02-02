@@ -29,7 +29,9 @@ class BackupSectionWidget extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => Get.find<SettingsController>().showBackupSettings(),
+                onPressed: () =>
+                    Get.find<SettingsController>().showBackupSettings(),
+                tooltip: 'Backup settings',
                 icon: Icon(
                   Icons.settings_outlined,
                   size: 20,
@@ -47,8 +49,10 @@ class BackupSectionWidget extends StatelessWidget {
           SizedBox(height: Sizes.size20),
           // Backup Statistics Card
           Obx(() => BackupStatsCardWidget(
-                statistics: Get.find<SettingsController>().getBackupStatisticsSummary(),
-                lastBackupDate: Get.find<SettingsController>().getFormattedLastBackupDate(),
+                statistics:
+                    Get.find<SettingsController>().getBackupStatisticsSummary(),
+                lastBackupDate:
+                    Get.find<SettingsController>().getFormattedLastBackupDate(),
               )),
           SizedBox(height: Sizes.size20),
           // Individual Backup Options

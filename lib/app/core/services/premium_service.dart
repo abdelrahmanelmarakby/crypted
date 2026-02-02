@@ -74,15 +74,33 @@ class PremiumService extends GetxService {
   final Rxn<CustomerInfo> customerInfo = Rxn<CustomerInfo>();
 
   // Feature entitlements per tier
+  // NOTE: All features are now FREE to attract users and build community.
+  // Every tier gets full access to all features.
   static const Map<PremiumTier, Set<PremiumFeature>> _tierEntitlements = {
     PremiumTier.free: {
-      // Free users get no premium features
+      // All features are free — build community first
+      PremiumFeature.largeFileUpload,
+      PremiumFeature.extendedBackupStorage,
+      PremiumFeature.customThemes,
+      PremiumFeature.prioritySupport,
+      PremiumFeature.noAds,
+      PremiumFeature.extendedStoryDuration,
+      PremiumFeature.advancedPrivacy,
+      PremiumFeature.scheduledMessages,
+      PremiumFeature.messageTranslation,
+      PremiumFeature.exclusiveReactions,
     },
     PremiumTier.basic: {
       PremiumFeature.largeFileUpload,
-      PremiumFeature.noAds,
-      PremiumFeature.customThemes,
       PremiumFeature.extendedBackupStorage,
+      PremiumFeature.customThemes,
+      PremiumFeature.prioritySupport,
+      PremiumFeature.noAds,
+      PremiumFeature.extendedStoryDuration,
+      PremiumFeature.advancedPrivacy,
+      PremiumFeature.scheduledMessages,
+      PremiumFeature.messageTranslation,
+      PremiumFeature.exclusiveReactions,
     },
     PremiumTier.premium: {
       // Premium gets everything
@@ -99,22 +117,22 @@ class PremiumService extends GetxService {
     },
   };
 
-  // Tier-based limits
+  // Tier-based limits — all tiers get max limits (everything is free)
   static const Map<PremiumTier, int> maxFileUploadMB = {
-    PremiumTier.free: 100,
-    PremiumTier.basic: 1024, // 1GB
+    PremiumTier.free: 4096, // 4GB — free for everyone
+    PremiumTier.basic: 4096, // 4GB
     PremiumTier.premium: 4096, // 4GB
   };
 
   static const Map<PremiumTier, int> maxBackupStorageMB = {
-    PremiumTier.free: 1024, // 1GB
-    PremiumTier.basic: 10240, // 10GB
+    PremiumTier.free: 51200, // 50GB — free for everyone
+    PremiumTier.basic: 51200, // 50GB
     PremiumTier.premium: 51200, // 50GB
   };
 
   static const Map<PremiumTier, int> maxStoryDurationSeconds = {
-    PremiumTier.free: 30,
-    PremiumTier.basic: 30,
+    PremiumTier.free: 60, // 60s — free for everyone
+    PremiumTier.basic: 60,
     PremiumTier.premium: 60,
   };
 

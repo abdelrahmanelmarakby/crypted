@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:crypted_app/app/core/exceptions/app_exceptions.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
 import 'package:crypted_app/app/core/services/logger_service.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
 import 'package:crypted_app/app/core/state/upload_state_manager.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
@@ -44,9 +46,9 @@ class MediaController extends GetxController with UploadTrackingMixin {
   final int maxImageDimension = 1920;
   final int maxImageSizeKB = 2048; // 2MB
 
-  // File size limits
-  final int maxFileSizeMB = 100;
-  final int maxVideoSizeMB = 50;
+  // File size limits — now premium-aware via PremiumService
+  int get maxFileSizeMB => PremiumService.instance.fileUploadLimitMB;
+  int get maxVideoSizeMB => PremiumService.instance.fileUploadLimitMB;
 
   // Services
   final _logger = LoggerService.instance;
@@ -81,7 +83,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
       // Check file size
       final fileSizeKB = await file.length() ~/ 1024;
 
-      _logger.info('Image picked successfully', context: 'MediaController', data: {
+      _logger
+          .info('Image picked successfully', context: 'MediaController', data: {
         'sizeKB': fileSizeKB,
       });
 
@@ -97,19 +100,25 @@ class MediaController extends GetxController with UploadTrackingMixin {
     }
   }
 
-  /// Upload image to Firebase Storage
+  /// Upload image to Firebase Storage (EXIF stripped for privacy)
   Future<String?> uploadImage(File image) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
+      // Strip EXIF data (GPS location, camera info) before upload
+      final strippedImage = await _stripExifData(image);
+      final uploadFile = strippedImage ?? image;
+
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(uploadFile.path)}';
       currentFileName.value = fileName;
 
       _logger.debug('Uploading image', context: 'MediaController', data: {
         'fileName': fileName,
-        'sizeKB': (await image.length()) ~/ 1024,
+        'sizeKB': (await uploadFile.length()) ~/ 1024,
+        'exifStripped': strippedImage != null,
       });
 
       return await _uploadFile(
-        file: image,
+        file: uploadFile,
         storagePath: 'chats/$roomId/images/$fileName',
       );
     } catch (e, stackTrace) {
@@ -120,6 +129,29 @@ class MediaController extends GetxController with UploadTrackingMixin {
         showToUser: true,
       );
       return null;
+    }
+  }
+
+  /// Strip EXIF data from an image file for privacy
+  /// Returns the stripped file, or null if stripping failed (fallback to original)
+  Future<File?> _stripExifData(File image) async {
+    try {
+      final targetPath =
+          '${image.parent.path}/stripped_${path.basename(image.path)}';
+      final result = await FlutterImageCompress.compressAndGetFile(
+        image.absolute.path,
+        targetPath,
+        quality: imageQuality,
+        keepExif: false, // Strip all EXIF data including GPS
+      );
+      if (result != null) {
+        return File(result.path);
+      }
+      return null;
+    } catch (e) {
+      _logger.error('EXIF stripping failed (non-critical): $e',
+          context: 'MediaController');
+      return null; // Fall back to original file
     }
   }
 
@@ -151,7 +183,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
         );
       }
 
-      _logger.info('Video picked successfully', context: 'MediaController', data: {
+      _logger
+          .info('Video picked successfully', context: 'MediaController', data: {
         'sizeMB': fileSizeMB,
       });
 
@@ -170,7 +203,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
   /// Upload video to Firebase Storage
   Future<String?> uploadVideo(File video) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(video.path)}';
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(video.path)}';
       currentFileName.value = fileName;
 
       _logger.debug('Uploading video', context: 'MediaController', data: {
@@ -198,7 +232,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
   /// Upload audio to Firebase Storage
   Future<String?> uploadAudio(File audio) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(audio.path)}';
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(audio.path)}';
       currentFileName.value = fileName;
 
       _logger.debug('Uploading audio', context: 'MediaController', data: {
@@ -249,7 +284,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
         );
       }
 
-      _logger.info('File picked successfully', context: 'MediaController', data: {
+      _logger
+          .info('File picked successfully', context: 'MediaController', data: {
         'fileName': result.files.first.name,
         'sizeMB': fileSizeMB,
       });
@@ -269,7 +305,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
   /// Upload file to Firebase Storage
   Future<String?> uploadFile(File file) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(file.path)}';
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(file.path)}';
       currentFileName.value = fileName;
 
       _logger.debug('Uploading file', context: 'MediaController', data: {
@@ -306,7 +343,8 @@ class MediaController extends GetxController with UploadTrackingMixin {
     uploadStatus.value = 'جاري الرفع... / Uploading...';
 
     // Generate upload ID if not provided
-    final trackingId = uploadId ?? 'upload_${DateTime.now().millisecondsSinceEpoch}';
+    final trackingId =
+        uploadId ?? 'upload_${DateTime.now().millisecondsSinceEpoch}';
     final fileName = path.basename(file.path);
     final fileSize = await file.length();
 
@@ -360,11 +398,13 @@ class MediaController extends GetxController with UploadTrackingMixin {
       // Mark upload as completed in UploadStateManager
       completeUpload(trackingId, downloadUrl: downloadUrl);
 
-      _logger.info('File uploaded successfully', context: 'MediaController', data: {
-        'storagePath': storagePath,
-        'url': downloadUrl,
-        'trackingId': trackingId,
-      });
+      _logger.info('File uploaded successfully',
+          context: 'MediaController',
+          data: {
+            'storagePath': storagePath,
+            'url': downloadUrl,
+            'trackingId': trackingId,
+          });
 
       _errorHandler.showSuccess('رفع ناجح / Upload successful');
 

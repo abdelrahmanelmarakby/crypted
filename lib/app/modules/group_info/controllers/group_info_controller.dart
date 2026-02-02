@@ -20,7 +20,12 @@ import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:crypted_app/app/modules/media_gallery/views/video_player_view.dart';
 
-enum MediaType { image, video, file, audio ,}
+enum MediaType {
+  image,
+  video,
+  file,
+  audio,
+}
 
 class GroupInfoController extends GetxController {
   // Group data - reactive for real-time updates
@@ -87,7 +92,8 @@ class GroupInfoController extends GetxController {
       print("   Name: ${groupName.value}");
       print("   Members: ${memberCount.value}");
       print("   Admins: ${adminIds.length}");
-      print("   Description: ${groupDescription.value?.isNotEmpty == true ? 'Yes' : 'No'}");
+      print(
+          "   Description: ${groupDescription.value?.isNotEmpty == true ? 'Yes' : 'No'}");
 
       // Ensure current user is in members list if not present
       _ensureCurrentUserInMembers();
@@ -120,7 +126,9 @@ class GroupInfoController extends GetxController {
         }
 
         // Fallback: if no adminIds, set first member as admin and update Firestore
-        if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+        if (adminIds.isEmpty &&
+            members.value != null &&
+            members.value!.isNotEmpty) {
           final firstMemberId = members.value!.first.uid;
           if (firstMemberId != null) {
             adminIds.add(firstMemberId);
@@ -172,7 +180,8 @@ class GroupInfoController extends GetxController {
   void _ensureCurrentUserInMembers() {
     if (currentUser == null || members.value == null) return;
 
-    final currentUserInMembers = members.value!.any((member) => member.uid == currentUser!.uid);
+    final currentUserInMembers =
+        members.value!.any((member) => member.uid == currentUser!.uid);
     if (!currentUserInMembers) {
       members.value = [currentUser!, ...members.value!];
       memberCount.value = members.value!.length;
@@ -201,7 +210,8 @@ class GroupInfoController extends GetxController {
   }
 
   /// Update group information
-  Future<void> updateGroupInfo({String? name, String? description, String? imageUrl}) async {
+  Future<void> updateGroupInfo(
+      {String? name, String? description, String? imageUrl}) async {
     if (roomId == null) {
       Get.snackbar(
         "Error",
@@ -306,10 +316,12 @@ class GroupInfoController extends GetxController {
       isLoading.value = true;
 
       // Remove member using data source
-      await _chatDataSources.removeMemberFromGroup(roomId!, userId, currentUserUid);
+      await _chatDataSources.removeMemberFromGroup(
+          roomId!, userId, currentUserUid);
 
       // Remove member from local list
-      members.value = members.value!.where((member) => member.uid != userId).toList();
+      members.value =
+          members.value!.where((member) => member.uid != userId).toList();
       memberCount.value = members.value!.length;
     } catch (e) {
       print("❌ Error removing member: $e");
@@ -428,7 +440,8 @@ class GroupInfoController extends GetxController {
     // Show confirmation bottom sheet
     final confirmed = await CustomBottomSheets.showConfirmation(
       title: 'Exit Group',
-      message: 'Are you sure you want to leave ${groupName.value ?? 'this group'}?',
+      message:
+          'Are you sure you want to leave ${groupName.value ?? 'this group'}?',
       subtitle: 'You will no longer receive messages from this group',
       confirmText: 'Exit Group',
       cancelText: 'Cancel',
@@ -649,6 +662,7 @@ class GroupInfoController extends GetxController {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Close',
                     onPressed: () => Get.back(),
                   ),
                 ],
@@ -715,9 +729,11 @@ class GroupInfoController extends GetxController {
                     itemCount: messages.length,
                     separatorBuilder: (context, index) => const Divider(),
                     itemBuilder: (context, index) {
-                      final message = messages[index].data() as Map<String, dynamic>;
+                      final message =
+                          messages[index].data() as Map<String, dynamic>;
                       final messageType = message['type'] ?? 'text';
-                      final messageContent = message['text'] ?? message['content'] ?? '';
+                      final messageContent =
+                          message['text'] ?? message['content'] ?? '';
                       final timestamp = message['timestamp'];
                       final senderId = message['senderId'] ?? '';
                       final currentUserId = UserService.currentUserValue?.uid;
@@ -730,7 +746,8 @@ class GroupInfoController extends GetxController {
                       } else {
                         final sender = members.value?.firstWhere(
                           (member) => member.uid == senderId,
-                          orElse: () => SocialMediaUser(uid: senderId, fullName: 'Unknown'),
+                          orElse: () => SocialMediaUser(
+                              uid: senderId, fullName: 'Unknown'),
                         );
                         senderName = sender?.fullName ?? 'Unknown';
                       }
@@ -745,7 +762,8 @@ class GroupInfoController extends GetxController {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.amber.shade100,
-                            child: const Icon(Icons.star, color: Colors.amber, size: 20),
+                            child: const Icon(Icons.star,
+                                color: Colors.amber, size: 20),
                           ),
                           title: Text(
                             senderName,
@@ -759,7 +777,9 @@ class GroupInfoController extends GetxController {
                             children: [
                               const SizedBox(height: 4),
                               Text(
-                                messageType == 'text' ? messageContent : '[$messageType]',
+                                messageType == 'text'
+                                    ? messageContent
+                                    : '[$messageType]',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 13),
@@ -778,6 +798,7 @@ class GroupInfoController extends GetxController {
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.close, size: 20),
+                            tooltip: 'Remove from starred',
                             onPressed: () async {
                               // Unstar message
                               await FirebaseFirestore.instance
@@ -884,6 +905,7 @@ class GroupInfoController extends GetxController {
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close),
+                      tooltip: 'Close',
                       onPressed: () => Get.back(),
                     ),
                   ],
@@ -1019,7 +1041,8 @@ class GroupInfoController extends GetxController {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final data = items[index].data() as Map<String, dynamic>;
-              final fileName = data['fileName'] ?? data['name'] ?? 'Unknown file';
+              final fileName =
+                  data['fileName'] ?? data['name'] ?? 'Unknown file';
               final fileSize = data['fileSize'] ?? '';
               final timestamp = data['timestamp'];
 
@@ -1062,11 +1085,13 @@ class GroupInfoController extends GetxController {
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.download, size: 20),
+                    tooltip: 'Download file',
                     onPressed: () async {
                       // Download file
                       final data = items[index].data() as Map<String, dynamic>;
                       final url = data['url'] ?? data['fileUrl'] ?? '';
-                      final fileName = data['fileName'] ?? 'file_${DateTime.now().millisecondsSinceEpoch}';
+                      final fileName = data['fileName'] ??
+                          'file_${DateTime.now().millisecondsSinceEpoch}';
 
                       if (url.isNotEmpty) {
                         await _downloadFile(url, fileName);
@@ -1195,7 +1220,8 @@ class GroupInfoController extends GetxController {
                   value: event == null
                       ? 0
                       : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ColorsManager.primary),
                 ),
               ),
               backgroundDecoration: const BoxDecoration(
@@ -1210,6 +1236,7 @@ class GroupInfoController extends GetxController {
               right: 16,
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                tooltip: 'Close gallery',
                 onPressed: () => Get.back(),
               ),
             ),
@@ -1222,7 +1249,8 @@ class GroupInfoController extends GetxController {
                 onPressed: () async {
                   final currentIndex = initialIndex;
                   final url = mediaItems[currentIndex]['url'] as String;
-                  await _downloadFile(url, 'media_${DateTime.now().millisecondsSinceEpoch}');
+                  await _downloadFile(
+                      url, 'media_${DateTime.now().millisecondsSinceEpoch}');
                 },
                 backgroundColor: ColorsManager.primary,
                 child: const Icon(Icons.download, color: Colors.white),
@@ -1261,9 +1289,11 @@ class GroupInfoController extends GetxController {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(_getIconForType(mediaType), size: 64, color: ColorsManager.lightGrey),
+                Icon(_getIconForType(mediaType),
+                    size: 64, color: ColorsManager.lightGrey),
                 SizedBox(height: 16),
-                Text("No ${mediaType.name}s shared", style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
+                Text("No ${mediaType.name}s shared",
+                    style: TextStyle(fontSize: 16, color: ColorsManager.grey)),
               ],
             ),
           );
@@ -1272,10 +1302,14 @@ class GroupInfoController extends GetxController {
         return GridView.builder(
           padding: EdgeInsets.all(8),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: mediaType.name == 'image' || mediaType.name == 'video' ? 3 : 1,
+            crossAxisCount:
+                mediaType.name == 'image' || mediaType.name == 'video' ? 3 : 1,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            childAspectRatio: mediaType.name == 'image' || mediaType.name == 'video' ? 1.0 : 3.0,
+            childAspectRatio:
+                mediaType.name == 'image' || mediaType.name == 'video'
+                    ? 1.0
+                    : 3.0,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -1287,14 +1321,25 @@ class GroupInfoController extends GetxController {
               title: data['caption'] ?? '',
               thumbnailUrl: data['thumbnailUrl'] ?? '',
               subtitle: data['caption'] ?? '',
-              timestampLabel: data['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(data['timestamp']).toString() : null,
-              fileSizeLabel: data['fileSize'] != null ? '${data['fileSize']} bytes' : null,
-              durationLabel: data['duration'] != null ? '${data['duration']} seconds' : null,
-              onPreview: () => MediaPreview.previewMedia(context, mediaType, data),
-              onOpenExternally: () => MediaPreview.openExternally(context, data['url']),
-              onDownload: () => _downloadFile(data['url'] ?? data['fileUrl'] ?? '', 'media_${DateTime.now().millisecondsSinceEpoch}'),
+              timestampLabel: data['timestamp'] != null
+                  ? DateTime.fromMillisecondsSinceEpoch(data['timestamp'])
+                      .toString()
+                  : null,
+              fileSizeLabel:
+                  data['fileSize'] != null ? '${data['fileSize']} bytes' : null,
+              durationLabel: data['duration'] != null
+                  ? '${data['duration']} seconds'
+                  : null,
+              onPreview: () =>
+                  MediaPreview.previewMedia(context, mediaType, data),
+              onOpenExternally: () =>
+                  MediaPreview.openExternally(context, data['url']),
+              onDownload: () => _downloadFile(
+                  data['url'] ?? data['fileUrl'] ?? '',
+                  'media_${DateTime.now().millisecondsSinceEpoch}'),
               // onOpenExternally: () => _openExternally(data['url'] ?? data['fileUrl'] ?? ''),
-              onShare: ()async => await Share.share(data['url'] ?? data['fileUrl'] ?? ''),
+              onShare: () async =>
+                  await Share.share(data['url'] ?? data['fileUrl'] ?? ''),
             );
           },
         );
@@ -1317,7 +1362,8 @@ class GroupInfoController extends GetxController {
     if (result.success) {
       FileDownloadHelper.showDownloadComplete(fileName, result.filePath!);
     } else {
-      FileDownloadHelper.showDownloadError(result.errorMessage ?? 'Download failed');
+      FileDownloadHelper.showDownloadError(
+          result.errorMessage ?? 'Download failed');
     }
   }
 
@@ -1338,7 +1384,9 @@ class GroupInfoController extends GetxController {
     }
 
     // Legacy fallback: first member is admin (only if no adminIds set)
-    if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+    if (adminIds.isEmpty &&
+        members.value != null &&
+        members.value!.isNotEmpty) {
       return members.value!.first.uid == userId;
     }
 
@@ -1349,7 +1397,9 @@ class GroupInfoController extends GetxController {
   bool isUserAdmin(String userId) {
     if (adminIds.contains(userId)) return true;
     if (createdBy.value != null && createdBy.value == userId) return true;
-    if (adminIds.isEmpty && members.value != null && members.value!.isNotEmpty) {
+    if (adminIds.isEmpty &&
+        members.value != null &&
+        members.value!.isNotEmpty) {
       return members.value!.first.uid == userId;
     }
     return false;
@@ -1532,7 +1582,8 @@ class GroupInfoController extends GetxController {
 
   /// Check if user can perform action based on permissions
   bool canEditGroupInfo() {
-    if (permissions.value.editGroupInfo == PermissionLevel.everyone) return true;
+    if (permissions.value.editGroupInfo == PermissionLevel.everyone)
+      return true;
     return isCurrentUserAdmin;
   }
 
@@ -1562,11 +1613,13 @@ class GroupInfoController extends GetxController {
   // Getters for easy access
   String get displayName => groupName.value ?? "Group Chat";
   String get displayDescription => groupDescription.value ?? "No description";
-  String get displayMemberCount => "${memberCount.value ?? 0} ${memberCount.value == 1 ? 'member' : 'members'}";
+  String get displayMemberCount =>
+      "${memberCount.value ?? 0} ${memberCount.value == 1 ? 'member' : 'members'}";
   String? get displayImage => groupImageUrl.value;
 
   // Check if group has description
-  bool get hasDescription => groupDescription.value != null && groupDescription.value!.isNotEmpty;
+  bool get hasDescription =>
+      groupDescription.value != null && groupDescription.value!.isNotEmpty;
 
   /// Get filtered members based on search query
   List<SocialMediaUser> get filteredMembers {

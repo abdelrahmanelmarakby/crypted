@@ -5,11 +5,13 @@ import 'dart:ui';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/modules/stories/views/story_preview_screen.dart';
+import 'package:crypted_app/app/modules/stories/widgets/event_creation_sheet.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,7 +29,7 @@ class StoryCameraScreen extends StatefulWidget {
   State<StoryCameraScreen> createState() => _StoryCameraScreenState();
 }
 
-enum _CaptureMode { photo, video, text }
+enum _CaptureMode { photo, video, text, event }
 
 class _StoryCameraScreenState extends State<StoryCameraScreen>
     with TickerProviderStateMixin {
@@ -41,7 +43,9 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
   // ── Recording timer ───────────────────────────────────────
   Timer? _recordingTimer;
   int _recordingSeconds = 0;
-  static const int _maxRecordingSeconds = 60;
+  // Premium-aware: free users get 30s, premium users get 60s
+  int get _maxRecordingSeconds =>
+      PremiumService.instance.storyDurationLimitSeconds;
 
   // ── Filters ───────────────────────────────────────────────
   bool _showFilters = false;
@@ -148,7 +152,9 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
       final albums = await PhotoManager.getAssetPathList(
         type: RequestType.image,
         filterOption: FilterOptionGroup(
-          orders: [const OrderOption(type: OrderOptionType.createDate, asc: false)],
+          orders: [
+            const OrderOption(type: OrderOptionType.createDate, asc: false)
+          ],
         ),
       );
       if (albums.isEmpty) return;
@@ -173,7 +179,12 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
 
   void _cycleFlash(CameraState state) {
     HapticFeedback.selectionClick();
-    const modes = [FlashMode.none, FlashMode.auto, FlashMode.on, FlashMode.always];
+    const modes = [
+      FlashMode.none,
+      FlashMode.auto,
+      FlashMode.on,
+      FlashMode.always
+    ];
     final idx = modes.indexOf(_flashMode);
     final next = modes[(idx + 1) % modes.length];
     state.sensorConfig.setFlashMode(next);
@@ -315,6 +326,12 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
     if (mode == _captureMode) return;
     HapticFeedback.selectionClick();
 
+    // Event mode opens the event creation sheet instead of changing camera
+    if (mode == _CaptureMode.event) {
+      _openEventCreationSheet();
+      return;
+    }
+
     setState(() => _captureMode = mode);
 
     // Switch CamerAwesome capture mode for photo/video
@@ -323,6 +340,15 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
     } else if (mode == _CaptureMode.video && cameraState != null) {
       cameraState.setState(CaptureMode.video);
     }
+  }
+
+  void _openEventCreationSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const EventCreationSheet(),
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────
@@ -360,7 +386,8 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
             // Pinch-to-zoom
             onScaleStart: (_) => _baseZoom = _currentZoom,
             onScaleUpdate: (details) {
-              final newZoom = (_baseZoom + (details.scale - 1) * 0.5).clamp(0.0, 1.0);
+              final newZoom =
+                  (_baseZoom + (details.scale - 1) * 0.5).clamp(0.0, 1.0);
               cameraState.sensorConfig.setZoom(newZoom);
               setState(() => _currentZoom = newZoom);
             },
@@ -665,13 +692,16 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected ? ColorsManager.primary : Colors.white30,
+                        color:
+                            isSelected ? ColorsManager.primary : Colors.white30,
                         width: isSelected ? 2.5 : 1,
                       ),
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white.withValues(alpha: isSelected ? 0.3 : 0.1),
-                          Colors.white.withValues(alpha: isSelected ? 0.15 : 0.05),
+                          Colors.white
+                              .withValues(alpha: isSelected ? 0.3 : 0.1),
+                          Colors.white
+                              .withValues(alpha: isSelected ? 0.15 : 0.05),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -679,11 +709,16 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
                     ),
                     child: Center(
                       child: Text(
-                        _filterNames[index].substring(0, _filterNames[index].length > 2 ? 2 : _filterNames[index].length),
+                        _filterNames[index].substring(
+                            0,
+                            _filterNames[index].length > 2
+                                ? 2
+                                : _filterNames[index].length),
                         style: TextStyle(
                           color: isSelected ? Colors.white : Colors.white60,
                           fontSize: 11,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -694,7 +729,8 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
                     style: TextStyle(
                       color: isSelected ? Colors.white : Colors.white54,
                       fontSize: 9,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                 ],
@@ -927,6 +963,7 @@ class _StoryCameraScreenState extends State<StoryCameraScreen>
       ('PHOTO', _CaptureMode.photo),
       ('VIDEO', _CaptureMode.video),
       ('TEXT', _CaptureMode.text),
+      ('EVENT', _CaptureMode.event),
     ];
 
     return Row(

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'user_model.dart';
@@ -7,6 +6,7 @@ enum StoryType {
   image,
   video,
   text,
+  event,
 }
 
 enum StoryStatus {
@@ -45,6 +45,16 @@ class StoryModel {
   String? linkUrl;
   String? linkDisplayText;
 
+  // Event story fields
+  String? eventTitle;
+  String? eventDescription;
+  DateTime? eventDate;
+  DateTime? eventEndDate;
+  String? eventVenue;
+  String? eventCategory; // social, sports, music, food, tech, art, other
+  int? eventMaxAttendees;
+  List<String>? attendeeIds; // UIDs of users who joined the event
+
   StoryModel({
     this.id,
     this.uid,
@@ -70,6 +80,14 @@ class StoryModel {
     this.isLocationPublic,
     this.linkUrl,
     this.linkDisplayText,
+    this.eventTitle,
+    this.eventDescription,
+    this.eventDate,
+    this.eventEndDate,
+    this.eventVenue,
+    this.eventCategory,
+    this.eventMaxAttendees,
+    this.attendeeIds,
   });
 
   StoryModel copyWith({
@@ -97,6 +115,14 @@ class StoryModel {
     bool? isLocationPublic,
     String? linkUrl,
     String? linkDisplayText,
+    String? eventTitle,
+    String? eventDescription,
+    DateTime? eventDate,
+    DateTime? eventEndDate,
+    String? eventVenue,
+    String? eventCategory,
+    int? eventMaxAttendees,
+    List<String>? attendeeIds,
   }) {
     return StoryModel(
       id: id ?? this.id,
@@ -123,6 +149,14 @@ class StoryModel {
       isLocationPublic: isLocationPublic ?? this.isLocationPublic,
       linkUrl: linkUrl ?? this.linkUrl,
       linkDisplayText: linkDisplayText ?? this.linkDisplayText,
+      eventTitle: eventTitle ?? this.eventTitle,
+      eventDescription: eventDescription ?? this.eventDescription,
+      eventDate: eventDate ?? this.eventDate,
+      eventEndDate: eventEndDate ?? this.eventEndDate,
+      eventVenue: eventVenue ?? this.eventVenue,
+      eventCategory: eventCategory ?? this.eventCategory,
+      eventMaxAttendees: eventMaxAttendees ?? this.eventMaxAttendees,
+      attendeeIds: attendeeIds ?? this.attendeeIds,
     );
   }
 
@@ -202,6 +236,32 @@ class StoryModel {
       result.addAll({'linkDisplayText': linkDisplayText});
     }
 
+    // Event fields
+    if (eventTitle != null) {
+      result.addAll({'eventTitle': eventTitle});
+    }
+    if (eventDescription != null) {
+      result.addAll({'eventDescription': eventDescription});
+    }
+    if (eventDate != null) {
+      result.addAll({'eventDate': Timestamp.fromDate(eventDate!)});
+    }
+    if (eventEndDate != null) {
+      result.addAll({'eventEndDate': Timestamp.fromDate(eventEndDate!)});
+    }
+    if (eventVenue != null) {
+      result.addAll({'eventVenue': eventVenue});
+    }
+    if (eventCategory != null) {
+      result.addAll({'eventCategory': eventCategory});
+    }
+    if (eventMaxAttendees != null) {
+      result.addAll({'eventMaxAttendees': eventMaxAttendees});
+    }
+    if (attendeeIds != null) {
+      result.addAll({'attendeeIds': attendeeIds});
+    }
+
     return result;
   }
 
@@ -253,9 +313,21 @@ class StoryModel {
       placeName: map['placeName'] ?? map['place_name'],
       city: map['city'],
       country: map['country'],
-      isLocationPublic: map['isLocationPublic'] ?? map['is_location_public'] ?? true,
+      isLocationPublic:
+          map['isLocationPublic'] ?? map['is_location_public'] ?? true,
       linkUrl: map['linkUrl'] ?? map['link_url'],
       linkDisplayText: map['linkDisplayText'] ?? map['link_display_text'],
+      eventTitle: map['eventTitle'] ?? map['event_title'],
+      eventDescription: map['eventDescription'] ?? map['event_description'],
+      eventDate: _parseDateTime(map['eventDate'] ?? map['event_date']),
+      eventEndDate:
+          _parseDateTime(map['eventEndDate'] ?? map['event_end_date']),
+      eventVenue: map['eventVenue'] ?? map['event_venue'],
+      eventCategory: map['eventCategory'] ?? map['event_category'],
+      eventMaxAttendees: map['eventMaxAttendees'] ?? map['event_max_attendees'],
+      attendeeIds: map['attendeeIds'] != null
+          ? List<String>.from(map['attendeeIds'])
+          : [],
     );
   }
 
@@ -311,9 +383,22 @@ class StoryModel {
       placeName: data['placeName'] ?? data['place_name'],
       city: data['city'],
       country: data['country'],
-      isLocationPublic: data['isLocationPublic'] ?? data['is_location_public'] ?? true,
+      isLocationPublic:
+          data['isLocationPublic'] ?? data['is_location_public'] ?? true,
       linkUrl: data['linkUrl'] ?? data['link_url'],
       linkDisplayText: data['linkDisplayText'] ?? data['link_display_text'],
+      eventTitle: data['eventTitle'] ?? data['event_title'],
+      eventDescription: data['eventDescription'] ?? data['event_description'],
+      eventDate: _parseDateTime(data['eventDate'] ?? data['event_date']),
+      eventEndDate:
+          _parseDateTime(data['eventEndDate'] ?? data['event_end_date']),
+      eventVenue: data['eventVenue'] ?? data['event_venue'],
+      eventCategory: data['eventCategory'] ?? data['event_category'],
+      eventMaxAttendees:
+          data['eventMaxAttendees'] ?? data['event_max_attendees'],
+      attendeeIds: data['attendeeIds'] != null
+          ? List<String>.from(data['attendeeIds'])
+          : [],
     );
   }
 
@@ -362,6 +447,9 @@ class StoryModel {
         case 'text':
         case 'txt':
           return StoryType.text;
+        case 'event':
+        case 'evt':
+          return StoryType.event;
         default:
           return StoryType.image;
       }
@@ -445,6 +533,31 @@ class StoryModel {
     return 'Location';
   }
 
+  // Event-related helpers
+
+  /// Whether this is an event story
+  bool get isEvent => storyType == StoryType.event;
+
+  /// Whether the event has not yet ended
+  bool get isEventActive {
+    if (!isEvent) return false;
+    final end = eventEndDate ?? eventDate;
+    if (end == null) return true;
+    return DateTime.now().isBefore(end);
+  }
+
+  /// Number of attendees
+  int get attendeeCount => attendeeIds?.length ?? 0;
+
+  /// Whether the event is full
+  bool get isEventFull {
+    if (eventMaxAttendees == null || eventMaxAttendees == 0) return false;
+    return attendeeCount >= eventMaxAttendees!;
+  }
+
+  /// Check if a user has joined the event
+  bool hasJoined(String userId) => attendeeIds?.contains(userId) ?? false;
+
   // Calculate distance between two stories (in kilometers)
   static double calculateDistance(StoryModel story1, StoryModel story2) {
     if (!story1.hasLocation || !story2.hasLocation) return double.infinity;
@@ -460,15 +573,18 @@ class StoryModel {
     final dLon = _toRadians(lon2 - lon1);
 
     final a = _sin(dLat / 2) * _sin(dLat / 2) +
-        _cos(_toRadians(lat1)) * _cos(_toRadians(lat2)) *
-        _sin(dLon / 2) * _sin(dLon / 2);
+        _cos(_toRadians(lat1)) *
+            _cos(_toRadians(lat2)) *
+            _sin(dLon / 2) *
+            _sin(dLon / 2);
 
     final c = 2 * _atan2(_sqrt(a), _sqrt(1 - a));
     return R * c;
   }
 
   static double _toRadians(double degree) => degree * 3.141592653589793 / 180;
-  static double _sin(double x) => x - (x * x * x) / 6 + (x * x * x * x * x) / 120;
+  static double _sin(double x) =>
+      x - (x * x * x) / 6 + (x * x * x * x * x) / 120;
   static double _cos(double x) => 1 - (x * x) / 2 + (x * x * x * x) / 24;
   static double _sqrt(double x) {
     if (x == 0) return 0;
@@ -478,6 +594,7 @@ class StoryModel {
     }
     return guess;
   }
+
   static double _atan2(double y, double x) {
     if (x > 0) return _atan(y / x);
     if (x < 0 && y >= 0) return _atan(y / x) + 3.141592653589793;
@@ -486,5 +603,7 @@ class StoryModel {
     if (x == 0 && y < 0) return -3.141592653589793 / 2;
     return 0;
   }
-  static double _atan(double x) => x - (x * x * x) / 3 + (x * x * x * x * x) / 5;
+
+  static double _atan(double x) =>
+      x - (x * x * x) / 3 + (x * x * x * x * x) / 5;
 }

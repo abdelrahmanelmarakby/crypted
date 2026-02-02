@@ -178,9 +178,14 @@ class FCMService {
       // so we retrieve it directly after initialization.
       try {
         final token = await AwesomeNotificationsFcm().requestFirebaseAppToken();
-        _currentToken = token;
-        if (kDebugMode) {
-          developer.log('📱 FCM token captured: ${token.substring(0, 20)}...', name: 'FCMService');
+        if (token.isNotEmpty) {
+          _currentToken = token;
+          if (kDebugMode) {
+            final preview = token.length > 20 ? '${token.substring(0, 20)}...' : token;
+            developer.log('📱 FCM token captured: $preview', name: 'FCMService');
+          }
+        } else if (kDebugMode) {
+          developer.log('⚠️ FCM token is empty — push notifications may not work', name: 'FCMService');
         }
       } catch (e) {
         if (kDebugMode) {

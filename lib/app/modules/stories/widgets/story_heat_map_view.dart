@@ -7,8 +7,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:crypted_app/app/data/data_source/nearby_data_source.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/story_cluster.dart';
+import 'package:crypted_app/app/modules/nearby/controllers/nearby_controller.dart';
 import 'package:crypted_app/app/services/story_clustering_service.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -44,6 +46,10 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   // User's current location (fetched via Geolocator)
   LatLng? _userLocation;
 
+  // Nearby People integration
+  late NearbyController _nearbyController;
+  NearbyUser? _selectedNearbyUser;
+
   // Default to a neutral position; will be adjusted when clusters load
   static const LatLng _defaultCenter = LatLng(24.7136, 46.6753); // Riyadh
 
@@ -73,6 +79,18 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   @override
   void initState() {
     super.initState();
+
+    // Initialize or find NearbyController
+    if (!Get.isRegistered<NearbyController>()) {
+      Get.put(NearbyController());
+    }
+    _nearbyController = Get.find<NearbyController>();
+
+    // Listen to nearby users changes
+    ever(_nearbyController.nearbyUsers, (_) {
+      _buildMarkers();
+    });
+
     _initializeClusters();
     _fetchUserLocation();
   }
@@ -142,27 +160,88 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
     setState(() {});
   }
 
-  /// Build Google Maps markers from clusters — each marker is a user avatar circle.
+  /// Build Google Maps markers from clusters, events, and nearby people.
+  ///
+  /// Color coding:
+  /// - Green ring = Regular stories (image/video/text)
+  /// - Orange ring = Event stories
+  /// - Blue ring = Nearby discoverable people
   Future<void> _buildMarkers() async {
     final newMarkers = <Marker>{};
 
+    // 1) Story cluster markers (Green)
     for (final cluster in clusters) {
-      final markerId = MarkerId(cluster.id);
-      final position = LatLng(cluster.centerLatitude, cluster.centerLongitude);
+      // Separate events from regular stories within the cluster
+      final hasEvents =
+          cluster.stories.any((s) => s.storyType == StoryType.event);
+      final hasRegular =
+          cluster.stories.any((s) => s.storyType != StoryType.event);
 
-      // Generate a custom avatar marker bitmap
-      final icon = await _createAvatarMarker(cluster);
-
-      newMarkers.add(
-        Marker(
+      if (hasRegular) {
+        final regularStories = cluster.stories
+            .where((s) => s.storyType != StoryType.event)
+            .toList();
+        final markerId = MarkerId('story_${cluster.id}');
+        final position =
+            LatLng(cluster.centerLatitude, cluster.centerLongitude);
+        final text = regularStories.length > 1
+            ? '${regularStories.length}'
+            : (regularStories.first.user?.fullName ?? '?')[0].toUpperCase();
+        final icon = await _createColoredMarker(
+          text: text,
+          ringColor: const Color(0xFF31A354), // Green for stories
+          size: regularStories.length > 1 ? 80.0 : 64.0,
+        );
+        newMarkers.add(Marker(
           markerId: markerId,
           position: position,
           icon: icon,
           anchor: const Offset(0.5, 0.5),
           onTap: () => _onClusterTap(cluster),
-          zIndexInt: cluster.size, // Larger clusters on top
-        ),
+          zIndexInt: cluster.size,
+        ));
+      }
+
+      // Event markers within this cluster (Orange) — show individually
+      if (hasEvents) {
+        for (final event
+            in cluster.stories.where((s) => s.storyType == StoryType.event)) {
+          if (!event.hasLocation) continue;
+          final markerId = MarkerId('event_${event.id}');
+          final icon = await _createColoredMarker(
+            text: (event.eventTitle ?? 'E')[0].toUpperCase(),
+            ringColor: const Color(0xFFFF6B35), // Orange for events
+            size: 72.0,
+            isEvent: true,
+          );
+          newMarkers.add(Marker(
+            markerId: markerId,
+            position: LatLng(event.latitude!, event.longitude!),
+            icon: icon,
+            anchor: const Offset(0.5, 0.5),
+            onTap: () => _openStoryViewer(event),
+            zIndexInt: 100, // Events on top
+          ));
+        }
+      }
+    }
+
+    // 2) Nearby people markers (Blue)
+    for (final user in _nearbyController.nearbyUsers) {
+      final markerId = MarkerId('person_${user.uid}');
+      final icon = await _createColoredMarker(
+        text: (user.fullName ?? '?')[0].toUpperCase(),
+        ringColor: const Color(0xFF4A90D9), // Blue for people
+        size: 60.0,
       );
+      newMarkers.add(Marker(
+        markerId: markerId,
+        position: LatLng(user.latitude, user.longitude),
+        icon: icon,
+        anchor: const Offset(0.5, 0.5),
+        onTap: () => _onNearbyUserTap(user),
+        zIndexInt: 50,
+      ));
     }
 
     if (mounted) {
@@ -172,49 +251,47 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
     }
   }
 
-  /// Creates a circular avatar marker bitmap for a story cluster.
-  /// Single stories show the user's initial; clusters show the count.
-  Future<BitmapDescriptor> _createAvatarMarker(StoryCluster cluster) async {
-    final size = cluster.size > 1 ? 80.0 : 64.0;
+  /// Creates a circular marker bitmap with a colored ring.
+  ///
+  /// [text] — the character or number to display in the center.
+  /// [ringColor] — Green (stories), Orange (events), Blue (people).
+  /// [size] — marker diameter in pixels.
+  /// [isEvent] — if true, adds a small calendar icon indicator.
+  Future<BitmapDescriptor> _createColoredMarker({
+    required String text,
+    required Color ringColor,
+    double size = 64.0,
+    bool isEvent = false,
+  }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
-    // Outer glow ring (Snapchat-style colored ring)
-    final ringColor = _getClusterColor(cluster);
+    // Outer glow ring
     paint
-      ..color = ringColor.withValues(alpha: 0.3)
+      ..color = ringColor.withValues(alpha: 0.25)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(size / 2, size / 2), size / 2, paint);
 
-    // Main circle background
-    paint
-      ..color = ringColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 4, paint);
-
-    // Inner white circle
-    paint.color = Colors.white;
-    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 7, paint);
-
-    // Center content: cluster count or user initial
+    // Solid ring
     paint.color = ringColor;
-    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 10, paint);
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 3, paint);
 
-    // Draw text (count or initial)
-    final text = cluster.size > 1
-        ? '${cluster.size}'
-        : (cluster.previewStories.isNotEmpty
-            ? (cluster.previewStories.first.user?.fullName ?? '?')[0]
-                .toUpperCase()
-            : '?');
+    // Inner white ring
+    paint.color = Colors.white;
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 6, paint);
 
+    // Center circle (same as ring color, slightly darker)
+    paint.color = ringColor;
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2 - 9, paint);
+
+    // Text
     final textPainter = TextPainter(
       text: TextSpan(
         text: text,
         style: TextStyle(
           color: Colors.white,
-          fontSize: cluster.size > 1 ? 20 : 22,
+          fontSize: size > 70 ? 20 : 18,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -300,19 +377,368 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
         // Always show the Google Map — even when no stories have location
         _buildSnapMap(),
 
+        // Legend bar (top)
+        _buildLegendBar(),
+
+        // Discoverability toggle (below legend)
+        _buildDiscoverabilityToggle(),
+
         // Empty state overlay when no stories at all
-        if (widget.stories.isEmpty) _buildEmptyState(),
+        if (widget.stories.isEmpty && _nearbyController.nearbyUsers.isEmpty)
+          _buildEmptyState(),
 
         // Non-geolocated stories → bottom horizontal card tray
-        if (_storiesWithoutLocation.isNotEmpty && selectedCluster == null)
+        if (_storiesWithoutLocation.isNotEmpty &&
+            selectedCluster == null &&
+            _selectedNearbyUser == null)
           _buildBottomStoryTray(),
 
         // Selected cluster preview sheet (Snapchat-style bottom card)
         if (selectedCluster != null) _buildClusterPreview(),
 
+        // Selected nearby user profile sheet
+        if (_selectedNearbyUser != null) _buildNearbyUserSheet(),
+
         // Create Story FAB
         _buildCreateStoryButton(),
       ],
+    );
+  }
+
+  // ── Legend Bar ────────────────────────────────────────────────
+
+  Widget _buildLegendBar() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1d1d2b).withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildLegendItem(
+              color: const Color(0xFF31A354),
+              label: 'Stories',
+              count: widget.stories
+                  .where((s) => s.storyType != StoryType.event)
+                  .length,
+            ),
+            _buildLegendDivider(),
+            _buildLegendItem(
+              color: const Color(0xFFFF6B35),
+              label: 'Events',
+              count: widget.stories
+                  .where((s) => s.storyType == StoryType.event)
+                  .length,
+            ),
+            _buildLegendDivider(),
+            Obx(() => _buildLegendItem(
+                  color: const Color(0xFF4A90D9),
+                  label: 'People',
+                  count: _nearbyController.nearbyUsers.length,
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendItem({
+    required Color color,
+    required String label,
+    required int count,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.5),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$label ($count)',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendDivider() {
+    return Container(
+      width: 1,
+      height: 16,
+      color: Colors.white.withValues(alpha: 0.15),
+    );
+  }
+
+  // ── Discoverability Toggle ───────────────────────────────────
+
+  Widget _buildDiscoverabilityToggle() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 54,
+      right: 16,
+      child: Obx(() {
+        final isOn = _nearbyController.isDiscoverable.value;
+        return GestureDetector(
+          onTap: () => _nearbyController.toggleDiscoverability(!isOn),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isOn
+                  ? const Color(0xFF4A90D9).withValues(alpha: 0.9)
+                  : const Color(0xFF1d1d2b).withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isOn
+                    ? const Color(0xFF4A90D9)
+                    : Colors.white.withValues(alpha: 0.15),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isOn ? Icons.visibility : Icons.visibility_off,
+                  size: 15,
+                  color: isOn ? Colors.white : Colors.white54,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isOn ? 'Visible' : 'Hidden',
+                  style: TextStyle(
+                    color: isOn ? Colors.white : Colors.white54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  // ── Nearby User Profile Sheet ────────────────────────────────
+
+  Widget _buildNearbyUserSheet() {
+    final user = _selectedNearbyUser!;
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: TweenAnimationBuilder(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        tween: Tween<double>(begin: 300, end: 0),
+        builder: (context, double offset, child) {
+          return Transform.translate(
+            offset: Offset(0, offset),
+            child: child,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1d1d2b),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 30,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Avatar with blue ring
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF4A90D9),
+                      width: 2.5,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 36,
+                    backgroundColor:
+                        const Color(0xFF4A90D9).withValues(alpha: 0.2),
+                    backgroundImage: user.imageUrl != null
+                        ? NetworkImage(user.imageUrl!)
+                        : null,
+                    child: user.imageUrl == null
+                        ? Text(
+                            (user.fullName ?? '?')[0].toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 26,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Name
+                Text(
+                  user.fullName ?? 'Someone nearby',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Distance + location
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.near_me,
+                        size: 14, color: Color(0xFF4A90D9)),
+                    const SizedBox(width: 4),
+                    Text(
+                      user.distanceText,
+                      style: const TextStyle(
+                        color: Color(0xFF4A90D9),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (user.city != null) ...[
+                      Text(
+                        '  \u2022  ${user.locationText}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                // Bio
+                if (user.bio != null && user.bio!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    user.bio!,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                // Action buttons
+                Row(
+                  children: [
+                    // Say Hi button
+                    Expanded(
+                      child: SizedBox(
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() => _selectedNearbyUser = null);
+                            Get.toNamed('/chat', arguments: {
+                              'userId': user.uid,
+                              'userName': user.fullName,
+                              'userImage': user.imageUrl,
+                            });
+                          },
+                          icon: const Icon(Icons.waving_hand, size: 18),
+                          label: const Text('Say Hi',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 15)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4A90D9),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Dismiss
+                    SizedBox(
+                      height: 46,
+                      width: 46,
+                      child: IconButton(
+                        onPressed: () =>
+                            setState(() => _selectedNearbyUser = null),
+                        icon: const Icon(Icons.close,
+                            color: Colors.white54, size: 22),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.08),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -415,6 +841,43 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
             Icons.play_circle_fill_rounded,
             color: Colors.white.withValues(alpha: 0.7),
             size: 48,
+          ),
+        ),
+      );
+    }
+
+    // Event story
+    if (story.storyType == StoryType.event) {
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A1A2E), Color(0xFF0F3460)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.event, color: Colors.white70, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                story.eventTitle ?? 'Event',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${story.attendeeCount} going',
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ],
           ),
         ),
       );
@@ -751,8 +1214,7 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
                       if (story.user?.imageUrl != null)
                         CircleAvatar(
                           radius: 12,
-                          backgroundImage:
-                              NetworkImage(story.user!.imageUrl!),
+                          backgroundImage: NetworkImage(story.user!.imageUrl!),
                         ),
                       const SizedBox(height: 4),
                       Text(
@@ -780,7 +1242,8 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
 
   Widget _buildCreateStoryButton() {
     // Push FAB above the bottom tray when it's visible
-    final showTray = _storiesWithoutLocation.isNotEmpty && selectedCluster == null;
+    final showTray =
+        _storiesWithoutLocation.isNotEmpty && selectedCluster == null;
     return Positioned(
       right: 20,
       bottom: showTray ? 236 : 100,
@@ -814,10 +1277,18 @@ class _StoryHeatMapViewState extends State<StoryHeatMapView> {
   // ── Helpers ─────────────────────────────────────────────────
 
   Color _getClusterColor(StoryCluster cluster) {
-    if (cluster.size >= 10) return Colors.red;
-    if (cluster.size >= 5) return Colors.orange;
-    if (cluster.size >= 3) return Colors.amber;
-    return ColorsManager.primary;
+    // Check if cluster contains events
+    final hasEvents =
+        cluster.stories.any((s) => s.storyType == StoryType.event);
+    if (hasEvents) return const Color(0xFFFF6B35); // Orange
+    return const Color(0xFF31A354); // Green for regular stories
+  }
+
+  void _onNearbyUserTap(NearbyUser user) {
+    setState(() {
+      selectedCluster = null;
+      _selectedNearbyUser = user;
+    });
   }
 
   void _onClusterTap(StoryCluster cluster) {

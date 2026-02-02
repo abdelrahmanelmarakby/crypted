@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypted_app/app/core/constants/firebase_collections.dart';
 import 'package:crypted_app/app/core/exceptions/app_exceptions.dart';
 import 'package:crypted_app/app/core/pagination/message_pagination_service.dart';
 import 'package:crypted_app/app/core/services/error_handler_service.dart';
@@ -16,6 +18,7 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
+import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:get/get.dart';
 
 /// Message Controller - Handles all message CRUD operations
@@ -76,6 +79,9 @@ class MessageController extends GetxController {
   final _logger = LoggerService.instance;
   final _errorHandler = ErrorHandlerService.instance;
 
+  // Disappearing messages
+  Duration? _disappearingDuration;
+
   // Getters
   SocialMediaUser? get currentUser => UserService.currentUser.value;
   bool get isReplying => replyToMessage.value != null;
@@ -87,11 +93,13 @@ class MessageController extends GetxController {
   /// Called when upload completes but before Firestore stream delivers the message
   void registerPendingUpload(String uploadId, String actualMessageId) {
     _pendingUploads[uploadId] = actualMessageId;
-    _logger.debug('Registered pending upload', context: 'MessageController', data: {
-      'uploadId': uploadId,
-      'actualMessageId': actualMessageId,
-      'pendingCount': _pendingUploads.length,
-    });
+    _logger.debug('Registered pending upload',
+        context: 'MessageController',
+        data: {
+          'uploadId': uploadId,
+          'actualMessageId': actualMessageId,
+          'pendingCount': _pendingUploads.length,
+        });
   }
 
   /// Clear a pending upload (called when Firestore delivers the message)
@@ -103,11 +111,13 @@ class MessageController extends GetxController {
   /// Called after message is added locally but before Firestore confirms
   void registerPendingSentMessage(String tempId, String actualMessageId) {
     _pendingSentMessages[tempId] = actualMessageId;
-    _logger.debug('Registered pending sent message', context: 'MessageController', data: {
-      'tempId': tempId,
-      'actualMessageId': actualMessageId,
-      'pendingCount': _pendingSentMessages.length,
-    });
+    _logger.debug('Registered pending sent message',
+        context: 'MessageController',
+        data: {
+          'tempId': tempId,
+          'actualMessageId': actualMessageId,
+          'pendingCount': _pendingSentMessages.length,
+        });
   }
 
   /// Clear a pending sent message (called when Firestore delivers the message)
@@ -121,7 +131,8 @@ class MessageController extends GetxController {
     if (index != -1) {
       messages.removeAt(index);
       messages.refresh();
-      _logger.debug('Removed local message', context: 'MessageController', data: {
+      _logger
+          .debug('Removed local message', context: 'MessageController', data: {
         'tempId': tempId,
       });
     }
@@ -133,14 +144,55 @@ class MessageController extends GetxController {
   void onInit() {
     super.onInit();
     _paginationService = MessagePaginationService();
+    _loadDisappearingDuration();
     _initializePaginatedMessages();
-    _logger.info('MessageController initialized', context: 'MessageController', data: {
-      'roomId': roomId,
-      'memberCount': members.length,
-    });
+    _logger.info('MessageController initialized',
+        context: 'MessageController',
+        data: {
+          'roomId': roomId,
+          'memberCount': members.length,
+        });
   }
 
   /// Initialize paginated message stream
+  /// Load the room's disappearing messages duration from Firestore
+  Future<void> _loadDisappearingDuration() async {
+    try {
+      final roomDoc = await FirebaseFirestore.instance
+          .collection(FirebaseCollections.chats)
+          .doc(roomId)
+          .get();
+      if (roomDoc.exists) {
+        final data = roomDoc.data();
+        final durationStr = data?['disappearingDuration'] as String?;
+        final parsed = DisappearingDuration.fromString(durationStr);
+        _disappearingDuration = parsed.duration;
+        if (_disappearingDuration != null) {
+          _logger.debug('Disappearing messages active',
+              context: 'MessageController',
+              data: {
+                'duration': parsed.displayName,
+              });
+        }
+      }
+    } catch (e) {
+      _logger.error('Failed to load disappearing duration: $e',
+          context: 'MessageController');
+    }
+  }
+
+  /// Filter out messages that have expired based on the room's disappearing duration
+  List<Message> _filterExpiredMessages(List<Message> msgs) {
+    if (_disappearingDuration == null) return msgs;
+    final now = DateTime.now();
+    return msgs.where((msg) {
+      // Don't filter uploading messages or very recent messages
+      if (msg is UploadingMessage) return true;
+      final expiresAt = msg.timestamp.add(_disappearingDuration!);
+      return expiresAt.isAfter(now);
+    }).toList();
+  }
+
   void _initializePaginatedMessages() {
     isLoadingMessages.value = true;
 
@@ -149,9 +201,8 @@ class MessageController extends GetxController {
         .listen(
       (paginatedResult) {
         // Get all local UploadingMessages
-        final localUploadingMessages = messages
-            .whereType<UploadingMessage>()
-            .toList();
+        final localUploadingMessages =
+            messages.whereType<UploadingMessage>().toList();
 
         // Get all local pending sent messages (messages with temp IDs starting with 'pending_')
         final localPendingSentMessages = messages
@@ -165,7 +216,7 @@ class MessageController extends GetxController {
 
         if (!hasPendingItems) {
           // No local uploads or pending messages - use Firestore messages directly
-          messages.value = paginatedResult.messages;
+          messages.value = _filterExpiredMessages(paginatedResult.messages);
         } else {
           // SMART MERGE: Handle upload/sent -> Firestore transition
           //
@@ -192,11 +243,13 @@ class MessageController extends GetxController {
               tempIdsToRemove.add(tempId);
               _clearPendingUpload(tempId);
               _clearPendingSentMessage(tempId);
-              _logger.debug('Firestore message arrived, replacing local', context: 'MessageController', data: {
-                'tempId': tempId,
-                'actualMessageId': firestoreMsg.id,
-                'messageType': firestoreMsg.runtimeType.toString(),
-              });
+              _logger.debug('Firestore message arrived, replacing local',
+                  context: 'MessageController',
+                  data: {
+                    'tempId': tempId,
+                    'actualMessageId': firestoreMsg.id,
+                    'messageType': firestoreMsg.runtimeType.toString(),
+                  });
             }
           }
 
@@ -231,27 +284,33 @@ class MessageController extends GetxController {
           // Sort by timestamp descending (newest first)
           mergedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-          messages.value = mergedMessages;
-          _logger.debug('Messages merged with smart handling', context: 'MessageController', data: {
-            'firestoreCount': paginatedResult.messages.length,
-            'uploadsKept': uploadsToKeep.length,
-            'pendingSentKept': pendingSentToKeep.length,
-            'localReplaced': tempIdsToRemove.length,
-            'totalCount': mergedMessages.length,
-          });
+          messages.value = _filterExpiredMessages(mergedMessages);
+          _logger.debug('Messages merged with smart handling',
+              context: 'MessageController',
+              data: {
+                'firestoreCount': paginatedResult.messages.length,
+                'uploadsKept': uploadsToKeep.length,
+                'pendingSentKept': pendingSentToKeep.length,
+                'localReplaced': tempIdsToRemove.length,
+                'totalCount': mergedMessages.length,
+              });
         }
 
         paginationState.value = paginatedResult.state;
         isLoadingMessages.value = false;
-        _logger.debug('Initial messages loaded', context: 'MessageController', data: {
-          'count': paginatedResult.messages.length,
-          'hasMore': paginatedResult.state.hasMoreMessages,
-        });
+        _logger.debug('Initial messages loaded',
+            context: 'MessageController',
+            data: {
+              'count': paginatedResult.messages.length,
+              'hasMore': paginatedResult.state.hasMoreMessages,
+            });
       },
       onError: (error) {
-        _logger.error('Failed to load messages', context: 'MessageController', data: {
-          'error': error.toString(),
-        });
+        _logger.error('Failed to load messages',
+            context: 'MessageController',
+            data: {
+              'error': error.toString(),
+            });
         isLoadingMessages.value = false;
         _errorHandler.handleError(
           error,
@@ -280,10 +339,11 @@ class MessageController extends GetxController {
       );
 
       if (result.messages.isNotEmpty) {
-        // Append older messages to the end
-        messages.addAll(result.messages);
+        // Append older messages to the end (filtering expired)
+        messages.addAll(_filterExpiredMessages(result.messages));
         paginationState.value = result.state;
-        _logger.debug('More messages loaded', context: 'MessageController', data: {
+        _logger
+            .debug('More messages loaded', context: 'MessageController', data: {
           'loaded': result.messages.length,
           'totalCount': messages.length,
           'hasMore': result.state.hasMoreMessages,
@@ -381,10 +441,12 @@ class MessageController extends GetxController {
           senderId: replyingTo!.senderId,
           previewText: replyToText.value,
         );
-        _logger.debug('Reply context attached', context: 'MessageController', data: {
-          'replyToMessageId': replyingTo!.id,
-          'previewText': replyToText.value,
-        });
+        _logger.debug('Reply context attached',
+            context: 'MessageController',
+            data: {
+              'replyToMessageId': replyingTo!.id,
+              'previewText': replyToText.value,
+            });
       }
 
       final textMessage = TextMessage(
@@ -398,7 +460,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(textMessage);
 
-      _logger.info('Text message sent successfully', context: 'MessageController');
+      _logger.info('Text message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -422,7 +485,8 @@ class MessageController extends GetxController {
     int? height,
   }) async {
     if (imageUrl.isEmpty) {
-      _errorHandler.handleValidationError('imageUrl', 'Image URL cannot be empty');
+      _errorHandler.handleValidationError(
+          'imageUrl', 'Image URL cannot be empty');
       return false;
     }
 
@@ -444,7 +508,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(imageMessage);
 
-      _logger.info('Image message sent successfully', context: 'MessageController');
+      _logger.info('Image message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -468,7 +533,8 @@ class MessageController extends GetxController {
     int? duration,
   }) async {
     if (videoUrl.isEmpty) {
-      _errorHandler.handleValidationError('videoUrl', 'Video URL cannot be empty');
+      _errorHandler.handleValidationError(
+          'videoUrl', 'Video URL cannot be empty');
       return false;
     }
 
@@ -486,12 +552,12 @@ class MessageController extends GetxController {
         senderId: currentUser!.uid!,
         timestamp: DateTime.now(),
         video: videoUrl,
-       
       );
 
       await _sendMessage(videoMessage);
 
-      _logger.info('Video message sent successfully', context: 'MessageController');
+      _logger.info('Video message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -513,7 +579,8 @@ class MessageController extends GetxController {
     required int duration,
   }) async {
     if (audioUrl.isEmpty) {
-      _errorHandler.handleValidationError('audioUrl', 'Audio URL cannot be empty');
+      _errorHandler.handleValidationError(
+          'audioUrl', 'Audio URL cannot be empty');
       return false;
     }
 
@@ -541,7 +608,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(audioMessage);
 
-      _logger.info('Audio message sent successfully', context: 'MessageController');
+      _logger.info('Audio message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -563,7 +631,8 @@ class MessageController extends GetxController {
     required String fileName,
   }) async {
     if (fileUrl.isEmpty) {
-      _errorHandler.handleValidationError('fileUrl', 'File URL cannot be empty');
+      _errorHandler.handleValidationError(
+          'fileUrl', 'File URL cannot be empty');
       return false;
     }
 
@@ -585,7 +654,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(fileMessage);
 
-      _logger.info('File message sent successfully', context: 'MessageController');
+      _logger.info('File message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -606,7 +676,8 @@ class MessageController extends GetxController {
     required double latitude,
     required double longitude,
   }) async {
-    _logger.debug('Sending location message', context: 'MessageController', data: {
+    _logger
+        .debug('Sending location message', context: 'MessageController', data: {
       'latitude': latitude,
       'longitude': longitude,
     });
@@ -625,7 +696,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(locationMessage);
 
-      _logger.info('Location message sent successfully', context: 'MessageController');
+      _logger.info('Location message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -647,11 +719,13 @@ class MessageController extends GetxController {
     required String contactPhone,
   }) async {
     if (contactName.isEmpty || contactPhone.isEmpty) {
-      _errorHandler.handleValidationError('contact', 'Contact information incomplete');
+      _errorHandler.handleValidationError(
+          'contact', 'Contact information incomplete');
       return false;
     }
 
-    _logger.debug('Sending contact message', context: 'MessageController', data: {
+    _logger
+        .debug('Sending contact message', context: 'MessageController', data: {
       'contactName': contactName,
     });
 
@@ -669,7 +743,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(contactMessage);
 
-      _logger.info('Contact message sent successfully', context: 'MessageController');
+      _logger.info('Contact message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -691,12 +766,14 @@ class MessageController extends GetxController {
     required List<String> options,
   }) async {
     if (question.trim().isEmpty) {
-      _errorHandler.handleValidationError('question', 'Poll question cannot be empty');
+      _errorHandler.handleValidationError(
+          'question', 'Poll question cannot be empty');
       return false;
     }
 
     if (options.length < 2) {
-      _errorHandler.handleValidationError('options', 'Poll must have at least 2 options');
+      _errorHandler.handleValidationError(
+          'options', 'Poll must have at least 2 options');
       return false;
     }
 
@@ -720,7 +797,8 @@ class MessageController extends GetxController {
 
       await _sendMessage(pollMessage);
 
-      _logger.info('Poll message sent successfully', context: 'MessageController');
+      _logger.info('Poll message sent successfully',
+          context: 'MessageController');
 
       return true;
     } catch (e, stackTrace) {
@@ -765,14 +843,17 @@ class MessageController extends GetxController {
       // Register mapping for deduplication when Firestore stream delivers
       registerPendingSentMessage(tempId, actualMessageId);
 
-      _logger.debug('Message sent with optimistic update', context: 'MessageController', data: {
-        'tempId': tempId,
-        'actualId': actualMessageId,
-      });
+      _logger.debug('Message sent with optimistic update',
+          context: 'MessageController',
+          data: {
+            'tempId': tempId,
+            'actualId': actualMessageId,
+          });
     } catch (e) {
       // ROLLBACK: Remove the optimistic message on failure
       removeLocalMessage(tempId);
-      _logger.logError('Message send failed, rolled back optimistic update', error: e);
+      _logger.logError('Message send failed, rolled back optimistic update',
+          error: e);
       rethrow;
     }
 
@@ -791,7 +872,8 @@ class MessageController extends GetxController {
     try {
       await chatDataSource.deletePrivateMessage(messageId, roomId);
 
-      _logger.info('Message deleted successfully', context: 'MessageController');
+      _logger.info('Message deleted successfully',
+          context: 'MessageController');
       _errorHandler.showSuccess('رسالة محذوفة / Message deleted');
 
       return true;
@@ -836,7 +918,8 @@ class MessageController extends GetxController {
 
     try {
       await chatDataSource.toggleFavoriteMessage(roomId, messageId);
-      _logger.info('Message favorited successfully', context: 'MessageController');
+      _logger.info('Message favorited successfully',
+          context: 'MessageController');
       _errorHandler.showSuccess('رسالة مفضلة / Message favorited');
       return true;
     } catch (e, stackTrace) {
@@ -853,7 +936,8 @@ class MessageController extends GetxController {
   /// Report message
   Future<bool> reportMessage(String messageId, String reason) async {
     if (reason.trim().isEmpty) {
-      _errorHandler.handleValidationError('reason', 'Please provide a reason for reporting');
+      _errorHandler.handleValidationError(
+          'reason', 'Please provide a reason for reporting');
       return false;
     }
 
@@ -871,7 +955,8 @@ class MessageController extends GetxController {
         reason: reason,
       );
 
-      _logger.info('Message reported successfully', context: 'MessageController');
+      _logger.info('Message reported successfully',
+          context: 'MessageController');
       _errorHandler.showSuccess('تم الإبلاغ عن الرسالة / Message reported');
 
       return true;

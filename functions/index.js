@@ -2046,4 +2046,415 @@ exports.onUserDeleted = functions
     }
   });
 
-functions.logger.log('✅ Phase 1, 2 & 3 Fully Optimized v2 Firebase Functions loaded successfully');
+// ═══════════════════════════════════════════════════════════════
+// PHASE 7: Scheduled Cleanup Functions
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * 7.1: Enforce disappearing messages — runs every 5 minutes.
+ * 
+ * Scans all chat rooms for messages that have a `disappearAfter` field
+ * (duration in seconds) and deletes them once their lifetime has elapsed.
+ * 
+ * Expected message fields:
+ *   - disappearAfter: number (seconds after send time to auto-delete)
+ *   - timestamp: Firestore Timestamp (when the message was sent)
+ */
+exports.enforceDisappearingMessages = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    region: 'us-central1',
+    timeoutSeconds: 120,
+    memory: '256MiB',
+  },
+  async (event) => {
+    // Map enum names to milliseconds
+    const DURATION_MS = {
+      'hours24': 24 * 60 * 60 * 1000,
+      'days7': 7 * 24 * 60 * 60 * 1000,
+      'days30': 30 * 24 * 60 * 60 * 1000,
+      'days90': 90 * 24 * 60 * 60 * 1000,
+    };
+
+    const nowMs = Date.now();
+    let totalDeleted = 0;
+    let totalErrors = 0;
+
+    try {
+      // Get all chat rooms that have disappearing messages enabled
+      const roomsSnapshot = await db.collection('chats')
+        .where('disappearingDuration', 'in', Object.keys(DURATION_MS))
+        .get();
+
+      for (const roomDoc of roomsSnapshot.docs) {
+        try {
+          const roomData = roomDoc.data();
+          const durationMs = DURATION_MS[roomData.disappearingDuration];
+          if (!durationMs) continue;
+
+          const cutoff = new Date(nowMs - durationMs);
+          const cutoffTimestamp = admin.firestore.Timestamp.fromDate(cutoff);
+
+          // Query messages older than the cutoff
+          const messagesSnapshot = await roomDoc.ref
+            .collection('chat')
+            .where('timestamp', '<', cutoffTimestamp)
+            .limit(500)
+            .get();
+
+          if (messagesSnapshot.empty) continue;
+
+          const batch = db.batch();
+          let batchCount = 0;
+
+          for (const messageDoc of messagesSnapshot.docs) {
+            batch.delete(messageDoc.ref);
+            batchCount++;
+
+            // Firestore batch limit is 500
+            if (batchCount >= 499) {
+              await batch.commit();
+              totalDeleted += batchCount;
+              batchCount = 0;
+            }
+          }
+
+          if (batchCount > 0) {
+            await batch.commit();
+            totalDeleted += batchCount;
+          }
+        } catch (roomError) {
+          totalErrors++;
+          functions.logger.warn(
+            `Error processing room ${roomDoc.id}:`,
+            roomError
+          );
+        }
+      }
+
+      functions.logger.info(
+        `enforceDisappearingMessages: deleted ${totalDeleted} messages from ${roomsSnapshot.size} rooms, ${totalErrors} errors`
+      );
+    } catch (error) {
+      functions.logger.error('enforceDisappearingMessages failed:', error);
+    }
+  }
+);
+
+/**
+ * 7.2: Cleanup expired stories — runs every hour.
+ * 
+ * Stories expire 24 hours after creation. This function:
+ *   1. Queries stories where expiresAt < now
+ *   2. Deletes associated media from Firebase Storage
+ *   3. Deletes the Firestore document
+ */
+exports.cleanupExpiredStories = onSchedule(
+  {
+    schedule: 'every 1 hours',
+    region: 'us-central1',
+    timeoutSeconds: 120,
+    memory: '256MiB',
+  },
+  async (event) => {
+    const now = admin.firestore.Timestamp.now();
+    let totalDeleted = 0;
+    let totalErrors = 0;
+
+    try {
+      const expiredStories = await db
+        .collection('Stories')
+        .where('expiresAt', '<', now)
+        .get();
+
+      if (expiredStories.empty) {
+        functions.logger.info('cleanupExpiredStories: no expired stories found');
+        return;
+      }
+
+      const batch = db.batch();
+      const storageDeletes = [];
+
+      for (const storyDoc of expiredStories.docs) {
+        const data = storyDoc.data();
+
+        // Delete associated media from Storage
+        if (data.mediaUrl) {
+          try {
+            const url = new URL(data.mediaUrl);
+            // Extract storage path from download URL
+            const pathMatch = url.pathname.match(/\/o\/(.+?)(\?|$)/);
+            if (pathMatch) {
+              const storagePath = decodeURIComponent(pathMatch[1]);
+              storageDeletes.push(
+                admin
+                  .storage()
+                  .bucket()
+                  .file(storagePath)
+                  .delete()
+                  .catch((e) => {
+                    // File may already be deleted — not critical
+                    functions.logger.warn(
+                      `Storage delete failed for ${storagePath}:`,
+                      e.message
+                    );
+                  })
+              );
+            }
+          } catch (urlError) {
+            // Invalid URL — skip storage deletion
+          }
+        }
+
+        // Delete subcollections (replies, reactions)
+        const subcollections = ['replies', 'reactions'];
+        for (const sub of subcollections) {
+          const subDocs = await storyDoc.ref.collection(sub).listDocuments();
+          for (const subDoc of subDocs) {
+            batch.delete(subDoc);
+          }
+        }
+
+        batch.delete(storyDoc.ref);
+        totalDeleted++;
+      }
+
+      // Execute all deletes
+      await Promise.all([batch.commit(), ...storageDeletes]);
+
+      functions.logger.info(
+        `cleanupExpiredStories: deleted ${totalDeleted} stories, ${totalErrors} errors`
+      );
+    } catch (error) {
+      functions.logger.error('cleanupExpiredStories failed:', error);
+    }
+  }
+);
+
+/**
+ * 7.3: Cleanup stale calls — runs every 15 minutes.
+ * 
+ * Marks calls as "missed" if they've been in "ringing" or "calling" status
+ * for more than 2 minutes (likely a crash or network issue).
+ */
+exports.cleanupStaleCalls = onSchedule(
+  {
+    schedule: 'every 15 minutes',
+    region: 'us-central1',
+    timeoutSeconds: 60,
+    memory: '128MiB',
+  },
+  async (event) => {
+    const twoMinutesAgo = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - 2 * 60 * 1000)
+    );
+    let totalCleaned = 0;
+
+    try {
+      // Find calls stuck in "ringing" status
+      const staleCalls = await db
+        .collection('Calls')
+        .where('status', 'in', ['ringing', 'calling'])
+        .where('createdAt', '<', twoMinutesAgo)
+        .get();
+
+      if (staleCalls.empty) {
+        functions.logger.info('cleanupStaleCalls: no stale calls found');
+        return;
+      }
+
+      const batch = db.batch();
+
+      for (const callDoc of staleCalls.docs) {
+        batch.update(callDoc.ref, {
+          status: 'missed',
+          endedAt: admin.firestore.FieldValue.serverTimestamp(),
+          cleanedUp: true,
+        });
+        totalCleaned++;
+      }
+
+      await batch.commit();
+
+      functions.logger.info(
+        `cleanupStaleCalls: cleaned up ${totalCleaned} stale calls`
+      );
+    } catch (error) {
+      functions.logger.error('cleanupStaleCalls failed:', error);
+    }
+  }
+);
+
+/**
+ * 7.4: Cleanup stale FCM tokens — runs daily at 3:00 AM UTC.
+ * 
+ * Removes FCM tokens that haven't been refreshed in 60 days.
+ * Stale tokens cause delivery failures and slow down notification sends.
+ */
+exports.cleanupStaleFCMTokens = onSchedule(
+  {
+    schedule: '0 3 * * *',
+    region: 'us-central1',
+    timeoutSeconds: 300,
+    memory: '256MiB',
+  },
+  async (event) => {
+    const sixtyDaysAgo = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
+    );
+    let totalDeleted = 0;
+    let totalInvalid = 0;
+
+    try {
+      // 1. Delete tokens with stale lastRefreshed timestamp
+      const staleTokens = await db
+        .collection('fcmTokens')
+        .where('lastRefreshed', '<', sixtyDaysAgo)
+        .get();
+
+      const batch = db.batch();
+
+      for (const tokenDoc of staleTokens.docs) {
+        batch.delete(tokenDoc.ref);
+        totalDeleted++;
+      }
+
+      if (totalDeleted > 0) {
+        await batch.commit();
+      }
+
+      // 2. Validate remaining tokens by sending a dry-run message
+      const allTokens = await db
+        .collection('fcmTokens')
+        .orderBy('lastRefreshed', 'desc')
+        .limit(1000) // Process up to 1000 tokens per run
+        .get();
+
+      const invalidTokenIds = [];
+
+      // Check tokens in batches of 500 (FCM sendEach limit)
+      const tokenBatches = [];
+      for (let i = 0; i < allTokens.docs.length; i += 500) {
+        tokenBatches.push(allTokens.docs.slice(i, i + 500));
+      }
+
+      for (const tokenBatch of tokenBatches) {
+        const messages = tokenBatch.map((doc) => ({
+          token: doc.data().token || doc.id,
+          data: { dryRun: 'true' },
+          android: { priority: 'normal' },
+        }));
+
+        try {
+          const response = await messaging.sendEach(messages, true); // dryRun=true
+
+          response.responses.forEach((resp, idx) => {
+            if (
+              resp.error &&
+              (resp.error.code === 'messaging/registration-token-not-registered' ||
+                resp.error.code === 'messaging/invalid-registration-token')
+            ) {
+              invalidTokenIds.push(tokenBatch[idx].ref);
+              totalInvalid++;
+            }
+          });
+        } catch (batchError) {
+          functions.logger.warn('FCM dry-run batch error:', batchError.message);
+        }
+      }
+
+      // Delete invalid tokens
+      if (invalidTokenIds.length > 0) {
+        const cleanupBatch = db.batch();
+        for (const ref of invalidTokenIds) {
+          cleanupBatch.delete(ref);
+        }
+        await cleanupBatch.commit();
+      }
+
+      functions.logger.info(
+        `cleanupStaleFCMTokens: deleted ${totalDeleted} stale + ${totalInvalid} invalid tokens`
+      );
+    } catch (error) {
+      functions.logger.error('cleanupStaleFCMTokens failed:', error);
+    }
+  }
+);
+
+// ──────────────────────────────────────────────
+// Phase 8.3: Unread Count Management
+// ──────────────────────────────────────────────
+
+/**
+ * Increment unreadCounts for all members (except sender) when a new message is created.
+ * Stores a per-user map on the chat room: { unreadCounts: { userId: number } }
+ */
+exports.incrementUnreadCounts = onDocumentCreated(
+  {
+    document: 'chats/{roomId}/chat/{messageId}',
+    region: LOCATION,
+  },
+  async (event) => {
+    try {
+      const messageData = event.data?.data();
+      if (!messageData) return;
+
+      const roomId = event.params.roomId;
+      const senderId = messageData.senderId || messageData.sender;
+      if (!senderId) return;
+
+      const roomRef = db.collection('chats').doc(roomId);
+      const roomSnap = await roomRef.get();
+      if (!roomSnap.exists) return;
+
+      const roomData = roomSnap.data();
+      const membersIds = roomData.membersIds || [];
+
+      // Build increment update for all members except the sender
+      const update = {};
+      for (const memberId of membersIds) {
+        if (memberId !== senderId) {
+          update[`unreadCounts.${memberId}`] = admin.firestore.FieldValue.increment(1);
+        }
+      }
+
+      if (Object.keys(update).length > 0) {
+        await roomRef.update(update);
+      }
+    } catch (error) {
+      functions.logger.error('incrementUnreadCounts failed:', error);
+    }
+  }
+);
+
+/**
+ * Reset unread count for a specific user when they open/read a chat.
+ * Called from the client via onCall.
+ */
+exports.resetUnreadCount = onCall(
+  { region: LOCATION },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+
+    const roomId = request.data?.roomId;
+    if (!roomId || typeof roomId !== 'string') {
+      throw new HttpsError('invalid-argument', 'roomId is required');
+    }
+
+    try {
+      const roomRef = db.collection('chats').doc(roomId);
+      await roomRef.update({
+        [`unreadCounts.${uid}`]: 0,
+      });
+      return { success: true };
+    } catch (error) {
+      functions.logger.error('resetUnreadCount failed:', error);
+      throw new HttpsError('internal', 'Failed to reset unread count');
+    }
+  }
+);
+
+functions.logger.log('✅ Phase 1, 2, 3, 7 & 8 Fully Optimized v2 Firebase Functions loaded successfully');

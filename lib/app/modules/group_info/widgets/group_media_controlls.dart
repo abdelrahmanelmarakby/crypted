@@ -15,7 +15,6 @@ import 'package:video_player/video_player.dart';
 
 import 'package:crypted_app/core/themes/color_manager.dart';
 
-
 /// Example usage:
 /// onPreview: () => _previewMedia(context, mediaType, data),
 /// onOpenExternally: () => _openExternally(context, data['url'] ?? data['fileUrl'] ?? '')
@@ -36,7 +35,8 @@ class MediaPreview {
     try {
       if (uri.scheme == 'http' || uri.scheme == 'https') {
         // try to open directly (external browser / native handler)
-        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        final launched =
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
         if (!launched) {
           // fallback: download then open via OpenFile
           final local = await _downloadToTemp(url);
@@ -50,7 +50,8 @@ class MediaPreview {
         await OpenFile.open(uri.toFilePath());
       } else {
         // unknown scheme (maybe data: or custom). try launch regardless.
-        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        final launched =
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
         if (!launched) _showSnack(context, 'Could not open externally.');
       }
     } catch (e) {
@@ -60,31 +61,38 @@ class MediaPreview {
   }
 
   // Core preview handler
-  static Future<void> previewMedia(BuildContext context, MediaType mediaType, Map<String, dynamic> data) async {
+  static Future<void> previewMedia(BuildContext context, MediaType mediaType,
+      Map<String, dynamic> data) async {
     final url = (data['url'] ?? data['fileUrl'] ?? '') as String;
     final thumbnail = (data['thumbnailUrl'] ?? '') as String;
-    final heroTag = url.isNotEmpty ? url : ('media_preview_${DateTime.now().millisecondsSinceEpoch}');
+    final heroTag = url.isNotEmpty
+        ? url
+        : ('media_preview_${DateTime.now().millisecondsSinceEpoch}');
 
     switch (mediaType) {
       case MediaType.image:
         await Navigator.of(context).push(PageRouteBuilder(
           opaque: false,
-          pageBuilder: (_, __, ___) => _ImagePreviewPage(url: url, heroTag: heroTag, caption: data['caption']),
+          pageBuilder: (_, __, ___) => _ImagePreviewPage(
+              url: url, heroTag: heroTag, caption: data['caption']),
         ));
         break;
       case MediaType.video:
         await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => _VideoPreviewPage(url: url, poster: thumbnail, caption: data['caption']),
+          builder: (_) => _VideoPreviewPage(
+              url: url, poster: thumbnail, caption: data['caption']),
         ));
         break;
       case MediaType.audio:
         await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => _AudioPreviewPage(url: url, title: data['caption'] ?? data['title']),
+          builder: (_) => _AudioPreviewPage(
+              url: url, title: data['caption'] ?? data['title']),
         ));
         break;
       case MediaType.file:
         await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => _FilePreviewPage(url: url, name: data['caption'] ?? url.split('/').last),
+          builder: (_) => _FilePreviewPage(
+              url: url, name: data['caption'] ?? url.split('/').last),
         ));
         break;
     }
@@ -92,12 +100,13 @@ class MediaPreview {
 
   // Helpers
 
-  static Future<File?> _downloadToTemp(String url, {String filename = ''}) async {
+  static Future<File?> _downloadToTemp(String url,
+      {String filename = ''}) async {
     try {
       final res = await http.get(Uri.parse(url));
       if (res.statusCode != 200) return null;
       final dir = await getTemporaryDirectory();
-      
+
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(res.bodyBytes);
       return file;
@@ -109,7 +118,8 @@ class MediaPreview {
 
   static void _showSnack(BuildContext context, String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger != null) messenger.showSnackBar(SnackBar(content: Text(message)));
+    if (messenger != null)
+      messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -119,7 +129,8 @@ class _ImagePreviewPage extends StatelessWidget {
   final String url;
   final Object heroTag;
   final String? caption;
-  const _ImagePreviewPage({required this.url, required this.heroTag, this.caption});
+  const _ImagePreviewPage(
+      {required this.url, required this.heroTag, this.caption});
 
   @override
   Widget build(BuildContext context) {
@@ -132,11 +143,14 @@ class _ImagePreviewPage extends StatelessWidget {
               child: Hero(
                 tag: heroTag,
                 child: url.isEmpty
-                    ? const Icon(Icons.broken_image, size: 120, color: Colors.white24)
+                    ? const Icon(Icons.broken_image,
+                        size: 120, color: Colors.white24)
                     : PhotoView(
                         imageProvider: NetworkImage(url),
-                        loadingBuilder: (context, event) => const Center(child: CircularProgressIndicator()),
-                        backgroundDecoration: const BoxDecoration(color: Colors.black),
+                        loadingBuilder: (context, event) =>
+                            const Center(child: CircularProgressIndicator()),
+                        backgroundDecoration:
+                            const BoxDecoration(color: Colors.black),
                         enableRotation: true,
                         minScale: PhotoViewComputedScale.contained,
                         maxScale: PhotoViewComputedScale.covered * 2.5,
@@ -146,7 +160,8 @@ class _ImagePreviewPage extends StatelessWidget {
             Positioned(
               left: 8,
               top: 8,
-              child: _roundIcon(context, Icons.close, onTap: () => Navigator.of(context).pop()),
+              child: _roundIcon(context, Icons.close,
+                  onTap: () => Navigator.of(context).pop()),
             ),
             Positioned(
               right: 8,
@@ -154,7 +169,8 @@ class _ImagePreviewPage extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _roundIcon(context, Icons.open_in_full, onTap: () => MediaPreview.openExternally(context, url)),
+                  _roundIcon(context, Icons.open_in_full,
+                      onTap: () => MediaPreview.openExternally(context, url)),
                   const SizedBox(width: 8),
                   _roundIcon(context, Icons.download, onTap: () async {
                     final file = await MediaPreview._downloadToTemp(url);
@@ -186,12 +202,14 @@ class _ImagePreviewPage extends StatelessWidget {
     );
   }
 
-  Widget _roundIcon(BuildContext context, IconData icon, {required VoidCallback onTap}) {
+  Widget _roundIcon(BuildContext context, IconData icon,
+      {required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(
+            color: Colors.black45, borderRadius: BorderRadius.circular(24)),
         padding: const EdgeInsets.all(8),
         child: Icon(icon, color: Colors.white),
       ),
@@ -226,7 +244,8 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
       return;
     }
     try {
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(widget.url));
       await _videoController!.initialize();
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
@@ -262,7 +281,9 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
       return Scaffold(
         appBar: AppBar(backgroundColor: Colors.black, elevation: 0),
         backgroundColor: Colors.black,
-        body: const Center(child: Text('Unable to load video', style: TextStyle(color: Colors.white70))),
+        body: const Center(
+            child: Text('Unable to load video',
+                style: TextStyle(color: Colors.white70))),
       );
     }
 
@@ -273,11 +294,16 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
           children: [
             Row(
               children: [
-                IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
+                IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop()),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.open_in_full, color: Colors.white),
-                  onPressed: () => MediaPreview.openExternally(context, widget.url),
+                  tooltip: 'Open externally',
+                  onPressed: () =>
+                      MediaPreview.openExternally(context, widget.url),
                 )
               ],
             ),
@@ -294,7 +320,8 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
             if (widget.caption != null)
               Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Text(widget.caption!, style: const TextStyle(color: Colors.white70)),
+                child: Text(widget.caption!,
+                    style: const TextStyle(color: Colors.white70)),
               ),
             _videoActions(),
           ],
@@ -310,6 +337,7 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
         children: [
           IconButton(
             icon: const Icon(Icons.download, color: Colors.white),
+            tooltip: 'Download video',
             onPressed: () async {
               final f = await MediaPreview._downloadToTemp(widget.url);
               if (f != null) {
@@ -324,11 +352,18 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
             color: Colors.grey[900],
             onSelected: (v) => _videoController?.setPlaybackSpeed(v),
             itemBuilder: (ctx) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((s) {
-              return PopupMenuItem<double>(value: s, child: Text('${s}x', style: const TextStyle(color: Colors.white)));
+              return PopupMenuItem<double>(
+                  value: s,
+                  child: Text('${s}x',
+                      style: const TextStyle(color: Colors.white)));
             }).toList(),
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Row(children: const [Icon(Icons.speed, color: Colors.white), SizedBox(width: 6), Text('Speed', style: TextStyle(color: Colors.white))]),
+              child: Row(children: const [
+                Icon(Icons.speed, color: Colors.white),
+                SizedBox(width: 6),
+                Text('Speed', style: TextStyle(color: Colors.white))
+              ]),
             ),
           )
         ],
@@ -379,12 +414,18 @@ class _AudioPreviewPageState extends State<_AudioPreviewPage> {
     super.dispose();
   }
 
-  String _format(Duration d) => d == Duration.zero ? '0:00' : DateFormat('m:ss').format(DateTime.fromMillisecondsSinceEpoch(d.inMilliseconds));
+  String _format(Duration d) => d == Duration.zero
+      ? '0:00'
+      : DateFormat('m:ss')
+          .format(DateTime.fromMillisecondsSinceEpoch(d.inMilliseconds));
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.black, elevation: 0, title: Text(widget.title ?? 'Audio')),
+      appBar: AppBar(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          title: Text(widget.title ?? 'Audio')),
       backgroundColor: Colors.black,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -395,26 +436,48 @@ class _AudioPreviewPageState extends State<_AudioPreviewPage> {
                   const SizedBox(height: 24),
                   Icon(Icons.audiotrack, size: 96, color: Colors.white70),
                   const SizedBox(height: 24),
-                  Text(widget.title ?? 'Audio file', style: const TextStyle(color: Colors.white, fontSize: 18)),
+                  Text(widget.title ?? 'Audio file',
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 18)),
                   const SizedBox(height: 18),
                   Slider(
                     min: 0,
-                    max: _duration.inMilliseconds.toDouble() > 0 ? _duration.inMilliseconds.toDouble() : 1,
-                    value: _position.inMilliseconds.clamp(0, _duration.inMilliseconds).toDouble(),
-                    onChanged: (v) => _player.seek(Duration(milliseconds: v.round())),
+                    max: _duration.inMilliseconds.toDouble() > 0
+                        ? _duration.inMilliseconds.toDouble()
+                        : 1,
+                    value: _position.inMilliseconds
+                        .clamp(0, _duration.inMilliseconds)
+                        .toDouble(),
+                    onChanged: (v) =>
+                        _player.seek(Duration(milliseconds: v.round())),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [Text(_format(_position), style: const TextStyle(color: Colors.white70)), Text(_format(_duration), style: const TextStyle(color: Colors.white70))],
+                    children: [
+                      Text(_format(_position),
+                          style: const TextStyle(color: Colors.white70)),
+                      Text(_format(_duration),
+                          style: const TextStyle(color: Colors.white70))
+                    ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      IconButton(icon: const Icon(Icons.replay_10, color: Colors.white), onPressed: () => _player.seek(_position - const Duration(seconds: 10))),
+                      IconButton(
+                          icon:
+                              const Icon(Icons.replay_10, color: Colors.white),
+                          tooltip: 'Replay 10 seconds',
+                          onPressed: () => _player
+                              .seek(_position - const Duration(seconds: 10))),
                       IconButton(
                         iconSize: 48,
-                        icon: Icon(_player.playing ? Icons.pause_circle_filled : Icons.play_circle_fill, color: Colors.white),
+                        icon: Icon(
+                            _player.playing
+                                ? Icons.pause_circle_filled
+                                : Icons.play_circle_fill,
+                            color: Colors.white),
+                        tooltip: _player.playing ? 'Pause' : 'Play',
                         onPressed: () async {
                           if (_player.playing) {
                             await _player.pause();
@@ -424,7 +487,12 @@ class _AudioPreviewPageState extends State<_AudioPreviewPage> {
                           setState(() {});
                         },
                       ),
-                      IconButton(icon: const Icon(Icons.forward_10, color: Colors.white), onPressed: () => _player.seek(_position + const Duration(seconds: 10))),
+                      IconButton(
+                          icon:
+                              const Icon(Icons.forward_10, color: Colors.white),
+                          tooltip: 'Forward 10 seconds',
+                          onPressed: () => _player
+                              .seek(_position + const Duration(seconds: 10))),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -433,18 +501,21 @@ class _AudioPreviewPageState extends State<_AudioPreviewPage> {
                     children: [
                       ElevatedButton.icon(
                         onPressed: () async {
-                          final f = await MediaPreview._downloadToTemp(widget.url);
+                          final f =
+                              await MediaPreview._downloadToTemp(widget.url);
                           if (f != null) {
                             await OpenFile.open(f.path);
                           } else {
-                            MediaPreview._showSnack(context, 'Download failed.');
+                            MediaPreview._showSnack(
+                                context, 'Download failed.');
                           }
                         },
                         icon: const Icon(Icons.download),
                         label: const Text('Download'),
                       ),
                       ElevatedButton.icon(
-                        onPressed: () => MediaPreview.openExternally(context, widget.url),
+                        onPressed: () =>
+                            MediaPreview.openExternally(context, widget.url),
                         icon: const Icon(Icons.open_in_new),
                         label: const Text('Open Externally'),
                       ),
@@ -478,7 +549,8 @@ class _FilePreviewPageState extends State<_FilePreviewPage> {
 
   Future<void> _tryPreview() async {
     try {
-      if (widget.url.toLowerCase().endsWith('.txt') || widget.url.toLowerCase().endsWith('.log')) {
+      if (widget.url.toLowerCase().endsWith('.txt') ||
+          widget.url.toLowerCase().endsWith('.log')) {
         final res = await http.get(Uri.parse(widget.url));
         if (res.statusCode == 200 && mounted) {
           setState(() => _previewText = res.body);
@@ -495,9 +567,13 @@ class _FilePreviewPageState extends State<_FilePreviewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.name), actions: [
-        IconButton(icon: const Icon(Icons.open_in_full), onPressed: () => MediaPreview.openExternally(context, widget.url)),
+        IconButton(
+            icon: const Icon(Icons.open_in_full),
+            tooltip: 'Open externally',
+            onPressed: () => MediaPreview.openExternally(context, widget.url)),
         IconButton(
             icon: const Icon(Icons.download),
+            tooltip: 'Download file',
             onPressed: () async {
               final f = await MediaPreview._downloadToTemp(widget.url);
               if (f != null) {
@@ -510,7 +586,8 @@ class _FilePreviewPageState extends State<_FilePreviewPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _previewText != null
-              ? SingleChildScrollView(padding: const EdgeInsets.all(12), child: Text(_previewText!))
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.all(12), child: Text(_previewText!))
               : Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.insert_drive_file, size: 64),
@@ -519,7 +596,8 @@ class _FilePreviewPageState extends State<_FilePreviewPage> {
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final f = await MediaPreview._downloadToTemp(widget.url);
+                        final f =
+                            await MediaPreview._downloadToTemp(widget.url);
                         if (f != null) {
                           await OpenFile.open(f.path);
                         } else {

@@ -1,11 +1,18 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConstants {
-  // ZEGO Cloud
-  static const int appID = 2019491852;
-  static const String appSign =
-      'cb53be540903e720ac87fb51c0c3d35ee1112e70d8797c4cdb0734c2115a5766';
-  static const String serverSecret= "8af82a59b0cca6b54b224212a623f0b1";
+  // ZEGO Cloud (UIKits app)
+  static int get appID => int.tryParse(dotenv.env['ZEGO_APP_ID'] ?? '') ?? 0;
+  static String get appSign => dotenv.env['ZEGO_APP_SIGN'] ?? '';
 
   // RevenueCat
-  static const String revenueCatApiKey = 'test_kDutLpSEyjeVopGQCePJBOdpaIB';
-  static const String entitlementId = 'Crypted Pro';
+  static String get revenueCatApiKey => dotenv.env['REVENUECAT_API_KEY'] ?? '';
+  static String get entitlementId =>
+      dotenv.env['REVENUECAT_ENTITLEMENT_ID'] ?? 'Crypted Pro';
+
+  // Google Maps
+  static String get googleMapsApiKey => dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+
+  // Giphy
+  static String get giphyApiKey => dotenv.env['GIPHY_API_KEY'] ?? '';
 }

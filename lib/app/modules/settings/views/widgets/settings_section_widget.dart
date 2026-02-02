@@ -4,6 +4,7 @@ import 'package:crypted_app/app/modules/settings/controllers/settings_controller
 import 'package:crypted_app/app/modules/about/views/about_view.dart';
 import 'package:crypted_app/app/core/services/premium_service.dart';
 import 'package:crypted_app/core/locale/my_locale_controller.dart';
+import 'package:crypted_app/core/themes/theme_controller.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -141,6 +142,13 @@ class SettingsSectionWidget extends StatelessWidget {
 
           const SizedBox(height: Spacing.xl),
 
+          // ── Appearance Section ──
+          _SectionHeader('APPEARANCE'),
+          const SizedBox(height: Spacing.xs),
+          const AppearanceSectionWidget(),
+
+          const SizedBox(height: Spacing.xl),
+
           // ── Danger Zone Section ──
           _SectionHeader('ACCOUNT'),
           const SizedBox(height: Spacing.xs),
@@ -183,13 +191,14 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(left: Spacing.xxs),
       child: Text(
         text,
         style: StylesManager.medium(
           fontSize: FontSize.xSmall,
-          color: ColorsManager.grey,
+          color: isDark ? ColorsManager.darkTextSecondary : ColorsManager.grey,
         ),
       ),
     );
@@ -207,19 +216,20 @@ class SettingsGroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: ColorsManager.white,
+        color: isDark ? ColorsManager.darkCard : ColorsManager.white,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
-        children: _buildChildrenWithDividers(),
+        children: _buildChildrenWithDividers(isDark),
       ),
     );
   }
 
-  List<Widget> _buildChildrenWithDividers() {
+  List<Widget> _buildChildrenWithDividers(bool isDark) {
     final List<Widget> result = [];
     for (int i = 0; i < children.length; i++) {
       result.add(children[i]);
@@ -229,7 +239,7 @@ class SettingsGroupCard extends StatelessWidget {
           height: 0.5,
           thickness: 0.5,
           indent: 60,
-          color: ColorsManager.border,
+          color: isDark ? ColorsManager.darkDivider : ColorsManager.border,
         ));
       }
     }
@@ -255,6 +265,7 @@ class SettingTileWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -284,14 +295,18 @@ class SettingTileWidget extends StatelessWidget {
                   title,
                   style: StylesManager.regular(
                     fontSize: FontSize.medium,
-                    color: ColorsManager.black,
+                    color: isDark
+                        ? ColorsManager.darkTextPrimary
+                        : ColorsManager.black,
                   ),
                 ),
               ),
               Icon(
                 Icons.arrow_forward_ios,
                 size: 14,
-                color: ColorsManager.lightGrey,
+                color: isDark
+                    ? ColorsManager.darkTextTertiary
+                    : ColorsManager.lightGrey,
               ),
             ],
           ),
@@ -774,8 +789,7 @@ class AnalyticsDeviceTrackingTileWidget extends StatelessWidget {
                   Transform.scale(
                     scale: 0.85,
                     child: Switch.adaptive(
-                      value:
-                          controller.analyticsDeviceTrackingEnabled.value,
+                      value: controller.analyticsDeviceTrackingEnabled.value,
                       onChanged: (value) =>
                           controller.toggleAnalyticsDeviceTracking(value),
                       activeTrackColor:
@@ -817,18 +831,16 @@ class AnalyticsLocationTrackingTileWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color:
-                          controller.analyticsLocationTrackingEnabled.value
-                              ? ColorsManager.warning.withValues(alpha: 0.1)
-                              : ColorsManager.grey.withValues(alpha: 0.1),
+                      color: controller.analyticsLocationTrackingEnabled.value
+                          ? ColorsManager.warning.withValues(alpha: 0.1)
+                          : ColorsManager.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Icon(
                       Iconsax.location,
-                      color:
-                          controller.analyticsLocationTrackingEnabled.value
-                              ? ColorsManager.warning
-                              : ColorsManager.grey,
+                      color: controller.analyticsLocationTrackingEnabled.value
+                          ? ColorsManager.warning
+                          : ColorsManager.grey,
                       size: IconSizes.sm,
                     ),
                   ),
@@ -858,8 +870,7 @@ class AnalyticsLocationTrackingTileWidget extends StatelessWidget {
                   Transform.scale(
                     scale: 0.85,
                     child: Switch.adaptive(
-                      value: controller
-                          .analyticsLocationTrackingEnabled.value,
+                      value: controller.analyticsLocationTrackingEnabled.value,
                       onChanged: (value) =>
                           controller.toggleAnalyticsLocationTracking(value),
                       activeTrackColor:
@@ -872,5 +883,156 @@ class AnalyticsLocationTrackingTileWidget extends StatelessWidget {
             ),
           ),
         ));
+  }
+}
+
+// ─────────────────────────────────────────────────
+// Appearance Section — Light / Dark / System toggle
+// ─────────────────────────────────────────────────
+
+class AppearanceSectionWidget extends StatelessWidget {
+  const AppearanceSectionWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeController = Get.find<ThemeController>();
+
+    // Check if premium is registered for gating
+    final bool hasPremium = Get.isRegistered<PremiumService>();
+    final premium = hasPremium ? Get.find<PremiumService>() : null;
+
+    return Obx(() {
+      final currentMode = themeController.themeMode.value;
+
+      // Free users can only use System theme — Dark/Light require Pro
+      final bool canChangeTheme =
+          premium == null || premium.hasFeature(PremiumFeature.customThemes);
+
+      return SettingsGroupCard(
+        children: [
+          _ThemeOptionTile(
+            title: 'Light',
+            icon: Iconsax.sun_1_copy,
+            isSelected: currentMode == ThemeMode.light,
+            onTap: () {
+              if (canChangeTheme) {
+                themeController.setThemeMode(ThemeMode.light);
+              } else {
+                premium.presentPaywall();
+              }
+            },
+            isPro: !canChangeTheme,
+          ),
+          _ThemeOptionTile(
+            title: 'Dark',
+            icon: Iconsax.moon_copy,
+            isSelected: currentMode == ThemeMode.dark,
+            onTap: () {
+              if (canChangeTheme) {
+                themeController.setThemeMode(ThemeMode.dark);
+              } else {
+                premium.presentPaywall();
+              }
+            },
+            isPro: !canChangeTheme,
+          ),
+          _ThemeOptionTile(
+            title: 'System',
+            icon: Iconsax.mobile_copy,
+            isSelected: currentMode == ThemeMode.system,
+            onTap: () => themeController.setThemeMode(ThemeMode.system),
+            isPro: false, // System is always free
+          ),
+        ],
+      );
+    });
+  }
+}
+
+/// A single theme option tile matching the [LanguageTileWidget] style.
+class _ThemeOptionTile extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isPro;
+
+  const _ThemeOptionTile({
+    required this.title,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    this.isPro = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isSelected
+          ? ColorsManager.primary.withValues(alpha: 0.05)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? ColorsManager.primary.withValues(alpha: 0.15)
+                      : ColorsManager.border,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(
+                  icon,
+                  color:
+                      isSelected ? ColorsManager.primary : ColorsManager.grey,
+                  size: IconSizes.sm,
+                ),
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: StylesManager.medium(
+                    fontSize: FontSize.medium,
+                    color: isSelected
+                        ? ColorsManager.primary
+                        : ColorsManager.black,
+                  ),
+                ),
+              ),
+              if (isPro)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'PRO',
+                    style: StylesManager.semiBold(
+                      fontSize: FontSize.xXSmall,
+                      color: ColorsManager.primary,
+                    ),
+                  ),
+                ),
+              if (isSelected && !isPro)
+                Icon(
+                  Icons.check_circle,
+                  size: IconSizes.sm,
+                  color: ColorsManager.primary,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -11,9 +11,11 @@ class FirebaseOptimizationService {
   factory FirebaseOptimizationService() => _instance;
   FirebaseOptimizationService._internal();
 
-  // Cache management
+  // Cache management with LRU eviction
   final Map<String, CachedData> _cache = {};
   final Duration _cacheExpiry = const Duration(minutes: 5);
+  static const int _maxCacheEntries = 200;
+  final List<String> _cacheAccessOrder = []; // LRU tracking
 
   // Batch timer for deferred operations
   Timer? _batchTimer;
@@ -92,6 +94,7 @@ class FirebaseOptimizationService {
       final cached = _cache[cacheKey]!;
       if (!cached.isExpired) {
         _metrics.cacheHits++;
+        _touchLru(cacheKey);
         if (kDebugMode) {
           print('📦 Cache hit: $cacheKey');
         }
@@ -112,14 +115,34 @@ class FirebaseOptimizationService {
     final queryTime = DateTime.now().difference(startTime);
     _metrics.addQueryTime(queryTime);
 
-    // Cache the result
-    _cache[cacheKey] = CachedData(
-      data: doc,
-      timestamp: DateTime.now(),
-      expiry: _cacheExpiry,
-    );
+    // Cache the result with LRU eviction
+    _putCache(
+        cacheKey,
+        CachedData(
+          data: doc,
+          timestamp: DateTime.now(),
+          expiry: _cacheExpiry,
+        ));
 
     return doc;
+  }
+
+  /// Move key to end of LRU list (most recently used)
+  void _touchLru(String key) {
+    _cacheAccessOrder.remove(key);
+    _cacheAccessOrder.add(key);
+  }
+
+  /// Put into cache with LRU eviction when at capacity
+  void _putCache(String key, CachedData data) {
+    // Evict LRU entries if at capacity
+    while (_cache.length >= _maxCacheEntries && _cacheAccessOrder.isNotEmpty) {
+      final evictKey = _cacheAccessOrder.removeAt(0);
+      _cache.remove(evictKey);
+      _metrics.cacheEvictions++;
+    }
+    _cache[key] = data;
+    _touchLru(key);
   }
 
   /// Query with pagination and caching
@@ -169,8 +192,8 @@ class FirebaseOptimizationService {
     // Execute query with cache
     if (useCache) {
       return await query.get(const GetOptions(source: Source.cache)).catchError(
-        (_) => query.get(),
-      );
+            (_) => query.get(),
+          );
     }
 
     return await query.get();
@@ -229,8 +252,7 @@ class FirebaseOptimizationService {
         // Monitor progress
         if (onProgress != null) {
           uploadTask.snapshotEvents.listen((snapshot) {
-            final progress =
-                snapshot.bytesTransferred / snapshot.totalBytes;
+            final progress = snapshot.bytesTransferred / snapshot.totalBytes;
             onProgress(progress);
           });
         }
@@ -332,8 +354,10 @@ class FirebaseOptimizationService {
   void clearCache({String? specificKey}) {
     if (specificKey != null) {
       _cache.remove(specificKey);
+      _cacheAccessOrder.remove(specificKey);
     } else {
       _cache.clear();
+      _cacheAccessOrder.clear();
     }
 
     if (kDebugMode) {
@@ -356,10 +380,18 @@ class FirebaseOptimizationService {
 
   /// Cleanup expired cache entries
   void cleanupCache() {
-    _cache.removeWhere((key, value) => value.isExpired);
+    final expiredKeys = _cache.entries
+        .where((e) => e.value.isExpired)
+        .map((e) => e.key)
+        .toList();
+    for (final key in expiredKeys) {
+      _cache.remove(key);
+      _cacheAccessOrder.remove(key);
+    }
 
     if (kDebugMode) {
-      print('🧹 Cache cleanup completed');
+      print(
+          '🧹 Cache cleanup completed (removed ${expiredKeys.length} expired)');
     }
   }
 
@@ -419,6 +451,7 @@ class FirebaseOptimizationService {
     _batchTimer?.cancel();
     _cleanupTimer?.cancel();
     _cache.clear();
+    _cacheAccessOrder.clear();
     _rateLimitMap.clear();
 
     if (kDebugMode) {
@@ -498,7 +531,7 @@ class BatchOperation {
     required this.docId,
     required this.type,
     this.data,
-    this.setOptions ,
+    this.setOptions,
   });
 }
 
@@ -513,6 +546,7 @@ enum BatchOperationType {
 class FirebaseMetrics {
   int cacheHits = 0;
   int cacheMisses = 0;
+  int cacheEvictions = 0;
   int rateLimitBlocks = 0;
   int totalQueries = 0;
   final List<Duration> _queryTimes = [];
@@ -550,6 +584,7 @@ class FirebaseMetrics {
   void reset() {
     cacheHits = 0;
     cacheMisses = 0;
+    cacheEvictions = 0;
     rateLimitBlocks = 0;
     totalQueries = 0;
     _queryTimes.clear();
@@ -560,6 +595,7 @@ class FirebaseMetrics {
     return {
       'cacheHits': cacheHits,
       'cacheMisses': cacheMisses,
+      'cacheEvictions': cacheEvictions,
       'hitRate': '${(hitRate * 100).toStringAsFixed(2)}%',
       'rateLimitBlocks': rateLimitBlocks,
       'totalQueries': totalQueries,

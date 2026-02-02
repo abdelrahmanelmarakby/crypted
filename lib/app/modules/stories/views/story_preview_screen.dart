@@ -143,10 +143,46 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
   // ── Emoji overlays ────────────────────────────────────────
   final List<_EmojiOverlayData> _emojiOverlays = [];
   static const List<String> _popularEmojis = [
-    '😀', '😂', '🥰', '😎', '🤩', '😍', '🥳', '🤔', '😱', '🔥',
-    '❤️', '💯', '✨', '🎉', '👏', '🙌', '💪', '🎶', '🌟', '⭐',
-    '🌈', '🦋', '🌸', '🍕', '☕', '🎮', '📸', '🏆', '💎', '🚀',
-    '👋', '✌️', '🤙', '👀', '💀', '🫠', '🥺', '😈', '🤡', '💅',
+    '😀',
+    '😂',
+    '🥰',
+    '😎',
+    '🤩',
+    '😍',
+    '🥳',
+    '🤔',
+    '😱',
+    '🔥',
+    '❤️',
+    '💯',
+    '✨',
+    '🎉',
+    '👏',
+    '🙌',
+    '💪',
+    '🎶',
+    '🌟',
+    '⭐',
+    '🌈',
+    '🦋',
+    '🌸',
+    '🍕',
+    '☕',
+    '🎮',
+    '📸',
+    '🏆',
+    '💎',
+    '🚀',
+    '👋',
+    '✌️',
+    '🤙',
+    '👀',
+    '💀',
+    '🫠',
+    '🥺',
+    '😈',
+    '🤡',
+    '💅',
   ];
 
   // ── Drawing ───────────────────────────────────────────────
@@ -494,8 +530,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                     ..._linkStickers
                         .asMap()
                         .entries
-                        .map((e) =>
-                            _buildDraggableLinkSticker(e.key, e.value)),
+                        .map((e) => _buildDraggableLinkSticker(e.key, e.value)),
 
                     // 5. Emoji overlays
                     ..._emojiOverlays
@@ -558,8 +593,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
             : const SizedBox.expand();
 
       case StoryType.video:
-        if (_videoController != null &&
-            _videoController!.value.isInitialized) {
+        if (_videoController != null && _videoController!.value.isInitialized) {
           return FittedBox(
             fit: BoxFit.cover,
             child: SizedBox(
@@ -590,6 +624,15 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                 ),
               ),
             ),
+          ),
+        );
+
+      case StoryType.event:
+        // Events are created via EventCreationSheet, not via StoryPreviewScreen
+        return Container(
+          color: const Color(0xFF1A1A2E),
+          child: const Center(
+            child: Icon(Icons.event, size: 64, color: Colors.white54),
           ),
         );
     }
@@ -720,7 +763,8 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                   end: Offset.zero,
                 ).animate(CurvedAnimation(
                   parent: _toolbarAnimController,
-                  curve: Interval(delay, delay + 0.4, curve: Curves.easeOutBack),
+                  curve:
+                      Interval(delay, delay + 0.4, curve: Curves.easeOutBack),
                 )),
                 child: Column(
                   children: [
@@ -769,7 +813,10 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
       },
       onPanUpdate: (details) {
         setState(() {
-          _currentDrawingPoints = [..._currentDrawingPoints, details.localPosition];
+          _currentDrawingPoints = [
+            ..._currentDrawingPoints,
+            details.localPosition
+          ];
         });
       },
       onPanEnd: (details) {
@@ -884,9 +931,8 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                               height: width * 2,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: isSelected
-                                    ? _drawingColor
-                                    : Colors.white,
+                                color:
+                                    isSelected ? _drawingColor : Colors.white,
                               ),
                             ),
                           ),
@@ -958,8 +1004,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
           children: [
             // Top bar: Cancel / Done
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1251,11 +1296,9 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
         onPanUpdate: (details) {
           setState(() {
             data.position = Offset(
-              (data.position.dx +
-                      details.delta.dx / screenSize.width)
+              (data.position.dx + details.delta.dx / screenSize.width)
                   .clamp(0.05, 0.95),
-              (data.position.dy +
-                      details.delta.dy / screenSize.height)
+              (data.position.dy + details.delta.dy / screenSize.height)
                   .clamp(0.05, 0.95),
             );
           });
@@ -1285,8 +1328,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
           child: Transform.scale(
             scale: data.scale,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: data.backgroundColor != null
                   ? BoxDecoration(
                       color: data.backgroundColor,
@@ -1365,8 +1407,8 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
             const SizedBox(height: 12),
@@ -1385,8 +1427,8 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
             const SizedBox(height: 20),
@@ -1449,11 +1491,9 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
         onPanUpdate: (details) {
           setState(() {
             data.position = Offset(
-              (data.position.dx +
-                      details.delta.dx / screenSize.width)
+              (data.position.dx + details.delta.dx / screenSize.width)
                   .clamp(0.05, 0.95),
-              (data.position.dy +
-                      details.delta.dy / screenSize.height)
+              (data.position.dy + details.delta.dy / screenSize.height)
                   .clamp(0.05, 0.95),
             );
           });
@@ -1475,8 +1515,8 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -1521,8 +1561,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
         height: 280,
         decoration: BoxDecoration(
           color: const Color(0xFF1C1C1E).withValues(alpha: 0.95),
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -1587,11 +1626,9 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
         onPanUpdate: (details) {
           setState(() {
             data.position = Offset(
-              (data.position.dx +
-                      details.delta.dx / screenSize.width)
+              (data.position.dx + details.delta.dx / screenSize.width)
                   .clamp(0.05, 0.95),
-              (data.position.dy +
-                      details.delta.dy / screenSize.height)
+              (data.position.dy + details.delta.dy / screenSize.height)
                   .clamp(0.05, 0.95),
             );
           });
@@ -1635,8 +1672,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(20),
@@ -1648,8 +1684,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Iconsax.location,
-                      color: Colors.white, size: 16),
+                  const Icon(Iconsax.location, color: Colors.white, size: 16),
                   const SizedBox(width: 4),
                   Text(
                     _placeName!,
@@ -1665,8 +1700,7 @@ class _StoryPreviewScreenState extends State<StoryPreviewScreen>
                       _openLocationPicker();
                     },
                     child: Icon(Iconsax.edit_2,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        size: 14),
+                        color: Colors.white.withValues(alpha: 0.7), size: 14),
                   ),
                 ],
               ),

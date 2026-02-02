@@ -164,6 +164,38 @@ class _StoryFullViewState extends State<StoryFullView>
         return _buildVideoStory();
       case StoryType.text:
         return _buildTextStory();
+      case StoryType.event:
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.event, color: Colors.white70, size: 40),
+                const SizedBox(height: 12),
+                Text(
+                  widget.story.eventTitle ?? 'Event',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${widget.story.attendeeCount} going',
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        );
       default:
         return const Center(
           child: Text(
@@ -230,7 +262,8 @@ class _StoryFullViewState extends State<StoryFullView>
       future: _initializeVideoPlayer(widget.story.storyFileUrl!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          if (_videoController != null && _videoController!.value.isInitialized) {
+          if (_videoController != null &&
+              _videoController!.value.isInitialized) {
             return SizedBox.expand(
               child: FittedBox(
                 fit: BoxFit.cover,
@@ -439,6 +472,8 @@ class _StoryFullViewState extends State<StoryFullView>
         return Icons.video_library;
       case StoryType.text:
         return Icons.text_fields;
+      case StoryType.event:
+        return Icons.event;
       default:
         return Icons.article;
     }

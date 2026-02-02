@@ -488,23 +488,31 @@ class OtherUserInfoController extends GetxController {
         return;
       }
 
-      // Update call model with generated ID
-      final callWithId = callModel.copyWith(callId: callId);
-
-      // Send ZEGO call invitation
-      final invitationSent = await ZegoCallService.instance.sendCallInvitation(
+      // Send ZEGO call invitation — InvitationService handles outgoing UI.
+      // Do NOT navigate to CallScreen; it conflicts with InvitationService's
+      // Express Engine and causes error 1001004 (LoginFailed).
+      final invitationResult = await ZegoCallService.instance.sendCallInvitation(
         calleeId: otherUser.uid ?? '',
         calleeName: otherUser.fullName ?? '',
         isVideoCall: isVideo,
+        callID: callId,
         resourceID: 'zego_data',
       );
 
-      if (!invitationSent) {
-        developer.log('[OtherUserInfoController] ZEGO invitation failed, continuing with direct call');
-      }
+      if (invitationResult.success) {
+        developer.log('[OtherUserInfoController] ZEGO invitation sent — service handles UI');
+      } else {
+        developer.log('[OtherUserInfoController] ZEGO invitation failed: '
+            'code=${invitationResult.errorCode}, msg=${invitationResult.errorMessage}');
+        _showError(invitationResult.userFacingMessage);
 
-      // Navigate to call screen
-      Get.toNamed(Routes.CALL, arguments: callWithId);
+        // Mark call as cancelled since invitation couldn't be sent
+        try {
+          await CallDataSources().markCallAsCancelled(callId);
+        } catch (e) {
+          developer.log('[OtherUserInfoController] Failed to cancel call record: $e');
+        }
+      }
     } catch (e) {
       developer.log('[OtherUserInfoController] Error starting call: $e');
       _showError('Failed to start call');

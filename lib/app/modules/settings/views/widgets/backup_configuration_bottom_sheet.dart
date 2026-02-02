@@ -278,6 +278,7 @@ class _BackupConfigurationBottomSheetState
                 ),
                 IconButton(
                   onPressed: () => Get.back(),
+                  tooltip: 'Close',
                   icon: Icon(Icons.close, color: ColorsManager.grey),
                 ),
               ],
@@ -441,7 +442,8 @@ class _BackupConfigurationBottomSheetState
                         subtitle: 'All conversations and message history',
                         icon: Icons.chat_bubble,
                         value: _backupChats.value,
-                        onChanged: (value) => _backupChats.value = value ?? false,
+                        onChanged: (value) =>
+                            _backupChats.value = value ?? false,
                       )),
 
                   SizedBox(height: Sizes.size24),
@@ -602,10 +604,14 @@ class _BackupConfigurationBottomSheetState
       margin: EdgeInsets.only(bottom: Sizes.size12),
       decoration: BoxDecoration(
         border: Border.all(
-          color: value ? ColorsManager.primary.withValues(alpha: 0.3) : ColorsManager.borderColor,
+          color: value
+              ? ColorsManager.primary.withValues(alpha: 0.3)
+              : ColorsManager.borderColor,
         ),
         borderRadius: BorderRadius.circular(12),
-        color: value ? ColorsManager.primary.withValues(alpha: 0.05) : Colors.white,
+        color: value
+            ? ColorsManager.primary.withValues(alpha: 0.05)
+            : Colors.white,
       ),
       child: ListTile(
         leading: Container(

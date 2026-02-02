@@ -31,8 +31,9 @@ class UserSelectionWidget extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
-        color:
-            isSelected ? ColorsManager.primary.withValues(alpha: 0.1) : Colors.white,
+        color: isSelected
+            ? ColorsManager.primary.withValues(alpha: 0.1)
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected ? ColorsManager.primary : ColorsManager.lightGrey,
@@ -148,6 +149,7 @@ class UserSelectionWidget extends StatelessWidget {
     );
   }
 }
+
 class UserSelectionBottomSheet extends GetView<HomeController> {
   const UserSelectionBottomSheet({super.key});
 
@@ -221,21 +223,23 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                           ),
                           const SizedBox(height: 3),
                           Obx(() {
-                            final selectedCount = controller.selectedUsers.length;
+                            final selectedCount =
+                                controller.selectedUsers.length;
                             return AnimatedSwitcher(
                               duration: const Duration(milliseconds: 250),
                               child: Text(
                                 selectedCount > 1
-                                  ? '$selectedCount members selected'
-                                  : selectedCount == 1
-                                    ? 'Start private conversation'
-                                    : 'Select people to chat with',
+                                    ? '$selectedCount members selected'
+                                    : selectedCount == 1
+                                        ? 'Start private conversation'
+                                        : 'Select people to chat with',
                                 key: ValueKey<int>(selectedCount),
                                 style: StylesManager.regular(
                                   fontSize: FontSize.small,
                                   color: selectedCount > 0
-                                    ? ColorsManager.primary.withValues(alpha: 0.8)
-                                    : ColorsManager.grey,
+                                      ? ColorsManager.primary
+                                          .withValues(alpha: 0.8)
+                                      : ColorsManager.grey,
                                 ),
                               ),
                             );
@@ -292,13 +296,15 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                             ? Padding(
                                 padding: const EdgeInsets.only(right: 10),
                                 child: IconButton(
+                                  tooltip: 'Clear search',
                                   onPressed: () {
                                     controller.searchQuery.value = '';
                                   },
                                   icon: Container(
                                     padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
-                                      color: ColorsManager.grey.withValues(alpha: 0.15),
+                                      color: ColorsManager.grey
+                                          .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Icon(
@@ -325,8 +331,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
 
           // Selected users preview and group creation form (when multiple selected)
           Obx(() {
-
-            if (controller.selectedUsers.isEmpty) return const SizedBox.shrink();
+            if (controller.selectedUsers.isEmpty)
+              return const SizedBox.shrink();
 
             final isGroupChat = controller.selectedUsers.length > 1;
 
@@ -359,8 +365,13 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         SizedBox(
                           height: 35,
                           width: controller.selectedUsers.length > 1
-                            ? (20 + (controller.selectedUsers.length.clamp(1, 4) - 1) * 16).toDouble()
-                            : 35,
+                              ? (20 +
+                                      (controller.selectedUsers.length
+                                                  .clamp(1, 4) -
+                                              1) *
+                                          16)
+                                  .toDouble()
+                              : 35,
                           child: Stack(
                             children: List.generate(
                               controller.selectedUsers.length.clamp(1, 4),
@@ -379,7 +390,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.1),
+                                          color: Colors.black
+                                              .withValues(alpha: 0.1),
                                           blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
@@ -387,26 +399,31 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                     ),
                                     child: ClipOval(
                                       child: user.imageUrl?.isNotEmpty == true
-                                        ? AppCachedNetworkImage(
-                                            imageUrl: user.imageUrl!,
-                                            width: 35,
-                                            height: 35,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Container(
-                                            color: ColorsManager.primary.withValues(alpha: 0.1),
-                                            child: Center(
-                                              child: Text(
-                                                (user.fullName?.isNotEmpty == true
-                                                  ? user.fullName!.substring(0, 1)
-                                                  : '?').toUpperCase(),
-                                                style: StylesManager.bold(
-                                                  fontSize: FontSize.small,
-                                                  color: ColorsManager.primary,
+                                          ? AppCachedNetworkImage(
+                                              imageUrl: user.imageUrl!,
+                                              width: 35,
+                                              height: 35,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Container(
+                                              color: ColorsManager.primary
+                                                  .withValues(alpha: 0.1),
+                                              child: Center(
+                                                child: Text(
+                                                  (user.fullName?.isNotEmpty ==
+                                                              true
+                                                          ? user.fullName!
+                                                              .substring(0, 1)
+                                                          : '?')
+                                                      .toUpperCase(),
+                                                  style: StylesManager.bold(
+                                                    fontSize: FontSize.small,
+                                                    color:
+                                                        ColorsManager.primary,
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
                                     ),
                                   ),
                                 );
@@ -427,7 +444,9 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                 color: Colors.black87,
                               ),
                               child: Text(
-                                isGroupChat ? 'Group Chat Setup' : 'Private Chat',
+                                isGroupChat
+                                    ? 'Group Chat Setup'
+                                    : 'Private Chat',
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -435,12 +454,13 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               duration: const Duration(milliseconds: 300),
                               style: StylesManager.regular(
                                 fontSize: FontSize.small,
-                                color: ColorsManager.grey.withValues(alpha: 0.8),
+                                color:
+                                    ColorsManager.grey.withValues(alpha: 0.8),
                               ),
                               child: Text(
                                 isGroupChat
-                                  ? 'Customize your group'
-                                  : 'Ready to start chatting',
+                                    ? 'Customize your group'
+                                    : 'Ready to start chatting',
                               ),
                             ),
                           ],
@@ -449,7 +469,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Group creation form (only for group chats)
                   if (isGroupChat) ...[
                     // Group name input with enhanced design
@@ -457,14 +477,16 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       opacity: isGroupChat ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 300),
                       child: AnimatedSlide(
-                        offset: isGroupChat ? Offset.zero : const Offset(0, -0.1),
+                        offset:
+                            isGroupChat ? Offset.zero : const Offset(0, -0.1),
                         duration: const Duration(milliseconds: 300),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: ColorsManager.lightGrey.withValues(alpha: 0.3),
+                              color: ColorsManager.lightGrey
+                                  .withValues(alpha: 0.3),
                               width: 1,
                             ),
                             boxShadow: [
@@ -488,38 +510,49 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               hintText: 'Group name (required)',
                               hintStyle: StylesManager.regular(
                                 fontSize: FontSize.medium,
-                                color: ColorsManager.grey.withValues(alpha: 0.5),
+                                color:
+                                    ColorsManager.grey.withValues(alpha: 0.5),
                               ),
                               prefixIcon: Padding(
-                                padding: const EdgeInsets.only(left: 14, right: 10),
+                                padding:
+                                    const EdgeInsets.only(left: 14, right: 10),
                                 child: Obx(() => AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: Icon(
-                                    controller.groupName.value.isNotEmpty
-                                      ? Icons.group_rounded
-                                      : Icons.group_outlined,
-                                    color: controller.groupName.value.isNotEmpty
-                                        ? ColorsManager.primary
-                                        : ColorsManager.grey.withValues(alpha: 0.6),
-                                    size: 22,
-                                    key: ValueKey<bool>(controller.groupName.value.isNotEmpty),
-                                  ),
-                                )),
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      child: Icon(
+                                        controller.groupName.value.isNotEmpty
+                                            ? Icons.group_rounded
+                                            : Icons.group_outlined,
+                                        color: controller
+                                                .groupName.value.isNotEmpty
+                                            ? ColorsManager.primary
+                                            : ColorsManager.grey
+                                                .withValues(alpha: 0.6),
+                                        size: 22,
+                                        key: ValueKey<bool>(controller
+                                            .groupName.value.isNotEmpty),
+                                      ),
+                                    )),
                               ),
                               suffixIcon: Obx(() {
                                 return controller.groupName.value.isNotEmpty
                                     ? Padding(
-                                        padding: const EdgeInsets.only(right: 10),
+                                        padding:
+                                            const EdgeInsets.only(right: 10),
                                         child: IconButton(
+                                          tooltip: 'Clear group name',
                                           onPressed: () {
-                                            controller.groupNameController.clear();
+                                            controller.groupNameController
+                                                .clear();
                                             controller.groupName.value = '';
                                           },
                                           icon: Container(
                                             padding: const EdgeInsets.all(5),
                                             decoration: BoxDecoration(
-                                              color: ColorsManager.grey.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(20),
+                                              color: ColorsManager.grey
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                             ),
                                             child: Icon(
                                               Icons.close_rounded,
@@ -543,13 +576,14 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                     ),
 
                     const SizedBox(height: 12),
-                    
+
                     // Group photo selection with enhanced design
                     AnimatedOpacity(
                       opacity: isGroupChat ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 300),
                       child: AnimatedSlide(
-                        offset: isGroupChat ? Offset.zero : const Offset(0, -0.1),
+                        offset:
+                            isGroupChat ? Offset.zero : const Offset(0, -0.1),
                         duration: const Duration(milliseconds: 400),
                         child: GestureDetector(
                           onTap: () {
@@ -563,8 +597,10 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: controller.groupPhotoUrl.value.isNotEmpty
-                                    ? ColorsManager.primary.withValues(alpha: 0.3)
-                                    : ColorsManager.lightGrey.withValues(alpha: 0.3),
+                                    ? ColorsManager.primary
+                                        .withValues(alpha: 0.3)
+                                    : ColorsManager.lightGrey
+                                        .withValues(alpha: 0.3),
                                 width: 1,
                               ),
                               boxShadow: [
@@ -589,7 +625,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                         height: 28,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2.5,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
                                             ColorsManager.primary,
                                           ),
                                         ),
@@ -618,48 +655,59 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(14),
                                         color: photoUrl.isNotEmpty
-                                          ? Colors.transparent
-                                          : ColorsManager.primary.withValues(alpha: 0.05),
+                                            ? Colors.transparent
+                                            : ColorsManager.primary
+                                                .withValues(alpha: 0.05),
                                         border: Border.all(
                                           color: photoUrl.isNotEmpty
-                                              ? ColorsManager.primary.withValues(alpha: 0.2)
-                                              : ColorsManager.lightGrey.withValues(alpha: 0.3),
+                                              ? ColorsManager.primary
+                                                  .withValues(alpha: 0.2)
+                                              : ColorsManager.lightGrey
+                                                  .withValues(alpha: 0.3),
                                           width: 1.5,
                                         ),
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(12),
                                         child: photoUrl.isNotEmpty
-                                          ? (photoUrl.startsWith('http')
-                                              ? AppCachedNetworkImage(
-                                                  imageUrl: photoUrl,
-                                                  height: 62,
-                                                  width: 62,
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : Image.file(
-                                                  File(photoUrl),
-                                                  height: 62,
-                                                  width: 62,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) {
-                                                    return Container(
-                                                      color: ColorsManager.lightGrey.withValues(alpha: 0.1),
-                                                      child: Icon(
-                                                        Icons.broken_image_rounded,
-                                                        color: ColorsManager.grey,
-                                                        size: 28,
-                                                      ),
-                                                    );
-                                                  },
-                                                ))
-                                          : Center(
-                                              child: Icon(
-                                                Icons.add_photo_alternate_outlined,
-                                                color: ColorsManager.primary.withValues(alpha: 0.6),
-                                                size: 30,
+                                            ? (photoUrl.startsWith('http')
+                                                ? AppCachedNetworkImage(
+                                                    imageUrl: photoUrl,
+                                                    height: 62,
+                                                    width: 62,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : Image.file(
+                                                    File(photoUrl),
+                                                    height: 62,
+                                                    width: 62,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context,
+                                                        error, stackTrace) {
+                                                      return Container(
+                                                        color: ColorsManager
+                                                            .lightGrey
+                                                            .withValues(
+                                                                alpha: 0.1),
+                                                        child: Icon(
+                                                          Icons
+                                                              .broken_image_rounded,
+                                                          color: ColorsManager
+                                                              .grey,
+                                                          size: 28,
+                                                        ),
+                                                      );
+                                                    },
+                                                  ))
+                                            : Center(
+                                                child: Icon(
+                                                  Icons
+                                                      .add_photo_alternate_outlined,
+                                                  color: ColorsManager.primary
+                                                      .withValues(alpha: 0.6),
+                                                  size: 30,
+                                                ),
                                               ),
-                                            ),
                                       ),
                                     ),
 
@@ -668,8 +716,10 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                     // Group photo info
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Group Photo',
@@ -685,7 +735,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                                 : 'Optional • Tap to add',
                                             style: StylesManager.regular(
                                               fontSize: FontSize.small,
-                                              color: ColorsManager.grey.withValues(alpha: 0.7),
+                                              color: ColorsManager.grey
+                                                  .withValues(alpha: 0.7),
                                             ),
                                           ),
                                         ],
@@ -695,14 +746,17 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                     // Action button
                                     if (photoUrl.isNotEmpty)
                                       IconButton(
+                                        tooltip: 'Remove group photo',
                                         onPressed: () {
                                           _showRemovePhotoDialog(context);
                                         },
                                         icon: Container(
                                           padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
-                                            color: Colors.red.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(20),
+                                            color: Colors.red
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                           child: Icon(
                                             Icons.delete_outline_rounded,
@@ -714,7 +768,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                     else
                                       Icon(
                                         Icons.chevron_right_rounded,
-                                        color: ColorsManager.grey.withValues(alpha: 0.4),
+                                        color: ColorsManager.grey
+                                            .withValues(alpha: 0.4),
                                         size: 24,
                                       ),
                                   ],
@@ -726,8 +781,6 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                       ),
                     ),
                   ],
-                  
-                
                 ],
               ),
             );
@@ -741,7 +794,6 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
               height: 1,
             ),
           ),
-
 
           // Users list
           Expanded(
@@ -775,7 +827,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: ColorsManager.lightGrey.withValues(alpha: 0.1),
+                            color:
+                                ColorsManager.lightGrey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
@@ -805,7 +858,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                 return name.contains(query) || email.contains(query);
               }).toList();
 
-              if (filteredUsers.isEmpty && controller.searchQuery.value.isNotEmpty) {
+              if (filteredUsers.isEmpty &&
+                  controller.searchQuery.value.isNotEmpty) {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
@@ -815,7 +869,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: ColorsManager.lightGrey.withValues(alpha: 0.1),
+                            color:
+                                ColorsManager.lightGrey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
@@ -846,9 +901,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                 );
               }
 
-              return 
-              
-              ListView.builder(
+              return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 itemCount: filteredUsers.length,
                 itemBuilder: (context, index) {
@@ -865,7 +918,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                         borderRadius: BorderRadius.circular(16),
                         border: isSelected
                             ? Border.all(
-                                color: ColorsManager.primary.withValues(alpha: 0.2),
+                                color: ColorsManager.primary
+                                    .withValues(alpha: 0.2),
                                 width: 1,
                               )
                             : null,
@@ -912,25 +966,31 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                 // User avatar
                                 CircleAvatar(
                                   radius: 24,
-                                  backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
-                                  child: user.imageUrl?.isNotEmpty == true ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(50),
-                                    child: AppCachedNetworkImage(
-                                      imageUrl: user.imageUrl!,
-                                      fit: BoxFit.cover,
-                                      height: Sizes.size48,
-                                      width: Sizes.size48,
-                                      isCircular: true,
-                                    ),
-                                  ) : Text(
-                                    (user.fullName?.isNotEmpty == true
-                                        ? user.fullName!.substring(0, 1)
-                                        : '?').toUpperCase(),
-                                    style: StylesManager.bold(
-                                      fontSize: FontSize.medium,
-                                      color: ColorsManager.primary,
-                                    ),
-                                  ),
+                                  backgroundColor: ColorsManager.primary
+                                      .withValues(alpha: 0.1),
+                                  child: user.imageUrl?.isNotEmpty == true
+                                      ? ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(50),
+                                          child: AppCachedNetworkImage(
+                                            imageUrl: user.imageUrl!,
+                                            fit: BoxFit.cover,
+                                            height: Sizes.size48,
+                                            width: Sizes.size48,
+                                            isCircular: true,
+                                          ),
+                                        )
+                                      : Text(
+                                          (user.fullName?.isNotEmpty == true
+                                                  ? user.fullName!
+                                                      .substring(0, 1)
+                                                  : '?')
+                                              .toUpperCase(),
+                                          style: StylesManager.bold(
+                                            fontSize: FontSize.medium,
+                                            color: ColorsManager.primary,
+                                          ),
+                                        ),
                                 ),
 
                                 const SizedBox(width: 12),
@@ -938,7 +998,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                 // User info
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         user.fullName ?? 'Unknown User',
@@ -983,7 +1044,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
             if (selectedUsers.isEmpty) return const SizedBox.shrink();
 
             final isGroupChat = selectedUsers.length > 1;
-            final hasValidGroupName = !isGroupChat || (controller.groupName.value.trim().isNotEmpty);
+            final hasValidGroupName =
+                !isGroupChat || (controller.groupName.value.trim().isNotEmpty);
 
             return Container(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -1004,50 +1066,59 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                 height: 56,
                 decoration: BoxDecoration(
                   gradient: hasValidGroupName
-                    ? LinearGradient(
-                        colors: [
-                          ColorsManager.primary,
-                          ColorsManager.primary.withValues(alpha: 0.85),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : LinearGradient(
-                        colors: [
-                          ColorsManager.grey.withValues(alpha: 0.3),
-                          ColorsManager.grey.withValues(alpha: 0.25),
-                        ],
-                      ),
+                      ? LinearGradient(
+                          colors: [
+                            ColorsManager.primary,
+                            ColorsManager.primary.withValues(alpha: 0.85),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : LinearGradient(
+                          colors: [
+                            ColorsManager.grey.withValues(alpha: 0.3),
+                            ColorsManager.grey.withValues(alpha: 0.25),
+                          ],
+                        ),
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: hasValidGroupName ? [
-                    BoxShadow(
-                      color: ColorsManager.primary.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ] : null,
+                  boxShadow: hasValidGroupName
+                      ? [
+                          BoxShadow(
+                            color:
+                                ColorsManager.primary.withValues(alpha: 0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    onTap: hasValidGroupName ? () {
-                      if (selectedUsers.length == 1) {
-                        // Start private chat
-                        print("👤 Starting private chat with: ${selectedUsers.first.fullName} (${selectedUsers.first.uid})");
-                        controller.createNewPrivateChatRoom(selectedUsers.first);
-                      } else {
-                        // Validate group name before creating
-                        if (controller.groupName.value.trim().isEmpty) {
-                          BotToast.showText(text: 'Please enter a group name');
-                          return;
-                        }
-                        // Start group chat
-                        print("👥 Starting group chat with ${selectedUsers.length} users");
-                        controller.createNewGroupChatRoom(selectedUsers);
-                      }
-                      Get.back();
-                    } : null,
+                    onTap: hasValidGroupName
+                        ? () {
+                            if (selectedUsers.length == 1) {
+                              // Start private chat
+                              print(
+                                  "👤 Starting private chat with: ${selectedUsers.first.fullName} (${selectedUsers.first.uid})");
+                              controller.createNewPrivateChatRoom(
+                                  selectedUsers.first);
+                            } else {
+                              // Validate group name before creating
+                              if (controller.groupName.value.trim().isEmpty) {
+                                BotToast.showText(
+                                    text: 'Please enter a group name');
+                                return;
+                              }
+                              // Start group chat
+                              print(
+                                  "👥 Starting group chat with ${selectedUsers.length} users");
+                              controller.createNewGroupChatRoom(selectedUsers);
+                            }
+                            Get.back();
+                          }
+                        : null,
                     child: Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1056,11 +1127,11 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                             duration: const Duration(milliseconds: 250),
                             child: Icon(
                               selectedUsers.length > 1
-                                ? Icons.group_add_rounded
-                                : Icons.chat_bubble_rounded,
+                                  ? Icons.group_add_rounded
+                                  : Icons.chat_bubble_rounded,
                               color: hasValidGroupName
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.6),
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.6),
                               size: 22,
                               key: ValueKey<bool>(hasValidGroupName),
                             ),
@@ -1076,14 +1147,14 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                   : 'Start Private Chat',
                               key: ValueKey<String>(
                                 isGroupChat
-                                  ? (hasValidGroupName ? 'valid' : 'invalid')
-                                  : 'private',
+                                    ? (hasValidGroupName ? 'valid' : 'invalid')
+                                    : 'private',
                               ),
                               style: StylesManager.bold(
                                 fontSize: FontSize.medium,
                                 color: hasValidGroupName
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.6),
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.6),
                               ),
                             ),
                           ),
@@ -1110,6 +1181,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
+              tooltip: 'Close preview',
               icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -1152,18 +1224,21 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
       AlertDialog(
         title: Text(
           'Remove Photo',
-          style: StylesManager.bold(fontSize: FontSize.large, color: Colors.black),
+          style:
+              StylesManager.bold(fontSize: FontSize.large, color: Colors.black),
         ),
         content: Text(
           'Are you sure you want to remove this group photo?',
-          style: StylesManager.regular(fontSize: FontSize.medium, color: ColorsManager.grey),
+          style: StylesManager.regular(
+              fontSize: FontSize.medium, color: ColorsManager.grey),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
             child: Text(
               'Cancel',
-              style: StylesManager.medium(fontSize: FontSize.medium, color: ColorsManager.grey),
+              style: StylesManager.medium(
+                  fontSize: FontSize.medium, color: ColorsManager.grey),
             ),
           ),
           TextButton(
@@ -1174,7 +1249,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
             },
             child: Text(
               'Remove',
-              style: StylesManager.medium(fontSize: FontSize.medium, color: Colors.red),
+              style: StylesManager.medium(
+                  fontSize: FontSize.medium, color: Colors.red),
             ),
           ),
         ],

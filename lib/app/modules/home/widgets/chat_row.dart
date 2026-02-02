@@ -89,7 +89,8 @@ class _ChatRowState extends State<ChatRow> {
     // Show confirmation bottom sheet for blocking
     final confirmResult = await CustomBottomSheets.showConfirmation(
       title: 'Block User',
-      message: 'Are you sure you want to block ${otherUser.fullName}? You won\'t receive messages from this user anymore.',
+      message:
+          'Are you sure you want to block ${otherUser.fullName}? You won\'t receive messages from this user anymore.',
       subtitle: 'This action can be reversed later',
       confirmText: 'Block',
       cancelText: 'Cancel',
@@ -105,7 +106,8 @@ class _ChatRowState extends State<ChatRow> {
     CustomBottomSheets.showLoading(message: 'Blocking user...');
 
     try {
-      await chatDataSource.blockUser(widget.chatRoom?.id ?? '', otherUser.uid ?? '');
+      await chatDataSource.blockUser(
+          widget.chatRoom?.id ?? '', otherUser.uid ?? '');
 
       // Close loading
       CustomBottomSheets.closeLoading();
@@ -143,7 +145,9 @@ class _ChatRowState extends State<ChatRow> {
       if (mounted) {
         Get.snackbar(
           'Success',
-          widget.chatRoom?.isFavorite == true ? 'Chat removed from favorites' : 'Chat added to favorites',
+          widget.chatRoom?.isFavorite == true
+              ? 'Chat removed from favorites'
+              : 'Chat added to favorites',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.primary,
           colorText: ColorsManager.white,
@@ -177,7 +181,9 @@ class _ChatRowState extends State<ChatRow> {
       if (mounted) {
         Get.snackbar(
           'Success',
-          widget.chatRoom?.isArchived == true ? 'Chat unarchived' : 'Chat archived',
+          widget.chatRoom?.isArchived == true
+              ? 'Chat unarchived'
+              : 'Chat archived',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: ColorsManager.primary,
           colorText: ColorsManager.white,
@@ -207,7 +213,8 @@ class _ChatRowState extends State<ChatRow> {
     // Enhanced confirmation bottom sheet for delete
     final confirmResult = await CustomBottomSheets.showConfirmation(
       title: 'Delete Chat',
-      message: 'Are you sure you want to delete this chat? All messages will be permanently removed.',
+      message:
+          'Are you sure you want to delete this chat? All messages will be permanently removed.',
       subtitle: '⚠️ This action cannot be undone',
       confirmText: 'Delete Forever',
       cancelText: 'Cancel',
@@ -230,7 +237,8 @@ class _ChatRowState extends State<ChatRow> {
       print("🔄 Attempting to delete chat room: ${widget.chatRoom?.id}");
 
       // Delete the chat room and all its messages
-      final success = await chatDataSource.deleteRoom(widget.chatRoom?.id ?? '');
+      final success =
+          await chatDataSource.deleteRoom(widget.chatRoom?.id ?? '');
 
       // Close loading bottom sheet
       CustomBottomSheets.closeLoading();
@@ -279,15 +287,13 @@ class _ChatRowState extends State<ChatRow> {
       onTap: _togglePin,
     ));
 
-    // Mute action (for group chats)
-    if (isGroupChat) {
-      actions.add(BottomSheetAction(
-        title: isMuted ? 'Unmute Chat' : 'Mute Chat',
-        icon: isMuted ? Icons.notifications_active : Icons.notifications_off,
-        iconColor: ColorsManager.primary,
-        onTap: _toggleMute,
-      ));
-    }
+    // Mute action (available for all chat types)
+    actions.add(BottomSheetAction(
+      title: isMuted ? 'Unmute Chat' : 'Mute Chat',
+      icon: isMuted ? Icons.notifications_active : Icons.notifications_off,
+      iconColor: ColorsManager.primary,
+      onTap: _toggleMute,
+    ));
 
     // Favorite action
     actions.add(BottomSheetAction(
@@ -341,218 +347,234 @@ class _ChatRowState extends State<ChatRow> {
     final isArchived = widget.chatRoom?.isArchived == true;
 
     return CupertinoContextMenu(
-      enableHapticFeedback: true,
-
-      
-      actions: [
-        CupertinoContextMenuAction(
-          onPressed: () {
-            Navigator.pop(context);
-            _togglePin();
-          },
-          trailingIcon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
-          child: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
-        ),
-        if (isGroupChat)
+        enableHapticFeedback: true,
+        actions: [
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _togglePin();
+            },
+            trailingIcon: isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+            child: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
+          ),
           CupertinoContextMenuAction(
             onPressed: () {
               Navigator.pop(context);
               _toggleMute();
             },
-            trailingIcon: isMuted ? Icons.notifications_active : Icons.notifications_off,
+            trailingIcon:
+                isMuted ? Icons.notifications_active : Icons.notifications_off,
             child: Text(isMuted ? 'Unmute Chat' : 'Mute Chat'),
           ),
-        CupertinoContextMenuAction(
-          onPressed: () {
-            Navigator.pop(context);
-            _toggleFavorite();
-          },
-          trailingIcon: isFavorite ? Icons.favorite : Icons.favorite_border,
-          child: Text(isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
-        ),
-        CupertinoContextMenuAction(
-          onPressed: () {
-            Navigator.pop(context);
-            _toggleArchive();
-          },
-          trailingIcon: isArchived ? Icons.unarchive : Icons.archive,
-          child: Text(isArchived ? 'Unarchive Chat' : 'Archive Chat'),
-        ),
-        if (!isGroupChat)
           CupertinoContextMenuAction(
             onPressed: () {
               Navigator.pop(context);
-              _blockUser();
+              _toggleFavorite();
             },
-            trailingIcon: Icons.block,
-            isDestructiveAction: true,
-            child: const Text('Block User'),
+            trailingIcon: isFavorite ? Icons.favorite : Icons.favorite_border,
+            child:
+                Text(isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
           ),
-        CupertinoContextMenuAction(
-          onPressed: () {
-            Navigator.pop(context);
-            _deleteChat();
-          },
-          trailingIcon: Icons.delete_forever,
-          isDestructiveAction: true,
-          child: const Text('Delete Chat'),
-        ),
-      ],
-      child: Material(
-        color: ColorsManager.white,
-        child: InkWell(
-          onTap: () {
-            Map<String, dynamic> arg = {
-              'members': widget.chatRoom?.members,
-              "blockingUserId": widget.chatRoom?.blockingUserId,
-              "roomId": widget.chatRoom?.id,
-              "isGroupChat": widget.chatRoom?.isGroupChat,
-            };
-            Get.toNamed(Routes.CHAT, arguments: arg);
-          },
-          child: Container(
-            // Fix #3: Better padding (8→16 horizontal, 12→14 vertical)
-            padding: const EdgeInsets.symmetric(
-              horizontal: Paddings.large,
-              vertical: Paddings.medium,
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _toggleArchive();
+            },
+            trailingIcon: isArchived ? Icons.unarchive : Icons.archive,
+            child: Text(isArchived ? 'Unarchive Chat' : 'Archive Chat'),
+          ),
+          if (!isGroupChat)
+            CupertinoContextMenuAction(
+              onPressed: () {
+                Navigator.pop(context);
+                _blockUser();
+              },
+              trailingIcon: Icons.block,
+              isDestructiveAction: true,
+              child: const Text('Block User'),
             ),
-            // Fix #3: Cleaner bottom divider using theme border color
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: ColorsManager.border,
-                  width: 0.5,
-                ),
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteChat();
+            },
+            trailingIcon: Icons.delete_forever,
+            isDestructiveAction: true,
+            child: const Text('Delete Chat'),
+          ),
+        ],
+        child: Material(
+          color: ColorsManager.white,
+          child: InkWell(
+            onTap: () {
+              Map<String, dynamic> arg = {
+                'members': widget.chatRoom?.members,
+                "blockingUserId": widget.chatRoom?.blockingUserId,
+                "roomId": widget.chatRoom?.id,
+                "isGroupChat": widget.chatRoom?.isGroupChat,
+              };
+              Get.toNamed(Routes.CHAT, arguments: arg);
+            },
+            child: Container(
+              // Fix #3: Better padding (8→16 horizontal, 12→14 vertical)
+              padding: const EdgeInsets.symmetric(
+                horizontal: Paddings.large,
+                vertical: Paddings.medium,
               ),
-            ),
-            child: Row(
-              children: [
-                // Avatar with online status for private chats
-                SizedBox(
-                  width: Sizes.size48,
-                  height: Sizes.size48,
-                  child: widget.chatRoom?.isGroupChat == true
-                      ? ClipOval(child: _buildGroupAvatar())
-                      : _buildPrivateAvatarWithStatus(),
-                ),
-                const SizedBox(width: Spacing.sm),
-
-                // Fix #4: Use Expanded instead of ConstrainedBox
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top row: Name + status icons | Timestamp
-                      Row(
-                        children: [
-                          // Name + icons (flexible)
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    _getChatDisplayName(),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    // Fix #1 & #2: Stronger hierarchy + StylesManager
-                                    style: StylesManager.semiBold(
-                                      fontSize: FontSize.medium,
-                                      color: ColorsManager.black,
-                                    ),
-                                  ),
-                                ),
-                                // Status icons with consistent spacing
-                                if (widget.chatRoom?.isGroupChat == true)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: Spacing.xxs),
-                                    child: Icon(
-                                      Icons.group,
-                                      size: 14,
-                                      color: ColorsManager.primary,
-                                    ),
-                                  ),
-                                if (isPinned)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: Spacing.xxs),
-                                    child: Icon(
-                                      Icons.push_pin,
-                                      size: 12,
-                                      color: ColorsManager.primary,
-                                    ),
-                                  ),
-                                if (isArchived)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: Spacing.xxs),
-                                    child: Icon(
-                                      Icons.archive,
-                                      size: 12,
-                                      color: ColorsManager.grey,
-                                    ),
-                                  ),
-                                if (isFavorite)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: Spacing.xxs),
-                                    child: Icon(
-                                      Icons.favorite,
-                                      size: 12,
-                                      color: ColorsManager.red,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: Spacing.xs),
-                          // Fix #1 & #2: Timestamp with better size + StylesManager
-                          Text(
-                            timeago.format(
-                                _parseDateSafely(widget.chatRoom?.lastChat) ?? DateTime.now()),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: StylesManager.regular(
-                              fontSize: FontSize.xSmall,
-                              color: ColorsManager.lightGrey,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: Spacing.xxs),
-
-                      // Bottom row: Subtitle | Unread badge
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _getChatSubtitle(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              // Fix #1 & #2: Better subtitle contrast + StylesManager
-                              style: StylesManager.regular(
-                                fontSize: FontSize.small,
-                                color: ColorsManager.grey,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: Spacing.xs),
-                          // UX-009: Animated unread indicator with pulse effect
-                          if (widget.chatRoom?.lastSender != UserService.currentUser.value?.uid)
-                            const UnreadPulseBadge(
-                              size: 8,
-                              enablePulse: true,
-                            )
-                          else
-                            const SizedBox(width: Sizes.size20),
-                        ],
-                      ),
-                    ],
+              // Fix #3: Cleaner bottom divider using theme border color
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: ColorsManager.border,
+                    width: 0.5,
                   ),
                 ),
-              ],
+              ),
+              child: Row(
+                children: [
+                  // Avatar with online status for private chats
+                  SizedBox(
+                    width: Sizes.size48,
+                    height: Sizes.size48,
+                    child: widget.chatRoom?.isGroupChat == true
+                        ? ClipOval(child: _buildGroupAvatar())
+                        : _buildPrivateAvatarWithStatus(),
+                  ),
+                  const SizedBox(width: Spacing.sm),
+
+                  // Fix #4: Use Expanded instead of ConstrainedBox
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Top row: Name + status icons | Timestamp
+                        Row(
+                          children: [
+                            // Name + icons (flexible)
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _getChatDisplayName(),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      // Fix #1 & #2: Stronger hierarchy + StylesManager
+                                      style: StylesManager.semiBold(
+                                        fontSize: FontSize.medium,
+                                        color: ColorsManager.black,
+                                      ),
+                                    ),
+                                  ),
+                                  // Status icons with consistent spacing
+                                  if (widget.chatRoom?.isGroupChat == true)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: Spacing.xxs),
+                                      child: Icon(
+                                        Icons.group,
+                                        size: 14,
+                                        color: ColorsManager.primary,
+                                      ),
+                                    ),
+                                  if (isPinned)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: Spacing.xxs),
+                                      child: Icon(
+                                        Icons.push_pin,
+                                        size: 12,
+                                        color: ColorsManager.primary,
+                                      ),
+                                    ),
+                                  if (isArchived)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: Spacing.xxs),
+                                      child: Icon(
+                                        Icons.archive,
+                                        size: 12,
+                                        color: ColorsManager.grey,
+                                      ),
+                                    ),
+                                  if (isFavorite)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: Spacing.xxs),
+                                      child: Icon(
+                                        Icons.favorite,
+                                        size: 12,
+                                        color: ColorsManager.red,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: Spacing.xs),
+                            // Fix #1 & #2: Timestamp with better size + StylesManager
+                            Text(
+                              timeago.format(
+                                  _parseDateSafely(widget.chatRoom?.lastChat) ??
+                                      DateTime.now()),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: StylesManager.regular(
+                                fontSize: FontSize.xSmall,
+                                color: ColorsManager.lightGrey,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: Spacing.xxs),
+
+                        // Bottom row: Subtitle | Unread badge
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _getChatSubtitle(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                // Fix #1 & #2: Better subtitle contrast + StylesManager
+                                style: StylesManager.regular(
+                                  fontSize: FontSize.small,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: Spacing.xs),
+                            // UX-009: Unread count badge or pulse indicator
+                            Builder(builder: (context) {
+                              final myUid = UserService.currentUser.value?.uid;
+                              final unread = (myUid != null)
+                                  ? (widget.chatRoom?.unreadCountFor(myUid) ??
+                                      0)
+                                  : 0;
+                              if (unread > 0) {
+                                return UnreadCountBadge(
+                                  count: unread,
+                                  showPulse: false,
+                                );
+                              } else if (widget.chatRoom?.lastSender != myUid) {
+                                // Fallback: green dot when we don't have counts yet
+                                return const UnreadPulseBadge(
+                                  size: 8,
+                                  enablePulse: true,
+                                );
+                              }
+                              return const SizedBox(width: Sizes.size20);
+                            }),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ));
-    
+        ));
   }
 
   /// Get the appropriate display name for the chat
@@ -589,7 +611,9 @@ class _ChatRowState extends State<ChatRow> {
   String _getChatDisplayImage() {
     if (widget.chatRoom?.isGroupChat == true) {
       // For group chats, use group image URL if available, otherwise fallback to first member's image
-      return widget.chatRoom?.groupImageUrl ?? _getChatDisplayUser()?.imageUrl ?? "";
+      return widget.chatRoom?.groupImageUrl ??
+          _getChatDisplayUser()?.imageUrl ??
+          "";
     } else {
       // For private chats, show the other user's image
       final displayUser = _getChatDisplayUser();
@@ -689,7 +713,9 @@ class _ChatRowState extends State<ChatRow> {
   SocialMediaUser? _getChatDisplayUser() {
     if (widget.chatRoom?.isGroupChat == true) {
       // For group chats, return the first member (could be enhanced to show group avatar)
-      return widget.chatRoom?.members?.isNotEmpty == true ? widget.chatRoom!.members!.first : null;
+      return widget.chatRoom?.members?.isNotEmpty == true
+          ? widget.chatRoom!.members!.first
+          : null;
     } else {
       // For private chats, return the other user
       return widget.chatRoom?.members?.firstWhere(
@@ -709,7 +735,8 @@ class _ChatRowState extends State<ChatRow> {
     // Filter out current user and get other members
     final otherMembers = members
         .where((user) => user.uid != currentUserId)
-        .where((user) => user.fullName != null && user.fullName!.trim().isNotEmpty)
+        .where(
+            (user) => user.fullName != null && user.fullName!.trim().isNotEmpty)
         .take(3)
         .map((user) => user.fullName!.trim().split(' ').first)
         .where((name) => name.isNotEmpty)
@@ -717,7 +744,8 @@ class _ChatRowState extends State<ChatRow> {
 
     if (otherMembers.isEmpty) {
       final allMembers = members
-          .where((user) => user.fullName != null && user.fullName!.trim().isNotEmpty)
+          .where((user) =>
+              user.fullName != null && user.fullName!.trim().isNotEmpty)
           .take(3)
           .map((user) => user.fullName!.trim().split(' ').first)
           .where((name) => name.isNotEmpty)

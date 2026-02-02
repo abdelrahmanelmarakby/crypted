@@ -126,7 +126,7 @@ class ChatCallHandler {
       // Send ZEGO call invitation (for push notification).
       // Pass the Firestore callId as the ZEGO room ID so both parties
       // join the same room when the callee accepts the invitation.
-      final invitationSent = await ZegoCallService.instance.sendCallInvitation(
+      final invitationResult = await ZegoCallService.instance.sendCallInvitation(
         calleeId: otherUser.uid ?? '',
         calleeName: otherUser.fullName ?? '',
         isVideoCall: isVideoCall,
@@ -134,17 +134,19 @@ class ChatCallHandler {
         resourceID: 'zego_data',
       );
 
-      if (invitationSent) {
+      if (invitationResult.success) {
         // Invitation succeeded — ZegoUIKitPrebuiltCallInvitationService
         // handles the outgoing call UI and room joining automatically.
         // Do NOT navigate to a custom CallScreen (avoids engine conflict).
         log('[ChatCallHandler] ZEGO invitation sent — invitation service handles UI');
       } else {
-        // Invitation failed — signaling plugin not connected or service not initialized.
+        // Invitation failed — show the specific error from ZIM.
         // Do NOT fall back to CallScreen — ZegoUIKitPrebuiltCall conflicts with the
         // invitation service's Express Engine and causes error 1001004 (LoginFailed).
-        log('[ChatCallHandler] ZEGO invitation failed — signaling may not be connected');
-        _showError('Call service is connecting. Please try again in a moment.');
+        log('[ChatCallHandler] ZEGO invitation failed: '
+            'code=${invitationResult.errorCode}, '
+            'msg=${invitationResult.errorMessage}');
+        _showError(invitationResult.userFacingMessage);
 
         // Mark call as cancelled since invitation couldn't be sent
         try {

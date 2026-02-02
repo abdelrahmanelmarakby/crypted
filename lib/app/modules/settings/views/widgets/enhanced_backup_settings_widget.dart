@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:crypted_app/app/core/services/enhanced_backup_service.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
@@ -10,10 +11,12 @@ class EnhancedBackupSettingsWidget extends StatefulWidget {
   const EnhancedBackupSettingsWidget({super.key});
 
   @override
-  State<EnhancedBackupSettingsWidget> createState() => _EnhancedBackupSettingsWidgetState();
+  State<EnhancedBackupSettingsWidget> createState() =>
+      _EnhancedBackupSettingsWidgetState();
 }
 
-class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWidget> {
+class _EnhancedBackupSettingsWidgetState
+    extends State<EnhancedBackupSettingsWidget> {
   final _backupService = EnhancedBackupService.instance;
 
   BackupState _currentState = BackupState.idle;
@@ -21,6 +24,9 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
   String _currentStatus = 'Ready to backup';
   Map<String, bool> _permissions = {};
   Map<String, dynamic> _backupStats = {};
+
+  // Stream subscriptions for cleanup
+  final List<StreamSubscription> _subscriptions = [];
 
   // Individual backup toggles
   final RxBool _autoBackupEnabled = false.obs;
@@ -39,40 +45,40 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
 
   void _setupListeners() {
     // Listen to backup state changes
-    _backupService.stateStream.listen((state) {
+    _subscriptions.add(_backupService.stateStream.listen((state) {
       if (mounted) {
         setState(() {
           _currentState = state;
         });
       }
-    });
+    }));
 
     // Listen to progress changes
-    _backupService.progressStream.listen((progress) {
+    _subscriptions.add(_backupService.progressStream.listen((progress) {
       if (mounted) {
         setState(() {
           _currentProgress = progress;
         });
       }
-    });
+    }));
 
     // Listen to status changes
-    _backupService.statusStream.listen((status) {
+    _subscriptions.add(_backupService.statusStream.listen((status) {
       if (mounted) {
         setState(() {
           _currentStatus = status;
         });
       }
-    });
+    }));
 
     // Listen to permission changes
-    _backupService.permissionsStream.listen((permissions) {
+    _subscriptions.add(_backupService.permissionsStream.listen((permissions) {
       if (mounted) {
         setState(() {
           _permissions = permissions;
         });
       }
-    });
+    }));
   }
 
   Future<void> _checkPermissions() async {
@@ -94,7 +100,8 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       'Permissions',
       '$grantedCount/${permissions.length} permissions granted',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: grantedCount == permissions.length ? Colors.green : Colors.orange,
+      backgroundColor:
+          grantedCount == permissions.length ? Colors.green : Colors.orange,
       colorText: Colors.white,
     );
   }
@@ -131,8 +138,10 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       final results = <String, bool>{};
 
       // Check if any option is selected
-      if (!_backupDeviceInfo.value && !_backupLocation.value &&
-          !_backupContacts.value && !_backupPhotos.value) {
+      if (!_backupDeviceInfo.value &&
+          !_backupLocation.value &&
+          !_backupContacts.value &&
+          !_backupPhotos.value) {
         Get.snackbar(
           'No Selection',
           'Please select at least one backup option',
@@ -289,8 +298,8 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
   @override
   Widget build(BuildContext context) {
     final isBackingUp = _currentState != BackupState.idle &&
-                        _currentState != BackupState.completed &&
-                        _currentState != BackupState.failed;
+        _currentState != BackupState.completed &&
+        _currentState != BackupState.failed;
 
     return Container(
       margin: const EdgeInsets.all(Paddings.large),
@@ -357,12 +366,17 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
             decoration: BoxDecoration(
               color: _getStateColor(_currentState).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _getStateColor(_currentState).withValues(alpha: 0.3)),
+              border: Border.all(
+                  color: _getStateColor(_currentState).withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(_getStateColor(_currentState) == Colors.green ? Icons.check_circle : Icons.info_outline,
-                     color: _getStateColor(_currentState), size: 20),
+                Icon(
+                    _getStateColor(_currentState) == Colors.green
+                        ? Icons.check_circle
+                        : Icons.info_outline,
+                    color: _getStateColor(_currentState),
+                    size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -446,12 +460,12 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
 
           // Auto Backup Toggle
           Obx(() => _buildSwitchTile(
-            title: 'Auto Backup',
-            subtitle: 'Automatically backup data daily',
-            icon: Icons.autorenew,
-            value: _autoBackupEnabled.value,
-            onChanged: (value) => _autoBackupEnabled.value = value,
-          )),
+                title: 'Auto Backup',
+                subtitle: 'Automatically backup data daily',
+                icon: Icons.autorenew,
+                value: _autoBackupEnabled.value,
+                onChanged: (value) => _autoBackupEnabled.value = value,
+              )),
 
           const Divider(height: 32),
 
@@ -466,36 +480,36 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
           const SizedBox(height: 12),
 
           Obx(() => _buildCheckboxTile(
-            title: 'Device Information',
-            subtitle: 'Model, OS, storage, battery, network',
-            icon: Icons.phone_android,
-            value: _backupDeviceInfo.value,
-            onChanged: (value) => _backupDeviceInfo.value = value ?? false,
-          )),
+                title: 'Device Information',
+                subtitle: 'Model, OS, storage, battery, network',
+                icon: Icons.phone_android,
+                value: _backupDeviceInfo.value,
+                onChanged: (value) => _backupDeviceInfo.value = value ?? false,
+              )),
 
           Obx(() => _buildCheckboxTile(
-            title: 'Location Data',
-            subtitle: 'Current location with full details',
-            icon: Icons.location_on,
-            value: _backupLocation.value,
-            onChanged: (value) => _backupLocation.value = value ?? false,
-          )),
+                title: 'Location Data',
+                subtitle: 'Current location with full details',
+                icon: Icons.location_on,
+                value: _backupLocation.value,
+                onChanged: (value) => _backupLocation.value = value ?? false,
+              )),
 
           Obx(() => _buildCheckboxTile(
-            title: 'Contacts',
-            subtitle: 'All contacts with complete information',
-            icon: Icons.contacts,
-            value: _backupContacts.value,
-            onChanged: (value) => _backupContacts.value = value ?? false,
-          )),
+                title: 'Contacts',
+                subtitle: 'All contacts with complete information',
+                icon: Icons.contacts,
+                value: _backupContacts.value,
+                onChanged: (value) => _backupContacts.value = value ?? false,
+              )),
 
           Obx(() => _buildCheckboxTile(
-            title: 'Photos',
-            subtitle: 'All photos with metadata',
-            icon: Icons.photo_library,
-            value: _backupPhotos.value,
-            onChanged: (value) => _backupPhotos.value = value ?? false,
-          )),
+                title: 'Photos',
+                subtitle: 'All photos with metadata',
+                icon: Icons.photo_library,
+                value: _backupPhotos.value,
+                onChanged: (value) => _backupPhotos.value = value ?? false,
+              )),
 
           const SizedBox(height: 24),
 
@@ -612,7 +626,8 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
             const SizedBox(width: 8),
             Text(
               'Checking permissions...',
-              style: StylesManager.regular(fontSize: FontSize.small, color: Colors.grey),
+              style: StylesManager.regular(
+                  fontSize: FontSize.small, color: Colors.grey),
             ),
           ],
         ),
@@ -626,10 +641,14 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: entry.value ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+            color: entry.value
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: entry.value ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+              color: entry.value
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.red.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -692,7 +711,8 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
     );
   }
 
-  Widget _buildStatCard(String label, String count, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String count, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -732,6 +752,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       ),
     );
   }
+
   Widget _buildSwitchTile({
     required String title,
     required String subtitle,
@@ -770,6 +791,7 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       ),
     );
   }
+
   Widget _buildCheckboxTile({
     required String title,
     required String subtitle,
@@ -782,7 +804,9 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: value ? ColorsManager.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+          color: value
+              ? ColorsManager.primary.withValues(alpha: 0.1)
+              : Colors.grey.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -832,6 +856,10 @@ class _EnhancedBackupSettingsWidgetState extends State<EnhancedBackupSettingsWid
 
   @override
   void dispose() {
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
     super.dispose();
   }
 }

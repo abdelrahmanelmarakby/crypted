@@ -73,7 +73,8 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
   }
 
   /// Image upload - Full preview with circular progress overlay (WhatsApp style)
-  Widget _buildImageUpload(BuildContext context, UploadState? uploadState, bool hasError) {
+  Widget _buildImageUpload(
+      BuildContext context, UploadState? uploadState, bool hasError) {
     final file = File(widget.message.filePath);
     final fileExists = file.existsSync();
 
@@ -140,7 +141,8 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
   }
 
   /// Video upload - Thumbnail with play icon and progress
-  Widget _buildVideoUpload(BuildContext context, UploadState? uploadState, bool hasError) {
+  Widget _buildVideoUpload(
+      BuildContext context, UploadState? uploadState, bool hasError) {
     final file = File(widget.message.filePath);
     final thumbnailPath = widget.message.thumbnailPath;
     final thumbnailFile = thumbnailPath != null ? File(thumbnailPath) : null;
@@ -240,14 +242,17 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
   }
 
   /// Audio upload - Waveform style with progress
-  Widget _buildAudioUpload(BuildContext context, UploadState? uploadState, bool hasError) {
+  Widget _buildAudioUpload(
+      BuildContext context, UploadState? uploadState, bool hasError) {
     return Container(
       constraints: BoxConstraints(
         maxWidth: MediaQuery.of(context).size.width * 0.7,
       ),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: hasError ? Colors.red.shade50 : ColorsManager.primary.withOpacity(0.1),
+        color: hasError
+            ? Colors.red.shade50
+            : ColorsManager.primary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: hasError
@@ -308,12 +313,14 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
               icon: const Icon(Iconsax.refresh, size: 20),
               color: ColorsManager.primary,
               onPressed: widget.onRetry,
+              tooltip: 'Retry upload',
             )
           else if (widget.onCancel != null)
             IconButton(
               icon: const Icon(Icons.close, size: 20),
               color: ColorsManager.grey,
               onPressed: widget.onCancel,
+              tooltip: 'Cancel upload',
             ),
         ],
       ),
@@ -321,7 +328,8 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
   }
 
   /// File upload - File icon with details and progress ring
-  Widget _buildFileUpload(BuildContext context, UploadState? uploadState, bool hasError) {
+  Widget _buildFileUpload(
+      BuildContext context, UploadState? uploadState, bool hasError) {
     final fileSize = FirebaseUtils.formatFileSize(widget.message.fileSize);
     final fileName = widget.message.fileName;
     final extension = fileName.split('.').last.toUpperCase();
@@ -383,7 +391,9 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
                       color: hasError ? Colors.red : _getFileColor(extension),
                     ),
                     Text(
-                      extension.length > 4 ? extension.substring(0, 4) : extension,
+                      extension.length > 4
+                          ? extension.substring(0, 4)
+                          : extension,
                       style: StylesManager.semiBold(
                         fontSize: 8,
                         color: hasError ? Colors.red : _getFileColor(extension),
@@ -477,12 +487,14 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
               icon: const Icon(Iconsax.refresh, size: 20),
               color: ColorsManager.primary,
               onPressed: widget.onRetry,
+              tooltip: 'Retry upload',
             )
           else if (widget.onCancel != null)
             IconButton(
               icon: const Icon(Icons.close, size: 20),
               color: ColorsManager.grey,
               onPressed: widget.onCancel,
+              tooltip: 'Cancel upload',
             ),
         ],
       ),
@@ -784,9 +796,8 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
     final eta = state.estimatedTimeRemaining;
 
     if (eta != null && speed.isNotEmpty) {
-      final etaStr = eta.inSeconds < 60
-          ? '${eta.inSeconds}s'
-          : '${eta.inMinutes}m';
+      final etaStr =
+          eta.inSeconds < 60 ? '${eta.inSeconds}s' : '${eta.inMinutes}m';
       return '$speed • ~$etaStr';
     }
     return speed;

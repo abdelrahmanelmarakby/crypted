@@ -1,10 +1,229 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns this path
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if file is an image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Check if file is a video
+    function isVideo() {
+      return request.resource.contentType.matches('video/.*');
+    }
+
+    // Check if file is audio
+    function isAudio() {
+      return request.resource.contentType.matches('audio/.*');
+    }
+
+    // Check if file is a document (PDF, Office, text)
+    function isDocument() {
+      return request.resource.contentType.matches('application/pdf')
+          || request.resource.contentType.matches('application/msword')
+          || request.resource.contentType.matches('application/vnd\\..*')
+          || request.resource.contentType.matches('text/.*');
+    }
+
+    // Check if file is any allowed media type
+    function isAllowedMedia() {
+      return isImage() || isVideo() || isAudio() || isDocument();
+    }
+
+    // Size limits (in bytes)
+    // 10MB for images
+    function isValidImageSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // 100MB for videos
+    function isValidVideoSize() {
+      return request.resource.size < 100 * 1024 * 1024;
+    }
+
+    // 50MB for audio
+    function isValidAudioSize() {
+      return request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // 100MB for documents/files
+    function isValidFileSize() {
+      return request.resource.size < 100 * 1024 * 1024;
+    }
+
+    // 500MB for backups
+    function isValidBackupSize() {
+      return request.resource.size < 500 * 1024 * 1024;
+    }
+
+    // General size limit: 100MB for any upload
+    function isWithinGeneralSizeLimit() {
+      return request.resource.size < 100 * 1024 * 1024;
+    }
+
+    // ============================================
+    // PROFILE IMAGES
+    // ============================================
+    match /profile_images/{userId}/{fileName} {
+      // Anyone authenticated can view profile images
+      allow read: if isAuthenticated();
+
+      // Only the owner can upload/update/delete their profile image
+      allow write: if isOwner(userId)
+                   && isImage()
+                   && isValidImageSize();
+    }
+
+    // ============================================
+    // CHAT MEDIA (Images)
+    // ============================================
+    match /chat_images/{roomId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isImage()
+                   && isValidImageSize();
+    }
+
+    match /chats/{roomId}/images/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isImage()
+                   && isValidImageSize();
+    }
+
+    // ============================================
+    // CHAT MEDIA (Videos)
+    // ============================================
+    match /chat_videos/{roomId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isVideo()
+                   && isValidVideoSize();
+    }
+
+    match /chats/{roomId}/videos/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isVideo()
+                   && isValidVideoSize();
+    }
+
+    // ============================================
+    // CHAT MEDIA (Audio / Voice Messages)
+    // ============================================
+    match /chat_audio/{roomId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isAudio()
+                   && isValidAudioSize();
+    }
+
+    match /chats/{roomId}/audio/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isAudio()
+                   && isValidAudioSize();
+    }
+
+    // ============================================
+    // CHAT MEDIA (Files / Documents)
+    // ============================================
+    match /chat_files/{roomId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isWithinGeneralSizeLimit();
+    }
+
+    match /chats/{roomId}/files/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isWithinGeneralSizeLimit();
+    }
+
+    // ============================================
+    // STORY FILES (Images & Videos)
+    // ============================================
+    match /stories/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId)
+                   && (isImage() || isVideo())
+                   && isValidVideoSize();
+    }
+
+    // Alternative story paths
+    match /Stories/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId)
+                   && (isImage() || isVideo())
+                   && isValidVideoSize();
+    }
+
+    // ============================================
+    // GROUP IMAGES
+    // ============================================
+    match /group_images/{chatId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isImage()
+                   && isValidImageSize();
+    }
+
+    // ============================================
+    // BACKUPS
+    // ============================================
+    match /backups/{userId}/{allPaths=**} {
+      // Only the owner can read/write their backups
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+                   && isValidBackupSize();
+    }
+
+    // ============================================
+    // HELP / SUPPORT ATTACHMENTS
+    // ============================================
+    match /help_attachments/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+                   && isWithinGeneralSizeLimit();
+    }
+
+    // ============================================
+    // AUDIO MESSAGES (legacy path used by FirebaseUtils)
+    // ============================================
+    match /audio/{roomId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isAudio()
+                   && isValidAudioSize();
+    }
+
+    // ============================================
+    // GENERIC CHAT MEDIA (catch-all for chat subpaths)
+    // ============================================
+    match /chat_media/{chatId}/{messageId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+                   && isWithinGeneralSizeLimit();
+    }
+
+    // ============================================
+    // DEFAULT: DENY ALL OTHER PATHS
+    // ============================================
     match /{allPaths=**} {
       allow read, write: if false;
     }

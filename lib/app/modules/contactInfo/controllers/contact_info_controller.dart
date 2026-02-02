@@ -318,6 +318,7 @@ class ContactInfoController extends GetxController {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Close',
                     onPressed: () => Get.back(),
                   ),
                 ],
@@ -384,9 +385,11 @@ class ContactInfoController extends GetxController {
                     itemCount: messages.length,
                     separatorBuilder: (context, index) => const Divider(),
                     itemBuilder: (context, index) {
-                      final message = messages[index].data() as Map<String, dynamic>;
+                      final message =
+                          messages[index].data() as Map<String, dynamic>;
                       final messageType = message['type'] ?? 'text';
-                      final messageContent = message['text'] ?? message['content'] ?? '';
+                      final messageContent =
+                          message['text'] ?? message['content'] ?? '';
                       final timestamp = message['timestamp'];
                       final senderId = message['senderId'] ?? '';
                       final currentUserId = UserService.currentUserValue?.uid;
@@ -402,7 +405,8 @@ class ContactInfoController extends GetxController {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.amber.shade100,
-                            child: const Icon(Icons.star, color: Colors.amber, size: 20),
+                            child: const Icon(Icons.star,
+                                color: Colors.amber, size: 20),
                           ),
                           title: Text(
                             isMe ? 'You' : (user.value?.fullName ?? 'Unknown'),
@@ -416,7 +420,9 @@ class ContactInfoController extends GetxController {
                             children: [
                               const SizedBox(height: 4),
                               Text(
-                                messageType == 'text' ? messageContent : '[$messageType]',
+                                messageType == 'text'
+                                    ? messageContent
+                                    : '[$messageType]',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 13),
@@ -435,6 +441,7 @@ class ContactInfoController extends GetxController {
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.close, size: 20),
+                            tooltip: 'Remove from starred',
                             onPressed: () async {
                               // Unstar message
                               await FirebaseFirestore.instance
@@ -542,6 +549,7 @@ class ContactInfoController extends GetxController {
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close),
+                      tooltip: 'Close',
                       onPressed: () => Get.back(),
                     ),
                   ],
@@ -677,7 +685,8 @@ class ContactInfoController extends GetxController {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final data = items[index].data() as Map<String, dynamic>;
-              final fileName = data['fileName'] ?? data['name'] ?? 'Unknown file';
+              final fileName =
+                  data['fileName'] ?? data['name'] ?? 'Unknown file';
               final fileSize = data['fileSize'] ?? '';
               final timestamp = data['timestamp'];
 
@@ -720,11 +729,13 @@ class ContactInfoController extends GetxController {
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.download, size: 20),
+                    tooltip: 'Download file',
                     onPressed: () async {
                       // Download file
                       final data = items[index].data() as Map<String, dynamic>;
                       final url = data['url'] ?? data['fileUrl'] ?? '';
-                      final fileName = data['fileName'] ?? 'file_${DateTime.now().millisecondsSinceEpoch}';
+                      final fileName = data['fileName'] ??
+                          'file_${DateTime.now().millisecondsSinceEpoch}';
 
                       if (url.isNotEmpty) {
                         await _downloadFile(url, fileName);
@@ -832,7 +843,8 @@ class ContactInfoController extends GetxController {
 
       // Save to device storage and share
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'chat_export_${displayName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.$exportFormat';
+      final fileName =
+          'chat_export_${displayName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.$exportFormat';
       final filePath = '${directory.path}/$fileName';
 
       // Write file to storage
@@ -895,7 +907,8 @@ class ContactInfoController extends GetxController {
       final currentUserId = UserService.currentUserValue?.uid;
       final senderName = senderId == currentUserId ? 'You' : displayName;
 
-      buffer.writeln('[${dateTime != null ? _formatTimestamp(dateTime) : 'Unknown time'}]');
+      buffer.writeln(
+          '[${dateTime != null ? _formatTimestamp(dateTime) : 'Unknown time'}]');
       buffer.writeln('$senderName:');
 
       if (messageType == 'text') {
@@ -965,7 +978,8 @@ class ContactInfoController extends GetxController {
             const SizedBox(height: 8),
             Text("Bio: ${user.value?.bio ?? 'No bio'}"),
             const SizedBox(height: 16),
-            const Text("Contact information", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text("Contact information",
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -987,8 +1001,10 @@ class ContactInfoController extends GetxController {
 
   // Getters for easy access - Group data
   String get groupDisplayName => groupName.value ?? "Group Chat";
-  String get groupDisplayDescription => groupDescription.value ?? "No description";
-  String get groupDisplayMemberCount => "${groupMemberCount.value ?? 0} ${groupMemberCount.value == 1 ? 'member' : 'members'}";
+  String get groupDisplayDescription =>
+      groupDescription.value ?? "No description";
+  String get groupDisplayMemberCount =>
+      "${groupMemberCount.value ?? 0} ${groupMemberCount.value == 1 ? 'member' : 'members'}";
 
   // Check if this is a group contact
   bool get isGroupContact => isGroup.value == true;
@@ -997,10 +1013,12 @@ class ContactInfoController extends GetxController {
   String get displayName => isGroupContact ? groupDisplayName : userName;
 
   // Get the subtitle (for user status or group member count)
-  String get displaySubtitle => isGroupContact ? groupDisplayMemberCount : userBio;
+  String get displaySubtitle =>
+      isGroupContact ? groupDisplayMemberCount : userBio;
 
   // Get the image (user or group)
-  String? get displayImage => isGroupContact ? null : userImage; // Groups use different image handling
+  String? get displayImage =>
+      isGroupContact ? null : userImage; // Groups use different image handling
 
   /// Start a call with the user
   Future<void> startCall({bool isVideo = false}) async {
@@ -1040,7 +1058,8 @@ class ContactInfoController extends GetxController {
     }
 
     try {
-      developer.log('[ContactInfoController] Starting ${isVideo ? "video" : "audio"} call to ${otherUser.uid}');
+      developer.log(
+          '[ContactInfoController] Starting ${isVideo ? "video" : "audio"} call to ${otherUser.uid}');
 
       // Create call model
       final callModel = CallModel(
@@ -1068,23 +1087,40 @@ class ContactInfoController extends GetxController {
         return;
       }
 
-      // Update call model with generated ID
-      final callWithId = callModel.copyWith(callId: callId);
-
-      // Send ZEGO call invitation
-      final invitationSent = await ZegoCallService.instance.sendCallInvitation(
+      // Send ZEGO call invitation — InvitationService handles outgoing UI.
+      // Do NOT navigate to CallScreen; it conflicts with InvitationService's
+      // Express Engine and causes error 1001004 (LoginFailed).
+      final invitationResult =
+          await ZegoCallService.instance.sendCallInvitation(
         calleeId: otherUser.uid ?? '',
         calleeName: otherUser.fullName ?? '',
         isVideoCall: isVideo,
+        callID: callId,
         resourceID: 'zego_data',
       );
 
-      if (!invitationSent) {
-        developer.log('[ContactInfoController] ZEGO invitation failed, continuing with direct call');
-      }
+      if (invitationResult.success) {
+        developer.log(
+            '[ContactInfoController] ZEGO invitation sent — service handles UI');
+      } else {
+        developer.log('[ContactInfoController] ZEGO invitation failed: '
+            'code=${invitationResult.errorCode}, msg=${invitationResult.errorMessage}');
+        Get.snackbar(
+          'Call Error',
+          invitationResult.userFacingMessage,
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
+          colorText: Colors.white,
+        );
 
-      // Navigate to call screen
-      Get.toNamed(Routes.CALL, arguments: callWithId);
+        // Mark call as cancelled since invitation couldn't be sent
+        try {
+          await CallDataSources().markCallAsCancelled(callId);
+        } catch (e) {
+          developer
+              .log('[ContactInfoController] Failed to cancel call record: $e');
+        }
+      }
     } catch (e) {
       developer.log('[ContactInfoController] Error starting call: $e');
       Get.snackbar(
@@ -1255,7 +1291,8 @@ class ContactInfoController extends GetxController {
                   value: event == null
                       ? 0
                       : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ColorsManager.primary),
                 ),
               ),
               backgroundDecoration: const BoxDecoration(
@@ -1270,6 +1307,7 @@ class ContactInfoController extends GetxController {
               right: 16,
               child: IconButton(
                 icon: Icon(Icons.close, color: Colors.white, size: 30),
+                tooltip: 'Close gallery',
                 onPressed: () => Get.back(),
               ),
             ),
@@ -1282,7 +1320,8 @@ class ContactInfoController extends GetxController {
                 onPressed: () async {
                   final currentIndex = initialIndex;
                   final url = mediaItems[currentIndex]['url'] as String;
-                  await _downloadFile(url, 'media_${DateTime.now().millisecondsSinceEpoch}');
+                  await _downloadFile(
+                      url, 'media_${DateTime.now().millisecondsSinceEpoch}');
                 },
                 backgroundColor: ColorsManager.primary,
                 child: Icon(Icons.download, color: Colors.white),
@@ -1309,7 +1348,8 @@ class ContactInfoController extends GetxController {
     if (result.success) {
       FileDownloadHelper.showDownloadComplete(fileName, result.filePath!);
     } else {
-      FileDownloadHelper.showDownloadError(result.errorMessage ?? 'Download failed');
+      FileDownloadHelper.showDownloadError(
+          result.errorMessage ?? 'Download failed');
     }
   }
 }

@@ -47,6 +47,7 @@ class ZegoCallConfig {
       buttons: [
         ZegoCallMenuBarButtonName.minimizingButton,
         ZegoCallMenuBarButtonName.showMemberListButton,
+        ZegoCallMenuBarButtonName.pipButton, 
       ],
       style: ZegoCallMenuBarStyle.dark,
     );
@@ -67,6 +68,7 @@ class ZegoCallConfig {
               ZegoCallMenuBarButtonName.switchAudioOutputButton,
             ],
       style: ZegoCallMenuBarStyle.dark,
+      
       hideAutomatically: false,
     );
 

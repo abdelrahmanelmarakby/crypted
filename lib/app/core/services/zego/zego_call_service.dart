@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -10,7 +11,53 @@ import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:crypted_app/core/constant.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_config.dart';
-import 'package:crypted_app/app/core/services/zego/zego_token_generator.dart';
+
+/// Result of a ZEGO call invitation attempt.
+///
+/// Replaces the raw `bool` return from `sendCallInvitation()` so callers
+/// can show specific error messages instead of generic failures.
+class ZegoCallInvitationResult {
+  final bool success;
+  final String? errorMessage;
+  final int? errorCode;
+
+  const ZegoCallInvitationResult._({
+    required this.success,
+    this.errorMessage,
+    this.errorCode,
+  });
+
+  factory ZegoCallInvitationResult.ok() =>
+      const ZegoCallInvitationResult._(success: true);
+
+  factory ZegoCallInvitationResult.failed({
+    String? message,
+    int? code,
+  }) =>
+      ZegoCallInvitationResult._(
+        success: false,
+        errorMessage: message ?? 'Call invitation failed',
+        errorCode: code,
+      );
+
+  /// Map known ZIM error codes to user-friendly messages.
+  String get userFacingMessage {
+    if (success) return '';
+    switch (errorCode) {
+      case 107026:
+        return 'This user is not available for calls. '
+            'They may need to update their app.';
+      case 6000281:
+        // Wrapper code for ZIM callInvite failure — check inner code
+        return errorMessage ?? 'Could not reach the other user.';
+      case 301003001:
+        // Signaling plugin error wrapping a ZIM failure
+        return errorMessage ?? 'Call service error. Please try again.';
+      default:
+        return errorMessage ?? 'Could not connect the call. Please try again.';
+    }
+  }
+}
 
 /// Centralized service for managing ZEGO Cloud video/audio calls.
 ///
@@ -42,24 +89,14 @@ class ZegoCallService extends GetxService {
   // Track current outgoing call invitees for cancellation
   List<ZegoCallUser>? _currentCallInvitees;
 
+  // ZIM connection state monitoring
+  StreamSubscription? _connectionStateSubscription;
+
   // Getters
   bool get isInitialized => _isInitialized.value;
   bool get isUserLoggedIn => _isUserLoggedIn.value;
   String? get currentUserId => _currentUserId.value;
   String? get currentUserName => _currentUserName.value;
-
-  /// Generate a ZEGO Token04 for the given user.
-  ///
-  /// Tokens are valid for 1 hour (3600 seconds) by default.
-  /// Used by both the invitation service and standalone CallScreen.
-  static String generateToken(String userID, {int effectiveTime = 3600}) {
-    return ZegoTokenGenerator.generateToken04(
-      appID: AppConstants.appID,
-      userID: userID,
-      serverSecret: AppConstants.serverSecret,
-      effectiveTimeInSeconds: effectiveTime,
-    );
-  }
 
   /// Initialize ZEGO SDK with navigator key.
   /// Call this in main() before runApp().
@@ -117,27 +154,22 @@ class ZegoCallService extends GetxService {
     try {
       log('[ZegoCallService] Logging in user: $userId ($userName)');
 
-      // Generate token for authentication (replaces appSign)
-      final token = generateToken(userId);
-      log('[ZegoCallService] Token generated for user: $userId');
+      // Auth strategy:
+      // - appSign → used for both ZIM SDK init (ZIM.create) and ZIM login.
+      // - Do NOT pass client-generated Token04 to init() — it causes ZIM to
+      //   hang in 'connecting' state when the server can't validate it.
+      //   ZIM.login() resolves its Future BEFORE the server acknowledges,
+      //   so the SDK thinks login succeeded while ZIM stays stuck.
+      // - Express room auth also uses appSign. The onTokenExpired callback
+      //   provides Token04 for renewal if needed during an active call.
+      log('[ZegoCallService] Initializing ZEGO invitation service (appSign auth)...');
 
       await ZegoUIKitPrebuiltCallInvitationService().init(
         appID: AppConstants.appID,
-        token: token,
+        appSign: AppConstants.appSign,
         userID: userId,
         userName: userName,
         plugins: [ZegoUIKitSignalingPlugin()],
-
-        // Token renewal callback — fired 30s before expiration
-        events: ZegoUIKitPrebuiltCallEvents(
-          room: ZegoCallRoomEvents(
-            onTokenExpired: (remainSeconds) {
-              log('[ZegoCallService] Token expiring in ${remainSeconds}s, renewing...');
-              final newToken = generateToken(_currentUserId.value ?? userId);
-              return newToken;
-            },
-          ),
-        ),
 
         // Notification configuration using new API
         notificationConfig: ZegoCallInvitationNotificationConfig(
@@ -241,6 +273,25 @@ class ZegoCallService extends GetxService {
       _currentUserName.value = userName;
       _isUserLoggedIn.value = true;
 
+      // Monitor ZIM connection state changes for diagnostics.
+      // ZIM.login() resolves before the server responds, so we need the
+      // stream to know when the connection is actually established.
+      _connectionStateSubscription?.cancel();
+      try {
+        _connectionStateSubscription = ZegoUIKit()
+            .getSignalingPlugin()
+            .getConnectionStateStream()
+            .listen((event) {
+          log('[ZegoCallService] 📡 ZIM state: ${event.state} (action: ${event.action})');
+        });
+
+        final immediateState =
+            ZegoUIKit().getSignalingPlugin().getConnectionState();
+        log('[ZegoCallService] Post-init ZIM state: $immediateState');
+      } catch (e) {
+        log('[ZegoCallService] Connection state monitoring failed: $e');
+      }
+
       log('[ZegoCallService] User logged in successfully: $userId');
     } catch (e, stackTrace) {
       log('[ZegoCallService] Failed to login user: $e');
@@ -261,6 +312,9 @@ class ZegoCallService extends GetxService {
     try {
       log('[ZegoCallService] Logging out user: ${_currentUserId.value}');
 
+      _connectionStateSubscription?.cancel();
+      _connectionStateSubscription = null;
+
       await ZegoUIKitPrebuiltCallInvitationService().uninit();
 
       _currentUserId.value = null;
@@ -274,12 +328,13 @@ class ZegoCallService extends GetxService {
   }
 
   /// Send a call invitation to a user.
-  /// Returns true if invitation was sent successfully.
+  ///
+  /// Returns a [ZegoCallInvitationResult] with success/failure status and,
+  /// on failure, the ZIM error code and a user-facing error message.
   ///
   /// [callID] is the ZEGO room ID both parties will join. If provided,
-  /// ensures the caller and callee end up in the same room. Must match
-  /// the callID used in CallScreen's ZegoUIKitPrebuiltCall widget.
-  Future<bool> sendCallInvitation({
+  /// ensures the caller and callee end up in the same room.
+  Future<ZegoCallInvitationResult> sendCallInvitation({
     required String calleeId,
     required String calleeName,
     required bool isVideoCall,
@@ -289,26 +344,72 @@ class ZegoCallService extends GetxService {
   }) async {
     if (!_isUserLoggedIn.value) {
       log('[ZegoCallService] Cannot send call - user not logged in');
-      return false;
+      return ZegoCallInvitationResult.failed(
+        message: 'Not logged in to call service',
+      );
     }
 
     try {
       log('[ZegoCallService] Sending ${isVideoCall ? "video" : "audio"} call to $calleeId (room: $callID)');
 
-      // Diagnostic: log signaling state before send
+      // ── Pre-Send State Check ──
+      ZegoSignalingPluginConnectionState signalingState;
       try {
-        final signalingState = ZegoUIKit().getSignalingPlugin().getConnectionState();
-        final isServiceInit = ZegoUIKitPrebuiltCallInvitationService().isInit;
-        log('[ZegoCallService] Pre-send diagnostics: '
-            'signalingState=$signalingState, '
-            'isServiceInit=$isServiceInit, '
-            'isVideoCall=$isVideoCall');
+        signalingState = ZegoUIKit().getSignalingPlugin().getConnectionState();
+        final localUser = ZegoUIKit().getLocalUser();
+        log('[ZegoCallService] Pre-send: signaling=$signalingState, '
+            'localUser="${localUser.id}"');
+
+        if (localUser.id.isEmpty) {
+          log('[ZegoCallService] ⚠️ Local user ID empty — invitation will fail');
+          return ZegoCallInvitationResult.failed(
+            message: 'Call service not ready. Please restart the app.',
+          );
+        }
       } catch (e) {
-        log('[ZegoCallService] Failed to get diagnostics: $e');
+        log('[ZegoCallService] Failed to get pre-send state: $e');
+        signalingState = ZegoSignalingPluginConnectionState.disconnected;
+      }
+
+      // Wait for signaling to connect if it's still connecting
+      if (signalingState != ZegoSignalingPluginConnectionState.connected) {
+        log('[ZegoCallService] Signaling not connected ($signalingState), waiting up to 5s...');
+        final connected = await _waitForSignalingConnection(
+          timeout: const Duration(seconds: 5),
+        );
+        if (!connected) {
+          final finalState =
+              ZegoUIKit().getSignalingPlugin().getConnectionState();
+          log('[ZegoCallService] ❌ ZIM not connected after 5s (state: $finalState)');
+          return ZegoCallInvitationResult.failed(
+            message: 'Call service not connected. Check your internet.',
+          );
+        }
+        log('[ZegoCallService] Signaling connected after wait');
+      }
+
+      // ── Listen for ZIM errors during send ──
+      // The SDK's send() swallows error details into a boolean.
+      // Capture the actual ZIM error from the signaling error stream.
+      int? capturedErrorCode;
+      String? capturedErrorMessage;
+      StreamSubscription<ZegoSignalingError>? errorSub;
+      try {
+        errorSub = ZegoUIKit()
+            .getSignalingPlugin()
+            .getErrorStream()
+            .listen((error) {
+          capturedErrorCode = error.code;
+          capturedErrorMessage = error.message;
+          log('[ZegoCallService] ⚠️ ZIM error: code=${error.code}, '
+              'message=${error.message}');
+        });
+      } catch (e) {
+        log('[ZegoCallService] Could not listen to error stream: $e');
       }
 
       final invitees = [ZegoCallUser(calleeId, calleeName)];
-      _currentCallInvitees = invitees; // Store for potential cancellation
+      _currentCallInvitees = invitees;
 
       final result = await ZegoUIKitPrebuiltCallInvitationService().send(
         invitees: invitees,
@@ -319,17 +420,42 @@ class ZegoCallService extends GetxService {
         customData: '${isVideoCall ? "video" : "audio"}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
+      // Give error stream a moment to deliver any queued errors
+      await Future.delayed(const Duration(milliseconds: 300));
+      await errorSub?.cancel();
+
       if (!result) {
         _currentCallInvitees = null;
-        log('[ZegoCallService] Call invitation FAILED to send — '
-            'check signaling connection and init state above');
+
+        // Parse inner ZIM error code from wrapper message if present
+        // Example: "callInvite failed with code: 107026, message: ..."
+        int? innerCode = capturedErrorCode;
+        if (capturedErrorMessage != null &&
+            capturedErrorMessage!.contains('code: ')) {
+          final match = RegExp(r'code:\s*(\d+)')
+              .firstMatch(capturedErrorMessage!);
+          if (match != null) {
+            innerCode = int.tryParse(match.group(1)!);
+          }
+        }
+
+        log('[ZegoCallService] ❌ Invitation failed '
+            '(zimCode: $capturedErrorCode, innerCode: $innerCode)');
+
+        return ZegoCallInvitationResult.failed(
+          code: innerCode ?? capturedErrorCode,
+          message: capturedErrorMessage,
+        );
       }
 
-      log('[ZegoCallService] Call invitation sent: $result');
-      return result;
-    } catch (e) {
+      log('[ZegoCallService] ✅ Call invitation sent successfully');
+      return ZegoCallInvitationResult.ok();
+    } catch (e, stackTrace) {
       log('[ZegoCallService] Failed to send call invitation: $e');
-      return false;
+      log('[ZegoCallService] Stack trace: $stackTrace');
+      return ZegoCallInvitationResult.failed(
+        message: 'Unexpected error: ${e.toString()}',
+      );
     }
   }
 
@@ -349,6 +475,26 @@ class ZegoCallService extends GetxService {
     } catch (e) {
       log('[ZegoCallService] Error cancelling call: $e');
     }
+  }
+
+  /// Wait for ZIM signaling to reach connected state.
+  ///
+  /// Returns true if connected within [timeout], false otherwise.
+  /// Polls every 200ms to check the connection state.
+  Future<bool> _waitForSignalingConnection({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      try {
+        final state = ZegoUIKit().getSignalingPlugin().getConnectionState();
+        if (state == ZegoSignalingPluginConnectionState.connected) {
+          return true;
+        }
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    return false;
   }
 
   /// Get call configuration for 1-on-1 calls.
@@ -387,6 +533,8 @@ class ZegoCallService extends GetxService {
   /// Cleanup resources when service is disposed.
   @override
   void onClose() {
+    _connectionStateSubscription?.cancel();
+    _connectionStateSubscription = null;
     logoutUser();
     super.onClose();
   }

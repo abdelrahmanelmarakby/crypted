@@ -51,11 +51,13 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
       leading: Obx(() {
         if (controller.isSearchMode.value) {
           return IconButton(
+            tooltip: 'Exit search',
             icon: const Icon(Icons.arrow_back),
             onPressed: controller.toggleSearchMode,
           );
         }
         return IconButton(
+          tooltip: 'Go back',
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
         );
@@ -84,6 +86,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           if (controller.isSearchMode.value) {
             if (controller.searchQuery.value.isNotEmpty) {
               return IconButton(
+                tooltip: 'Clear search',
                 icon: const Icon(Icons.close),
                 onPressed: controller.clearSearch,
               );
@@ -92,11 +95,13 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           }
           if (controller.isSelectionMode.value) {
             return IconButton(
+              tooltip: 'Cancel selection',
               icon: const Icon(Icons.close),
               onPressed: controller.toggleSelectionMode,
             );
           }
           return IconButton(
+            tooltip: 'Search media',
             icon: const Icon(Icons.search),
             onPressed: controller.toggleSearchMode,
           );
@@ -222,8 +227,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
           // Media thumbnail
           if (type == MediaType.photos || type == MediaType.videos)
             _buildImageThumbnail(item, type),
-          if (type == MediaType.audio)
-            _buildAudioThumbnail(item),
+          if (type == MediaType.audio) _buildAudioThumbnail(item),
 
           // Selection overlay
           if (isSelected)
@@ -345,6 +349,7 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
                 activeColor: ColorsManager.primary,
               )
             : IconButton(
+                tooltip: 'More options',
                 icon: const Icon(Icons.more_vert),
                 onPressed: () => _showItemOptions(item, type),
               ),
@@ -492,7 +497,8 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
             ),
             ListTile(
               leading: Icon(Icons.delete, color: ColorsManager.error),
-              title: Text('Delete', style: TextStyle(color: ColorsManager.error)),
+              title:
+                  Text('Delete', style: TextStyle(color: ColorsManager.error)),
               onTap: () async {
                 Get.back();
                 controller.toggleSelection(item.messageId ?? '');
@@ -591,7 +597,8 @@ class MediaGalleryView extends GetView<MediaGalleryController> {
             TextButton.icon(
               onPressed: controller.deleteSelected,
               icon: Icon(Icons.delete, color: ColorsManager.error),
-              label: Text('Delete', style: TextStyle(color: ColorsManager.error)),
+              label:
+                  Text('Delete', style: TextStyle(color: ColorsManager.error)),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:crypted_app/app/data/data_source/chat/chat_data_sources.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/data/models/chat/chat_room_model.dart';
@@ -33,12 +34,16 @@ class MessageSearchController extends GetxController {
   final ChatDataSources _chatDataSources = ChatDataSources();
 
   final RxList<Message> _searchResults = <Message>[].obs;
-  final RxList<Message> _allSearchResults = <Message>[].obs; // Store all results before filtering
+  final RxList<Message> _allSearchResults =
+      <Message>[].obs; // Store all results before filtering
   final RxList<SocialMediaUser> _userResults = <SocialMediaUser>[].obs;
   final RxString _searchQuery = ''.obs;
   final RxBool _isSearching = false.obs;
   final Rx<MessageTypeFilter> _selectedFilter = MessageTypeFilter.all.obs;
   final RxList<String> _recentSearches = <String>[].obs;
+
+  // Stream subscriptions for cleanup
+  StreamSubscription? _messageSearchSubscription;
 
   List<Message> get searchResults => _searchResults;
   List<SocialMediaUser> get userResults => _userResults;
@@ -166,7 +171,10 @@ class MessageSearchController extends GetxController {
   }
 
   void _searchInMessages() {
-    _chatDataSources.getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
+    // Cancel previous search subscription to prevent leaks
+    _messageSearchSubscription?.cancel();
+    _messageSearchSubscription = _chatDataSources
+        .getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
         .listen((chatRooms) async {
       List<Message> results = [];
       Map<String, String> chatNames = {}; // Cache for chat names
@@ -179,13 +187,16 @@ class MessageSearchController extends GetxController {
           chatNames[chatRoom.id ?? ''] = chatName;
 
           // Get recent messages from this chat room
-          final messages = await _chatDataSources.getLivePrivateMessage(chatRoom.id ?? "").first;
+          final messages = await _chatDataSources
+              .getLivePrivateMessage(chatRoom.id ?? "")
+              .first;
 
           // Search through messages in this chat room
           for (var message in messages) {
             if (_messageMatchesQuery(message, _searchQuery.value)) {
               // Create a copy of the message with chat name info
-              final messageWithChatName = await _enhanceMessageWithChatInfo(message, chatName);
+              final messageWithChatName =
+                  await _enhanceMessageWithChatInfo(message, chatName);
               results.add(messageWithChatName);
             }
           }
@@ -219,18 +230,23 @@ class MessageSearchController extends GetxController {
       final currentUserId = UserService.currentUserValue?.uid ?? '';
 
       // Handle group chats
-      if (chatRoom.isGroupChat == true && chatRoom.name != null && chatRoom.name!.isNotEmpty) {
+      if (chatRoom.isGroupChat == true &&
+          chatRoom.name != null &&
+          chatRoom.name!.isNotEmpty) {
         return chatRoom.name!;
       }
 
       // Handle private chats (1-on-1)
       if (chatRoom.membersIds != null && chatRoom.membersIds!.length == 2) {
         // Find the other user (not current user)
-        final otherUserId = chatRoom.membersIds!.firstWhere((id) => id != currentUserId);
+        final otherUserId =
+            chatRoom.membersIds!.firstWhere((id) => id != currentUserId);
         if (otherUserId.isNotEmpty) {
           // Get the other user's profile
           final otherUser = await UserService().getProfile(otherUserId);
-          if (otherUser != null && otherUser.fullName != null && otherUser.fullName!.isNotEmpty) {
+          if (otherUser != null &&
+              otherUser.fullName != null &&
+              otherUser.fullName!.isNotEmpty) {
             return otherUser.fullName!;
           }
         }
@@ -249,7 +265,8 @@ class MessageSearchController extends GetxController {
     }
   }
 
-  Future<Message> _enhanceMessageWithChatInfo(Message message, String chatName) async {
+  Future<Message> _enhanceMessageWithChatInfo(
+      Message message, String chatName) async {
     // For now, just return the original message
     // In a more advanced implementation, you could create a wrapper
     // that includes chat name information
@@ -261,7 +278,8 @@ class MessageSearchController extends GetxController {
 
     // Search in message content based on type
     String? content = _getMessageContent(message);
-    if (content != null && content.toLowerCase().contains(query.toLowerCase())) {
+    if (content != null &&
+        content.toLowerCase().contains(query.toLowerCase())) {
       return true;
     }
 
@@ -348,8 +366,10 @@ class MessageSearchController extends GetxController {
     _searchQuery.value = '*'; // Indicate we're browsing, not searching
     _isSearching.value = true;
 
-    _chatDataSources.getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
-        .first.then((chatRooms) async {
+    _chatDataSources
+        .getChats(getGroupChatOnly: false, getPrivateChatOnly: false)
+        .first
+        .then((chatRooms) async {
       List<Message> results = [];
 
       // For each chat room, get messages of the selected type
@@ -359,12 +379,15 @@ class MessageSearchController extends GetxController {
           String chatName = await _getChatNameForSearch(chatRoom);
 
           // Get recent messages from this chat room
-          final messages = await _chatDataSources.getLivePrivateMessage(chatRoom.id ?? "").first;
+          final messages = await _chatDataSources
+              .getLivePrivateMessage(chatRoom.id ?? "")
+              .first;
 
           // Filter messages by type (no query match needed)
           for (var message in messages) {
             if (_messageMatchesType(message, filter)) {
-              final messageWithChatName = await _enhanceMessageWithChatInfo(message, chatName);
+              final messageWithChatName =
+                  await _enhanceMessageWithChatInfo(message, chatName);
               results.add(messageWithChatName);
             }
           }
@@ -423,6 +446,7 @@ class MessageSearchController extends GetxController {
 
   @override
   void onClose() {
+    _messageSearchSubscription?.cancel();
     _searchResults.close();
     _allSearchResults.close();
     _userResults.close();

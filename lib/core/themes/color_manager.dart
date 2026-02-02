@@ -130,15 +130,88 @@ class ColorsManager {
   static const Color busy = Color(0xFFF44336);
 
   // ============================================
+  // DARK MODE COLORS
+  // ============================================
+  static const Color darkScaffoldBackground = Color(0xFF121212);
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkSurfaceVariant = Color(0xFF2C2C2C);
+  static const Color darkCard = Color(0xFF1E1E1E);
+  static const Color darkNavbar = Color(0xFF1A1A1A);
+  static const Color darkAppBar = Color(0xFF1E1E1E);
+  static const Color darkBottomSheet = Color(0xFF252525);
+  static const Color darkDialog = Color(0xFF2C2C2C);
+  static const Color darkInput = Color(0xFF2C2C2C);
+  static const Color darkInputBorder = Color(0xFF404040);
+  static const Color darkDivider = Color(0xFF333333);
+  static const Color darkBorder = Color(0xFF333333);
+  static const Color darkSnackBar = Color(0xFF323232);
+
+  // Dark mode text colors
+  static const Color darkTextPrimary = Color(0xFFE0E0E0);
+  static const Color darkTextSecondary = Color(0xFF9E9E9E);
+  static const Color darkTextTertiary = Color(0xFF757575);
+  static const Color darkTextDisabled = Color(0xFF505050);
+
+  // Dark mode chat colors
+  static const Color darkTextfieldMessage = Color(0xFF2C2C2C);
+  static const Color darkManMessage = Color(0xFF9E9E9E);
+  static const Color darkMessFriendColor = Color(0xFF1B3A24);
+  static const Color darkVoiceColor = Color(0xFFB0B0B0);
+  static const Color darkVoiceProgressColor = Color(0xFF555555);
+
+  // Dark mode icon/setting backgrounds
+  static const Color darkBackgroundIconSetting = Color(0xFF1B3A24);
+  static const Color darkBackgroundError = Color(0xFF3D1F1F);
+
+  // ============================================
+  // ADAPTIVE COLOR HELPERS (light/dark)
+  // ============================================
+
+  /// Returns the appropriate color based on current brightness.
+  /// Usage: `ColorsManager.adaptive(context, light: white, dark: darkSurface)`
+  static Color adaptive(
+    BuildContext context, {
+    required Color light,
+    required Color dark,
+  }) {
+    return Theme.of(context).brightness == Brightness.dark ? dark : light;
+  }
+
+  /// Scaffold / page background
+  static Color scaffoldBg(BuildContext context) => adaptive(context,
+      light: scaffoldBackground, dark: darkScaffoldBackground);
+
+  /// Card / container surface
+  static Color surfaceAdaptive(BuildContext context) =>
+      adaptive(context, light: white, dark: darkSurface);
+
+  /// Primary text
+  static Color textPrimaryAdaptive(BuildContext context) =>
+      adaptive(context, light: textPrimary, dark: darkTextPrimary);
+
+  /// Secondary text
+  static Color textSecondaryAdaptive(BuildContext context) =>
+      adaptive(context, light: textSecondary, dark: darkTextSecondary);
+
+  /// Divider / border
+  static Color dividerAdaptive(BuildContext context) =>
+      adaptive(context, light: border, dark: darkDivider);
+
+  /// Input field background
+  static Color inputBg(BuildContext context) =>
+      adaptive(context, light: surfaceVariant, dark: darkInput);
+
+  // ============================================
   // MATERIAL STATE PROPERTY
   // ============================================
   static WidgetStateProperty<Color?> greyMatrialColor =
       WidgetStateColor.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
-          return white;
-        }
-        return white;
-      });
+    if (states.contains(WidgetState.disabled)) {
+      return white;
+    }
+    return white;
+  });
 
   // ============================================
   // UTILITY METHODS

@@ -34,7 +34,8 @@ import 'package:crypted_app/app/modules/chat/widgets/message_actions_bottom_shee
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
-import 'package:crypted_app/app/data/models/messages/image_message_model.dart' as image;
+import 'package:crypted_app/app/data/models/messages/image_message_model.dart'
+    as image;
 import 'package:crypted_app/app/data/models/messages/audio_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/file_message_model.dart';
@@ -73,7 +74,14 @@ import 'package:crypted_app/app/core/services/search_history_service.dart';
 /// ARCH-008: Uses CallHandlerMixin to move call logic from view to controller
 /// ARCH-009: Uses NewArchitectureMixin for clean architecture message operations
 class ChatController extends GetxController
-    with ChatControllerIntegration, RateLimitedController, DebouncedControllerMixin, CallHandlerMixin, NewArchitectureMixin, ForwardArchitectureMixin, GroupArchitectureMixin {
+    with
+        ChatControllerIntegration,
+        RateLimitedController,
+        DebouncedControllerMixin,
+        CallHandlerMixin,
+        NewArchitectureMixin,
+        ForwardArchitectureMixin,
+        GroupArchitectureMixin {
   // Text input controller
   final TextEditingController messageController = TextEditingController();
 
@@ -121,14 +129,17 @@ class ChatController extends GetxController
       description: chatDescription.value.isEmpty ? null : chatDescription.value,
       imageUrl: groupImageUrl.value.isEmpty ? null : groupImageUrl.value,
       isGroupChat: isGroupChat.value,
-      members: members.map((m) => MemberMapper.toEntity(m, adminIds, null)).toList(),
-      memberIds: members.map((m) => m.uid ?? '').where((id) => id.isNotEmpty).toList(),
+      members:
+          members.map((m) => MemberMapper.toEntity(m, adminIds, null)).toList(),
+      memberIds:
+          members.map((m) => m.uid ?? '').where((id) => id.isNotEmpty).toList(),
       isRead: true,
       isMuted: false,
       isPinned: false,
       isArchived: false,
       isFavorite: false,
-      blockedUserIds: blockedChatInfo.value.blockedByThem ? [blockingUserId ?? ''] : [],
+      blockedUserIds:
+          blockedChatInfo.value.blockedByThem ? [blockingUserId ?? ''] : [],
       adminIds: adminIds.toList(),
       blockingUserId: blockingUserId,
       createdBy: null,
@@ -152,8 +163,10 @@ class ChatController extends GetxController
   /// UX-007: Unread message tracking for "New Messages" divider
   /// Stores the timestamp when user entered/opened this chat
   final Rx<DateTime?> chatEntryTime = Rx<DateTime?>(null);
+
   /// Flag to show the unread divider (dismisses after scrolling)
   final RxBool showUnreadDivider = true.obs;
+
   /// Count of messages newer than entry time
   final RxInt newMessageCount = 0.obs;
 
@@ -166,6 +179,7 @@ class ChatController extends GetxController
         : null;
     return _repository!;
   }
+
   bool get hasRepository => Get.isRegistered<IChatRepository>();
 
   // Real-time services
@@ -176,11 +190,11 @@ class ChatController extends GetxController
   // Services
   final _logger = LoggerService.instance;
   final _errorHandler = ErrorHandlerService.instance;
-  
+
   // Typing indicators
   final RxList<String> typingUsers = <String>[].obs;
   final RxString typingText = ''.obs;
-  
+
   // Stream subscriptions for cleanup
   final List<StreamSubscription> _streamSubscriptions = [];
 
@@ -224,51 +238,47 @@ class ChatController extends GetxController
   /// Setup listeners for Chat Session Manager changes
   void _setupSessionListeners() {
     // Use stream subscriptions for external streams and store them for cleanup
-    _streamSubscriptions.add(
-      ChatSessionManager.instance.membersStream.listen((List<SocialMediaUser> newMembers) {
-        members = newMembers;
-        memberCount.value = newMembers.length;
-        _updateChatInfo();
-        update(); // Trigger UI update
-      })
-    );
+    _streamSubscriptions.add(ChatSessionManager.instance.membersStream
+        .listen((List<SocialMediaUser> newMembers) {
+      members = newMembers;
+      memberCount.value = newMembers.length;
+      _updateChatInfo();
+      update(); // Trigger UI update
+    }));
 
     _streamSubscriptions.add(
-      ChatSessionManager.instance.isGroupChatStream.listen((bool isGroup) {
-        isGroupChat.value = isGroup;
-        update();
-      })
-    );
+        ChatSessionManager.instance.isGroupChatStream.listen((bool isGroup) {
+      isGroupChat.value = isGroup;
+      update();
+    }));
 
-    _streamSubscriptions.add(
-      ChatSessionManager.instance.chatNameStream.listen((String name) {
-        chatName.value = name;
-        update();
-      })
-    );
+    _streamSubscriptions
+        .add(ChatSessionManager.instance.chatNameStream.listen((String name) {
+      chatName.value = name;
+      update();
+    }));
 
     // BUG-004 FIX: Don't setup typing listener here - roomId not initialized yet
     // Typing listener is now setup in _initializeApp() after roomId is set
   }
-  
+
   /// Setup typing indicator listener
   void _setupTypingListener() {
     if (roomId.isEmpty) return;
-    
-    _streamSubscriptions.add(
-      typingService.listenToTypingUsers(roomId).listen((users) async {
-        if (users.isEmpty) {
-          typingUsers.clear();
-          typingText.value = '';
-          return;
-        }
-        
-        final userIds = users.map((u) => u.userId).toList();
-        final names = await typingService.getTypingUsersNames(roomId, userIds);
-        typingUsers.value = names;
-        typingText.value = typingService.formatTypingText(names);
-      })
-    );
+
+    _streamSubscriptions
+        .add(typingService.listenToTypingUsers(roomId).listen((users) async {
+      if (users.isEmpty) {
+        typingUsers.clear();
+        typingText.value = '';
+        return;
+      }
+
+      final userIds = users.map((u) => u.userId).toList();
+      final names = await typingService.getTypingUsersNames(roomId, userIds);
+      typingUsers.value = names;
+      typingText.value = typingService.formatTypingText(names);
+    }));
   }
 
   Future<void> _initializeApp() async {
@@ -282,6 +292,9 @@ class ChatController extends GetxController
 
     // Initialize new architecture components
     _initializeNewArchitecture();
+
+    // Reset unread count for this room when the user opens it
+    _resetUnreadCount();
 
     // Load blocked chat info for private chats
     await _loadBlockedChatInfo();
@@ -335,8 +348,23 @@ class ChatController extends GetxController
         });
       }
     } catch (e) {
-      _logger.error('Error loading blocked chat info: $e', context: 'ChatController');
+      _logger.error('Error loading blocked chat info: $e',
+          context: 'ChatController');
     }
+  }
+
+  /// Reset unread count for the current user when they open this chat
+  void _resetUnreadCount() {
+    final uid = currentUser?.uid;
+    if (uid == null || roomId.isEmpty) return;
+    // Fire-and-forget: write 0 to the per-user unread counter
+    FirebaseFirestore.instance
+        .collection(FirebaseCollections.chats)
+        .doc(roomId)
+        .update({'unreadCounts.$uid': 0}).catchError((e) {
+      // Silently fail — field may not exist yet on legacy rooms
+      log('Reset unread count failed (non-critical): $e');
+    });
   }
 
   /// Unblock the other user in the chat
@@ -418,7 +446,8 @@ class ChatController extends GetxController
       sendMessage: sendMessage,
     );
 
-    _logger.info('New architecture initialized', context: 'ChatController', data: {
+    _logger
+        .info('New architecture initialized', context: 'ChatController', data: {
       'roomId': roomId,
       'hasEventBus': true,
       'hasOfflineQueue': true,
@@ -433,9 +462,10 @@ class ChatController extends GetxController
     final arguments = Get.arguments;
     print("🔍 Chat arguments received: $arguments");
     roomId = arguments?['roomId'] ?? '';
-    
+
     // Check if we should use the session manager
-    final useSessionManager = arguments?['useSessionManager'] ?? true; // Default to true for new implementation
+    final useSessionManager = arguments?['useSessionManager'] ??
+        true; // Default to true for new implementation
 
     if (useSessionManager && ChatSessionManager.instance.hasActiveSession) {
       // Use Chat Session Manager (preferred method)
@@ -463,17 +493,19 @@ class ChatController extends GetxController
 
     sessionManager.printSessionInfo();
   }
+
   /// Initialize from legacy arguments (backward compatibility)
   @Deprecated('Use _initializeFromSessionManager instead')
-  Future<void> _initializeFromLegacyArguments(Map<String, dynamic>? arguments) async {
+  Future<void> _initializeFromLegacyArguments(
+      Map<String, dynamic>? arguments) async {
     if (arguments != null) {
       members = arguments['members'] ?? [];
       blockingUserId = arguments['blockingUserId'];
-      
+
       // Detect if it's a group chat based on member count
       isGroupChat.value = members.length > 2;
       memberCount.value = members.length;
-      
+
       // Set chat name
       if (isGroupChat.value) {
         chatName.value = arguments['groupName'] ?? 'Group Chat';
@@ -489,20 +521,23 @@ class ChatController extends GetxController
     }
 
     // Ensure current user is in members
-    if (members.isEmpty || !members.any((user) => user.uid == currentUser?.uid)) {
+    if (members.isEmpty ||
+        !members.any((user) => user.uid == currentUser?.uid)) {
       if (currentUser == null) {
         print("⚠️ Current user is null, trying to get from service");
         await _tryToGetCurrentUser();
       }
-      
-      if (currentUser != null && !members.any((user) => user.uid == currentUser!.uid)) {
+
+      if (currentUser != null &&
+          !members.any((user) => user.uid == currentUser!.uid)) {
         members.insert(0, currentUser!);
         memberCount.value = members.length;
       }
     }
 
     // Ensure current user is first in the list
-    final currentUserIndex = members.indexWhere((user) => user.uid == currentUser?.uid);
+    final currentUserIndex =
+        members.indexWhere((user) => user.uid == currentUser?.uid);
     if (currentUserIndex > 0) {
       final userToMove = members.removeAt(currentUserIndex);
       members.insert(0, userToMove);
@@ -533,7 +568,8 @@ class ChatController extends GetxController
   }
 
   void _initializeChatDataSource() {
-    _logger.debug('Initializing ChatDataSource', context: 'ChatController', data: {
+    _logger
+        .debug('Initializing ChatDataSource', context: 'ChatController', data: {
       'currentUserId': currentUser?.uid,
       'memberCount': members.length,
     });
@@ -558,7 +594,8 @@ class ChatController extends GetxController
     isChatDataSourceReady.value = true;
     update(); // Trigger UI rebuild
 
-    _logger.info('ChatDataSource and MessageController initialized', context: 'ChatController');
+    _logger.info('ChatDataSource and MessageController initialized',
+        context: 'ChatController');
   }
 
   void _updateChatInfo() {
@@ -614,7 +651,8 @@ class ChatController extends GetxController
             // Fallback: use creator as admin
             adminIds.value = [data['createdBy'] as String];
             print('✅ Using creator as admin: ${adminIds.first}');
-          } else if (data['membersIds'] != null && (data['membersIds'] as List).isNotEmpty) {
+          } else if (data['membersIds'] != null &&
+              (data['membersIds'] as List).isNotEmpty) {
             // Fallback: first member is admin
             adminIds.value = [(data['membersIds'] as List).first.toString()];
             print('✅ Using first member as admin: ${adminIds.first}');
@@ -645,7 +683,9 @@ class ChatController extends GetxController
           .listen((snapshot) {
         if (snapshot.exists) {
           final data = snapshot.data();
-          if (data != null && data['wallpaper'] != null && data['wallpaper'] is Map) {
+          if (data != null &&
+              data['wallpaper'] != null &&
+              data['wallpaper'] is Map) {
             chatWallpaper.value = ChatWallpaper.fromMap(
               Map<String, dynamic>.from(data['wallpaper'] as Map),
             );
@@ -661,7 +701,8 @@ class ChatController extends GetxController
 
   void _logChatInfo() {
     print("👤 Current User: ${currentUser?.fullName} (${currentUser?.uid})");
-    print("👥 Members: ${members.map((e) => '${e.fullName} (${e.uid})').join(', ')}");
+    print(
+        "👥 Members: ${members.map((e) => '${e.fullName} (${e.uid})').join(', ')}");
     print("💬 Chat Name: ${chatName.value}");
     print("🔢 Member Count: ${memberCount.value}");
     print("👥 Is Group Chat: ${isGroupChat.value}");
@@ -674,7 +715,8 @@ class ChatController extends GetxController
 
     // Initialize Zego if not already initialized
     if (currentUser?.uid != null && currentUser?.fullName != null) {
-      await CallDataSources().onUserLogin(currentUser!.uid!, currentUser!.fullName!);
+      await CallDataSources()
+          .onUserLogin(currentUser!.uid!, currentUser!.fullName!);
     }
   }
 
@@ -749,7 +791,8 @@ class ChatController extends GetxController
   Future<void> clearSearchHistory() => _searchHistoryService.clearHistory();
 
   /// Set scroll controller from the view (kept for backwards compatibility)
-  @Deprecated('Use messageScrollController getter instead - controller now owns the ScrollController')
+  @Deprecated(
+      'Use messageScrollController getter instead - controller now owns the ScrollController')
   void setScrollController(ScrollController controller) {
     // No-op - controller now manages its own ScrollController
   }
@@ -784,7 +827,8 @@ class ChatController extends GetxController
     }
 
     // FIX: Debounce search to prevent excessive filtering on every keystroke
-    getDebouncer('message_search', const Duration(milliseconds: 300)).run(() => _performSearch(query));
+    getDebouncer('message_search', const Duration(milliseconds: 300))
+        .run(() => _performSearch(query));
   }
 
   /// Internal search implementation (called after debounce)
@@ -808,12 +852,13 @@ class ChatController extends GetxController
       // Search in poll questions
       if (message is PollMessage) {
         return message.question.toLowerCase().contains(lowerQuery) ||
-               message.options.any((opt) => opt.toLowerCase().contains(lowerQuery));
+            message.options
+                .any((opt) => opt.toLowerCase().contains(lowerQuery));
       }
       // Search in event titles
       if (message is EventMessage) {
         return (message.title?.toLowerCase().contains(lowerQuery) ?? false) ||
-               (message.description?.toLowerCase().contains(lowerQuery) ?? false);
+            (message.description?.toLowerCase().contains(lowerQuery) ?? false);
       }
       return false;
     }).toList();
@@ -827,7 +872,7 @@ class ChatController extends GetxController
     }
 
     _logger.debug('Search found ${searchResults.length} results for "$query"',
-                  context: 'ChatController');
+        context: 'ChatController');
   }
 
   /// Clear search query and results
@@ -841,7 +886,8 @@ class ChatController extends GetxController
   void nextSearchResult() {
     if (searchResults.isEmpty) return;
 
-    currentSearchIndex.value = (currentSearchIndex.value + 1) % searchResults.length;
+    currentSearchIndex.value =
+        (currentSearchIndex.value + 1) % searchResults.length;
     scrollToCurrentSearchResult();
   }
 
@@ -892,11 +938,13 @@ class ChatController extends GetxController
     const estimatedMessageHeight = 80.0;
     final targetOffset = index * estimatedMessageHeight;
 
-    messageScrollController.animateTo(
+    messageScrollController
+        .animateTo(
       targetOffset,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
-    ).then((_) {
+    )
+        .then((_) {
       // After scroll completes, try to refine with GlobalKey
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final key = messageKeys[messageId];
@@ -986,10 +1034,7 @@ class ChatController extends GetxController
       }
 
       await chatDataSource.sendMessage(
-        privateMessage: messageToSend,
-        roomId: roomId,
-        members: members
-      );
+          privateMessage: messageToSend, roomId: roomId, members: members);
 
       _clearMessageInput();
       print("✅ Message sent successfully with reply context");
@@ -1007,7 +1052,8 @@ class ChatController extends GetxController
     // SEC-004 FIX: Check rate limit before sending
     final rateLimitResult = recordMessageSend(roomId);
     if (!rateLimitResult.allowed) {
-      _showErrorToast(rateLimitResult.message ?? 'Sending too fast. Please wait.');
+      _showErrorToast(
+          rateLimitResult.message ?? 'Sending too fast. Please wait.');
       return;
     }
 
@@ -1051,7 +1097,8 @@ class ChatController extends GetxController
     // PERF-008 FIX: Check connectivity before sending
     if (!ConnectivityService().isOnline) {
       // FIX: Queue message for offline sending
-      _logger.info('Offline - queueing message for later', context: 'ChatController');
+      _logger.info('Offline - queueing message for later',
+          context: 'ChatController');
 
       // Queue the message to offline queue for later delivery
       final messageData = message.toMap();
@@ -1093,14 +1140,12 @@ class ChatController extends GetxController
         );
       } else {
         actualMessageId = await chatDataSource.sendMessage(
-          privateMessage: message,
-          roomId: roomId,
-          members: members
-        );
+            privateMessage: message, roomId: roomId, members: members);
       }
 
       // Register mapping for deduplication when Firestore stream delivers
-      messageControllerService.registerPendingSentMessage(tempId, actualMessageId);
+      messageControllerService.registerPendingSentMessage(
+          tempId, actualMessageId);
 
       // Emit message sent event through event bus
       eventBus.emit(MessageSentEvent(
@@ -1109,7 +1154,8 @@ class ChatController extends GetxController
         localId: tempId,
       ));
 
-      print("✅ Message sent via legacy path (tempId: $tempId -> actualId: $actualMessageId)");
+      print(
+          "✅ Message sent via legacy path (tempId: $tempId -> actualId: $actualMessageId)");
       return actualMessageId;
     } catch (e) {
       // ROLLBACK: Remove the optimistic message on failure
@@ -1275,7 +1321,7 @@ class ChatController extends GetxController
           members = sessionManager.members;
           memberCount.value = members.length;
           _showToast('${newMember.fullName} added to group');
-          
+
           // Reinitialize chat data source with new members
           _initializeChatDataSource();
         }
@@ -1308,21 +1354,23 @@ class ChatController extends GetxController
           members = sessionManager.members;
           memberCount.value = members.length;
           _showToast('Member removed from group');
-          
+
           // Check if we still have enough members
           if (members.length < 2) {
             _showToast('Not enough members, ending chat');
             Get.back();
             return;
           }
-          
+
           // Reinitialize chat data source with updated members
           _initializeChatDataSource();
         }
       } else {
         // Fallback for legacy mode
-        final memberIndex = members.indexWhere((member) => member.uid == userId);
-        if (memberIndex != -1 && memberIndex != 0) { // Don't remove current user
+        final memberIndex =
+            members.indexWhere((member) => member.uid == userId);
+        if (memberIndex != -1 && memberIndex != 0) {
+          // Don't remove current user
           final removedMember = members.removeAt(memberIndex);
           memberCount.value = members.length;
           _showToast('${removedMember.fullName} removed from group');
@@ -1355,7 +1403,7 @@ class ChatController extends GetxController
           chatDescription.value = description;
         }
       }
-      
+
       _showToast('Group info updated');
     } catch (e) {
       _showErrorToast('Failed to update group info');
@@ -1400,7 +1448,7 @@ class ChatController extends GetxController
   double getNoPercentage() => totalVotes == 0 ? 0 : noVotes.value / totalVotes;
 
   void addMessage(Message message) => messages.add(message);
-  
+
   void removeMessage(int index) {
     if (index >= 0 && index < messages.length) {
       messages.removeAt(index);
@@ -1425,7 +1473,8 @@ class ChatController extends GetxController
   // BUG-005 FIX: Safe message copyWith helper to avoid unsafe type casting
   /// Safely attempts to copy a message with updated fields.
   /// Returns null if copyWith is not implemented for the message type.
-  Message? _safeCopyMessage(Message message, {
+  Message? _safeCopyMessage(
+    Message message, {
     bool? isDeleted,
     bool? isPinned,
     bool? isFavorite,
@@ -1445,7 +1494,8 @@ class ChatController extends GetxController
       }
       return null;
     } catch (e) {
-      _logger.warning('copyWith not implemented for ${message.runtimeType}', context: 'ChatController');
+      _logger.warning('copyWith not implemented for ${message.runtimeType}',
+          context: 'ChatController');
       return null;
     }
   }
@@ -1472,7 +1522,8 @@ class ChatController extends GetxController
           // BUG-005 FIX: Safely try to update local state, Firestore stream will sync regardless
           final updatedMessage = _safeCopyMessage(message, isDeleted: true);
           if (updatedMessage != null) {
-            final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
+            final messageIndex =
+                messages.indexWhere((msg) => msg.id == message.id);
             if (messageIndex != -1) {
               messages[messageIndex] = updatedMessage;
               update();
@@ -1559,7 +1610,8 @@ class ChatController extends GetxController
 
       // If pinning a message, first unpin any existing pinned messages
       if (!isCurrentlyPinned) {
-        final currentlyPinnedMessages = messages.where((msg) => msg.isPinned).toList();
+        final currentlyPinnedMessages =
+            messages.where((msg) => msg.isPinned).toList();
 
         if (currentlyPinnedMessages.isNotEmpty) {
           // Only allow one pinned message at a time
@@ -1572,9 +1624,11 @@ class ChatController extends GetxController
             );
 
             // BUG-005 FIX: Use safe copy method
-            final unpinnedMessage = _safeCopyMessage(pinnedMessage, isPinned: false);
+            final unpinnedMessage =
+                _safeCopyMessage(pinnedMessage, isPinned: false);
             if (unpinnedMessage != null) {
-              final pinnedIndex = messages.indexWhere((msg) => msg.id == pinnedMessage.id);
+              final pinnedIndex =
+                  messages.indexWhere((msg) => msg.id == pinnedMessage.id);
               if (pinnedIndex != -1) {
                 messages[pinnedIndex] = unpinnedMessage;
               }
@@ -1591,7 +1645,8 @@ class ChatController extends GetxController
       );
 
       // BUG-005 FIX: Safely update local state
-      final updatedMessage = _safeCopyMessage(message, isPinned: !isCurrentlyPinned);
+      final updatedMessage =
+          _safeCopyMessage(message, isPinned: !isCurrentlyPinned);
       if (updatedMessage != null) {
         final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
         if (messageIndex != -1) {
@@ -1602,7 +1657,8 @@ class ChatController extends GetxController
 
       _showToast(isCurrentlyPinned ? 'Message unpinned' : 'Message pinned');
     } catch (e) {
-      _showErrorToast('Failed to ${message.isPinned ? 'unpin' : 'pin'} message: ${e.toString()}');
+      _showErrorToast(
+          'Failed to ${message.isPinned ? 'unpin' : 'pin'} message: ${e.toString()}');
     } finally {
       _hideLoading();
     }
@@ -1623,7 +1679,8 @@ class ChatController extends GetxController
       );
 
       // BUG-005 FIX: Safely update local state
-      final updatedMessage = _safeCopyMessage(message, isFavorite: !isCurrentlyFavorite);
+      final updatedMessage =
+          _safeCopyMessage(message, isFavorite: !isCurrentlyFavorite);
       if (updatedMessage != null) {
         final messageIndex = messages.indexWhere((msg) => msg.id == message.id);
         if (messageIndex != -1) {
@@ -1632,9 +1689,12 @@ class ChatController extends GetxController
         }
       }
 
-      _showToast(isCurrentlyFavorite ? 'Removed from favorites' : 'Added to favorites');
+      _showToast(isCurrentlyFavorite
+          ? 'Removed from favorites'
+          : 'Added to favorites');
     } catch (e) {
-      _showErrorToast('Failed to ${message.isFavorite ? 'remove from' : 'add to'} favorites: ${e.toString()}');
+      _showErrorToast(
+          'Failed to ${message.isFavorite ? 'remove from' : 'add to'} favorites: ${e.toString()}');
     } finally {
       _hideLoading();
     }
@@ -1736,12 +1796,14 @@ class ChatController extends GetxController
     // FIX: Throttle reactions to prevent multiple rapid Firestore writes
     // Uses a unique key per message+emoji combination
     final throttleKey = 'reaction_${message.id}_$emoji';
-    getThrottler(throttleKey, const Duration(milliseconds: 500)).run(() => _performReactionToggle(message, emoji, currentUserId));
+    getThrottler(throttleKey, const Duration(milliseconds: 500))
+        .run(() => _performReactionToggle(message, emoji, currentUserId));
   }
 
   /// Internal reaction toggle implementation (called after throttle)
   /// ARCH-009: Uses new architecture with fallback to legacy
-  Future<void> _performReactionToggle(Message message, String emoji, String userId) async {
+  Future<void> _performReactionToggle(
+      Message message, String emoji, String userId) async {
     // FIX: Prevent reacting to local/pending messages that don't exist in Firestore yet
     if (message.id.isEmpty || message.id.startsWith('pending_')) {
       _logger.warning('Cannot react to pending message: ${message.id}');
@@ -1755,7 +1817,8 @@ class ChatController extends GetxController
       emoji: emoji,
       userId: userId,
       onSuccess: (result) {
-        _logger.info('Toggled reaction $emoji on message ${message.id} (added: ${result.wasAdded})');
+        _logger.info(
+            'Toggled reaction $emoji on message ${message.id} (added: ${result.wasAdded})');
       },
       onError: (error) {
         _errorHandler.handleError(
@@ -1768,7 +1831,8 @@ class ChatController extends GetxController
   }
 
   /// Legacy reaction toggle path (used when new architecture is disabled)
-  Future<void> _toggleReactionLegacy(String messageId, String emoji, String userId) async {
+  Future<void> _toggleReactionLegacy(
+      String messageId, String emoji, String userId) async {
     try {
       // ARCH-003: Use repository when available, fallback to data source
       if (hasRepository) {
@@ -1844,13 +1908,15 @@ class ChatController extends GetxController
   List<ForwardTarget> _buildRecentChatTargets() {
     // TODO: Implement fetching from conversations data source
     // For now, return members as targets
-    return members.map((m) => ForwardTarget(
-      id: m.uid ?? '',
-      name: m.fullName ?? 'Unknown',
-      imageUrl: m.imageUrl,
-      type: ForwardTargetType.user,
-      isGroup: false,
-    )).toList();
+    return members
+        .map((m) => ForwardTarget(
+              id: m.uid ?? '',
+              name: m.fullName ?? 'Unknown',
+              imageUrl: m.imageUrl,
+              type: ForwardTargetType.user,
+              isGroup: false,
+            ))
+        .toList();
   }
 
   /// Build contact targets from user's contacts
@@ -1871,7 +1937,8 @@ class ChatController extends GetxController
       targetRoomId: target.id,
       onSuccess: (forwardResult) {
         _showToast('Message forwarded');
-        _logger.info('Message forwarded to ${target.name}: ${forwardResult.messageId}');
+        _logger.info(
+            'Message forwarded to ${target.name}: ${forwardResult.messageId}');
       },
       onError: (error) {
         _showToast('Failed to forward: $error');
@@ -1884,7 +1951,8 @@ class ChatController extends GetxController
   }
 
   /// Perform multiple forward operation
-  Future<void> _performForwardMultiple(Message message, List<ForwardTarget> targets) async {
+  Future<void> _performForwardMultiple(
+      Message message, List<ForwardTarget> targets) async {
     if (!isForwardArchitectureEnabled) {
       _showToast('Forward feature not available');
       return;
@@ -1932,7 +2000,8 @@ class ChatController extends GetxController
       isAdmin: isAdmin,
       isCreator: isCreator,
       onEditName: (newName) => _updateGroupName(newName),
-      onEditDescription: (newDescription) => _updateGroupDescription(newDescription),
+      onEditDescription: (newDescription) =>
+          _updateGroupDescription(newDescription),
       onEditImage: () => _pickAndUpdateGroupImage(context),
       onLeaveGroup: () => _confirmAndLeaveGroup(context),
       onEditPermissions: () => _showPermissionsSheet(context),
@@ -1976,7 +2045,8 @@ class ChatController extends GetxController
       isAdmin: isAdmin,
       isCreator: false,
       onEditName: (newName) => _updateGroupName(newName),
-      onEditDescription: (newDescription) => _updateGroupDescription(newDescription),
+      onEditDescription: (newDescription) =>
+          _updateGroupDescription(newDescription),
       onEditImage: () => _pickAndUpdateGroupImage(context),
       onLeaveGroup: () => _confirmAndLeaveGroup(context),
       onEditPermissions: () => _showPermissionsSheet(context),
@@ -2091,7 +2161,8 @@ class ChatController extends GetxController
     final confirmed = await ConfirmationBottomSheet.show(
       context,
       title: 'Leave Group',
-      description: 'Are you sure you want to leave this group? You will no longer receive messages from this conversation.',
+      description:
+          'Are you sure you want to leave this group? You will no longer receive messages from this conversation.',
       confirmLabel: 'Leave',
       icon: Icons.exit_to_app_rounded,
       isDestructive: true,
@@ -2175,9 +2246,10 @@ class ChatController extends GetxController
       onRemoveAdmin: memberRole == GroupRole.admin && isCurrentUserTheCreator
           ? () => _removeAdmin(member)
           : null,
-      onRemoveMember: !isSelf && isCurrentUserAnAdmin && memberRole != GroupRole.creator
-          ? () => _removeMember(member)
-          : null,
+      onRemoveMember:
+          !isSelf && isCurrentUserAnAdmin && memberRole != GroupRole.creator
+              ? () => _removeMember(member)
+              : null,
       onTransferOwnership: isCurrentUserTheCreator && !isSelf
           ? () => _transferOwnership(context, member)
           : null,
@@ -2250,12 +2322,14 @@ class ChatController extends GetxController
   }
 
   /// Transfer group ownership
-  Future<void> _transferOwnership(BuildContext context, SocialMediaUser member) async {
+  Future<void> _transferOwnership(
+      BuildContext context, SocialMediaUser member) async {
     final memberName = member.fullName ?? 'User';
     final confirmed = await ConfirmationBottomSheet.show(
       context,
       title: 'Transfer Ownership',
-      description: 'Transfer group ownership to $memberName? You will become a regular admin.',
+      description:
+          'Transfer group ownership to $memberName? You will become a regular admin.',
       confirmLabel: 'Transfer',
       icon: Icons.swap_horiz_rounded,
       iconColor: ColorsManager.primary,
@@ -2323,22 +2397,23 @@ class ChatController extends GetxController
 
   /// Forward message to specific chat
   /// Creates or finds existing chat room and sends the forwarded message
-  Future<void> _forwardMessageToChat(Message message, String targetUserId) async {
+  Future<void> _forwardMessageToChat(
+      Message message, String targetUserId) async {
     try {
       _showLoading();
-      
+
       // Get target user data
       final targetUser = await _getUserById(targetUserId);
       if (targetUser == null) {
         throw Exception('Target user not found');
       }
-      
+
       // Get or create chat room with target user
       final targetRoomId = await _getOrCreateChatRoomWithUser(targetUser);
-      
+
       // Create forwarded message with new room ID and timestamp
       Message forwardedMessage;
-      
+
       if (message is TextMessage) {
         forwardedMessage = TextMessage(
           id: '',
@@ -2425,15 +2500,16 @@ class ChatController extends GetxController
           forwardedFrom: message.senderId,
         );
       }
-      
+
       // Send forwarded message to target chat room
       await chatDataSource.sendMessage(
         privateMessage: forwardedMessage,
         roomId: targetRoomId,
         members: [currentUser!, targetUser],
       );
-      
-      print('📤 Message forwarded successfully to room: $targetRoomId with user: ${targetUser.fullName}');
+
+      print(
+          '📤 Message forwarded successfully to room: $targetRoomId with user: ${targetUser.fullName}');
     } catch (e) {
       print('❌ Failed to forward message: $e');
       rethrow;
@@ -2441,14 +2517,15 @@ class ChatController extends GetxController
       _hideLoading();
     }
   }
-  
+
   /// Get or create chat room with specific user
-  Future<String> _getOrCreateChatRoomWithUser(SocialMediaUser targetUser) async {
+  Future<String> _getOrCreateChatRoomWithUser(
+      SocialMediaUser targetUser) async {
     try {
       // Create members list (current user and target user)
       final members = [currentUser!, targetUser];
       final memberIds = members.map((user) => user.uid).toList()..sort();
-      
+
       // Check if chat room already exists
       final existingRooms = await FirebaseFirestore.instance
           .collection(FirebaseCollections.chats)
@@ -2456,16 +2533,18 @@ class ChatController extends GetxController
           .where('isGroupChat', isEqualTo: false)
           .limit(1)
           .get();
-      
+
       if (existingRooms.docs.isNotEmpty) {
         // Return existing room ID
         return existingRooms.docs.first.id;
       }
-      
+
       // Create new chat room
-      final newRoomRef = FirebaseFirestore.instance.collection(FirebaseCollections.chats).doc();
+      final newRoomRef = FirebaseFirestore.instance
+          .collection(FirebaseCollections.chats)
+          .doc();
       final roomId = newRoomRef.id;
-      
+
       await newRoomRef.set({
         'membersIds': memberIds,
         'members': members.map((user) => user.toMap()).toList(),
@@ -2475,7 +2554,7 @@ class ChatController extends GetxController
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       print('✅ Created new chat room: $roomId');
       return roomId;
     } catch (e) {
@@ -2483,7 +2562,7 @@ class ChatController extends GetxController
       rethrow;
     }
   }
-  
+
   /// Get user by ID from Firestore
   Future<SocialMediaUser?> _getUserById(String userId) async {
     try {
@@ -2491,11 +2570,11 @@ class ChatController extends GetxController
           .collection(FirebaseCollections.users)
           .doc(userId)
           .get();
-      
+
       if (userDoc.exists) {
         return SocialMediaUser.fromMap(userDoc.data()!);
       }
-      
+
       return null;
     } catch (e) {
       print('❌ Error getting user by ID: $e');
@@ -2533,7 +2612,8 @@ class ChatController extends GetxController
         if (blockedByMe.contains(userId)) continue;
 
         // Skip if they blocked me
-        final theirBlockedList = List<String>.from(doc.data()['blockedUser'] ?? []);
+        final theirBlockedList =
+            List<String>.from(doc.data()['blockedUser'] ?? []);
         if (theirBlockedList.contains(currentUser?.uid)) continue;
 
         contacts.add(user);
@@ -2542,7 +2622,8 @@ class ChatController extends GetxController
         if (contacts.length >= 20) break;
       }
 
-      print('📞 Fetched ${contacts.length} contacts for forwarding (after block filtering)');
+      print(
+          '📞 Fetched ${contacts.length} contacts for forwarding (after block filtering)');
       return contacts;
     } catch (e) {
       print('❌ Error fetching contacts: $e');
@@ -2582,7 +2663,8 @@ class ChatController extends GetxController
       final confirmResult = await ConfirmationBottomSheet.show(
         context,
         title: 'Report Message',
-        description: 'Report this message for violating community guidelines? Our team will review it.',
+        description:
+            'Report this message for violating community guidelines? Our team will review it.',
         confirmLabel: 'Report',
         icon: Icons.flag_rounded,
         isDestructive: true,
@@ -2592,7 +2674,8 @@ class ChatController extends GetxController
         // Implement actual reporting to server
         try {
           await _reportMessageToServer(message);
-          _showToast('Message reported. Thank you for helping keep our community safe.');
+          _showToast(
+              'Message reported. Thank you for helping keep our community safe.');
         } catch (e) {
           _showErrorToast('Failed to report message: ${e.toString()}');
         }
@@ -2606,7 +2689,9 @@ class ChatController extends GetxController
   Future<void> _reportMessageToServer(Message message) async {
     try {
       // Implement actual reporting to backend API
-      await FirebaseFirestore.instance.collection(FirebaseCollections.reports).add({
+      await FirebaseFirestore.instance
+          .collection(FirebaseCollections.reports)
+          .add({
         'messageId': message.id,
         'roomId': roomId,
         'reporterId': currentUser?.uid ?? '',
@@ -2716,8 +2801,11 @@ class ChatController extends GetxController
       isFavorite: message.isFavorite,
       canPin: true,
       canFavorite: true,
-      canDelete: message.senderId == currentUser?.uid && !message.isDeleted, // Only allow delete for own non-deleted messages
-      canRestore: message.isDeleted && message.senderId == currentUser?.uid, // Only allow restore for own deleted messages
+      canDelete: message.senderId == currentUser?.uid &&
+          !message.isDeleted, // Only allow delete for own non-deleted messages
+      canRestore: message.isDeleted &&
+          message.senderId ==
+              currentUser?.uid, // Only allow restore for own deleted messages
       canReply: true,
       canForward: true,
       canCopy: isTextMessage,
@@ -2755,11 +2843,16 @@ class ChatController extends GetxController
     print("   Current User: ${currentUser?.fullName} (${currentUser?.uid})");
     print("   Members:");
     for (int i = 0; i < members.length; i++) {
-      String role = i == 0 ? " (Current User)" : isGroupChat.value ? " (Member)" : " (Receiver)";
+      String role = i == 0
+          ? " (Current User)"
+          : isGroupChat.value
+              ? " (Member)"
+              : " (Receiver)";
       print("   ${i + 1}. ${members[i].fullName} (${members[i].uid})$role");
     }
     print("   Blocked User: $blockingUserId");
-    print("   Has Active Session: ${ChatSessionManager.instance.hasActiveSession}");
+    print(
+        "   Has Active Session: ${ChatSessionManager.instance.hasActiveSession}");
   }
 
   /// Handle text input changes for typing indicator
@@ -2770,7 +2863,7 @@ class ChatController extends GetxController
       typingService.stopTyping(roomId);
     }
   }
-  
+
   /// Mark visible messages as read
   void markMessagesAsRead(List<String> messageIds) {
     if (messageIds.isEmpty) return;
@@ -3046,10 +3139,12 @@ class ChatController extends GetxController
 
   @override
   void onClose() {
-    _logger.info('ChatController disposing - cleaning up resources', context: 'ChatController', data: {
-      'roomId': roomId,
-      'streamSubscriptions': _streamSubscriptions.length,
-    });
+    _logger.info('ChatController disposing - cleaning up resources',
+        context: 'ChatController',
+        data: {
+          'roomId': roomId,
+          'streamSubscriptions': _streamSubscriptions.length,
+        });
 
     // Dispose new architecture resources (event bus subscriptions, etc.)
     disposeArchitecture();
@@ -3088,11 +3183,13 @@ class ChatController extends GetxController
 
     // End chat session when screen is closed if using session manager
     if (ChatSessionManager.instance.hasActiveSession) {
-      _logger.info('Chat screen closed, ending session', context: 'ChatController');
+      _logger.info('Chat screen closed, ending session',
+          context: 'ChatController');
       ChatSessionManager.instance.endChatSession();
     }
 
-    _logger.info('ChatController disposed successfully', context: 'ChatController');
+    _logger.info('ChatController disposed successfully',
+        context: 'ChatController');
     super.onClose();
   }
 
@@ -3103,7 +3200,8 @@ class ChatController extends GetxController
       typingService.stopTyping(roomId);
       _logger.debug('Typing service cleaned up', context: 'ChatController');
     } catch (e) {
-      _logger.warning('Error cleaning up typing service', context: 'ChatController', data: {'error': e.toString()});
+      _logger.warning('Error cleaning up typing service',
+          context: 'ChatController', data: {'error': e.toString()});
     }
 
     // Note: RecordingService and ActivityStatusService will be added when integrated
@@ -3128,9 +3226,11 @@ class ChatController extends GetxController
     try {
       // Stop read receipt tracking
       // readReceiptService.stopTracking(roomId);
-      _logger.debug('Read receipt service cleaned up', context: 'ChatController');
+      _logger.debug('Read receipt service cleaned up',
+          context: 'ChatController');
     } catch (e) {
-      _logger.warning('Error cleaning up read receipt service', context: 'ChatController', data: {'error': e.toString()});
+      _logger.warning('Error cleaning up read receipt service',
+          context: 'ChatController', data: {'error': e.toString()});
     }
   }
 }
@@ -3219,7 +3319,8 @@ class _ForwardContactSheet extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.error_outline, color: Colors.grey[400], size: 48),
+                          Icon(Icons.error_outline,
+                              color: Colors.grey[400], size: 48),
                           const SizedBox(height: 12),
                           Text(
                             'Failed to load contacts',
@@ -3238,7 +3339,8 @@ class _ForwardContactSheet extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.people_outline, color: Colors.grey[400], size: 48),
+                          Icon(Icons.people_outline,
+                              color: Colors.grey[400], size: 48),
                           const SizedBox(height: 12),
                           Text(
                             'No contacts available',
@@ -3261,9 +3363,11 @@ class _ForwardContactSheet extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final contact = contacts[index];
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 4),
                       leading: CircleAvatar(
-                        backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
+                        backgroundColor:
+                            ColorsManager.primary.withValues(alpha: 0.1),
                         backgroundImage: contact.imageUrl?.isNotEmpty == true
                             ? NetworkImage(contact.imageUrl!)
                             : null,

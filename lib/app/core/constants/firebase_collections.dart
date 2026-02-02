@@ -25,7 +25,8 @@ class FirebaseCollections {
 
   /// Legacy chat rooms collection - some parts of app still use this
   /// TODO: Migrate all usages to 'chats' collection
-  @Deprecated('Use FirebaseCollections.chats instead. This is for legacy compatibility only.')
+  @Deprecated(
+      'Use FirebaseCollections.chats instead. This is for legacy compatibility only.')
   static const String chatRoomsLegacy = 'chat_rooms';
 
   /// Users collection - stores user profiles and settings
@@ -67,6 +68,10 @@ class FirebaseCollections {
   /// Group invite links collection - stores group invitation links
   /// Structure: group_invite_links/{linkId}
   static const String groupInviteLinks = 'group_invite_links';
+
+  /// User locations collection - stores discoverable user locations for Nearby People
+  /// Structure: user_locations/{userId}
+  static const String userLocations = 'user_locations';
 
   /// Chat rooms collection (capital C) - legacy variant
   @Deprecated('Use FirebaseCollections.chats instead')
@@ -125,6 +130,10 @@ class FirebaseCollections {
   /// Story reactions subcollection
   /// Path: Stories/{storyId}/reactions/{reactionId}
   static const String storyReactions = 'reactions';
+
+  /// Event attendees subcollection
+  /// Path: Stories/{storyId}/attendees/{userId}
+  static const String eventAttendees = 'attendees';
 
   /// Device info backup subcollection
   /// Path: backups/{userId}/device_info

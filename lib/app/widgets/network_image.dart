@@ -78,6 +78,11 @@ class AppCachedNetworkImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final memCacheHeight = height != null ? (height! * 2).ceil() : null;
     final memCacheWidth = width != null ? (width! * 2).ceil() : null;
+    // Cap disk cache at 1080px to reduce storage while keeping quality
+    final diskHeight =
+        height != null ? (height! * 3).clamp(0, 1080).ceil() : 1080;
+    final diskWidth = width != null ? (width! * 3).clamp(0, 1080).ceil() : 1080;
+
     return Container(
       decoration: BoxDecoration(
         shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
@@ -85,18 +90,21 @@ class AppCachedNetworkImage extends StatelessWidget {
       ),
       child: RepaintBoundary(
         child: CachedNetworkImage(
-          placeholder:
-              noLoader
-                  ? null
-                  : (_, __) => Center(
-                    child:
-                        loaderWidget ??
+          placeholder: noLoader
+              ? null
+              : (_, __) => Center(
+                    child: loaderWidget ??
                         (isLoaderShimmer
                             ? Shimmer(height: height, width: width)
                             : const AppLoader()),
                   ),
           memCacheHeight: memCacheHeight,
           memCacheWidth: memCacheWidth,
+          maxHeightDiskCache: diskHeight,
+          maxWidthDiskCache: diskWidth,
+          fadeInDuration: const Duration(milliseconds: 200),
+          fadeOutDuration: const Duration(milliseconds: 100),
+          fadeInCurve: Curves.easeIn,
           imageUrl: imageUrl,
           width: width,
           height: height,
@@ -104,13 +112,11 @@ class AppCachedNetworkImage extends StatelessWidget {
           color: color,
           colorBlendMode: colorBlendMode,
           alignment: alignment,
-          errorWidget:
-              customErrorWidgetBuilder ??
+          errorWidget: customErrorWidgetBuilder ??
               (BuildContext context, String url, dynamic error) {
                 return Container(
                   decoration: BoxDecoration(color: Colors.grey[300]),
-                  child:
-                      customErrorWidget ??
+                  child: customErrorWidget ??
                       const Icon(Iconsax.user, color: Colors.black),
                 );
               }, // coverage:ignore-end

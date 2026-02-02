@@ -4,6 +4,8 @@ import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/widgets/custom_loading.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
+import 'package:crypted_app/core/themes/styles_manager.dart';
+import 'package:crypted_app/core/themes/size_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +15,7 @@ import '../../../data/data_source/user_services.dart';
 import '../../../data/models/chat/chat_room_model.dart';
 import 'chat_row.dart';
 
-class TabBarBody extends StatelessWidget {
+class TabBarBody extends StatefulWidget {
   const TabBarBody({
     super.key,
     this.getGroupChatOnly,
@@ -28,19 +30,29 @@ class TabBarBody extends StatelessWidget {
   final bool getFavoriteOnly;
 
   @override
+  State<TabBarBody> createState() => _TabBarBodyState();
+}
+
+class _TabBarBodyState extends State<TabBarBody> {
+  bool _archivedExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ChatRoom>>(
       stream: ChatDataSources(
         chatConfiguration: ChatConfiguration(
-          members: [UserService.currentUser.value ?? SocialMediaUser(
-            uid: FirebaseAuth.instance.currentUser?.uid,
-            fullName: FirebaseAuth.instance.currentUser?.displayName,
-            imageUrl: FirebaseAuth.instance.currentUser?.photoURL,
-          )],
+          members: [
+            UserService.currentUser.value ??
+                SocialMediaUser(
+                  uid: FirebaseAuth.instance.currentUser?.uid,
+                  fullName: FirebaseAuth.instance.currentUser?.displayName,
+                  imageUrl: FirebaseAuth.instance.currentUser?.photoURL,
+                )
+          ],
         ),
       ).getChats(
-        getGroupChatOnly: getGroupChatOnly ?? false,
-        getPrivateChatOnly: getPrivateChatOnly ?? false,
+        getGroupChatOnly: widget.getGroupChatOnly ?? false,
+        getPrivateChatOnly: widget.getPrivateChatOnly ?? false,
       ),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
@@ -51,54 +63,56 @@ class TabBarBody extends StatelessWidget {
 
           final myId = UserService.currentUser.value?.uid;
           final myChats = filteredChats
-              ?.where((chatRoom) =>
-                  chatRoom.membersIds?.contains(myId) ?? false)
+              ?.where(
+                  (chatRoom) => chatRoom.membersIds?.contains(myId) ?? false)
               .toList();
 
-          // Sort chats: pinned chats first, then regular chats, then archived chats at bottom
-          if (myChats != null && myChats.isNotEmpty) {
-            myChats.sort((a, b) {
-              // First, sort by archived status (archived chats at bottom)
-              if ((a.isArchived ?? false) && !(b.isArchived ?? false)) {
-                return 1; // a (archived) goes after b (not archived)
-              } else if (!(a.isArchived ?? false) && (b.isArchived ?? false)) {
-                return -1; // a (not archived) goes before b (archived)
-              }
+          // Split into active and archived
+          final activeChats =
+              myChats?.where((c) => !(c.isArchived ?? false)).toList();
+          final archivedChats =
+              myChats?.where((c) => c.isArchived ?? false).toList();
 
-              // If both have same archived status, sort by pinned status (pinned chats first)
-              if ((a.isPinned ?? false) && !(b.isPinned ?? false)) {
-                return -1;
-              } else if (!(a.isPinned ?? false) && (b.isPinned ?? false)) {
-                return 1;
-              }
+          // Sort active chats: pinned first, then by time
+          _sortChats(activeChats);
+          // Sort archived chats by time only (no pin priority)
+          _sortChatsByTime(archivedChats);
 
-              // If both have same pinned status, sort by last message time (newest first)
-              final aTime = _parseTimestamp(a.lastChat);
-              final bTime = _parseTimestamp(b.lastChat);
+          print(
+              "DEBUG: Total chats: ${allChats?.length ?? 0}, Active: ${activeChats?.length ?? 0}, Archived: ${archivedChats?.length ?? 0}");
 
-              if (aTime != null && bTime != null) {
-                return bTime.compareTo(aTime); // Newest first
-              } else if (aTime != null) {
-                return -1;
-              } else if (bTime != null) {
-                return 1;
-              }
+          final hasActive = activeChats?.isNotEmpty ?? false;
+          final hasArchived = archivedChats?.isNotEmpty ?? false;
 
-              return 0;
-            });
-          }
-
-          print("DEBUG: Total chats: ${allChats?.length ?? 0}, Filtered chats: ${filteredChats?.length ?? 0}, My chats: ${myChats?.length ?? 0}");
-
-          if (myChats?.isNotEmpty ?? false) {
+          if (hasActive || hasArchived) {
             return ListView.builder(
-              itemCount: myChats?.length ?? 0,
+              itemCount: (activeChats?.length ?? 0) +
+                  (hasArchived ? 1 : 0) // archive header row
+                  +
+                  (_archivedExpanded ? (archivedChats?.length ?? 0) : 0),
               itemBuilder: (context, index) {
-                ChatRoom? chatRoom = myChats?[index];
-               
-                return ChatRow(
-                  chatRoom: chatRoom,
-                );
+                final activeCount = activeChats?.length ?? 0;
+
+                // Active chat rows
+                if (index < activeCount) {
+                  return ChatRow(chatRoom: activeChats?[index]);
+                }
+
+                // Archive section header
+                if (index == activeCount && hasArchived) {
+                  return _buildArchivedHeader(archivedChats?.length ?? 0);
+                }
+
+                // Archived chat rows (only if expanded)
+                if (_archivedExpanded) {
+                  final archivedIndex = index - activeCount - 1;
+                  if (archivedIndex >= 0 &&
+                      archivedIndex < (archivedChats?.length ?? 0)) {
+                    return ChatRow(chatRoom: archivedChats?[archivedIndex]);
+                  }
+                }
+
+                return const SizedBox.shrink();
               },
             );
           } else {
@@ -136,7 +150,7 @@ class TabBarBody extends StatelessWidget {
           log("Error fetching chats: ${snapshot.error.toString() + snapshot.stackTrace.toString()}");
           return const Center(
             child: Text(
-              "‼️ Ooooh no! Could not fetch chats ‼️",
+              "Ooooh no! Could not fetch chats",
               style: TextStyle(color: ColorsManager.error),
             ),
           );
@@ -147,6 +161,81 @@ class TabBarBody extends StatelessWidget {
     );
   }
 
+  /// Collapsible archived chats section header
+  Widget _buildArchivedHeader(int count) {
+    return InkWell(
+      onTap: () => setState(() => _archivedExpanded = !_archivedExpanded),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Paddings.large,
+          vertical: Paddings.small,
+        ),
+        decoration: BoxDecoration(
+          color: ColorsManager.grey.withValues(alpha: 0.08),
+          border: const Border(
+            top: BorderSide(color: ColorsManager.border, width: 0.5),
+            bottom: BorderSide(color: ColorsManager.border, width: 0.5),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.archive_outlined,
+              size: 18,
+              color: ColorsManager.grey,
+            ),
+            const SizedBox(width: Spacing.xs),
+            Expanded(
+              child: Text(
+                'Archived ($count)',
+                style: StylesManager.semiBold(
+                  fontSize: FontSize.small,
+                  color: ColorsManager.grey,
+                ),
+              ),
+            ),
+            AnimatedRotation(
+              turns: _archivedExpanded ? 0.5 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.keyboard_arrow_down,
+                size: 20,
+                color: ColorsManager.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Sort active chats: pinned first, then by last message time
+  void _sortChats(List<ChatRoom>? chats) {
+    if (chats == null || chats.isEmpty) return;
+    chats.sort((a, b) {
+      // Pinned chats first
+      if ((a.isPinned ?? false) && !(b.isPinned ?? false)) return -1;
+      if (!(a.isPinned ?? false) && (b.isPinned ?? false)) return 1;
+      // Then by time
+      return _compareByTime(a, b);
+    });
+  }
+
+  /// Sort chats by last message time only (no pin priority)
+  void _sortChatsByTime(List<ChatRoom>? chats) {
+    if (chats == null || chats.isEmpty) return;
+    chats.sort(_compareByTime);
+  }
+
+  int _compareByTime(ChatRoom a, ChatRoom b) {
+    final aTime = _parseTimestamp(a.lastChat);
+    final bTime = _parseTimestamp(b.lastChat);
+    if (aTime != null && bTime != null) return bTime.compareTo(aTime);
+    if (aTime != null) return -1;
+    if (bTime != null) return 1;
+    return 0;
+  }
+
   /// Apply additional filters based on tab selection
   List<ChatRoom>? _applyAdditionalFilters(List<ChatRoom>? chats) {
     if (chats == null) return null;
@@ -154,7 +243,7 @@ class TabBarBody extends StatelessWidget {
     List<ChatRoom> filteredChats = chats;
 
     // Filter by unread status if required
-    if (getUnreadOnly) {
+    if (widget.getUnreadOnly) {
       filteredChats = filteredChats.where((chat) {
         // Consider a chat unread if the last sender is not the current user
         return chat.lastSender != UserService.currentUser.value?.uid;
@@ -162,7 +251,7 @@ class TabBarBody extends StatelessWidget {
     }
 
     // Filter by favorite status if required
-    if (getFavoriteOnly) {
+    if (widget.getFavoriteOnly) {
       filteredChats = filteredChats.where((chat) {
         return chat.isFavorite == true;
       }).toList();
@@ -173,13 +262,13 @@ class TabBarBody extends StatelessWidget {
 
   /// Get appropriate empty state message based on current filter
   String _getEmptyStateMessage() {
-    if (getUnreadOnly) {
+    if (widget.getUnreadOnly) {
       return "No unread chats";
-    } else if (getFavoriteOnly) {
+    } else if (widget.getFavoriteOnly) {
       return "No favorite chats";
-    } else if (getGroupChatOnly == true) {
+    } else if (widget.getGroupChatOnly == true) {
       return "No group chats yet";
-    } else if (getPrivateChatOnly == true) {
+    } else if (widget.getPrivateChatOnly == true) {
       return "No private chats yet";
     } else {
       return "No chats yet";
@@ -188,13 +277,13 @@ class TabBarBody extends StatelessWidget {
 
   /// Get appropriate empty state sub-message based on current filter
   String _getEmptyStateSubMessage() {
-    if (getUnreadOnly) {
+    if (widget.getUnreadOnly) {
       return "All your messages have been read";
-    } else if (getFavoriteOnly) {
+    } else if (widget.getFavoriteOnly) {
       return "Mark your favorite chats to see them here";
-    } else if (getGroupChatOnly == true) {
+    } else if (widget.getGroupChatOnly == true) {
       return "Create or join group chats to see them here";
-    } else if (getPrivateChatOnly == true) {
+    } else if (widget.getPrivateChatOnly == true) {
       return "Start private conversations to see them here";
     } else {
       return "Start a conversation to see your chats here";

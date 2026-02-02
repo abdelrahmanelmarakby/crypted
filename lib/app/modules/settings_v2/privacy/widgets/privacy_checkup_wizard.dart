@@ -7,6 +7,8 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/styles_manager.dart';
 import 'package:crypted_app/app/modules/settings_v2/core/models/privacy_settings_model.dart';
 import 'package:crypted_app/app/modules/settings_v2/privacy/controllers/privacy_settings_controller.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
+import 'package:crypted_app/app/widgets/premium_gate_dialog.dart';
 
 /// Privacy Checkup Wizard
 /// Guides users through reviewing and improving their privacy settings
@@ -97,7 +99,8 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
 
     _runCheckup();
   }
@@ -304,17 +307,21 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
           // Quick stats
           Row(
             children: [
-              Expanded(child: _buildQuickStat(
+              Expanded(
+                  child: _buildQuickStat(
                 icon: Iconsax.eye_slash,
-                value: _getVisibilityLabel(settings.profileVisibility.lastSeen.level),
+                value: _getVisibilityLabel(
+                    settings.profileVisibility.lastSeen.level),
                 label: 'Last Seen',
               )),
-              Expanded(child: _buildQuickStat(
+              Expanded(
+                  child: _buildQuickStat(
                 icon: Iconsax.lock,
                 value: settings.security.appLockEnabled ? 'On' : 'Off',
                 label: 'App Lock',
               )),
-              Expanded(child: _buildQuickStat(
+              Expanded(
+                  child: _buildQuickStat(
                 icon: Iconsax.shield_tick,
                 value: settings.security.twoStepEnabled ? 'On' : 'Off',
                 label: '2-Step',
@@ -377,45 +384,47 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
         children: [
           _buildStepHeader(step),
           const SizedBox(height: 24),
-
           _buildSettingCard(
             title: 'Last Seen',
             subtitle: 'Who can see when you were last online',
-            currentValue: _getVisibilityLabel(settings.profileVisibility.lastSeen.level),
+            currentValue:
+                _getVisibilityLabel(settings.profileVisibility.lastSeen.level),
             icon: Iconsax.clock,
             options: VisibilityLevel.values,
             currentLevel: settings.profileVisibility.lastSeen.level,
             onChanged: (level) => _controller.updateLastSeenVisibility(level),
           ),
-
           _buildSettingCard(
             title: 'Profile Photo',
             subtitle: 'Who can see your profile picture',
-            currentValue: _getVisibilityLabel(settings.profileVisibility.profilePhoto.level),
+            currentValue: _getVisibilityLabel(
+                settings.profileVisibility.profilePhoto.level),
             icon: Iconsax.image,
             options: VisibilityLevel.values,
             currentLevel: settings.profileVisibility.profilePhoto.level,
-            onChanged: (level) => _controller.updateProfilePhotoVisibility(level),
+            onChanged: (level) =>
+                _controller.updateProfilePhotoVisibility(level),
           ),
-
           _buildSettingCard(
             title: 'About',
             subtitle: 'Who can see your about info',
-            currentValue: _getVisibilityLabel(settings.profileVisibility.about.level),
+            currentValue:
+                _getVisibilityLabel(settings.profileVisibility.about.level),
             icon: Iconsax.info_circle,
             options: VisibilityLevel.values,
             currentLevel: settings.profileVisibility.about.level,
             onChanged: (level) => _controller.updateAboutVisibility(level),
           ),
-
           _buildSettingCard(
             title: 'Online Status',
             subtitle: 'Who can see when you\'re online',
-            currentValue: _getVisibilityLabel(settings.profileVisibility.onlineStatus.level),
+            currentValue: _getVisibilityLabel(
+                settings.profileVisibility.onlineStatus.level),
             icon: Iconsax.activity,
             options: VisibilityLevel.values,
             currentLevel: settings.profileVisibility.onlineStatus.level,
-            onChanged: (level) => _controller.updateOnlineStatusVisibility(level),
+            onChanged: (level) =>
+                _controller.updateOnlineStatusVisibility(level),
           ),
         ],
       ),
@@ -432,47 +441,55 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
         children: [
           _buildStepHeader(step),
           const SizedBox(height: 24),
-
           _buildSettingCard(
             title: 'Who Can Message Me',
             subtitle: 'Control who can send you messages',
-            currentValue: _getVisibilityLabel(settings.communication.whoCanMessage.level),
+            currentValue:
+                _getVisibilityLabel(settings.communication.whoCanMessage.level),
             icon: Iconsax.message,
             options: VisibilityLevel.values,
             currentLevel: settings.communication.whoCanMessage.level,
             onChanged: (level) => _controller.updateWhoCanMessage(level),
           ),
-
           _buildSettingCard(
             title: 'Who Can Call Me',
             subtitle: 'Control who can call you',
-            currentValue: _getVisibilityLabel(settings.communication.whoCanCall.level),
+            currentValue:
+                _getVisibilityLabel(settings.communication.whoCanCall.level),
             icon: Iconsax.call,
             options: VisibilityLevel.values,
             currentLevel: settings.communication.whoCanCall.level,
             onChanged: (level) => _controller.updateWhoCanCall(level),
           ),
-
           _buildSettingCard(
             title: 'Group Invitations',
             subtitle: 'Who can add you to groups',
-            currentValue: _getVisibilityLabel(settings.communication.whoCanAddToGroups.level),
+            currentValue: _getVisibilityLabel(
+                settings.communication.whoCanAddToGroups.level),
             icon: Iconsax.people,
             options: VisibilityLevel.values,
             currentLevel: settings.communication.whoCanAddToGroups.level,
             onChanged: (level) => _controller.updateWhoCanAddToGroups(level),
           ),
-
           const SizedBox(height: 16),
-
           _buildToggleCard(
             title: 'Read Receipts',
             subtitle: 'Show others when you\'ve read their messages',
             value: settings.communication.readReceipts,
             icon: Iconsax.tick_circle,
-            onChanged: (value) => _controller.toggleReadReceipts(value),
+            onChanged: (value) {
+              _controller.toggleReadReceipts(value);
+            },
           ),
-
+          _buildToggleCard(
+            title: 'Typing Indicator',
+            subtitle: 'Show others when you\'re typing',
+            value: settings.communication.typingIndicator,
+            icon: Iconsax.edit,
+            onChanged: (value) {
+              _controller.toggleTypingIndicator(value);
+            },
+          ),
           _buildToggleCard(
             title: 'Typing Indicator',
             subtitle: 'Show others when you\'re typing',
@@ -495,7 +512,6 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
         children: [
           _buildStepHeader(step),
           const SizedBox(height: 24),
-
           _buildToggleCard(
             title: 'App Lock',
             subtitle: 'Require authentication to open the app',
@@ -504,7 +520,6 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
             onChanged: (value) => _controller.toggleAppLock(value),
             isImportant: !settings.security.appLockEnabled,
           ),
-
           if (settings.security.appLockEnabled)
             _buildToggleCard(
               title: 'Biometric Unlock',
@@ -513,7 +528,6 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
               icon: Iconsax.finger_scan,
               onChanged: (value) => _controller.toggleBiometric(value),
             ),
-
           _buildToggleCard(
             title: 'Two-Step Verification',
             subtitle: 'Add an extra layer of security',
@@ -522,11 +536,9 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
             onChanged: (value) => _controller.toggleTwoStepVerification(value),
             isImportant: !settings.security.twoStepEnabled,
           ),
-
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 16),
-
           _buildToggleCard(
             title: 'Allow Screenshots',
             subtitle: 'Allow others to screenshot your messages',
@@ -534,7 +546,6 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
             icon: Iconsax.screenmirroring,
             onChanged: (value) => _controller.toggleScreenshots(value),
           ),
-
           _buildToggleCard(
             title: 'Allow Forwarding',
             subtitle: 'Allow others to forward your messages',
@@ -542,7 +553,6 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
             icon: Iconsax.forward,
             onChanged: (value) => _controller.toggleForwarding(value),
           ),
-
           _buildToggleCard(
             title: 'Hide Media in Gallery',
             subtitle: 'Don\'t show Crypted media in phone gallery',
@@ -818,7 +828,8 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
             ),
           ),
         ),
-        onTap: () => _showVisibilityPicker(title, options, currentLevel, onChanged),
+        onTap: () =>
+            _showVisibilityPicker(title, options, currentLevel, onChanged),
       ),
     );
   }
@@ -834,9 +845,8 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isImportant && !value
-            ? Colors.orange.shade50
-            : Colors.grey.shade50,
+        color:
+            isImportant && !value ? Colors.orange.shade50 : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(16),
         border: isImportant && !value
             ? Border.all(color: Colors.orange.shade200)
@@ -1032,7 +1042,10 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        24, 16, 24, 16 + MediaQuery.of(context).padding.bottom,
+        24,
+        16,
+        24,
+        16 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1130,30 +1143,30 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
               ),
             ),
             ...options.map((level) => ListTile(
-              leading: Radio<VisibilityLevel>(
-                value: level,
-                groupValue: currentLevel,
-                onChanged: (value) {
-                  if (value != null) {
-                    onChanged(value);
+                  leading: Radio<VisibilityLevel>(
+                    value: level,
+                    groupValue: currentLevel,
+                    onChanged: (value) {
+                      if (value != null) {
+                        onChanged(value);
+                        Navigator.pop(context);
+                      }
+                    },
+                    activeColor: ColorsManager.primary,
+                  ),
+                  title: Text(_getVisibilityLabel(level)),
+                  subtitle: Text(
+                    _getVisibilityDescription(level),
+                    style: StylesManager.regular(
+                      fontSize: FontSize.xSmall,
+                      color: ColorsManager.grey,
+                    ),
+                  ),
+                  onTap: () {
+                    onChanged(level);
                     Navigator.pop(context);
-                  }
-                },
-                activeColor: ColorsManager.primary,
-              ),
-              title: Text(_getVisibilityLabel(level)),
-              subtitle: Text(
-                _getVisibilityDescription(level),
-                style: StylesManager.regular(
-                  fontSize: FontSize.xSmall,
-                  color: ColorsManager.grey,
-                ),
-              ),
-              onTap: () {
-                onChanged(level);
-                Navigator.pop(context);
-              },
-            )),
+                  },
+                )),
             SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         ),

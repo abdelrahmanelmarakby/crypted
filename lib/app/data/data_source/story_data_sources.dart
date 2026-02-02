@@ -111,6 +111,168 @@ class StoryDataSources {
     }
   }
 
+  // Upload event story — events expire when the event ends (not 24h)
+  Future<bool> uploadEventStory(StoryModel story) async {
+    try {
+      final userId = UserService.currentUser.value?.uid;
+      if (userId == null) {
+        log('User ID is null');
+        return false;
+      }
+
+      log('Starting event story upload for user: $userId');
+
+      final now = DateTime.now();
+      // Events expire when the event ends, or 30 days from now if no end date
+      final expiresAt = story.eventEndDate ??
+          story.eventDate?.add(const Duration(hours: 4)) ??
+          now.add(const Duration(days: 30));
+
+      final currentUser = UserService.currentUser.value;
+      final storyData = story.copyWith(
+        uid: userId,
+        user: currentUser,
+        createdAt: now,
+        expiresAt: expiresAt,
+        status: StoryStatus.active,
+        storyType: StoryType.event,
+        viewedBy: [],
+        attendeeIds: [userId], // Creator auto-joins
+        duration: 10, // Event cards display for 10s in story viewer
+      );
+
+      final docRef = await storiesCollection.add(storyData.toMap());
+      await storiesCollection.doc(docRef.id).update({'id': docRef.id});
+
+      // Also add creator to attendees subcollection
+      await storiesCollection
+          .doc(docRef.id)
+          .collection(FirebaseCollections.eventAttendees)
+          .doc(userId)
+          .set({
+        'uid': userId,
+        'userName': currentUser?.fullName,
+        'userImageUrl': currentUser?.imageUrl,
+        'joinedAt': Timestamp.now(),
+      });
+
+      log('Event story uploaded successfully: ${docRef.id}');
+      return true;
+    } catch (e) {
+      log('Error uploading event story: $e');
+      return false;
+    }
+  }
+
+  // Join an event
+  Future<bool> joinEvent(String storyId) async {
+    try {
+      final currentUser = UserService.currentUser.value;
+      if (currentUser?.uid == null) return false;
+
+      final uid = currentUser!.uid!;
+
+      // Add to attendeeIds array
+      await storiesCollection.doc(storyId).update({
+        'attendeeIds': FieldValue.arrayUnion([uid]),
+      });
+
+      // Add to attendees subcollection (for richer data)
+      await storiesCollection
+          .doc(storyId)
+          .collection(FirebaseCollections.eventAttendees)
+          .doc(uid)
+          .set({
+        'uid': uid,
+        'userName': currentUser.fullName,
+        'userImageUrl': currentUser.imageUrl,
+        'joinedAt': Timestamp.now(),
+      });
+
+      // Notify event creator
+      final storyDoc = await storiesCollection.doc(storyId).get();
+      final storyOwnerId = storyDoc.data()?['uid'] as String?;
+      if (storyOwnerId != null) {
+        await _sendStoryNotification(
+          storyOwnerId: storyOwnerId,
+          type: 'event_join',
+          title: 'New Attendee',
+          body: '${currentUser.fullName} joined your event!',
+          fromUserId: uid,
+          fromUserName: currentUser.fullName ?? '',
+          fromUserImage: currentUser.imageUrl ?? '',
+          storyId: storyId,
+        );
+      }
+
+      log('User $uid joined event $storyId');
+      return true;
+    } catch (e) {
+      log('Error joining event: $e');
+      return false;
+    }
+  }
+
+  // Leave an event
+  Future<bool> leaveEvent(String storyId) async {
+    try {
+      final uid = UserService.currentUser.value?.uid;
+      if (uid == null) return false;
+
+      await storiesCollection.doc(storyId).update({
+        'attendeeIds': FieldValue.arrayRemove([uid]),
+      });
+
+      await storiesCollection
+          .doc(storyId)
+          .collection(FirebaseCollections.eventAttendees)
+          .doc(uid)
+          .delete();
+
+      log('User $uid left event $storyId');
+      return true;
+    } catch (e) {
+      log('Error leaving event: $e');
+      return false;
+    }
+  }
+
+  // Get event attendees
+  Stream<List<Map<String, dynamic>>> getEventAttendees(String storyId) {
+    return storiesCollection
+        .doc(storyId)
+        .collection(FirebaseCollections.eventAttendees)
+        .orderBy('joinedAt', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  // Get all public events (not expired, type == event)
+  Stream<List<StoryModel>> getPublicEvents() {
+    final now = DateTime.now();
+    return storiesCollection
+        .where('storyType', isEqualTo: 'event')
+        .where('expiresAt', isGreaterThan: Timestamp.fromDate(now))
+        .orderBy('expiresAt')
+        .orderBy('eventDate')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) {
+            try {
+              return StoryModel.fromQuery(doc);
+            } catch (e) {
+              log('Error parsing event story: $e');
+              return null;
+            }
+          })
+          .where((s) => s != null)
+          .cast<StoryModel>()
+          .toList();
+    });
+  }
+
   // جلب جميع الـ stories (مبسط)
   // FIX: Server-side filtering for expired stories to reduce bandwidth
   // NOTE: Requires composite index on (expiresAt, createdAt) in Firebase Console
@@ -287,7 +449,9 @@ class StoryDataSources {
       log('💬 Sending reply to story $storyId from ${currentUser!.uid}');
 
       // إنشاء مرجع لمجموعة الردود تحت الـ story
-      final repliesRef = storiesCollection.doc(storyId).collection(FirebaseCollections.storyReplies);
+      final repliesRef = storiesCollection
+          .doc(storyId)
+          .collection(FirebaseCollections.storyReplies);
 
       final replyData = {
         'uid': currentUser.uid,
@@ -305,11 +469,11 @@ class StoryDataSources {
         type: 'story_reply',
         title: 'New Reply',
         body: '${currentUser.fullName} replied to your story: $replyText',
-        fromUserId: currentUser.uid??"",
-        fromUserName: currentUser.fullName??"",
-        fromUserImage: currentUser.imageUrl??"",
+        fromUserId: currentUser.uid ?? "",
+        fromUserName: currentUser.fullName ?? "",
+        fromUserImage: currentUser.imageUrl ?? "",
         storyId: storyId,
-      );  
+      );
 
       log('✅ Reply sent successfully to story $storyId');
       return true;
@@ -335,8 +499,9 @@ class StoryDataSources {
       log('❤️ Sending reaction $emoji to story $storyId from ${currentUser!.uid}');
 
       // إنشاء مرجع لمجموعة التفاعلات تحت الـ story
-      final reactionsRef =
-          storiesCollection.doc(storyId).collection(FirebaseCollections.storyReactions);
+      final reactionsRef = storiesCollection
+          .doc(storyId)
+          .collection(FirebaseCollections.storyReactions);
 
       // التحقق من وجود تفاعل سابق لنفس المستخدم
       final existingReaction = await reactionsRef
@@ -347,7 +512,7 @@ class StoryDataSources {
       if (existingReaction.docs.isNotEmpty) {
         // تحديث التفاعل الحالي
         await existingReaction.docs.first.reference.update({
-          'emoji': emoji??"",
+          'emoji': emoji ?? "",
           'updatedAt': Timestamp.now(),
         });
         log('✅ Reaction updated for story $storyId');
@@ -371,9 +536,9 @@ class StoryDataSources {
         type: 'story_reaction',
         title: 'New Reaction',
         body: '${currentUser.fullName} reacted to your story with $emoji',
-        fromUserId: currentUser.uid??"",
-        fromUserName: currentUser.fullName??"",
-        fromUserImage: currentUser.imageUrl??"",
+        fromUserId: currentUser.uid ?? "",
+        fromUserName: currentUser.fullName ?? "",
+        fromUserImage: currentUser.imageUrl ?? "",
         storyId: storyId,
       );
 

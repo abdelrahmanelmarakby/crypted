@@ -45,48 +45,58 @@ class HomeView extends GetView<HomeController> {
               children: [
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        Get.toNamed(Routes.SETTINGS);
-                      },
-                      child: Obx(() {
-                        final user = UserService.currentUser.value;
-                        if (user?.imageUrl != null && user!.imageUrl!.isNotEmpty) {
-                          return ClipOval(
-                            child: AppCachedNetworkImage(
-                              imageUrl: user.imageUrl!,
-                              fit: BoxFit.cover,
-                              height: Radiuss.xLarge * 2,
-                              width: Radiuss.xLarge * 2,
-                              isCircular: true,
-                            ),
-                          );
-                        } else {
-                          return CircleAvatar(
-                            backgroundImage: AssetImage(
-                              'assets/images/Profile Image111.png',
-                            ),
-                            radius: Radiuss.xLarge,
-                          );
-                        }
-                      }),
+                    Semantics(
+                      label: 'Profile picture. Double tap to open settings',
+                      button: true,
+                      child: GestureDetector(
+                        onTap: () {
+                          Get.toNamed(Routes.SETTINGS);
+                        },
+                        child: Obx(() {
+                          final user = UserService.currentUser.value;
+                          if (user?.imageUrl != null &&
+                              user!.imageUrl!.isNotEmpty) {
+                            return ClipOval(
+                              child: AppCachedNetworkImage(
+                                imageUrl: user.imageUrl!,
+                                fit: BoxFit.cover,
+                                height: Radiuss.xLarge * 2,
+                                width: Radiuss.xLarge * 2,
+                                isCircular: true,
+                              ),
+                            );
+                          } else {
+                            return CircleAvatar(
+                              backgroundImage: AssetImage(
+                                'assets/images/Profile Image111.png',
+                              ),
+                              radius: Radiuss.xLarge,
+                            );
+                          }
+                        }),
+                      ),
                     ),
                     SizedBox(width: Sizes.size12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          Constants.kHello.tr,
-                          style: StylesManager.regular(fontSize: FontSize.small, color: ColorsManager.grey),
-                        ),
-                        Obx(() => Text(
-                              controller.myUser.value?.fullName ??
-                                  UserService.currentUser.value?.fullName ??
-                                  Constants.kUser.tr,
-                              style: StylesManager.regular(
-                                  fontSize: FontSize.medium, color: ColorsManager.black),
-                            )),
-                      ],
+                    MergeSemantics(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            Constants.kHello.tr,
+                            style: StylesManager.regular(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.grey),
+                          ),
+                          Obx(() => Text(
+                                controller.myUser.value?.fullName ??
+                                    UserService.currentUser.value?.fullName ??
+                                    Constants.kUser.tr,
+                                style: StylesManager.regular(
+                                    fontSize: FontSize.medium,
+                                    color: ColorsManager.black),
+                              )),
+                        ],
+                      ),
                     ),
                     Spacer(),
                     // Fix #7: Single container instead of nested CircleAvatars
@@ -105,6 +115,7 @@ class HomeView extends GetView<HomeController> {
                         onPressed: () {
                           Get.to(() => Search());
                         },
+                        tooltip: 'Search',
                         icon: SvgPicture.asset(
                           'assets/icons/search-normal.svg',
                           width: 20,

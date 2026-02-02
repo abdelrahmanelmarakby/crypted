@@ -1,4 +1,5 @@
 import 'package:crypted_app/app/core/constants/chat_constants.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
 
 /// DATA-001: Message Validator
 /// Validates message data before saving to Firestore
@@ -20,7 +21,8 @@ class MessageValidator {
     }
 
     if (text.length > ChatConstants.maxMessageLength) {
-      errors.add('Message exceeds maximum length of ${ChatConstants.maxMessageLength} characters');
+      errors.add(
+          'Message exceeds maximum length of ${ChatConstants.maxMessageLength} characters');
     }
 
     // Validate sender
@@ -58,9 +60,10 @@ class MessageValidator {
       errors.add('Invalid media URL format');
     }
 
-    // Validate file size
-    if (fileSize != null && fileSize > ChatConstants.maxFileSizeMb * 1024 * 1024) {
-      errors.add('File size exceeds maximum of ${ChatConstants.maxFileSizeMb}MB');
+    // Validate file size (premium-aware)
+    final maxSizeMB = PremiumService.instance.fileUploadLimitMB;
+    if (fileSize != null && fileSize > maxSizeMB * 1024 * 1024) {
+      errors.add('File size exceeds maximum of ${maxSizeMB}MB');
     }
 
     // Validate sender
@@ -99,11 +102,13 @@ class MessageValidator {
 
     // Validate options
     if (options.length < ChatConstants.minPollOptions) {
-      errors.add('Poll must have at least ${ChatConstants.minPollOptions} options');
+      errors.add(
+          'Poll must have at least ${ChatConstants.minPollOptions} options');
     }
 
     if (options.length > ChatConstants.maxPollOptions) {
-      errors.add('Poll cannot have more than ${ChatConstants.maxPollOptions} options');
+      errors.add(
+          'Poll cannot have more than ${ChatConstants.maxPollOptions} options');
     }
 
     for (int i = 0; i < options.length; i++) {
@@ -229,7 +234,8 @@ class MessageValidator {
     }
 
     if (memberIds.length > ChatConstants.maxGroupMembers) {
-      errors.add('Group cannot exceed ${ChatConstants.maxGroupMembers} members');
+      errors
+          .add('Group cannot exceed ${ChatConstants.maxGroupMembers} members');
     }
 
     // Check for duplicate member IDs
@@ -244,13 +250,16 @@ class MessageValidator {
         errors.add('Group name is required');
       }
 
-      if (groupName != null && groupName.length > ChatConstants.maxGroupNameLength) {
-        errors.add('Group name exceeds maximum length of ${ChatConstants.maxGroupNameLength} characters');
+      if (groupName != null &&
+          groupName.length > ChatConstants.maxGroupNameLength) {
+        errors.add(
+            'Group name exceeds maximum length of ${ChatConstants.maxGroupNameLength} characters');
       }
 
       if (groupDescription != null &&
           groupDescription.length > ChatConstants.maxGroupDescriptionLength) {
-        errors.add('Group description exceeds maximum length of ${ChatConstants.maxGroupDescriptionLength} characters');
+        errors.add(
+            'Group description exceeds maximum length of ${ChatConstants.maxGroupDescriptionLength} characters');
       }
 
       if (memberIds.length < 2) {
@@ -345,7 +354,8 @@ mixin ValidationMixin {
   final _validator = MessageValidator.instance;
 
   /// Validate and get result
-  ValidationResult validate(ValidationResult Function(MessageValidator) validation) {
+  ValidationResult validate(
+      ValidationResult Function(MessageValidator) validation) {
     return validation(_validator);
   }
 

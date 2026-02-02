@@ -30,6 +30,9 @@ import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart
     as native_contact;
 import 'package:image_picker/image_picker.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:crypted_app/app/data/models/messages/sticker_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/gif_message_model.dart';
+import 'package:crypted_app/app/modules/chat/widgets/giphy_picker_sheet.dart';
 
 class AttachmentWidget extends GetView<ChatController> {
   const AttachmentWidget({super.key});
@@ -161,7 +164,8 @@ class AttachmentWidget extends GetView<ChatController> {
                           sendRequestFunction: (soundFile, time) async {
                             controller.onChangeRec(false);
                             try {
-                              print("🎤 ========== AUDIO DEBUG START ==========");
+                              print(
+                                  "🎤 ========== AUDIO DEBUG START ==========");
                               print("🎤 Sending audio message...");
                               print("  File path: ${soundFile.path}");
                               print("  Duration: $time");
@@ -174,14 +178,17 @@ class AttachmentWidget extends GetView<ChatController> {
 
                               if (exists) {
                                 final fileSize = await file.length();
-                                print("  File size: $fileSize bytes (${(fileSize / 1024).toStringAsFixed(2)} KB)");
+                                print(
+                                    "  File size: $fileSize bytes (${(fileSize / 1024).toStringAsFixed(2)} KB)");
 
                                 // Read first few bytes to check format
                                 final bytes = await file.openRead(0, 12).first;
-                                print("  First bytes (hex): ${bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}");
+                                print(
+                                    "  First bytes (hex): ${bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}");
 
                                 if (fileSize == 0) {
-                                  print("❌ ERROR: Audio file is EMPTY (0 bytes)!");
+                                  print(
+                                      "❌ ERROR: Audio file is EMPTY (0 bytes)!");
                                   Get.snackbar(
                                     "Recording Error",
                                     "Audio file is empty. Please check microphone permissions.",
@@ -193,7 +200,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                 }
 
                                 if (fileSize < 1000) {
-                                  print("⚠️ WARNING: Audio file is very small ($fileSize bytes)");
+                                  print(
+                                      "⚠️ WARNING: Audio file is very small ($fileSize bytes)");
                                 }
                               } else {
                                 print("❌ ERROR: Audio file does not exist!");
@@ -206,7 +214,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                 );
                                 return;
                               }
-                              print("🎤 ========================================");
+                              print(
+                                  "🎤 ========================================");
 
                               // Test: Try to play locally to verify audio content
                               print("🔊 Testing local playback...");
@@ -223,17 +232,18 @@ class AttachmentWidget extends GetView<ChatController> {
 
                               final audioMessage =
                                   await FirebaseUtils.uploadAudio(
-                                      soundFile.path,
-                                      controller.roomId,
-                                      time);
+                                      soundFile.path, controller.roomId, time);
 
                               if (audioMessage != null) {
-                                print("✅ Audio message created, sending to chat...");
+                                print(
+                                    "✅ Audio message created, sending to chat...");
                                 await controller.sendMessage(audioMessage);
                                 print("✅ Audio message sent successfully");
                               } else {
-                                print("❌ Failed to upload audio to Firebase Storage");
-                                throw Exception("Failed to upload audio to Firebase Storage");
+                                print(
+                                    "❌ Failed to upload audio to Firebase Storage");
+                                throw Exception(
+                                    "Failed to upload audio to Firebase Storage");
                               }
                             } catch (e, stackTrace) {
                               print("❌ Error sending audio message: $e");
@@ -243,7 +253,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                 "Error",
                                 "Failed to send audio message: ${e.toString()}",
                                 snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: Colors.red.withValues(alpha: 0.8),
+                                backgroundColor:
+                                    Colors.red.withValues(alpha: 0.8),
                                 colorText: Colors.white,
                                 duration: const Duration(seconds: 3),
                                 margin: const EdgeInsets.all(16),
@@ -268,16 +279,22 @@ class AttachmentWidget extends GetView<ChatController> {
                       children: [
                         // Mic button (always mounted, animated visibility)
                         AnimatedScale(
-                          scale: controller.messageController.text.isEmpty ? 1.0 : 0.0,
+                          scale: controller.messageController.text.isEmpty
+                              ? 1.0
+                              : 0.0,
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOutBack,
                           child: AnimatedOpacity(
-                            opacity: controller.messageController.text.isEmpty ? 1.0 : 0.0,
+                            opacity: controller.messageController.text.isEmpty
+                                ? 1.0
+                                : 0.0,
                             duration: const Duration(milliseconds: 150),
                             child: IgnorePointer(
-                              ignoring: controller.messageController.text.isNotEmpty,
+                              ignoring:
+                                  controller.messageController.text.isNotEmpty,
                               child: SocialMediaRecorder(
-                                backGroundColor: ColorsManager.primary.withAlpha(50),
+                                backGroundColor:
+                                    ColorsManager.primary.withAlpha(50),
                                 recordIconBackGroundColor:
                                     ColorsManager.primary.withAlpha(50),
                                 recordIcon: Icon(
@@ -317,20 +334,23 @@ class AttachmentWidget extends GetView<ChatController> {
                                     final exists = await file.exists();
                                     if (!exists) return;
 
-                                    final audioMessage = await FirebaseUtils.uploadAudio(
+                                    final audioMessage =
+                                        await FirebaseUtils.uploadAudio(
                                       soundFile.path,
                                       controller.roomId,
                                       time,
                                     );
                                     if (audioMessage != null) {
-                                      await controller.sendMessage(audioMessage);
+                                      await controller
+                                          .sendMessage(audioMessage);
                                     }
                                   } catch (e) {
                                     Get.snackbar(
                                       "Error",
                                       "Failed to send audio message",
                                       snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: Colors.red.withValues(alpha: 0.8),
+                                      backgroundColor:
+                                          Colors.red.withValues(alpha: 0.8),
                                       colorText: Colors.white,
                                     );
                                   } finally {
@@ -344,14 +364,20 @@ class AttachmentWidget extends GetView<ChatController> {
                         ),
                         // Send button (always mounted, animated visibility)
                         AnimatedScale(
-                          scale: controller.messageController.text.isNotEmpty ? 1.0 : 0.0,
+                          scale: controller.messageController.text.isNotEmpty
+                              ? 1.0
+                              : 0.0,
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOutBack,
                           child: AnimatedOpacity(
-                            opacity: controller.messageController.text.isNotEmpty ? 1.0 : 0.0,
+                            opacity:
+                                controller.messageController.text.isNotEmpty
+                                    ? 1.0
+                                    : 0.0,
                             duration: const Duration(milliseconds: 150),
                             child: IgnorePointer(
-                              ignoring: controller.messageController.text.isEmpty,
+                              ignoring:
+                                  controller.messageController.text.isEmpty,
                               child: GestureDetector(
                                 onTap: () {
                                   // UX-003: Haptic feedback on send
@@ -362,7 +388,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                   width: Sizes.size50,
                                   height: Sizes.size50,
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(Radiuss.small),
+                                    borderRadius:
+                                        BorderRadius.circular(Radiuss.small),
                                     color: ColorsManager.primary.withAlpha(50),
                                   ),
                                   child: const Icon(
@@ -512,11 +539,14 @@ class AttachmentWidget extends GetView<ChatController> {
 
                             // Get file info
                             final file = File(path);
-                            final fileName = path.split(Platform.pathSeparator).last;
+                            final fileName =
+                                path.split(Platform.pathSeparator).last;
                             final fileSize = await file.length();
-                            final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
+                            final uploadId = FirebaseUtils.generateUniqueId(
+                                'image', controller.roomId);
 
-                            debugPrint("📷 Starting upload: $fileName ($fileSize bytes)");
+                            debugPrint(
+                                "📷 Starting upload: $fileName ($fileSize bytes)");
 
                             // Start upload tracking
                             controller.startUpload(
@@ -525,27 +555,33 @@ class AttachmentWidget extends GetView<ChatController> {
                               fileName: fileName,
                               fileSize: fileSize,
                               uploadType: 'image',
-                              thumbnailPath: path, // Use original image as thumbnail
+                              thumbnailPath:
+                                  path, // Use original image as thumbnail
                             );
 
                             // Upload with progress tracking
-                            final photoMessage = await FirebaseUtils.uploadImage(
+                            final photoMessage =
+                                await FirebaseUtils.uploadImage(
                               path,
                               controller.roomId,
                               onProgress: (progress) {
-                                debugPrint("📷 Upload progress: ${(progress * 100).toStringAsFixed(0)}%");
-                                controller.updateUploadProgress(uploadId, progress);
+                                debugPrint(
+                                    "📷 Upload progress: ${(progress * 100).toStringAsFixed(0)}%");
+                                controller.updateUploadProgress(
+                                    uploadId, progress);
                               },
                             );
 
                             if (photoMessage != null) {
-                              debugPrint("📷 Upload complete, sending message...");
+                              debugPrint(
+                                  "📷 Upload complete, sending message...");
                               // Complete upload (replace uploading message with actual message)
                               await controller.sendMessage(photoMessage);
                               controller.completeUpload(uploadId, photoMessage);
                               debugPrint("📷 Photo message sent successfully!");
                             } else {
-                              debugPrint("❌ Upload failed - photoMessage is null");
+                              debugPrint(
+                                  "❌ Upload failed - photoMessage is null");
                               // Upload failed, remove uploading message
                               controller.cancelUpload(uploadId);
                             }
@@ -572,11 +608,14 @@ class AttachmentWidget extends GetView<ChatController> {
 
                               // Get file info
                               final file = File(photo.path);
-                              final fileName = photo.path.split(Platform.pathSeparator).last;
+                              final fileName =
+                                  photo.path.split(Platform.pathSeparator).last;
                               final fileSize = await file.length();
-                              final uploadId = FirebaseUtils.generateUniqueId('image', controller.roomId);
+                              final uploadId = FirebaseUtils.generateUniqueId(
+                                  'image', controller.roomId);
 
-                              debugPrint("📸 Starting upload: $fileName ($fileSize bytes)");
+                              debugPrint(
+                                  "📸 Starting upload: $fileName ($fileSize bytes)");
 
                               // Start upload tracking
                               controller.startUpload(
@@ -589,22 +628,29 @@ class AttachmentWidget extends GetView<ChatController> {
                               );
 
                               // Upload with progress tracking
-                              final photoMessage = await FirebaseUtils.uploadImage(
+                              final photoMessage =
+                                  await FirebaseUtils.uploadImage(
                                 photo.path,
                                 controller.roomId,
                                 onProgress: (progress) {
-                                  debugPrint("📸 Upload progress: ${(progress * 100).toStringAsFixed(0)}%");
-                                  controller.updateUploadProgress(uploadId, progress);
+                                  debugPrint(
+                                      "📸 Upload progress: ${(progress * 100).toStringAsFixed(0)}%");
+                                  controller.updateUploadProgress(
+                                      uploadId, progress);
                                 },
                               );
 
                               if (photoMessage != null) {
-                                debugPrint("📸 Upload complete, sending message...");
+                                debugPrint(
+                                    "📸 Upload complete, sending message...");
                                 await controller.sendMessage(photoMessage);
-                                controller.completeUpload(uploadId, photoMessage);
-                                debugPrint("📸 Camera photo sent successfully!");
+                                controller.completeUpload(
+                                    uploadId, photoMessage);
+                                debugPrint(
+                                    "📸 Camera photo sent successfully!");
                               } else {
-                                debugPrint("❌ Camera upload failed - photoMessage is null");
+                                debugPrint(
+                                    "❌ Camera upload failed - photoMessage is null");
                                 controller.cancelUpload(uploadId);
                               }
                             } else {
@@ -646,7 +692,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                   .millisecondsSinceEpoch
                                   .toString(),
                               roomId: controller.roomId,
-                              senderId: UserService.currentUser.value?.uid ?? "",
+                              senderId:
+                                  UserService.currentUser.value?.uid ?? "",
                               timestamp: DateTime.now(),
                               latitude: position.latitude,
                               longitude: position.longitude,
@@ -708,7 +755,8 @@ class AttachmentWidget extends GetView<ChatController> {
                                     .millisecondsSinceEpoch
                                     .toString(),
                                 roomId: controller.roomId,
-                                senderId: UserService.currentUser.value?.uid??"",
+                                senderId:
+                                    UserService.currentUser.value?.uid ?? "",
                                 timestamp: DateTime.now(),
                                 name: contact.fullName ?? 'Unknown Contact',
                                 phoneNumber: contact.phoneNumbers!.first,
@@ -718,7 +766,8 @@ class AttachmentWidget extends GetView<ChatController> {
                             Get.snackbar(
                               "خطأ",
                               " ${e.toString()} فشل في اختيار جهة الاتصال",
-                              backgroundColor: Colors.red.withValues(alpha: 0.8),
+                              backgroundColor:
+                                  Colors.red.withValues(alpha: 0.8),
                               colorText: Colors.white,
                             );
                           }
@@ -738,9 +787,11 @@ class AttachmentWidget extends GetView<ChatController> {
 
                           // Get file info
                           final file = File(path);
-                          final fileName = path.split(Platform.pathSeparator).last;
+                          final fileName =
+                              path.split(Platform.pathSeparator).last;
                           final fileSize = await file.length();
-                          final uploadId = FirebaseUtils.generateUniqueId('file', controller.roomId);
+                          final uploadId = FirebaseUtils.generateUniqueId(
+                              'file', controller.roomId);
 
                           // Start upload tracking
                           controller.startUpload(
@@ -756,7 +807,8 @@ class AttachmentWidget extends GetView<ChatController> {
                             path,
                             controller.roomId,
                             onProgress: (progress) {
-                              controller.updateUploadProgress(uploadId, progress);
+                              controller.updateUploadProgress(
+                                  uploadId, progress);
                             },
                           );
 
@@ -784,6 +836,48 @@ class AttachmentWidget extends GetView<ChatController> {
                               child: EventBottomSheet(controller: controller),
                             ),
                           );
+                        },
+                      ),
+                      const Spacer(),
+                      _buildMenuItem(
+                        context,
+                        'assets/icons/ico-24-sticker.svg',
+                        'GIF',
+                        () async {
+                          Get.back();
+                          final result = await GiphyPickerSheet.show(context);
+                          if (result == null) return;
+
+                          if (result.type == 'gif') {
+                            await controller.sendMessage(GifMessage(
+                              id: DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString(),
+                              roomId: controller.roomId,
+                              senderId:
+                                  UserService.currentUser.value?.uid ?? '',
+                              timestamp: DateTime.now(),
+                              gifUrl: result.url,
+                              previewUrl: result.previewUrl,
+                              giphyId: result.giphyId,
+                              title: result.title,
+                              width: result.width,
+                              height: result.height,
+                            ));
+                          } else {
+                            await controller.sendMessage(StickerMessage(
+                              id: DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString(),
+                              roomId: controller.roomId,
+                              senderId:
+                                  UserService.currentUser.value?.uid ?? '',
+                              timestamp: DateTime.now(),
+                              stickerUrl: result.url,
+                              width: result.width,
+                              height: result.height,
+                            ));
+                          }
                         },
                       ),
                     ],

@@ -149,8 +149,10 @@ class StoriesController extends GetxController {
     }
 
     _allStoriesRetryCount++;
-    final backoffMs = 1000 * (1 << (_allStoriesRetryCount - 1)); // Exponential: 1s, 2s, 4s, 8s, 16s
-    print('🔄 Retrying stories stream in ${backoffMs}ms (attempt $_allStoriesRetryCount/$_maxRetries)');
+    final backoffMs = 1000 *
+        (1 << (_allStoriesRetryCount - 1)); // Exponential: 1s, 2s, 4s, 8s, 16s
+    print(
+        '🔄 Retrying stories stream in ${backoffMs}ms (attempt $_allStoriesRetryCount/$_maxRetries)');
 
     Future.delayed(Duration(milliseconds: backoffMs), () {
       if (!isClosed) {
@@ -169,7 +171,8 @@ class StoriesController extends GetxController {
       // Cancel existing subscription if any
       _userStoriesSubscription?.cancel();
 
-      _userStoriesSubscription = _storyDataSources.getUserStories(userId).listen(
+      _userStoriesSubscription =
+          _storyDataSources.getUserStories(userId).listen(
         (stories) {
           print('👤 Fetched ${stories.length} user stories for $userId');
           _userStoriesRetryCount = 0; // Reset retry count on success
@@ -195,8 +198,10 @@ class StoriesController extends GetxController {
     }
 
     _userStoriesRetryCount++;
-    final backoffMs = 1000 * (1 << (_userStoriesRetryCount - 1)); // Exponential: 1s, 2s, 4s, 8s, 16s
-    print('🔄 Retrying user stories stream in ${backoffMs}ms (attempt $_userStoriesRetryCount/$_maxRetries)');
+    final backoffMs = 1000 *
+        (1 << (_userStoriesRetryCount - 1)); // Exponential: 1s, 2s, 4s, 8s, 16s
+    print(
+        '🔄 Retrying user stories stream in ${backoffMs}ms (attempt $_userStoriesRetryCount/$_maxRetries)');
 
     Future.delayed(Duration(milliseconds: backoffMs), () {
       if (!isClosed) {
@@ -401,18 +406,18 @@ class StoriesController extends GetxController {
 
       if (success) {
         print('✅ Story uploaded successfully');
-        Get.snackbar(Constants.kSuccess.tr,"Story uploaded successfully");
+        Get.snackbar(Constants.kSuccess.tr, "Story uploaded successfully");
         clearStoryData();
         // تحديث البيانات بعد الرفع
         fetchAllStories();
         fetchUserStories();
       } else {
         print('❌ Story upload failed');
-        Get.snackbar(Constants.kError.tr,"Story upload failed");
+        Get.snackbar(Constants.kError.tr, "Story upload failed");
       }
     } catch (e) {
       print('❌ Error uploading story: $e');
-      Get.snackbar(Constants.kError.tr,"Story upload failed");
+      Get.snackbar(Constants.kError.tr, "Story upload failed");
     } finally {
       isUploading.value = false;
       update();
@@ -488,6 +493,10 @@ class StoriesController extends GetxController {
           linkDisplayText: linkDisplayText,
         );
         success = await _storyDataSources.uploadTextStory(story);
+      } else if (storyType == StoryType.event) {
+        // Events are created via EventCreationSheet, not through this path
+        print('Event stories are created via EventCreationSheet');
+        success = true;
       }
 
       if (success) {
@@ -638,9 +647,9 @@ class StoriesController extends GetxController {
   Future<void> deleteStory(String storyId) async {
     final success = await _storyDataSources.deleteStory(storyId);
     if (success) {
-      Get.snackbar(Constants.kSuccess.tr,"Story deleted successfully");
+      Get.snackbar(Constants.kSuccess.tr, "Story deleted successfully");
     } else {
-      Get.snackbar(Constants.kError.tr,"Story deleted failed");
+      Get.snackbar(Constants.kError.tr, "Story deleted failed");
     }
   }
 

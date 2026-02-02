@@ -166,10 +166,9 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
     if (_videoController == null) {
       final story = widget.stories[currentStoryIndex];
       final remainingDuration = Duration(
-        milliseconds: ((1 - _progressController.value) *
-                (story.duration ?? 5) *
-                1000)
-            .toInt(),
+        milliseconds:
+            ((1 - _progressController.value) * (story.duration ?? 5) * 1000)
+                .toInt(),
       );
       _progressTimer = Timer(remainingDuration, () {
         if (!isPaused) _nextStory();
@@ -326,6 +325,53 @@ class _EpicStoryViewerState extends State<EpicStoryViewer>
                   ),
                   textAlign: TextAlign.center,
                 ),
+              ),
+            ),
+          )
+        else if (story.storyType == StoryType.event)
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1A1A2E),
+                  Color(0xFF16213E),
+                  Color(0xFF0F3460)
+                ],
+              ),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.event, color: Colors.white70, size: 40),
+                  const SizedBox(height: 12),
+                  Text(
+                    story.eventTitle ?? 'Event',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  if (story.eventDescription != null &&
+                      story.eventDescription!.isNotEmpty)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(top: 8, left: 24, right: 24),
+                      child: Text(story.eventDescription!,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 14)),
+                    ),
+                  const SizedBox(height: 12),
+                  Text('${story.attendeeCount} going',
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 13)),
+                ],
               ),
             ),
           ),

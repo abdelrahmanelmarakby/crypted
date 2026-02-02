@@ -38,6 +38,7 @@ class BackupSettingsSheetWidget extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: () => Get.back(),
+                tooltip: 'Close',
                 icon: Icon(
                   Icons.close,
                   color: ColorsManager.grey,
@@ -125,7 +126,8 @@ class BackupSettingsSheetWidget extends StatelessWidget {
                       onPressed: () {
                         controller.saveBackupSettings();
                         Get.back();
-                        _showFeedbackSnackBar('Settings saved successfully', ColorsManager.success);
+                        _showFeedbackSnackBar('Settings saved successfully',
+                            ColorsManager.success);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorsManager.primary,
@@ -232,6 +234,7 @@ class BackupProgressSheetWidget extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: () => Get.back(),
+                tooltip: 'Close',
                 icon: Icon(
                   Icons.close,
                   color: ColorsManager.grey,
@@ -250,8 +253,10 @@ class BackupProgressSheetWidget extends StatelessWidget {
                     CircularProgressIndicator(
                       strokeWidth: 8,
                       value: controller.backupProgress.value,
-                      valueColor: AlwaysStoppedAnimation<Color>(ColorsManager.primary),
-                      backgroundColor: ColorsManager.primary.withValues(alpha: 0.2),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                      backgroundColor:
+                          ColorsManager.primary.withValues(alpha: 0.2),
                     ),
                     Column(
                       mainAxisSize: MainAxisSize.min,

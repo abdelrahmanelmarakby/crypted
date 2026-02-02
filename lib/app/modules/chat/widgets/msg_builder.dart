@@ -10,6 +10,8 @@ import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/location_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/video_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/sticker_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/gif_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/uploading_message_model.dart';
 import 'package:crypted_app/app/modules/chat/controllers/chat_controller.dart';
 import 'package:crypted_app/app/modules/chat/widgets/animated_message_item.dart';
@@ -23,6 +25,8 @@ import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/locatio
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/poll_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/text_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/video_message.dart';
+import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/sticker_message.dart';
+import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/gif_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_type_widget/uploading_message.dart';
 import 'package:crypted_app/app/modules/chat/widgets/message_reactions_display.dart';
 import 'package:crypted_app/app/widgets/network_image.dart';
@@ -111,7 +115,8 @@ class MessageBuilder extends GetView<ChatController> {
                 const SizedBox(height: Sizes.size4),
                 Obx(() {
                   // Search result highlighting
-                  final isCurrentResult = controller.isCurrentSearchResult(messageModel);
+                  final isCurrentResult =
+                      controller.isCurrentSearchResult(messageModel);
                   final isAnyResult = controller.isSearchResult(messageModel);
 
                   return GestureDetector(
@@ -143,7 +148,8 @@ class MessageBuilder extends GetView<ChatController> {
                               )
                             : isAnyResult
                                 ? Border.all(
-                                    color: ColorsManager.primary.withValues(alpha: 0.4),
+                                    color: ColorsManager.primary
+                                        .withValues(alpha: 0.4),
                                     width: 1.5,
                                   )
                                 : null,
@@ -151,7 +157,8 @@ class MessageBuilder extends GetView<ChatController> {
                         boxShadow: isCurrentResult
                             ? [
                                 BoxShadow(
-                                  color: ColorsManager.primary.withValues(alpha: 0.3),
+                                  color: ColorsManager.primary
+                                      .withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   spreadRadius: 2,
                                 ),
@@ -159,76 +166,81 @@ class MessageBuilder extends GetView<ChatController> {
                             : null,
                       ),
                       padding: const EdgeInsets.all(Sizes.size12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Reply context indicator
-                        if (messageModel.replyTo != null)
-                          _buildReplyContextWidget(context, messageModel.replyTo!),
-                        // Forwarded message indicator
-                        if (messageModel.isForwarded)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: Sizes.size8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.forward_rounded,
-                                  size: Sizes.size14,
-                                  color: ColorsManager.grey.withValues(alpha: 0.7),
-                                ),
-                                const SizedBox(width: Sizes.size4),
-                                Text(
-                                  'Forwarded',
-                                  style: StylesManager.regular(
-                                    fontSize: FontSize.xSmall,
-                                    color: ColorsManager.grey.withValues(alpha: 0.7),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Reply context indicator
+                          if (messageModel.replyTo != null)
+                            _buildReplyContextWidget(
+                                context, messageModel.replyTo!),
+                          // Forwarded message indicator
+                          if (messageModel.isForwarded)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(bottom: Sizes.size8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.forward_rounded,
+                                    size: Sizes.size14,
+                                    color: ColorsManager.grey
+                                        .withValues(alpha: 0.7),
                                   ),
+                                  const SizedBox(width: Sizes.size4),
+                                  Text(
+                                    'Forwarded',
+                                    style: StylesManager.regular(
+                                      fontSize: FontSize.xSmall,
+                                      color: ColorsManager.grey
+                                          .withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          buildMessageContent(context, messageModel),
+
+                          // Message reactions display
+                          if (messageModel.reactions.isNotEmpty)
+                            MessageReactionsDisplay(
+                              reactions: messageModel.reactions,
+                              currentUserId:
+                                  UserService.currentUser.value?.uid ?? '',
+                              onReactionTap: (emoji) {
+                                controller.toggleReaction(messageModel, emoji);
+                              },
+                              onShowDetails: () {
+                                // Show details handled by long press on reaction
+                              },
+                            ),
+
+                          const SizedBox(height: Sizes.size4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // UX-004: Animated delivery status (✓ → ✓✓)
+                              if (!senderType)
+                                AnimatedDeliveryStatus(
+                                  state: _getDeliveryState(messageModel),
+                                  color: ColorsManager.grey,
+                                  readColor: ColorsManager.primary,
+                                  size: Sizes.size16,
                                 ),
-                              ],
-                            ),
-                          ),
-                        buildMessageContent(context, messageModel),
-
-                        // Message reactions display
-                        if (messageModel.reactions.isNotEmpty)
-                          MessageReactionsDisplay(
-                            reactions: messageModel.reactions,
-                            currentUserId: UserService.currentUser.value?.uid ?? '',
-                            onReactionTap: (emoji) {
-                              controller.toggleReaction(messageModel, emoji);
-                            },
-                            onShowDetails: () {
-                              // Show details handled by long press on reaction
-                            },
-                          ),
-
-                        const SizedBox(height: Sizes.size4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // UX-004: Animated delivery status (✓ → ✓✓)
-                            if (!senderType)
-                              AnimatedDeliveryStatus(
-                                state: _getDeliveryState(messageModel),
-                                color: ColorsManager.grey,
-                                readColor: ColorsManager.primary,
-                                size: Sizes.size16,
+                              const SizedBox(width: Sizes.size4),
+                              Text(
+                                '$hour:${time.minute.toString().padLeft(2, '0')} $amPm',
+                                style: StylesManager.regular(
+                                  fontSize: FontSize.xSmall,
+                                  color: ColorsManager.grey,
+                                ),
                               ),
-                            const SizedBox(width: Sizes.size4),
-                            Text(
-                              '$hour:${time.minute.toString().padLeft(2, '0')} $amPm',
-                              style: StylesManager.regular(
-                                fontSize: FontSize.xSmall,
-                                color: ColorsManager.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
+                  );
                 }),
               ],
             ),
@@ -282,7 +294,8 @@ class MessageBuilder extends GetView<ChatController> {
             InkWell(
               onTap: () => controller.restoreMessage(msg),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: ColorsManager.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -402,6 +415,18 @@ class MessageBuilder extends GetView<ChatController> {
           isMe: msg.senderId == UserService.currentUser.value?.uid,
         );
 
+      case StickerMessage():
+        return StickerMessageWidget(
+          key: key,
+          message: msg,
+        );
+
+      case GifMessage():
+        return GifMessageWidget(
+          key: key,
+          message: msg,
+        );
+
       case UploadingMessage():
         return UploadingMessageWidget(
           key: key,
@@ -436,7 +461,8 @@ class MessageBuilder extends GetView<ChatController> {
   }
 
   /// Build reply context widget to show what message is being replied to
-  Widget _buildReplyContextWidget(BuildContext context, ReplyToMessage replyTo) {
+  Widget _buildReplyContextWidget(
+      BuildContext context, ReplyToMessage replyTo) {
     return GestureDetector(
       onTap: () {
         // Scroll to the original message when reply is tapped

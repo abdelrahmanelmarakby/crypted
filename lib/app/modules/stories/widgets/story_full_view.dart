@@ -348,9 +348,55 @@ class _StoryFullViewState extends State<StoryFullView>
         return _buildVideoStory();
       case StoryType.text:
         return _buildTextStory();
+      case StoryType.event:
+        return _buildEventStoryCard();
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildEventStoryCard() {
+    final story = widget.story;
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.event, color: Colors.white70, size: 40),
+              const SizedBox(height: 12),
+              Text(
+                story.eventTitle ?? 'Event',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold),
+              ),
+              if (story.eventDescription != null) ...[
+                const SizedBox(height: 8),
+                Text(story.eventDescription!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ],
+              const SizedBox(height: 12),
+              Text('${story.attendeeCount} going',
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildImageStory() {
@@ -589,6 +635,8 @@ class _StoryFullViewState extends State<StoryFullView>
         return Icons.video_library;
       case StoryType.text:
         return Icons.text_fields;
+      case StoryType.event:
+        return Icons.event;
       default:
         return Icons.article;
     }
@@ -658,6 +706,8 @@ class _StoryFullViewState extends State<StoryFullView>
         return 'فيديو';
       case StoryType.text:
         return 'نص';
+      case StoryType.event:
+        return 'حدث';
       default:
         return 'قصة';
     }

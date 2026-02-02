@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:crypted_app/app/core/services/enhanced_backup_service.dart';
 import 'package:crypted_app/app/modules/settings/controllers/settings_controller.dart';
 import 'package:crypted_app/app/modules/settings/views/widgets/backup_configuration_bottom_sheet.dart';
@@ -24,6 +25,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
   BackupState _currentState = BackupState.idle;
   double _currentProgress = 0.0;
   Map<String, dynamic> _backupStats = {};
+  final List<StreamSubscription> _subscriptions = [];
 
   final RxBool _autoBackupEnabled = false.obs;
 
@@ -35,13 +37,22 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
   }
 
   void _setupListeners() {
-    _backupService.stateStream.listen((state) {
+    _subscriptions.add(_backupService.stateStream.listen((state) {
       if (mounted) setState(() => _currentState = state);
-    });
+    }));
 
-    _backupService.progressStream.listen((progress) {
+    _subscriptions.add(_backupService.progressStream.listen((progress) {
       if (mounted) setState(() => _currentProgress = progress);
-    });
+    }));
+  }
+
+  @override
+  void dispose() {
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
+    super.dispose();
   }
 
   Future<void> _loadBackupStats() async {
@@ -196,7 +207,8 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
                           value: _autoBackupEnabled.value,
                           onChanged: isBackingUp ? null : _toggleAutoBackup,
                           activeColor: ColorsManager.primary,
-                          activeTrackColor: ColorsManager.primary.withValues(alpha: 0.5),
+                          activeTrackColor:
+                              ColorsManager.primary.withValues(alpha: 0.5),
                           inactiveThumbColor: Colors.white,
                           inactiveTrackColor: Colors.grey.shade300,
                         )),
@@ -250,8 +262,8 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
                         LinearProgressIndicator(
                           value: _currentProgress,
                           backgroundColor: Colors.grey[200],
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(ColorsManager.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              ColorsManager.primary),
                         ),
                       ],
                     ),

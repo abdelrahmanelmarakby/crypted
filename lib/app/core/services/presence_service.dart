@@ -21,7 +21,8 @@ class PresenceService {
   PresenceService._internal();
 
   // Firebase Realtime Database reference
-  final DatabaseReference _presenceRef = FirebaseDatabase.instance.ref('presence');
+  final DatabaseReference _presenceRef =
+      FirebaseDatabase.instance.ref('presence');
   final FirebaseFunctions _functions = FirebaseFunctions.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -40,7 +41,8 @@ class PresenceService {
   }
 
   // Presence cache for faster lookups
-  final RxMap<String, Map<String, dynamic>> _presenceCache = <String, Map<String, dynamic>>{}.obs;
+  final RxMap<String, Map<String, dynamic>> _presenceCache =
+      <String, Map<String, dynamic>>{}.obs;
 
   String? _sessionId;
   bool _isOnline = false;
@@ -90,7 +92,8 @@ class PresenceService {
         });
       } catch (fnError) {
         if (kDebugMode) {
-          print('⚠️ Cloud Function updatePresence failed: $fnError (using fallback)');
+          print(
+              '⚠️ Cloud Function updatePresence failed: $fnError (using fallback)');
         }
       }
 
@@ -173,7 +176,7 @@ class PresenceService {
   Future<String> _getDeviceId() async {
     try {
       final deviceInfo = DeviceInfoPlugin();
-      
+
       if (defaultTargetPlatform == TargetPlatform.android) {
         final androidInfo = await deviceInfo.androidInfo;
         return androidInfo.id;
@@ -181,7 +184,7 @@ class PresenceService {
         final iosInfo = await deviceInfo.iosInfo;
         return iosInfo.identifierForVendor ?? 'unknown';
       }
-      
+
       return 'unknown';
     } catch (e) {
       return 'unknown';
@@ -258,7 +261,8 @@ class PresenceService {
       final onlineVisibility = await _checkOnlineStatusVisibility(userId);
       final lastSeenVisibility = await _checkLastSeenVisibility(userId);
 
-      final isOnline = onlineVisibility.canView ? (data['online'] == true) : false;
+      final isOnline =
+          onlineVisibility.canView ? (data['online'] == true) : false;
 
       DateTime? lastSeen;
       if (lastSeenVisibility.canView) {
@@ -339,7 +343,8 @@ class PresenceService {
         'userIds': userIds,
       });
 
-      final presenceData = Map<String, Map<String, dynamic>>.from(result.data['presence']);
+      final presenceData =
+          Map<String, Map<String, dynamic>>.from(result.data['presence']);
 
       // Update cache
       _presenceCache.addAll(presenceData);
@@ -377,7 +382,8 @@ class PresenceService {
   }
 
   /// Check if user allows viewing their online status
-  Future<VisibilityCheckResult> _checkOnlineStatusVisibility(String targetUserId) async {
+  Future<VisibilityCheckResult> _checkOnlineStatusVisibility(
+      String targetUserId) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
       return VisibilityCheckResult(canView: false, reason: 'Not authenticated');
@@ -424,7 +430,8 @@ class PresenceService {
   }
 
   /// Check if user allows viewing their last seen
-  Future<VisibilityCheckResult> _checkLastSeenVisibility(String targetUserId) async {
+  Future<VisibilityCheckResult> _checkLastSeenVisibility(
+      String targetUserId) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
       return VisibilityCheckResult(canView: false, reason: 'Not authenticated');
@@ -529,7 +536,8 @@ class PresenceService {
   }
 
   /// Get target user's privacy settings from Firestore
-  Future<EnhancedPrivacySettingsModel?> _getTargetUserPrivacySettings(String userId) async {
+  Future<EnhancedPrivacySettingsModel?> _getTargetUserPrivacySettings(
+      String userId) async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection(FirebaseCollections.users)
@@ -584,8 +592,18 @@ class PresenceService {
   /// Format date (MMM dd)
   String _formatDate(DateTime dateTime) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${months[dateTime.month - 1]} ${dateTime.day}';
   }
@@ -640,14 +658,30 @@ class PresenceService {
   }
 
   /// Force refresh presence status
+  /// Includes auth check — stops heartbeat if user logged out
   Future<void> refreshPresence() async {
-    if (_isOnline) {
-      final userId = _auth.currentUser?.uid;
-      if (userId != null) {
-        // Just update the timestamp in RTDB
-        await _presenceRef.child(userId).update({
-          'updatedAt': ServerValue.timestamp,
-        });
+    if (!_isOnline) return;
+
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      // User logged out while heartbeat was running — clean up
+      _isOnline = false;
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
+      _sessionId = null;
+      if (kDebugMode) {
+        print('⚠️ Heartbeat stopped: user no longer authenticated');
+      }
+      return;
+    }
+
+    try {
+      await _presenceRef.child(userId).update({
+        'updatedAt': ServerValue.timestamp,
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Heartbeat refresh failed: $e');
       }
     }
   }

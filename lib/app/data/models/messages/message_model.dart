@@ -11,6 +11,8 @@ import 'package:crypted_app/app/data/models/messages/location_message_model.dart
 import 'package:crypted_app/app/data/models/messages/poll_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/text_message_model.dart';
 import 'package:crypted_app/app/data/models/messages/call_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/sticker_message_model.dart';
+import 'package:crypted_app/app/data/models/messages/gif_message_model.dart';
 
 abstract class Message {
   final String id;
@@ -63,6 +65,10 @@ abstract class Message {
         return VideoMessage.fromMap(map);
       case 'call':
         return CallMessage.fromMap(map);
+      case 'sticker':
+        return StickerMessage.fromMap(map);
+      case 'gif':
+        return GifMessage.fromMap(map);
       default:
         throw Exception('Unknown message type');
     }
@@ -111,7 +117,8 @@ abstract class Message {
     if (timestamp is Map) {
       try {
         final seconds = timestamp['_seconds'] ?? timestamp['seconds'] ?? 0;
-        final nanoseconds = timestamp['_nanoseconds'] ?? timestamp['nanoseconds'] ?? 0;
+        final nanoseconds =
+            timestamp['_nanoseconds'] ?? timestamp['nanoseconds'] ?? 0;
         return DateTime.fromMillisecondsSinceEpoch(
           (seconds as int) * 1000 + ((nanoseconds as int) ~/ 1000000),
         );

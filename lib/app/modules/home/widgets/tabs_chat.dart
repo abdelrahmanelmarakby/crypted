@@ -86,7 +86,7 @@ class TabsChat extends StatelessWidget {
       length: 4,
       child: Scaffold(
         // extendBody: true,
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.surfaceAdaptive(context),
         floatingActionButtonLocation:
             FloatingActionButtonLocation.miniCenterFloat,
 
@@ -176,10 +176,18 @@ class TabsChat extends StatelessWidget {
           },
           body: TabBarView(
             children: [
-              TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false), // All
-              TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false, getUnreadOnly: true), // Unread
-              TabBarBody(getGroupChatOnly: true, getPrivateChatOnly: false), // Groups
-              TabBarBody(getGroupChatOnly: false, getPrivateChatOnly: false, getFavoriteOnly: true), // Favourite
+              TabBarBody(
+                  getGroupChatOnly: false, getPrivateChatOnly: false), // All
+              TabBarBody(
+                  getGroupChatOnly: false,
+                  getPrivateChatOnly: false,
+                  getUnreadOnly: true), // Unread
+              TabBarBody(
+                  getGroupChatOnly: true, getPrivateChatOnly: false), // Groups
+              TabBarBody(
+                  getGroupChatOnly: false,
+                  getPrivateChatOnly: false,
+                  getFavoriteOnly: true), // Favourite
             ],
           ),
         ),

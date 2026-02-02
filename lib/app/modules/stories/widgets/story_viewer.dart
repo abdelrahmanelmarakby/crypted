@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:crypted_app/app/data/data_source/story_data_sources.dart';
 import 'package:crypted_app/app/data/models/story_model.dart';
 import 'package:crypted_app/app/data/models/user_model.dart';
 import 'package:crypted_app/app/data/data_source/user_services.dart';
@@ -48,6 +49,14 @@ class _StoryViewerState extends State<StoryViewer>
   bool _showReactions = false;
   String? _selectedReaction;
   final List<String> _reactionEmojis = ['❤️', '😂', '😮', '😢', '👏', '🔥'];
+  static const Map<String, String> _reactionLabels = {
+    '❤️': 'Love',
+    '😂': 'Laugh',
+    '😮': 'Wow',
+    '😢': 'Sad',
+    '👏': 'Clap',
+    '🔥': 'Fire',
+  };
 
   // FIX: Track video listener to prevent memory leak
   VoidCallback? _videoListener;
@@ -91,8 +100,8 @@ class _StoryViewerState extends State<StoryViewer>
       final nextUserStories = controller.getStoriesForUser(nextUser.uid!);
       if (nextUserStories.isNotEmpty) {
         // Sort by creation time (oldest first)
-        nextUserStories.sort((a, b) =>
-            (a.createdAt ?? DateTime.now()).compareTo(b.createdAt ?? DateTime.now()));
+        nextUserStories.sort((a, b) => (a.createdAt ?? DateTime.now())
+            .compareTo(b.createdAt ?? DateTime.now()));
         _preloadStoryMedia(nextUserStories.first);
       }
     }
@@ -740,146 +749,156 @@ class _StoryViewerState extends State<StoryViewer>
                 // Story content
                 _buildStoryContent(currentStory),
 
-            // Progress bars for all stories
-            Positioned(
-              top: 50,
-              left: 20,
-              right: 20,
-              child: _buildProgressBars(),
-            ),
-
-            // User info
-            Positioned(
-              top: 100,
-              left: 20,
-              right: 20,
-              child: _buildUserInfo(currentUser, currentStory),
-            ),
-
-            // Close button with long press support
-            Positioned(
-              top: 50,
-              right: 20,
-              child: GestureDetector(
-                onTap: _closeStoryViewer,
-                onLongPressStart: (_) => _onLongPressStart(),
-                onLongPressEnd: (_) => _onLongPressEnd(),
-                onLongPressCancel: () => _onLongPressEnd(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
+                // Progress bars for all stories
+                Positioned(
+                  top: 50,
+                  left: 20,
+                  right: 20,
+                  child: _buildProgressBars(),
                 ),
-              ),
-            ),
 
-            // Pause/Play button with long press support
-            Positioned(
-              top: 50,
-              left: 20,
-              child: GestureDetector(
-                onTap: _togglePause,
-                onLongPressStart: (_) => _onLongPressStart(),
-                onLongPressEnd: (_) => _onLongPressEnd(),
-                onLongPressCancel: () => _onLongPressEnd(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(
-                      _isPaused ? Icons.play_arrow : Icons.pause,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
+                // User info
+                Positioned(
+                  top: 100,
+                  left: 20,
+                  right: 20,
+                  child: _buildUserInfo(currentUser, currentStory),
                 ),
-              ),
-            ),
 
-            // Long press indicator with reactions
-            if (_isLongPressing)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Reactions Bar
-                      if (_showReactions) _buildReactionsBar(),
-
-                      const SizedBox(height: 20),
-
-                      // Pause Indicator
-                      Container(
-                        padding: const EdgeInsets.all(16),
+                // Close button with long press support
+                Positioned(
+                  top: 50,
+                  right: 20,
+                  child: Semantics(
+                    label: 'Close story viewer',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: _closeStoryViewer,
+                      onLongPressStart: (_) => _onLongPressStart(),
+                      onLongPressEnd: (_) => _onLongPressEnd(),
+                      onLongPressCancel: () => _onLongPressEnd(),
+                      child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.pause,
-                              color: Colors.white,
-                              size: 48,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Story Paused',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _showReactions ? 'Tap reaction to send' : 'Release to continue',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: EdgeInsets.all(9),
+                          child: Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
 
-            // Link sticker (tappable — opens URL)
-            _buildLinkSticker(currentStory),
+                // Pause/Play button with long press support
+                Positioned(
+                  top: 50,
+                  left: 20,
+                  child: Semantics(
+                    label: _isPaused ? 'Play story' : 'Pause story',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: _togglePause,
+                      onLongPressStart: (_) => _onLongPressStart(),
+                      onLongPressEnd: (_) => _onLongPressEnd(),
+                      onLongPressCancel: () => _onLongPressEnd(),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(9),
+                          child: Icon(
+                            _isPaused ? Icons.play_arrow : Icons.pause,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
-            // Floating Reply Button
-            _buildFloatingReplyButton(),
+                // Long press indicator with reactions
+                if (_isLongPressing)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Reactions Bar
+                          if (_showReactions) _buildReactionsBar(),
 
-            // Navigation controls with new gesture handling
-            _buildNavigationControls(),
+                          const SizedBox(height: 20),
 
-            // Reply Input Field
-            _buildReplyField(),
-          ],
+                          // Pause Indicator
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.pause,
+                                  color: Colors.white,
+                                  size: 48,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Story Paused',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _showReactions
+                                      ? 'Tap reaction to send'
+                                      : 'Release to continue',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Link sticker (tappable — opens URL)
+                _buildLinkSticker(currentStory),
+
+                // Floating Reply Button
+                _buildFloatingReplyButton(),
+
+                // Navigation controls with new gesture handling
+                _buildNavigationControls(),
+
+                // Reply Input Field
+                _buildReplyField(),
+              ],
+            ),
+          ),
         ),
-      ),
-    ),
       );
     });
   }
@@ -892,6 +911,8 @@ class _StoryViewerState extends State<StoryViewer>
         return _buildVideoStory(story);
       case StoryType.text:
         return _buildTextStory(story);
+      case StoryType.event:
+        return _buildEventStory(story);
       default:
         return const Center(
           child: Text(
@@ -900,6 +921,221 @@ class _StoryViewerState extends State<StoryViewer>
           ),
         );
     }
+  }
+
+  Widget _buildEventStory(StoryModel story) {
+    final hasImage =
+        story.storyFileUrl != null && story.storyFileUrl!.isNotEmpty;
+    final attendeeCount = story.attendeeCount;
+    final currentUid = _currentUserId;
+    final hasJoined = currentUid != null && story.hasJoined(currentUid);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Background — cover image or gradient
+        if (hasImage)
+          CachedNetworkImage(
+            imageUrl: story.storyFileUrl!,
+            fit: BoxFit.cover,
+            color: Colors.black.withAlpha(120),
+            colorBlendMode: BlendMode.darken,
+          )
+        else
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1A1A2E),
+                  Color(0xFF16213E),
+                  Color(0xFF0F3460)
+                ],
+              ),
+            ),
+          ),
+        // Event card content
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Category chip
+                if (story.eventCategory != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(30),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      story.eventCategory!.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                // Event title
+                Text(
+                  story.eventTitle ?? 'Event',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Description
+                if (story.eventDescription != null &&
+                    story.eventDescription!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      story.eventDescription!,
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(200),
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 24),
+                // Date & venue info
+                _buildEventInfoRow(
+                  icon: Icons.calendar_today,
+                  text: story.eventDate != null
+                      ? _formatEventDate(story.eventDate!)
+                      : 'Date TBD',
+                ),
+                if (story.eventVenue != null && story.eventVenue!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _buildEventInfoRow(
+                      icon: Icons.location_on,
+                      text: story.eventVenue!,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                _buildEventInfoRow(
+                  icon: Icons.people,
+                  text:
+                      '$attendeeCount ${attendeeCount == 1 ? 'person' : 'people'} going'
+                      '${story.eventMaxAttendees != null ? ' / ${story.eventMaxAttendees} max' : ''}',
+                ),
+                const SizedBox(height: 28),
+                // Join / Leave button
+                SizedBox(
+                  width: 200,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => _toggleEventJoin(story, hasJoined),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: hasJoined
+                          ? Colors.white.withAlpha(40)
+                          : const Color(0xFF31A354),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        side: hasJoined
+                            ? const BorderSide(color: Colors.white30)
+                            : BorderSide.none,
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          hasJoined
+                              ? Icons.check_circle
+                              : Icons.add_circle_outline,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          hasJoined ? 'Joined' : 'Join Event',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEventInfoRow({required IconData icon, required String text}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 16, color: Colors.white60),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            text,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatEventDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = date.difference(now);
+    final day = '${date.day}/${date.month}/${date.year}';
+    final time =
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+
+    if (diff.inDays == 0) {
+      return 'Today at $time';
+    } else if (diff.inDays == 1) {
+      return 'Tomorrow at $time';
+    }
+    return '$day at $time';
+  }
+
+  String? get _currentUserId {
+    try {
+      return Get.find<dynamic>().currentUser?.uid as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _toggleEventJoin(StoryModel story, bool hasJoined) async {
+    final dataSource = StoryDataSources();
+    if (hasJoined) {
+      await dataSource.leaveEvent(story.id!);
+    } else {
+      if (story.isEventFull) {
+        Get.snackbar(
+            'Event Full', 'This event has reached its maximum capacity');
+        return;
+      }
+      await dataSource.joinEvent(story.id!);
+    }
+    // The UI will update via the stream
   }
 
   Widget _buildImageStory(StoryModel story) {
@@ -953,7 +1189,8 @@ class _StoryViewerState extends State<StoryViewer>
       future: _initializeVideoPlayer(story.storyFileUrl!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          if (_videoController != null && _videoController!.value.isInitialized) {
+          if (_videoController != null &&
+              _videoController!.value.isInitialized) {
             return SizedBox.expand(
               child: FittedBox(
                 fit: BoxFit.cover,
@@ -994,9 +1231,8 @@ class _StoryViewerState extends State<StoryViewer>
     if (!hasTextOverlay) return videoPlayer;
 
     // Render text overlay on top of video (can't be composited without FFmpeg)
-    final textColor = story.textColor != null
-        ? _parseColor(story.textColor!)
-        : Colors.white;
+    final textColor =
+        story.textColor != null ? _parseColor(story.textColor!) : Colors.white;
     final fontSize = story.fontSize ?? 20.0;
 
     // Determine vertical alignment from textPosition metadata
@@ -1067,7 +1303,8 @@ class _StoryViewerState extends State<StoryViewer>
       _videoListener = () {
         if (_videoController != null &&
             _videoController!.value.isInitialized &&
-            _videoController!.value.position >= _videoController!.value.duration &&
+            _videoController!.value.position >=
+                _videoController!.value.duration &&
             _videoController!.value.duration > Duration.zero) {
           _nextStory();
         }
@@ -1124,43 +1361,46 @@ class _StoryViewerState extends State<StoryViewer>
   Widget _buildProgressBars() {
     final currentUserId = UserService.currentUser.value?.uid;
 
-    return Row(
-      children: List.generate(_currentUserStories.length, (index) {
-        final isCurrentStory = index == _currentStoryIndex;
-        final story = _currentUserStories[index];
-        final isViewed = story.isViewedBy(currentUserId ?? '');
+    return Semantics(
+      label: 'Story ${_currentStoryIndex + 1} of ${_currentUserStories.length}',
+      child: Row(
+        children: List.generate(_currentUserStories.length, (index) {
+          final isCurrentStory = index == _currentStoryIndex;
+          final story = _currentUserStories[index];
+          final isViewed = story.isViewedBy(currentUserId ?? '');
 
-        return Expanded(
-          child: Container(
-            height: 3,
-            margin: EdgeInsets.only(
-                right: index < _currentUserStories.length - 1 ? 4 : 0),
-            decoration: BoxDecoration(
-              color: isViewed
-                  ? Colors.white.withValues(alpha: 0.6)
-                  : Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: isCurrentStory
-                ? AnimatedBuilder(
-                    animation: _progressController,
-                    builder: (context, child) {
-                      return FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: _progressController.value,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(2),
+          return Expanded(
+            child: Container(
+              height: 3,
+              margin: EdgeInsets.only(
+                  right: index < _currentUserStories.length - 1 ? 4 : 0),
+              decoration: BoxDecoration(
+                color: isViewed
+                    ? Colors.white.withValues(alpha: 0.6)
+                    : Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: isCurrentStory
+                  ? AnimatedBuilder(
+                      animation: _progressController,
+                      builder: (context, child) {
+                        return FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: _progressController.value,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  )
-                : null,
-          ),
-        );
-      }),
+                        );
+                      },
+                    )
+                  : null,
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -1253,22 +1493,37 @@ class _StoryViewerState extends State<StoryViewer>
               // Previous story area (left side)
               Expanded(
                 flex: 2,
-                child: Container(
-                  color: Colors.transparent,
+                child: Semantics(
+                  label: 'Previous story',
+                  button: true,
+                  onTap: _previousStory,
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
                 ),
               ),
-              // Middle area (no action)
+              // Middle area (pause/play)
               Expanded(
                 flex: 1,
-                child: Container(
-                  color: Colors.transparent,
+                child: Semantics(
+                  label: _isPaused ? 'Play story' : 'Pause story',
+                  button: true,
+                  onTap: _togglePause,
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
                 ),
               ),
               // Next story area (right side)
               Expanded(
                 flex: 2,
-                child: Container(
-                  color: Colors.transparent,
+                child: Semantics(
+                  label: 'Next story',
+                  button: true,
+                  onTap: _nextStory,
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
                 ),
               ),
             ],
@@ -1286,6 +1541,8 @@ class _StoryViewerState extends State<StoryViewer>
         return Icons.video_library;
       case StoryType.text:
         return Icons.text_fields;
+      case StoryType.event:
+        return Icons.event;
       default:
         return Icons.article;
     }
@@ -1312,10 +1569,9 @@ class _StoryViewerState extends State<StoryViewer>
       return const SizedBox.shrink();
     }
 
-    final displayText =
-        story.linkDisplayText?.isNotEmpty == true
-            ? story.linkDisplayText!
-            : _extractDomainFromUrl(story.linkUrl!);
+    final displayText = story.linkDisplayText?.isNotEmpty == true
+        ? story.linkDisplayText!
+        : _extractDomainFromUrl(story.linkUrl!);
 
     return Positioned(
       bottom: 80, // above the reply button
@@ -1329,8 +1585,8 @@ class _StoryViewerState extends State<StoryViewer>
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(22),
@@ -1342,8 +1598,7 @@ class _StoryViewerState extends State<StoryViewer>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Iconsax.link,
-                        color: Colors.white, size: 16),
+                    const Icon(Iconsax.link, color: Colors.white, size: 16),
                     const SizedBox(width: 8),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 200),
@@ -1414,7 +1669,8 @@ class _StoryViewerState extends State<StoryViewer>
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.9),
           border: Border(
-            top: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 1),
+            top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.2), width: 1),
           ),
         ),
         padding: EdgeInsets.only(
@@ -1432,18 +1688,22 @@ class _StoryViewerState extends State<StoryViewer>
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Reply to story...',
-                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                  hintStyle:
+                      TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Colors.white, width: 1.5),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1459,19 +1719,23 @@ class _StoryViewerState extends State<StoryViewer>
               ),
             ),
             const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _sendReply,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: ColorsManager.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.send,
-                  color: Colors.white,
-                  size: 20,
+            Semantics(
+              label: 'Send reply',
+              button: true,
+              child: GestureDetector(
+                onTap: _sendReply,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.send,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
@@ -1490,33 +1754,38 @@ class _StoryViewerState extends State<StoryViewer>
       left: 0,
       right: 0,
       child: Center(
-        child: GestureDetector(
-          onTap: _toggleReplyField,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.reply,
-                  color: Colors.white,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Reply',
-                  style: TextStyle(
+        child: Semantics(
+          label: 'Reply to story',
+          button: true,
+          child: GestureDetector(
+            onTap: _toggleReplyField,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.reply,
                     color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    size: 18,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Reply',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1549,20 +1818,25 @@ class _StoryViewerState extends State<StoryViewer>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: _reactionEmojis.map((emoji) {
-                return GestureDetector(
-                  onTap: () => _sendReaction(emoji),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _selectedReaction == emoji
-                          ? ColorsManager.primary.withValues(alpha: 0.2)
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 32),
+                return Semantics(
+                  label: 'React with ${_reactionLabels[emoji] ?? emoji}',
+                  button: true,
+                  selected: _selectedReaction == emoji,
+                  child: GestureDetector(
+                    onTap: () => _sendReaction(emoji),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _selectedReaction == emoji
+                            ? ColorsManager.primary.withValues(alpha: 0.2)
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 32),
+                      ),
                     ),
                   ),
                 );

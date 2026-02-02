@@ -13,7 +13,6 @@ import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/app/data/models/call_model.dart';
 import 'package:crypted_app/app/data/data_source/call_data_sources.dart';
 import 'package:crypted_app/app/core/services/zego/zego_call_config.dart';
-import 'package:crypted_app/app/core/services/zego/zego_call_service.dart';
 
 /// Screen for active voice/video calls using ZEGO UIKit.
 ///
@@ -33,8 +32,6 @@ class _CallScreenState extends State<CallScreen> {
   // Call data
   CallModel? _callModel;
   String? _callId;
-  String? _token;
-
   // State management
   bool _isInitializing = true;
   bool _isCallReady = false;
@@ -88,10 +85,6 @@ class _CallScreenState extends State<CallScreen> {
       log('[CallScreen] Initializing call: $_callId');
       log('[CallScreen] Caller: ${_callModel!.callerId} -> Callee: ${_callModel!.calleeId}');
       log('[CallScreen] Type: ${_callModel!.callType?.name}');
-
-      // Generate ZEGO token for this call session
-      _token = ZegoCallService.generateToken(_callModel!.callerId ?? '');
-      log('[CallScreen] Token generated for call session');
 
       // Mark call as ready
       if (mounted) {
@@ -224,7 +217,7 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     // Show call not ready state
-    if (!_isCallReady || _callModel == null || _callId == null || _token == null) {
+    if (!_isCallReady || _callModel == null || _callId == null) {
       return _buildLoadingScreen('Starting call...');
     }
 
@@ -330,10 +323,10 @@ class _CallScreenState extends State<CallScreen> {
         backgroundColor: ColorsManager.navbarColor,
         body: Stack(
           children: [
-            // ZEGO Call UI — uses token auth (not appSign)
+            // ZEGO Call UI — appSign auth (UIKits app, no token enforcement)
             ZegoUIKitPrebuiltCall(
               appID: AppConstants.appID,
-              token: _token!,
+              appSign: AppConstants.appSign,
               userID: _callModel!.callerId ?? '',
               userName: _callModel!.callerUserName ?? '',
               callID: _callId!,
@@ -343,14 +336,6 @@ class _CallScreenState extends State<CallScreen> {
               events: ZegoUIKitPrebuiltCallEvents(
                 onError: _handleZegoError,
                 onCallEnd: _handleZegoCallEnd,
-                room: ZegoCallRoomEvents(
-                  onTokenExpired: (remainSeconds) {
-                    log('[CallScreen] Token expiring in ${remainSeconds}s, renewing...');
-                    return ZegoCallService.generateToken(
-                      _callModel!.callerId ?? '',
-                    );
-                  },
-                ),
                 user: ZegoCallUserEvents(
                   onEnter: (user) {
                     log('[CallScreen] User joined: ${user.name}');

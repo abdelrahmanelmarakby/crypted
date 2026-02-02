@@ -183,6 +183,8 @@ const Set<String> kForwardableMessageTypes = {
   'contact',
   'poll',
   'event',
+  'sticker',
+  'gif',
 };
 
 /// Message types that cannot be forwarded

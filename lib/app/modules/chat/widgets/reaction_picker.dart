@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:crypted_app/app/core/services/premium_service.dart';
+import 'package:crypted_app/app/widgets/premium_gate_dialog.dart';
 import 'package:crypted_app/core/themes/color_manager.dart';
 import 'package:crypted_app/core/themes/font_manager.dart';
 import 'package:crypted_app/core/themes/size_manager.dart';
@@ -15,7 +17,7 @@ class ReactionPicker extends StatelessWidget {
     this.onMoreEmojis,
   });
 
-  // Quick reaction emojis (common ones)
+  // Quick reaction emojis (available to all users)
   static const List<String> quickReactions = [
     '👍', // Thumbs up
     '❤️', // Heart
@@ -25,6 +27,14 @@ class ReactionPicker extends StatelessWidget {
     '🙏', // Praying/thank you
     '🔥', // Fire
     '👏', // Clapping
+  ];
+
+  // Exclusive reactions (premium-only)
+  static const List<String> exclusiveReactions = [
+    '🥰', // Loving
+    '🤯', // Mind blown
+    '💀', // Dead (laughing)
+    '🫡', // Salute
   ];
 
   @override
@@ -49,6 +59,11 @@ class ReactionPicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ...quickReactions.map((emoji) => _ReactionButton(
+                emoji: emoji,
+                onTap: () => onReactionSelected(emoji),
+              )),
+          // All reactions are now free for everyone
+          ...exclusiveReactions.map((emoji) => _ReactionButton(
                 emoji: emoji,
                 onTap: () => onReactionSelected(emoji),
               )),
@@ -83,6 +98,62 @@ class _ReactionButton extends StatelessWidget {
         child: Text(
           emoji,
           style: const TextStyle(fontSize: 24),
+        ),
+      ),
+    );
+  }
+}
+
+/// Exclusive reaction button with lock overlay for free users
+class _ExclusiveReactionButton extends StatelessWidget {
+  final String emoji;
+  final bool isPremium;
+  final VoidCallback onTap;
+
+  const _ExclusiveReactionButton({
+    required this.emoji,
+    required this.isPremium,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Opacity(
+              opacity: isPremium ? 1.0 : 0.4,
+              child: Text(
+                emoji,
+                style: const TextStyle(fontSize: 24),
+              ),
+            ),
+            if (!isPremium)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: ColorsManager.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.star,
+                    size: 8,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -129,24 +200,131 @@ class EmojiPickerDialog extends StatelessWidget {
   // Extended emoji list grouped by category
   static const Map<String, List<String>> emojiCategories = {
     'Smileys': [
-      '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
-      '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
-      '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
-      '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
-      '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
+      '😀',
+      '😃',
+      '😄',
+      '😁',
+      '😆',
+      '😅',
+      '😂',
+      '🤣',
+      '😊',
+      '😇',
+      '🙂',
+      '🙃',
+      '😉',
+      '😌',
+      '😍',
+      '🥰',
+      '😘',
+      '😗',
+      '😙',
+      '😚',
+      '😋',
+      '😛',
+      '😝',
+      '😜',
+      '🤪',
+      '🤨',
+      '🧐',
+      '🤓',
+      '😎',
+      '🤩',
+      '🥳',
+      '😏',
+      '😒',
+      '😞',
+      '😔',
+      '😟',
+      '😕',
+      '🙁',
+      '☹️',
+      '😣',
+      '😖',
+      '😫',
+      '😩',
+      '🥺',
+      '😢',
+      '😭',
+      '😤',
+      '😠',
+      '😡',
+      '🤬',
     ],
     'Gestures': [
-      '👍', '👎', '👊', '✊', '🤛', '🤜', '🤞', '✌️', '🤟', '🤘',
-      '👌', '🤌', '🤏', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚',
-      '🖐️', '✋', '🖖', '👏', '🙌', '👐', '🤲', '🤝', '🙏',
+      '👍',
+      '👎',
+      '👊',
+      '✊',
+      '🤛',
+      '🤜',
+      '🤞',
+      '✌️',
+      '🤟',
+      '🤘',
+      '👌',
+      '🤌',
+      '🤏',
+      '👈',
+      '👉',
+      '👆',
+      '👇',
+      '☝️',
+      '👋',
+      '🤚',
+      '🖐️',
+      '✋',
+      '🖖',
+      '👏',
+      '🙌',
+      '👐',
+      '🤲',
+      '🤝',
+      '🙏',
     ],
     'Hearts': [
-      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
-      '❤️‍🔥', '❤️‍🩹', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝',
+      '❤️',
+      '🧡',
+      '💛',
+      '💚',
+      '💙',
+      '💜',
+      '🖤',
+      '🤍',
+      '🤎',
+      '💔',
+      '❤️‍🔥',
+      '❤️‍🩹',
+      '❣️',
+      '💕',
+      '💞',
+      '💓',
+      '💗',
+      '💖',
+      '💘',
+      '💝',
     ],
     'Symbols': [
-      '🔥', '⭐', '✨', '💫', '💥', '💢', '💦', '💨', '🕳️', '💬',
-      '👁️‍🗨️', '🗨️', '🗯️', '💭', '💤', '✔️', '✅', '❌', '❎', '➕',
+      '🔥',
+      '⭐',
+      '✨',
+      '💫',
+      '💥',
+      '💢',
+      '💦',
+      '💨',
+      '🕳️',
+      '💬',
+      '👁️‍🗨️',
+      '🗨️',
+      '🗯️',
+      '💭',
+      '💤',
+      '✔️',
+      '✅',
+      '❌',
+      '❎',
+      '➕',
     ],
   };
 
@@ -207,7 +385,8 @@ class EmojiPickerDialog extends StatelessWidget {
                       children: emojiCategories.values.map((emojis) {
                         return GridView.builder(
                           padding: EdgeInsets.all(Paddings.normal),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 7,
                             crossAxisSpacing: 6,
                             mainAxisSpacing: 6,

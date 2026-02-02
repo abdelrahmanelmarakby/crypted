@@ -23,6 +23,7 @@ class ChatRoom {
   List<String>? blockedUsers;
   List<String>? adminIds;
   String? createdBy;
+  Map<String, int>? unreadCounts;
 
   ChatRoom({
     this.id,
@@ -45,7 +46,13 @@ class ChatRoom {
     this.blockedUsers,
     this.adminIds,
     this.createdBy,
+    this.unreadCounts,
   });
+
+  /// Get unread count for a specific user
+  int unreadCountFor(String userId) {
+    return unreadCounts?[userId] ?? 0;
+  }
 
   /// Check if a user is an admin of this chat room
   bool isUserAdmin(String userId) {
@@ -85,6 +92,7 @@ class ChatRoom {
     List<String>? blockedUsers,
     List<String>? adminIds,
     String? createdBy,
+    Map<String, int>? unreadCounts,
   }) {
     return ChatRoom(
       blockingUserId: blockingUserId ?? this.blockingUserId,
@@ -107,6 +115,7 @@ class ChatRoom {
       blockedUsers: blockedUsers ?? this.blockedUsers,
       adminIds: adminIds ?? this.adminIds,
       createdBy: createdBy ?? this.createdBy,
+      unreadCounts: unreadCounts ?? this.unreadCounts,
     );
   }
 
@@ -116,7 +125,9 @@ class ChatRoom {
       'name': name,
       'blockingUserId': blockingUserId,
       'membersIds': membersIds,
-      'members': members?.map((member) => member.toMap()).toList(), // Include members in saved data
+      'members': members
+          ?.map((member) => member.toMap())
+          .toList(), // Include members in saved data
       'lastMsg': lastMsg,
       'lastSender': lastSender,
       'lastChat': lastChat,
@@ -132,45 +143,56 @@ class ChatRoom {
       'blockedUsers': blockedUsers,
       'adminIds': adminIds,
       'createdBy': createdBy,
+      'unreadCounts': unreadCounts,
     };
   }
 
   List<ChatRoom> fromQuery(QuerySnapshot snapshot) {
-    return snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>?;
-      if (data == null) return null;
-      
-      return ChatRoom(
-        blockingUserId: _safeGet(data, "blockingUserId"),
-        id: _safeGet(data, 'id'),
-        membersIds: _safeGetStringList(data, 'membersIds'),
-        // Only try to get members if the field exists
-        members: data.containsKey('members') && data['members'] != null
-            ? (data['members'] as List<dynamic>?)
-                ?.map((e) => SocialMediaUser.fromMap(e as Map<String, dynamic>))
-                .toList()
-            : null,
-        lastMsg: _safeGet(data, 'lastMsg'),
-        lastSender: _safeGet(data, 'lastSender'),
-        lastChat: _safeGet(data, 'lastChat'),
-        keywords: _safeGetStringList(data, 'keywords'),
-        read: data['read'] as bool?,
-        isGroupChat: data['isGroupChat'] as bool?,
-        description: _safeGet(data, 'description'),
-        groupImageUrl: _safeGet(data, 'groupImageUrl'),
-        isMuted: data['isMuted'] as bool?,
-        isPinned: data['isPinned'] as bool?,
-        isArchived: data['isArchived'] as bool?,
-        isFavorite: data['isFavorite'] as bool?,
-        blockedUsers: data['blockedUsers'] != null
-            ? (data['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
-            : null,
-        adminIds: data['adminIds'] != null
-            ? (data['adminIds'] as List<dynamic>).map((e) => e.toString()).toList()
-            : null,
-        createdBy: _safeGet(data, 'createdBy'),
-      );
-    })
+    return snapshot.docs
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) return null;
+
+          return ChatRoom(
+            blockingUserId: _safeGet(data, "blockingUserId"),
+            id: _safeGet(data, 'id'),
+            membersIds: _safeGetStringList(data, 'membersIds'),
+            // Only try to get members if the field exists
+            members: data.containsKey('members') && data['members'] != null
+                ? (data['members'] as List<dynamic>?)
+                    ?.map((e) =>
+                        SocialMediaUser.fromMap(e as Map<String, dynamic>))
+                    .toList()
+                : null,
+            lastMsg: _safeGet(data, 'lastMsg'),
+            lastSender: _safeGet(data, 'lastSender'),
+            lastChat: _safeGet(data, 'lastChat'),
+            keywords: _safeGetStringList(data, 'keywords'),
+            read: data['read'] as bool?,
+            isGroupChat: data['isGroupChat'] as bool?,
+            description: _safeGet(data, 'description'),
+            groupImageUrl: _safeGet(data, 'groupImageUrl'),
+            isMuted: data['isMuted'] as bool?,
+            isPinned: data['isPinned'] as bool?,
+            isArchived: data['isArchived'] as bool?,
+            isFavorite: data['isFavorite'] as bool?,
+            blockedUsers: data['blockedUsers'] != null
+                ? (data['blockedUsers'] as List<dynamic>)
+                    .map((e) => e.toString())
+                    .toList()
+                : null,
+            adminIds: data['adminIds'] != null
+                ? (data['adminIds'] as List<dynamic>)
+                    .map((e) => e.toString())
+                    .toList()
+                : null,
+            createdBy: _safeGet(data, 'createdBy'),
+            unreadCounts: data['unreadCounts'] != null
+                ? (data['unreadCounts'] as Map<String, dynamic>)
+                    .map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0))
+                : null,
+          );
+        })
         .where((chatRoom) => chatRoom != null)
         .cast<ChatRoom>()
         .toList();
@@ -217,7 +239,9 @@ class ChatRoom {
       id: map['id'] as String?,
       name: map['name'] as String?,
       membersIds: map['membersIds'] != null
-          ? (map['membersIds'] as List<dynamic>).map((e) => e.toString()).toList()
+          ? (map['membersIds'] as List<dynamic>)
+              .map((e) => e.toString())
+              .toList()
           : null,
       members: map['members'] != null
           ? (map['members'] as List<dynamic>)
@@ -239,17 +263,24 @@ class ChatRoom {
       description: map['description'] as String?,
       groupImageUrl: map['groupImageUrl'] as String?,
       blockedUsers: map['blockedUsers'] != null
-          ? (map['blockedUsers'] as List<dynamic>).map((e) => e.toString()).toList()
+          ? (map['blockedUsers'] as List<dynamic>)
+              .map((e) => e.toString())
+              .toList()
           : null,
       adminIds: map['adminIds'] != null
           ? (map['adminIds'] as List<dynamic>).map((e) => e.toString()).toList()
           : null,
       createdBy: map['createdBy'] as String?,
+      unreadCounts: map['unreadCounts'] != null
+          ? (map['unreadCounts'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0))
+          : null,
     );
   }
 
   /// Factory constructor from JSON string
-  factory ChatRoom.fromJson(Map<String, dynamic> json) => ChatRoom.fromMap(json);
+  factory ChatRoom.fromJson(Map<String, dynamic> json) =>
+      ChatRoom.fromMap(json);
 
   @override
   String toString() {
