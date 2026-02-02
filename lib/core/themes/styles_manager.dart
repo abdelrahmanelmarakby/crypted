@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'font_manager.dart';
 
@@ -221,57 +221,82 @@ class StylesManager {
 
   // ============================================
   // ZEN TYPOGRAPHY PRESETS
+  // Dark-mode aware: pass a BuildContext to auto-adapt,
+  // or provide an explicit color to override.
   // ============================================
 
   /// Large page title - 28px DM Sans Bold
-  static TextStyle zenTitle({Color? color}) {
+  static TextStyle zenTitle({Color? color, BuildContext? context}) {
     return dmSansBold(
       fontSize: 28,
-      color: color ?? const Color(0xFF1A1A1A),
+      color: color ?? _zenPrimaryColor(context),
       letterSpacing: -0.5,
     );
   }
 
   /// Section heading - 18px DM Sans SemiBold
-  static TextStyle zenHeading({Color? color}) {
+  static TextStyle zenHeading({Color? color, BuildContext? context}) {
     return dmSansSemiBold(
       fontSize: 18,
-      color: color ?? const Color(0xFF1A1A1A),
+      color: color ?? _zenPrimaryColor(context),
       letterSpacing: -0.3,
     );
   }
 
   /// Subheading - 15px DM Sans Medium
-  static TextStyle zenSubheading({Color? color}) {
+  static TextStyle zenSubheading({Color? color, BuildContext? context}) {
     return dmSansMedium(
       fontSize: 15,
-      color: color ?? const Color(0xFF1A1A1A),
+      color: color ?? _zenPrimaryColor(context),
       letterSpacing: -0.1,
     );
   }
 
   /// Body text - 14px IBM Plex (your existing font)
-  static TextStyle zenBody({Color? color}) {
+  static TextStyle zenBody({Color? color, BuildContext? context}) {
     return regular(
       fontSize: 14,
-      color: color ?? const Color(0xFF6B7280),
+      color: color ?? _zenSecondaryColor(context),
     );
   }
 
   /// Caption/small text - 12px IBM Plex
-  static TextStyle zenCaption({Color? color}) {
+  static TextStyle zenCaption({Color? color, BuildContext? context}) {
     return regular(
       fontSize: 12,
-      color: color ?? const Color(0xFF9CA3AF),
+      color: color ?? _zenTertiaryColor(context),
     );
   }
 
   /// Large stat number - 32px DM Sans Bold
-  static TextStyle zenStat({Color? color}) {
+  static TextStyle zenStat({Color? color, BuildContext? context}) {
     return dmSansBold(
       fontSize: 32,
-      color: color ?? const Color(0xFF1A1A1A),
+      color: color ?? _zenPrimaryColor(context),
       letterSpacing: -1,
     );
+  }
+
+  // ── Zen dark-mode helpers ──
+
+  static Color _zenPrimaryColor(BuildContext? context) {
+    if (context != null && Theme.of(context).brightness == Brightness.dark) {
+      return const Color(0xFFE0E0E0); // darkZenCharcoal
+    }
+    return const Color(0xFF1A1A1A); // zenCharcoal
+  }
+
+  static Color _zenSecondaryColor(BuildContext? context) {
+    if (context != null && Theme.of(context).brightness == Brightness.dark) {
+      return const Color(0xFF9E9E9E); // darkZenGray
+    }
+    return const Color(0xFF6B7280); // zenGray
+  }
+
+  static Color _zenTertiaryColor(BuildContext? context) {
+    if (context != null && Theme.of(context).brightness == Brightness.dark) {
+      return const Color(0xFF757575); // darkZenMuted
+    }
+    return const Color(0xFF9CA3AF); // zenMuted
   }
 }

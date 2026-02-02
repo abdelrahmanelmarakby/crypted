@@ -164,6 +164,26 @@ class ColorsManager {
   static const Color darkBackgroundIconSetting = Color(0xFF1B3A24);
   static const Color darkBackgroundError = Color(0xFF3D1F1F);
 
+  // Dark mode semantic colors
+  static const Color darkSuccess = Color(0xFF4CAF50);
+  static const Color darkSuccessLight = Color(0xFF1B3A24);
+  static const Color darkWarning = Color(0xFFFFB74D);
+  static const Color darkWarningLight = Color(0xFF3D3118);
+  static const Color darkInfo = Color(0xFF64B5F6);
+  static const Color darkInfoLight = Color(0xFF1A2E45);
+
+  // Dark mode zen palette
+  static const Color darkZenCharcoal = Color(0xFFE0E0E0);
+  static const Color darkZenGray = Color(0xFF9E9E9E);
+  static const Color darkZenMuted = Color(0xFF757575);
+  static const Color darkZenBorder = Color(0xFF333333);
+  static const Color darkZenSurface = Color(0xFF1E1E1E);
+  static const Color darkZenHover = Color(0xFF252525);
+
+  // Dark mode status colors
+  static const Color darkOnline = Color(0xFF66BB6A);
+  static const Color darkStar = Color(0xFFFFD54F);
+
   // ============================================
   // ADAPTIVE COLOR HELPERS (light/dark)
   // ============================================
@@ -201,6 +221,58 @@ class ColorsManager {
   /// Input field background
   static Color inputBg(BuildContext context) =>
       adaptive(context, light: surfaceVariant, dark: darkInput);
+
+  /// Chat bubble (own message)
+  static Color chatBubbleOwn(BuildContext context) =>
+      adaptive(context, light: messFriendColor, dark: darkMessFriendColor);
+
+  /// Chat bubble (friend message)
+  static Color chatBubbleFriend(BuildContext context) =>
+      adaptive(context, light: textfieldMessage, dark: darkTextfieldMessage);
+
+  /// Voice waveform color
+  static Color voiceAdaptive(BuildContext context) =>
+      adaptive(context, light: voiceColor, dark: darkVoiceColor);
+
+  /// Voice progress bar color
+  static Color voiceProgressAdaptive(BuildContext context) => adaptive(context,
+      light: voiceProgressColor, dark: darkVoiceProgressColor);
+
+  /// Card surface
+  static Color cardAdaptive(BuildContext context) =>
+      adaptive(context, light: white, dark: darkCard);
+
+  /// App bar background
+  static Color appBarAdaptive(BuildContext context) =>
+      adaptive(context, light: white, dark: darkAppBar);
+
+  /// Bottom sheet background
+  static Color bottomSheetAdaptive(BuildContext context) =>
+      adaptive(context, light: white, dark: darkBottomSheet);
+
+  /// Navbar background
+  static Color navbarAdaptive(BuildContext context) =>
+      adaptive(context, light: navbarColor, dark: darkNavbar);
+
+  /// Icon setting background
+  static Color iconSettingBg(BuildContext context) => adaptive(context,
+      light: backgroundIconSetting, dark: darkBackgroundIconSetting);
+
+  /// Error background
+  static Color errorBg(BuildContext context) =>
+      adaptive(context, light: backgroundError, dark: darkBackgroundError);
+
+  /// Tertiary text
+  static Color textTertiaryAdaptive(BuildContext context) =>
+      adaptive(context, light: textTertiary, dark: darkTextTertiary);
+
+  /// Border adaptive
+  static Color borderAdaptive(BuildContext context) =>
+      adaptive(context, light: border, dark: darkBorder);
+
+  /// Surface variant adaptive
+  static Color surfaceVariantAdaptive(BuildContext context) =>
+      adaptive(context, light: surfaceVariant, dark: darkSurfaceVariant);
 
   // ============================================
   // MATERIAL STATE PROPERTY

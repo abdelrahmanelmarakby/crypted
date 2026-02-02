@@ -461,6 +461,80 @@ class ThemeManager {
       thumbColor: ColorsManager.primary,
       overlayColor: ColorsManager.primary.withValues(alpha: 0.2),
     ),
+
+    // Popup menu theme
+    popupMenuTheme: PopupMenuThemeData(
+      color: ColorsManager.white,
+      elevation: Elevations.md,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      textStyle: StylesManager.regular(
+        color: ColorsManager.textPrimary,
+        fontSize: FontSize.medium,
+      ),
+    ),
+
+    // Tooltip theme
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: ColorsManager.charcoal,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      textStyle: StylesManager.regular(
+        color: ColorsManager.white,
+        fontSize: FontSize.small,
+      ),
+    ),
+
+    // Drawer theme
+    drawerTheme: const DrawerThemeData(
+      backgroundColor: ColorsManager.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: Elevations.lg,
+    ),
+
+    // Navigation bar theme (Material 3)
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: ColorsManager.navbarColor,
+      indicatorColor: ColorsManager.primarySurface,
+      elevation: Elevations.md,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return StylesManager.medium(
+            color: ColorsManager.primary,
+            fontSize: FontSize.xXSmall,
+          );
+        }
+        return StylesManager.regular(
+          color: ColorsManager.lightGrey,
+          fontSize: FontSize.xXSmall,
+        );
+      }),
+    ),
+
+    // Search bar theme
+    searchBarTheme: SearchBarThemeData(
+      backgroundColor: WidgetStateProperty.all(ColorsManager.surfaceVariant),
+      elevation: WidgetStateProperty.all(0),
+      textStyle: WidgetStateProperty.all(
+        StylesManager.regular(
+          color: ColorsManager.textPrimary,
+          fontSize: FontSize.medium,
+        ),
+      ),
+      hintStyle: WidgetStateProperty.all(
+        StylesManager.regular(
+          color: ColorsManager.textTertiary,
+          fontSize: FontSize.medium,
+        ),
+      ),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+        ),
+      ),
+    ),
   );
 
   /// Dark theme configuration
@@ -912,6 +986,81 @@ class ThemeManager {
       inactiveTrackColor: ColorsManager.darkBackgroundIconSetting,
       thumbColor: ColorsManager.primary,
       overlayColor: ColorsManager.primary.withValues(alpha: 0.2),
+    ),
+
+    // Popup menu theme
+    popupMenuTheme: PopupMenuThemeData(
+      color: ColorsManager.darkSurfaceVariant,
+      elevation: Elevations.md,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      textStyle: StylesManager.regular(
+        color: ColorsManager.darkTextPrimary,
+        fontSize: FontSize.medium,
+      ),
+    ),
+
+    // Tooltip theme
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: ColorsManager.darkTextPrimary,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      textStyle: StylesManager.regular(
+        color: ColorsManager.darkScaffoldBackground,
+        fontSize: FontSize.small,
+      ),
+    ),
+
+    // Drawer theme
+    drawerTheme: const DrawerThemeData(
+      backgroundColor: ColorsManager.darkSurface,
+      surfaceTintColor: Colors.transparent,
+      elevation: Elevations.lg,
+    ),
+
+    // Navigation bar theme (Material 3)
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: ColorsManager.darkNavbar,
+      indicatorColor: ColorsManager.darkBackgroundIconSetting,
+      elevation: Elevations.md,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return StylesManager.medium(
+            color: ColorsManager.primary,
+            fontSize: FontSize.xXSmall,
+          );
+        }
+        return StylesManager.regular(
+          color: ColorsManager.darkTextTertiary,
+          fontSize: FontSize.xXSmall,
+        );
+      }),
+    ),
+
+    // Search bar theme
+    searchBarTheme: SearchBarThemeData(
+      backgroundColor:
+          WidgetStateProperty.all(ColorsManager.darkSurfaceVariant),
+      elevation: WidgetStateProperty.all(0),
+      textStyle: WidgetStateProperty.all(
+        StylesManager.regular(
+          color: ColorsManager.darkTextPrimary,
+          fontSize: FontSize.medium,
+        ),
+      ),
+      hintStyle: WidgetStateProperty.all(
+        StylesManager.regular(
+          color: ColorsManager.darkTextTertiary,
+          fontSize: FontSize.medium,
+        ),
+      ),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+        ),
+      ),
     ),
   );
 }
