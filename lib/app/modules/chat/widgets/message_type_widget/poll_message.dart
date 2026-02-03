@@ -280,7 +280,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color: ColorsManager.navbarColor,
+                      color: ColorsManager.dividerAdaptive(context),
                       width: 1,
                     ),
                   ),
@@ -316,10 +316,11 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
     final userId = UserService.currentUserValue?.uid ?? '';
 
     Get.bottomSheet(
-      Container(
+      Builder(
+        builder: (context) => Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
+          color: ColorsManager.surfaceAdaptive(context),
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
           ),
@@ -333,7 +334,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: ColorsManager.navbarColor,
+                    color: ColorsManager.dividerAdaptive(context),
                     width: 1,
                   ),
                 ),
@@ -361,7 +362,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                           'Poll Results',
                           style: StylesManager.bold(
                             fontSize: FontSize.large,
-                            color: ColorsManager.black,
+                            color: ColorsManager.textPrimaryAdaptive(context),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -402,7 +403,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                   Container(
                     width: 1,
                     height: 40,
-                    color: ColorsManager.navbarColor,
+                    color: ColorsManager.dividerAdaptive(context),
                   ),
                   _buildStatItem(
                     icon: Iconsax.chart_1_copy,
@@ -412,7 +413,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                   Container(
                     width: 1,
                     height: 40,
-                    color: ColorsManager.navbarColor,
+                    color: ColorsManager.dividerAdaptive(context),
                   ),
                   _buildStatItem(
                     icon: message.isClosed
@@ -449,12 +450,12 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                     decoration: BoxDecoration(
                       color: userVoted
                           ? ColorsManager.primary.withValues(alpha: 0.1)
-                          : Colors.white,
+                          : ColorsManager.surfaceAdaptive(context),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: userVoted
                             ? ColorsManager.primary
-                            : ColorsManager.navbarColor,
+                            : ColorsManager.dividerAdaptive(context),
                         width: userVoted ? 2 : 1,
                       ),
                     ),
@@ -469,7 +470,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
                                 option,
                                 style: StylesManager.semiBold(
                                   fontSize: FontSize.medium,
-                                  color: ColorsManager.black,
+                                  color: ColorsManager.textPrimaryAdaptive(context),
                                 ),
                               ),
                             ),
