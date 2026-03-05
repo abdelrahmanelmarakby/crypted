@@ -19,9 +19,9 @@ class ContactInfoView extends GetView<ContactInfoController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         title: Text(
           Constants.kContactInfo.tr,
           style: StylesManager.regular(fontSize: FontSize.xLarge),

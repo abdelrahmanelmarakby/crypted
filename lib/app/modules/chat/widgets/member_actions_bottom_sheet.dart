@@ -84,10 +84,16 @@ class MemberActionsBottomSheet extends StatelessWidget {
       isCurrentUserAdmin && !member.isAdmin && onMakeAdmin != null;
 
   bool get canRemoveAdmin =>
-      isCurrentUserCreator && member.isAdmin && !member.isCreator && onRemoveAdmin != null;
+      isCurrentUserCreator &&
+      member.isAdmin &&
+      !member.isCreator &&
+      onRemoveAdmin != null;
 
   bool get canRemoveMember =>
-      isCurrentUserAdmin && !member.isCreator && !isSelf && onRemoveMember != null;
+      isCurrentUserAdmin &&
+      !member.isCreator &&
+      !isSelf &&
+      onRemoveMember != null;
 
   bool get canTransferOwnership =>
       isCurrentUserCreator && !isSelf && onTransferOwnership != null;
@@ -233,7 +239,7 @@ class MemberActionsBottomSheet extends StatelessWidget {
                         style: TextStyle(
                           fontSize: FontSize.large,
                           fontWeight: FontWeight.w600,
-                          color: ColorsManager.black,
+                          color: ColorsManager.textPrimaryAdaptive(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -425,7 +431,7 @@ class MemberActionsBottomSheet extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       color: isDestructive
                           ? ColorsManager.error2
-                          : ColorsManager.black,
+                          : ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -478,8 +484,7 @@ class MemberActionsBottomSheet extends StatelessWidget {
       icon: Icons.remove_moderator,
       iconColor: ColorsManager.warning,
       title: 'Remove Admin?',
-      message:
-          '${member.name} will no longer be able to manage the group.',
+      message: '${member.name} will no longer be able to manage the group.',
       confirmText: 'Remove Admin',
       confirmColor: ColorsManager.warning,
       onConfirm: () {
@@ -567,7 +572,7 @@ class MemberActionsBottomSheet extends StatelessWidget {
               style: TextStyle(
                 fontSize: FontSize.xLarge,
                 fontWeight: FontWeight.w600,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
             const SizedBox(height: 8),

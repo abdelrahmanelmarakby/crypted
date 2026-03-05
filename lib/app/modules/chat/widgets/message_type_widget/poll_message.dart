@@ -317,294 +317,308 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
 
     Get.bottomSheet(
       Builder(
-        builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: ColorsManager.surfaceAdaptive(context),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: ColorsManager.dividerAdaptive(context),
-                    width: 1,
+          builder: (context) => Container(
+                decoration: BoxDecoration(
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
                   ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: ColorsManager.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Iconsax.chart_copy,
-                      color: ColorsManager.primary,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Poll Results',
-                          style: StylesManager.bold(
-                            fontSize: FontSize.large,
-                            color: ColorsManager.textPrimaryAdaptive(context),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: ColorsManager.dividerAdaptive(context),
+                            width: 1,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          message.question,
-                          style: StylesManager.regular(
-                            fontSize: FontSize.small,
-                            color: ColorsManager.grey,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: ColorsManager.grey),
-                    onPressed: () => Get.back(),
-                  ),
-                ],
-              ),
-            ),
-
-            // Poll Statistics
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: ColorsManager.primary.withValues(alpha: 0.05),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem(
-                    icon: Iconsax.people_copy,
-                    label: 'Total Votes',
-                    value: '$totalVotes',
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: ColorsManager.dividerAdaptive(context),
-                  ),
-                  _buildStatItem(
-                    icon: Iconsax.chart_1_copy,
-                    label: 'Options',
-                    value: '${message.options.length}',
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: ColorsManager.dividerAdaptive(context),
-                  ),
-                  _buildStatItem(
-                    icon: message.isClosed
-                        ? Iconsax.lock_copy
-                        : Iconsax.tick_circle_copy,
-                    label: 'Status',
-                    value: message.isClosed ? 'Closed' : 'Active',
-                    valueColor: message.isClosed
-                        ? ColorsManager.error
-                        : ColorsManager.success,
-                  ),
-                ],
-              ),
-            ),
-
-            // Options Results
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: const EdgeInsets.all(20),
-                itemCount: message.options.length,
-                itemBuilder: (context, index) {
-                  final option = message.options[index];
-                  final votes = message.votes[index] ?? [];
-                  final voteCount = votes.length;
-                  final percentage = totalVotes > 0
-                      ? (voteCount / totalVotes * 100).toStringAsFixed(1)
-                      : '0.0';
-                  final userVoted = votes.contains(userId);
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: userVoted
-                          ? ColorsManager.primary.withValues(alpha: 0.1)
-                          : ColorsManager.surfaceAdaptive(context),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: userVoted
-                            ? ColorsManager.primary
-                            : ColorsManager.dividerAdaptive(context),
-                        width: userVoted ? 2 : 1,
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Option title and vote count
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                option,
-                                style: StylesManager.semiBold(
-                                  fontSize: FontSize.medium,
-                                  color: ColorsManager.textPrimaryAdaptive(context),
-                                ),
-                              ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color:
+                                  ColorsManager.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            if (userVoted)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: ColorsManager.primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Iconsax.tick_circle_copy,
-                                      color: Colors.white,
-                                      size: 14,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Your Vote',
-                                      style: StylesManager.semiBold(
-                                        fontSize: FontSize.xSmall,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Progress bar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: totalVotes > 0 ? voteCount / totalVotes : 0,
-                            backgroundColor: ColorsManager.navbarColor
-                                .withValues(alpha: 0.3),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              userVoted
-                                  ? ColorsManager.primary
-                                  : ColorsManager.grey,
+                            child: Icon(
+                              Iconsax.chart_copy,
+                              color: ColorsManager.primary,
+                              size: 24,
                             ),
-                            minHeight: 8,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Stats
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  Iconsax.people_copy,
-                                  size: 16,
-                                  color: ColorsManager.grey,
-                                ),
-                                const SizedBox(width: 4),
                                 Text(
-                                  '$voteCount ${voteCount == 1 ? "vote" : "votes"}',
+                                  'Poll Results',
+                                  style: StylesManager.bold(
+                                    fontSize: FontSize.large,
+                                    color: ColorsManager.textPrimaryAdaptive(
+                                        context),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  message.question,
                                   style: StylesManager.regular(
                                     fontSize: FontSize.small,
                                     color: ColorsManager.grey,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
-                            Text(
-                              '$percentage%',
-                              style: StylesManager.bold(
-                                fontSize: FontSize.medium,
-                                color: userVoted
-                                    ? ColorsManager.primary
-                                    : ColorsManager.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Footer with poll info
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: ColorsManager.navbarColor,
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Iconsax.info_circle_copy,
-                    size: 16,
-                    color: ColorsManager.grey,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      message.allowMultipleVotes
-                          ? 'Multiple votes allowed'
-                          : 'Single vote only',
-                      style: StylesManager.regular(
-                        fontSize: FontSize.small,
-                        color: ColorsManager.grey,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close, color: ColorsManager.grey),
+                            onPressed: () => Get.back(),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+
+                    // Poll Statistics
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.primary.withValues(alpha: 0.05),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatItem(
+                            context: context,
+                            icon: Iconsax.people_copy,
+                            label: 'Total Votes',
+                            value: '$totalVotes',
+                          ),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: ColorsManager.dividerAdaptive(context),
+                          ),
+                          _buildStatItem(
+                            context: context,
+                            icon: Iconsax.chart_1_copy,
+                            label: 'Options',
+                            value: '${message.options.length}',
+                          ),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: ColorsManager.dividerAdaptive(context),
+                          ),
+                          _buildStatItem(
+                            context: context,
+                            icon: message.isClosed
+                                ? Iconsax.lock_copy
+                                : Iconsax.tick_circle_copy,
+                            label: 'Status',
+                            value: message.isClosed ? 'Closed' : 'Active',
+                            valueColor: message.isClosed
+                                ? ColorsManager.error
+                                : ColorsManager.success,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Options Results
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(20),
+                        itemCount: message.options.length,
+                        itemBuilder: (context, index) {
+                          final option = message.options[index];
+                          final votes = message.votes[index] ?? [];
+                          final voteCount = votes.length;
+                          final percentage = totalVotes > 0
+                              ? (voteCount / totalVotes * 100)
+                                  .toStringAsFixed(1)
+                              : '0.0';
+                          final userVoted = votes.contains(userId);
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: userVoted
+                                  ? ColorsManager.primary.withValues(alpha: 0.1)
+                                  : ColorsManager.surfaceAdaptive(context),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: userVoted
+                                    ? ColorsManager.primary
+                                    : ColorsManager.dividerAdaptive(context),
+                                width: userVoted ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Option title and vote count
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        option,
+                                        style: StylesManager.semiBold(
+                                          fontSize: FontSize.medium,
+                                          color:
+                                              ColorsManager.textPrimaryAdaptive(
+                                                  context),
+                                        ),
+                                      ),
+                                    ),
+                                    if (userVoted)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: ColorsManager.primary,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Iconsax.tick_circle_copy,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Your Vote',
+                                              style: StylesManager.semiBold(
+                                                fontSize: FontSize.xSmall,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Progress bar
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LinearProgressIndicator(
+                                    value: totalVotes > 0
+                                        ? voteCount / totalVotes
+                                        : 0,
+                                    backgroundColor:
+                                        ColorsManager.dividerAdaptive(context)
+                                            .withValues(alpha: 0.3),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      userVoted
+                                          ? ColorsManager.primary
+                                          : ColorsManager.grey,
+                                    ),
+                                    minHeight: 8,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Stats
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Iconsax.people_copy,
+                                          size: 16,
+                                          color: ColorsManager.grey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$voteCount ${voteCount == 1 ? "vote" : "votes"}',
+                                          style: StylesManager.regular(
+                                            fontSize: FontSize.small,
+                                            color: ColorsManager.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '$percentage%',
+                                      style: StylesManager.bold(
+                                        fontSize: FontSize.medium,
+                                        color: userVoted
+                                            ? ColorsManager.primary
+                                            : ColorsManager.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Footer with poll info
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: ColorsManager.dividerAdaptive(context),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.info_circle_copy,
+                            size: 16,
+                            color: ColorsManager.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              message.allowMultipleVotes
+                                  ? 'Multiple votes allowed'
+                                  : 'Single vote only',
+                              style: StylesManager.regular(
+                                fontSize: FontSize.small,
+                                color: ColorsManager.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
     );
   }
 
   Widget _buildStatItem({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String value,
@@ -622,7 +636,7 @@ class _PollMessageWidgetState extends State<PollMessageWidget> {
           value,
           style: StylesManager.bold(
             fontSize: FontSize.large,
-            color: valueColor ?? ColorsManager.black,
+            color: valueColor ?? ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         const SizedBox(height: 4),
@@ -688,7 +702,7 @@ class OptionTile extends StatelessWidget {
         color: isSelected ? color.withValues(alpha: 0.08) : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isSelected ? color : ColorsManager.navbarColor,
+          color: isSelected ? color : ColorsManager.dividerAdaptive(context),
           width: isSelected ? 2 : 1.5,
         ),
       ),
@@ -729,7 +743,9 @@ class OptionTile extends StatelessWidget {
                   label,
                   style: StylesManager.medium(
                     fontSize: FontSize.small,
-                    color: isSelected ? color : ColorsManager.black,
+                    color: isSelected
+                        ? color
+                        : ColorsManager.textPrimaryAdaptive(context),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -781,7 +797,7 @@ class OptionTile extends StatelessWidget {
                     builder: (context, value, child) {
                       return LinearProgressIndicator(
                         value: value,
-                        backgroundColor: ColorsManager.navbarColor,
+                        backgroundColor: ColorsManager.inputBg(context),
                         valueColor: AlwaysStoppedAnimation<Color>(color),
                         minHeight: 8,
                       );

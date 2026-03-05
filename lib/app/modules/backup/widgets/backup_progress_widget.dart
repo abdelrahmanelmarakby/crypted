@@ -22,50 +22,51 @@ class BackupProgressWidget extends GetView<BackupController> {
       final status = controller.backupStatus.value;
       final currentPhase = _getPhaseFromProgress(progress);
 
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: ColorsManager.primary.withValues(alpha: 0.15),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorsManager.primary.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header with overall progress
-            _buildProgressHeader(progress),
+      return Builder(
+          builder: (context) => Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: ColorsManager.primary.withValues(alpha: 0.15),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ColorsManager.primary.withValues(alpha: 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Header with overall progress
+                    _buildProgressHeader(progress),
 
-            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-            // Phase indicators - step by step
-            _buildPhaseIndicators(currentPhase),
+                    // Phase indicators - step by step
+                    _buildPhaseIndicators(currentPhase),
 
-            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-            // Current phase explanation
-            _buildCurrentPhaseExplanation(currentPhase, status),
+                    // Current phase explanation
+                    _buildCurrentPhaseExplanation(currentPhase, status),
 
-            const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-            // Linear progress with gradient
-            _buildProgressBar(progress),
+                    // Linear progress with gradient
+                    _buildProgressBar(progress),
 
-            const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-            // Time estimate
-            _buildTimeEstimate(progress),
-          ],
-        ),
-      );
+                    // Time estimate
+                    _buildTimeEstimate(progress),
+                  ],
+                ),
+              ));
     });
   }
 
@@ -270,7 +271,10 @@ class BackupProgressWidget extends GetView<BackupController> {
                                     ColorsManager.primary,
                                     ColorsManager.zenBorder
                                   ]
-                                : [ColorsManager.zenBorder, ColorsManager.zenBorder],
+                                : [
+                                    ColorsManager.zenBorder,
+                                    ColorsManager.zenBorder
+                                  ],
                       ),
                       borderRadius: BorderRadius.circular(1),
                     ),
@@ -386,7 +390,8 @@ class BackupProgressWidget extends GetView<BackupController> {
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               height: 8,
-              width: Get.width * 0.75 * progress, // Approximate width calculation
+              width:
+                  Get.width * 0.75 * progress, // Approximate width calculation
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -406,7 +411,8 @@ class BackupProgressWidget extends GetView<BackupController> {
   Widget _buildTimeEstimate(double progress) {
     // Calculate estimated time based on progress
     final remainingPercentage = 100 - (progress * 100).toInt();
-    final estimatedMinutes = (remainingPercentage / 20).ceil(); // Rough estimate
+    final estimatedMinutes =
+        (remainingPercentage / 20).ceil(); // Rough estimate
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -529,57 +535,59 @@ class BackupProgressWidget extends GetView<BackupController> {
     }
 
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
+      Builder(
+          builder: (context) => Container(
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: ColorsManager.zenBorder,
-                  borderRadius: BorderRadius.circular(2),
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: ColorsManager.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _getPhaseIcon(phase),
-                    color: ColorsManager.primary,
-                    size: 24,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.zenBorder,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: ColorsManager.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getPhaseIcon(phase),
+                            color: ColorsManager.primary,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Text(
+                          title,
+                          style: StylesManager.zenHeading(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      description,
+                      style: StylesManager.zenBody(),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Text(
-                  title,
-                  style: StylesManager.zenHeading(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              description,
-              style: StylesManager.zenBody(),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+              )),
       isScrollControlled: true,
     );
   }

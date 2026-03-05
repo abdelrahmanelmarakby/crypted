@@ -16,9 +16,9 @@ class NotificationsView extends GetView<NotificationsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.surfaceAdaptive(context),
         centerTitle: false,
         title: Text(
           Constants.kNotifications.tr,
@@ -238,7 +238,8 @@ class NotificationsView extends GetView<NotificationsController> {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    side: BorderSide(color: Colors.grey.shade300),
+                                    side:
+                                        BorderSide(color: Colors.grey.shade300),
                                   ),
                                   child: Text(
                                     Constants.kCancel.tr,

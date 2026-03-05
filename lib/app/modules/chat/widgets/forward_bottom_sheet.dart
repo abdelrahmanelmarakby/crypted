@@ -180,9 +180,7 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
 
           // Content
           Expanded(
-            child: widget.isLoading
-                ? _buildLoadingState()
-                : _buildContent(),
+            child: widget.isLoading ? _buildLoadingState() : _buildContent(),
           ),
 
           // Multi-select action bar
@@ -220,7 +218,7 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
                 style: TextStyle(
                   fontSize: FontSize.large,
                   fontWeight: FontWeight.w600,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               if (_isMultiSelectMode)
@@ -241,7 +239,8 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
                 setState(() => _isMultiSelectMode = true);
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: ColorsManager.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
@@ -322,7 +321,8 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
     );
@@ -430,7 +430,7 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
                           style: TextStyle(
                             fontSize: FontSize.medium,
                             fontWeight: FontWeight.w500,
-                            color: ColorsManager.black,
+                            color: ColorsManager.textPrimaryAdaptive(context),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -476,9 +476,8 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected
-                      ? ColorsManager.primary
-                      : Colors.transparent,
+                  color:
+                      isSelected ? ColorsManager.primary : Colors.transparent,
                   border: Border.all(
                     color: isSelected
                         ? ColorsManager.primary
@@ -619,7 +618,8 @@ class _ForwardBottomSheetState extends State<ForwardBottomSheet> {
           // Forward button
           Expanded(
             child: GestureDetector(
-              onTap: _selectedTargets.isNotEmpty ? _handleForwardMultiple : null,
+              onTap:
+                  _selectedTargets.isNotEmpty ? _handleForwardMultiple : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(

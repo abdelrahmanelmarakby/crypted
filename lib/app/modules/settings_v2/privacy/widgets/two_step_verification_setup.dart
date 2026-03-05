@@ -18,7 +18,8 @@ class TwoStepVerificationSetup extends StatefulWidget {
   });
 
   /// Show the setup wizard as a full-screen modal
-  static Future<bool?> show(BuildContext context, {bool isEnabled = false}) async {
+  static Future<bool?> show(BuildContext context,
+      {bool isEnabled = false}) async {
     return await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -28,7 +29,8 @@ class TwoStepVerificationSetup extends StatefulWidget {
   }
 
   @override
-  State<TwoStepVerificationSetup> createState() => _TwoStepVerificationSetupState();
+  State<TwoStepVerificationSetup> createState() =>
+      _TwoStepVerificationSetupState();
 }
 
 class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
@@ -250,7 +252,8 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
 
       Navigator.of(context).pop(true);
     } catch (e) {
-      _showError('Failed to ${widget.isEnabled ? 'disable' : 'enable'} two-step verification');
+      _showError(
+          'Failed to ${widget.isEnabled ? 'disable' : 'enable'} two-step verification');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -360,13 +363,14 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(false),
-          icon: const Icon(Icons.close, color: Colors.black87),
+          icon: Icon(Icons.close,
+              color: ColorsManager.textPrimaryAdaptive(context)),
         ),
         title: _buildProgressIndicator(),
         centerTitle: true,
@@ -652,7 +656,8 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
             onDelete: () {
               if (_confirmPin.isNotEmpty) {
                 setState(() {
-                  _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1);
+                  _confirmPin =
+                      _confirmPin.substring(0, _confirmPin.length - 1);
                   _pinMismatch = false;
                 });
                 HapticFeedback.lightImpact();
@@ -938,7 +943,6 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
       child: Column(
         children: [
           const SizedBox(height: 32),
-
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -952,14 +956,12 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
             ),
           ),
           const SizedBox(height: 32),
-
           Text(
             'Disable Two-Step Verification',
             style: StylesManager.bold(fontSize: FontSize.large),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-
           Text(
             'Are you sure you want to disable two-step verification? This will make your account less secure.',
             style: StylesManager.regular(
@@ -969,7 +971,6 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1004,20 +1005,17 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
       child: Column(
         children: [
           const SizedBox(height: 32),
-
           Icon(
             Iconsax.key,
             size: 64,
             color: ColorsManager.primary,
           ),
           const SizedBox(height: 24),
-
           Text(
             'Enter Your PIN',
             style: StylesManager.bold(fontSize: FontSize.large),
           ),
           const SizedBox(height: 8),
-
           Text(
             'Enter your current PIN to disable two-step verification',
             style: StylesManager.regular(
@@ -1027,10 +1025,8 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 48),
-
           _buildPinDisplay(_pin),
           const SizedBox(height: 32),
-
           _buildNumericKeypad(
             onDigit: (digit) {
               if (_pin.length < 6) {
@@ -1045,9 +1041,7 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
               }
             },
           ),
-
           const SizedBox(height: 24),
-
           TextButton(
             onPressed: _handleForgotPin,
             child: Text(
@@ -1069,7 +1063,6 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
       child: Column(
         children: [
           const SizedBox(height: 64),
-
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
@@ -1083,14 +1076,12 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
             ),
           ),
           const SizedBox(height: 32),
-
           Text(
             'Two-Step Verification Disabled',
             style: StylesManager.bold(fontSize: FontSize.large),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-
           Text(
             'Your account no longer requires a PIN for verification. You can enable it again anytime in settings.',
             style: StylesManager.regular(
@@ -1178,7 +1169,8 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
   Widget _buildKeypadRow(List<String> digits, Function(String) onDigit) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: digits.map((digit) => _buildKeypadButton(digit, onDigit)).toList(),
+      children:
+          digits.map((digit) => _buildKeypadButton(digit, onDigit)).toList(),
     );
   }
 
@@ -1260,7 +1252,10 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        24, 16, 24, 16 + MediaQuery.of(context).padding.bottom,
+        24,
+        16,
+        24,
+        16 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1296,17 +1291,16 @@ class _TwoStepVerificationSetupState extends State<TwoStepVerificationSetup>
             )
           else
             const Expanded(child: SizedBox()),
-
           const SizedBox(width: 16),
-
           Expanded(
             flex: 2,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _nextStep,
               style: ElevatedButton.styleFrom(
-                backgroundColor: widget.isEnabled && step.type == _StepType.disableIntro
-                    ? Colors.red
-                    : ColorsManager.primary,
+                backgroundColor:
+                    widget.isEnabled && step.type == _StepType.disableIntro
+                        ? Colors.red
+                        : ColorsManager.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

@@ -917,7 +917,7 @@ class _ThemeOptionTile extends StatelessWidget {
                     fontSize: FontSize.medium,
                     color: isSelected
                         ? ColorsManager.primary
-                        : ColorsManager.black,
+                        : ColorsManager.textPrimaryAdaptive(context),
                   ),
                 ),
               ),

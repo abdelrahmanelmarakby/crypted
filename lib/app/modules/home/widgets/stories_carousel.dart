@@ -28,7 +28,8 @@ class StoriesCarousel extends StatelessWidget {
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            itemCount: controller.storiesByUser.length + 1, // +1 for add story button
+            itemCount:
+                controller.storiesByUser.length + 1, // +1 for add story button
             itemBuilder: (context, index) {
               if (index == 0) {
                 return _buildAddStoryButton();
@@ -47,6 +48,7 @@ class StoriesCarousel extends StatelessWidget {
                   userStories.every((s) => s.isViewedBy(currentUserId));
 
               return _buildStoryItem(
+                context: context,
                 controller: controller,
                 userName: user?.fullName ?? 'Unknown',
                 userImage: user?.imageUrl ?? '',
@@ -136,6 +138,7 @@ class StoriesCarousel extends StatelessWidget {
 
   /// Story avatar item with ring color based on viewed status.
   Widget _buildStoryItem({
+    required BuildContext context,
     required StoriesController controller,
     required String userName,
     required String userImage,
@@ -201,7 +204,9 @@ class StoriesCarousel extends StatelessWidget {
               userName.split(' ').first,
               style: StylesManager.medium(
                 fontSize: FontSize.xSmall,
-                color: allViewed ? ColorsManager.grey : ColorsManager.black,
+                color: allViewed
+                    ? ColorsManager.grey
+                    : ColorsManager.textPrimaryAdaptive(context),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

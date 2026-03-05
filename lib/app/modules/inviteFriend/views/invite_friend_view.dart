@@ -17,10 +17,10 @@ class InviteFriendView extends GetView<InviteFriendController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
         centerTitle: false,
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         title: Text(
           Constants.kInviteAFriend.tr,
           style: StylesManager.regular(fontSize: FontSize.xLarge),
@@ -31,7 +31,7 @@ class InviteFriendView extends GetView<InviteFriendController> {
           children: [
             Container(
               height: Sizes.size90,
-              color: ColorsManager.navbarColor,
+              color: ColorsManager.appBarAdaptive(context),
               padding: const EdgeInsets.all(Paddings.large),
               child: Column(
                 children: [
@@ -47,8 +47,8 @@ class InviteFriendView extends GetView<InviteFriendController> {
                               )
                             : null,
                         hint: Constants.kSearch.tr,
-                        borderColor: ColorsManager.navbarColor,
-                        fillColor: ColorsManager.white,
+                        borderColor: ColorsManager.appBarAdaptive(context),
+                        fillColor: ColorsManager.cardAdaptive(context),
                         controller: controller.searchController,
                         onChange: controller.onSearchChanged,
                       )),
@@ -67,7 +67,7 @@ class InviteFriendView extends GetView<InviteFriendController> {
                     child: Container(
                       padding: const EdgeInsets.all(Paddings.normal),
                       decoration: BoxDecoration(
-                        color: ColorsManager.navbarColor,
+                        color: ColorsManager.cardAdaptive(context),
                         borderRadius: BorderRadius.circular(Radiuss.normal),
                       ),
                       child: Row(
@@ -186,7 +186,7 @@ class InviteFriendView extends GetView<InviteFriendController> {
 
                     return Container(
                       decoration: BoxDecoration(
-                        color: ColorsManager.navbarColor,
+                        color: ColorsManager.surfaceAdaptive(context),
                         borderRadius: BorderRadius.circular(Radiuss.normal),
                       ),
                       child: Padding(

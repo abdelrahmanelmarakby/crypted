@@ -247,9 +247,13 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
           // Export progress or button
           Padding(
             padding: EdgeInsets.fromLTRB(
-              24, 0, 24, MediaQuery.of(context).padding.bottom + 16,
+              24,
+              0,
+              24,
+              MediaQuery.of(context).padding.bottom + 16,
             ),
-            child: _isExporting ? _buildProgressIndicator() : _buildExportButton(),
+            child:
+                _isExporting ? _buildProgressIndicator() : _buildExportButton(),
           ),
         ],
       ),
@@ -286,7 +290,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
                 children: [
                   Icon(
                     format.icon,
-                    color: isSelected ? ColorsManager.primary : ColorsManager.grey,
+                    color:
+                        isSelected ? ColorsManager.primary : ColorsManager.grey,
                     size: 24,
                   ),
                   const SizedBox(height: 8),
@@ -294,7 +299,9 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
                     format.displayName,
                     style: StylesManager.medium(
                       fontSize: FontSize.small,
-                      color: isSelected ? ColorsManager.primary : Colors.black87,
+                      color: isSelected
+                          ? ColorsManager.primary
+                          : ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   Text(
@@ -530,7 +537,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
 
       // Update progress
       if (i % 100 == 0) {
-        setState(() => _exportProgress = 0.1 + (i / widget.messages.length) * 0.5);
+        setState(
+            () => _exportProgress = 0.1 + (i / widget.messages.length) * 0.5);
       }
     }
 
@@ -542,7 +550,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
     return buffer.toString();
   }
 
-  void _writeTextMessage(StringBuffer buffer, Message message, DateFormat dateFormat) {
+  void _writeTextMessage(
+      StringBuffer buffer, Message message, DateFormat dateFormat) {
     final parts = <String>[];
 
     if (_options.includeTimestamps) {
@@ -567,8 +576,10 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
     buffer.writeln('<html lang="en">');
     buffer.writeln('<head>');
     buffer.writeln('  <meta charset="UTF-8">');
-    buffer.writeln('  <meta name="viewport" content="width=device-width, initial-scale=1.0">');
-    buffer.writeln('  <title>Chat Export - ${_escapeHtml(widget.chatName)}</title>');
+    buffer.writeln(
+        '  <meta name="viewport" content="width=device-width, initial-scale=1.0">');
+    buffer.writeln(
+        '  <title>Chat Export - ${_escapeHtml(widget.chatName)}</title>');
     buffer.writeln('  <style>');
     buffer.writeln(_getHtmlStyles());
     buffer.writeln('  </style>');
@@ -577,8 +588,10 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
     buffer.writeln('  <div class="container">');
     buffer.writeln('    <header>');
     buffer.writeln('      <h1>Chat Export</h1>');
-    buffer.writeln('      <p class="chat-name">${_escapeHtml(widget.chatName)}</p>');
-    buffer.writeln('      <p class="meta">Exported: ${dateFormat.format(DateTime.now())} • ${widget.messages.length} messages</p>');
+    buffer.writeln(
+        '      <p class="chat-name">${_escapeHtml(widget.chatName)}</p>');
+    buffer.writeln(
+        '      <p class="meta">Exported: ${dateFormat.format(DateTime.now())} • ${widget.messages.length} messages</p>');
     buffer.writeln('    </header>');
     buffer.writeln('    <div class="messages">');
 
@@ -587,7 +600,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
       _writeHtmlMessage(buffer, message, dateFormat);
 
       if (i % 100 == 0) {
-        setState(() => _exportProgress = 0.1 + (i / widget.messages.length) * 0.5);
+        setState(
+            () => _exportProgress = 0.1 + (i / widget.messages.length) * 0.5);
       }
     }
 
@@ -599,7 +613,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
     return buffer.toString();
   }
 
-  void _writeHtmlMessage(StringBuffer buffer, Message message, DateFormat dateFormat) {
+  void _writeHtmlMessage(
+      StringBuffer buffer, Message message, DateFormat dateFormat) {
     final senderName = widget.senderNames[message.senderId] ?? 'Unknown';
     final content = _escapeHtml(_getMessageContent(message));
 
@@ -609,7 +624,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
     }
     buffer.writeln('        <div class="content">$content</div>');
     if (_options.includeTimestamps) {
-      buffer.writeln('        <div class="timestamp">${dateFormat.format(message.timestamp)}</div>');
+      buffer.writeln(
+          '        <div class="timestamp">${dateFormat.format(message.timestamp)}</div>');
     }
     buffer.writeln('      </div>');
   }
@@ -744,7 +760,8 @@ class _ChatExportDialogState extends State<ChatExportDialog> {
     final directory = await getTemporaryDirectory();
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     final sanitizedName = widget.chatName.replaceAll(RegExp(r'[^\w\s-]'), '');
-    final fileName = 'chat_export_${sanitizedName}_$timestamp.${_options.format.extension}';
+    final fileName =
+        'chat_export_${sanitizedName}_$timestamp.${_options.format.extension}';
     final file = File('${directory.path}/$fileName');
     await file.writeAsString(content);
     return file;

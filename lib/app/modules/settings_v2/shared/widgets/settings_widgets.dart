@@ -371,7 +371,7 @@ class SettingsDropdown<T> extends StatelessWidget {
                         ),
                       ),
                       const Divider(height: 1),
-                      ...options.map((option) => _buildOption(option)),
+                      ...options.map((option) => _buildOption(option, ctx)),
                       const SizedBox(height: Paddings.large),
                     ],
                   ),
@@ -393,7 +393,7 @@ class SettingsDropdown<T> extends StatelessWidget {
     );
   }
 
-  Widget _buildOption(DropdownOption<T> option) {
+  Widget _buildOption(DropdownOption<T> option, BuildContext context) {
     final isSelected = option.value == value;
     return InkWell(
       onTap: () {
@@ -423,8 +423,9 @@ class SettingsDropdown<T> extends StatelessWidget {
                     option.label,
                     style: StylesManager.medium(
                       fontSize: FontSize.medium,
-                      color:
-                          isSelected ? ColorsManager.primary : Colors.black87,
+                      color: isSelected
+                          ? ColorsManager.primary
+                          : ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   if (option.description != null) ...[

@@ -72,13 +72,14 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back,
+              color: ColorsManager.textPrimaryAdaptive(context)),
         ),
         title: Text(
           'Security Activity',
@@ -94,7 +95,7 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                 Iconsax.filter,
                 color: _selectedFilter != null
                     ? ColorsManager.primary
-                    : Colors.black87,
+                    : ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
           ),
@@ -169,7 +170,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
     );
@@ -254,7 +256,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: _getEventColor(entry.eventType).withValues(alpha: 0.3),
+                        color: _getEventColor(entry.eventType)
+                            .withValues(alpha: 0.3),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -295,7 +298,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _getEventColor(entry.eventType).withValues(alpha: 0.1),
+                            color: _getEventColor(entry.eventType)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -311,7 +315,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                             children: [
                               Text(
                                 entry.eventType.displayName,
-                                style: StylesManager.semiBold(fontSize: FontSize.medium),
+                                style: StylesManager.semiBold(
+                                    fontSize: FontSize.medium),
                               ),
                               Text(
                                 _formatTimestamp(entry.timestamp),
@@ -513,7 +518,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                       type.displayName,
                       style: StylesManager.medium(
                         fontSize: FontSize.medium,
-                        color: isSelected ? ColorsManager.primary : Colors.black87,
+                        color:
+                            isSelected ? ColorsManager.primary : Colors.black87,
                       ),
                     ),
                     trailing: isSelected
@@ -618,10 +624,10 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
                   _buildDetailRow('Event ID', entry.id),
                   _buildDetailRow('Event Type', entry.eventType.key),
-                  _buildDetailRow('Timestamp', _formatTimestampFull(entry.timestamp)),
+                  _buildDetailRow(
+                      'Timestamp', _formatTimestampFull(entry.timestamp)),
                   if (entry.deviceName != null)
                     _buildDetailRow('Device', entry.deviceName!),
                   if (entry.location != null)
@@ -638,9 +644,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...entry.metadata!.entries.map((e) =>
-                      _buildDetailRow(e.key, e.value.toString())
-                    ),
+                    ...entry.metadata!.entries
+                        .map((e) => _buildDetailRow(e.key, e.value.toString())),
                   ],
                 ],
               ),
@@ -650,7 +655,10 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
             // Actions
             Padding(
               padding: EdgeInsets.fromLTRB(
-                24, 0, 24, MediaQuery.of(context).padding.bottom + 16,
+                24,
+                0,
+                24,
+                MediaQuery.of(context).padding.bottom + 16,
               ),
               child: Row(
                 children: [
@@ -732,7 +740,8 @@ class _SecurityAuditLogViewerState extends State<SecurityAuditLogViewer> {
     buffer.writeln('Timestamp: ${_formatTimestampFull(entry.timestamp)}');
     if (entry.deviceName != null) buffer.writeln('Device: ${entry.deviceName}');
     if (entry.location != null) buffer.writeln('Location: ${entry.location}');
-    if (entry.ipAddress != null) buffer.writeln('IP Address: ${entry.ipAddress}');
+    if (entry.ipAddress != null)
+      buffer.writeln('IP Address: ${entry.ipAddress}');
     if (entry.metadata != null && entry.metadata!.isNotEmpty) {
       buffer.writeln('');
       buffer.writeln('Additional Information:');

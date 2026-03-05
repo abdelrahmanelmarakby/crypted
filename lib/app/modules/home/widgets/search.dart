@@ -150,15 +150,15 @@ class Search extends StatelessWidget {
                     }
 
                     if (controller.searchQuery.isEmpty) {
-                      return _buildRecentSearches(controller);
+                      return _buildRecentSearches(controller, context);
                     }
 
                     if (controller.searchResults.isEmpty &&
                         controller.userResults.isEmpty) {
-                      return _buildNoResults();
+                      return _buildNoResults(context);
                     }
 
-                    return _buildSearchResults(controller);
+                    return _buildSearchResults(controller, context);
                   }),
                 ),
               ),
@@ -275,7 +275,8 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildRecentSearches(MessageSearchController controller) {
+  static Widget _buildRecentSearches(
+      MessageSearchController controller, BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(Paddings.large),
       child: Column(
@@ -308,7 +309,7 @@ class Search extends StatelessWidget {
           Expanded(
             child: Obx(() {
               if (controller.recentSearches.isEmpty) {
-                return _buildSearchSuggestions(controller);
+                return _buildSearchSuggestions(controller, context);
               }
 
               return ListView.builder(
@@ -316,7 +317,7 @@ class Search extends StatelessWidget {
                 itemCount: controller.recentSearches.length,
                 itemBuilder: (context, index) {
                   final search = controller.recentSearches[index];
-                  return _buildRecentSearchItem(search, controller);
+                  return _buildRecentSearchItem(search, controller, context);
                 },
               );
             }),
@@ -327,7 +328,7 @@ class Search extends StatelessWidget {
   }
 
   static Widget _buildRecentSearchItem(
-      String search, MessageSearchController controller) {
+      String search, MessageSearchController controller, BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: Sizes.size8),
       decoration: BoxDecoration(
@@ -355,7 +356,7 @@ class Search extends StatelessWidget {
           search,
           style: StylesManager.medium(
             fontSize: FontSize.medium,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -370,7 +371,8 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildSearchSuggestions(MessageSearchController controller) {
+  static Widget _buildSearchSuggestions(
+      MessageSearchController controller, BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(Paddings.large),
       child: Column(
@@ -392,30 +394,35 @@ class Search extends StatelessWidget {
                   Iconsax.message_text_1,
                   'Recent messages',
                   'Find your latest conversations',
+                  context: context,
                   onTap: () => controller.browseByType(MessageTypeFilter.text),
                 ),
                 _buildSuggestionItem(
                   Iconsax.gallery,
                   'Photos',
                   'Search through shared images',
+                  context: context,
                   onTap: () => controller.browseByType(MessageTypeFilter.photo),
                 ),
                 _buildSuggestionItem(
                   Iconsax.video_play,
                   'Videos',
                   'Find video messages and clips',
+                  context: context,
                   onTap: () => controller.browseByType(MessageTypeFilter.video),
                 ),
                 _buildSuggestionItem(
                   Iconsax.document_text,
                   'Documents',
                   'Locate files and documents',
+                  context: context,
                   onTap: () => controller.browseByType(MessageTypeFilter.file),
                 ),
                 _buildSuggestionItem(
                   Iconsax.music,
                   'Audio',
                   'Find voice messages and audio files',
+                  context: context,
                   onTap: () => controller.browseByType(MessageTypeFilter.audio),
                 ),
               ],
@@ -430,6 +437,7 @@ class Search extends StatelessWidget {
     IconData icon,
     String title,
     String subtitle, {
+    required BuildContext context,
     VoidCallback? onTap,
   }) {
     return Container(
@@ -459,7 +467,7 @@ class Search extends StatelessWidget {
           title,
           style: StylesManager.semiBold(
             fontSize: FontSize.medium,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         subtitle: Text(
@@ -479,7 +487,7 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildNoResults() {
+  static Widget _buildNoResults(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(40),
       child: Center(
@@ -511,7 +519,7 @@ class Search extends StatelessWidget {
               'No results found',
               style: StylesManager.bold(
                 fontSize: FontSize.xLarge,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
             const SizedBox(height: Sizes.size12),
@@ -556,7 +564,7 @@ class Search extends StatelessWidget {
                         'Search Tips',
                         style: StylesManager.semiBold(
                           fontSize: FontSize.medium,
-                          color: ColorsManager.black,
+                          color: ColorsManager.textPrimaryAdaptive(context),
                         ),
                       ),
                     ],
@@ -604,7 +612,8 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildSearchResults(MessageSearchController controller) {
+  static Widget _buildSearchResults(
+      MessageSearchController controller, BuildContext context) {
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
@@ -642,7 +651,7 @@ class Search extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           ...controller.searchResults
-              .map((message) => _buildMessageResultItem(message)),
+              .map((message) => _buildMessageResultItem(message, context)),
         ],
 
         // User Results
@@ -685,7 +694,7 @@ class Search extends StatelessWidget {
     );
   }
 
-  static Widget _buildMessageResultItem(Message message) {
+  static Widget _buildMessageResultItem(Message message, BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -744,7 +753,7 @@ class Search extends StatelessWidget {
                           _getChatNameForMessage(message),
                           style: StylesManager.semiBold(
                             fontSize: FontSize.medium,
-                            color: ColorsManager.black,
+                            color: ColorsManager.textPrimaryAdaptive(context),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

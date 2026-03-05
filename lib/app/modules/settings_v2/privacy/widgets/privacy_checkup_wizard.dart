@@ -160,13 +160,14 @@ class _PrivacyCheckupWizardState extends State<PrivacyCheckupWizard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.close, color: Colors.black87),
+          icon: Icon(Icons.close,
+              color: ColorsManager.textPrimaryAdaptive(context)),
         ),
         title: _buildProgressIndicator(),
         centerTitle: true,

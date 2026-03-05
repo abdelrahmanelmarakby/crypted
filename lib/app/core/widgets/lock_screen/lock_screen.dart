@@ -118,7 +118,7 @@ class _LockScreenState extends State<LockScreen> with WidgetsBindingObserver {
     return PopScope(
       canPop: false, // Prevent back navigation
       child: Scaffold(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.scaffoldBg(context),
         body: SafeArea(
           child: Column(
             children: [
@@ -134,7 +134,7 @@ class _LockScreenState extends State<LockScreen> with WidgetsBindingObserver {
                 'Crypted',
                 style: StylesManager.bold(
                   fontSize: FontSize.xLarge + 8,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
 
@@ -165,7 +165,8 @@ class _LockScreenState extends State<LockScreen> with WidgetsBindingObserver {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                        Icon(Icons.error_outline,
+                            color: Colors.red.shade700, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -191,7 +192,8 @@ class _LockScreenState extends State<LockScreen> with WidgetsBindingObserver {
 
               // Use device credentials text button
               TextButton(
-                onPressed: _isAuthenticating ? null : _authenticateWithBiometrics,
+                onPressed:
+                    _isAuthenticating ? null : _authenticateWithBiometrics,
                 child: Text(
                   'Use device credentials',
                   style: StylesManager.medium(

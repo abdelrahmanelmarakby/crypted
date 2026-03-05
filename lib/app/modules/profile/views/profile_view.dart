@@ -180,7 +180,9 @@ class ProfileView extends GetView<ProfileController> {
               left: 0,
               child: Column(
                 children: [
-                  Divider(color: ColorsManager.navbarColor, thickness: 2),
+                  Divider(
+                      color: ColorsManager.dividerAdaptive(context),
+                      thickness: 2),
                   SizedBox(height: Sizes.size10),
                   Obx(
                     () => Padding(
@@ -241,7 +243,8 @@ class ProfileView extends GetView<ProfileController> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 image: DecorationImage(
-                                  image: FileImage(controller.selectedImage.value!),
+                                  image: FileImage(
+                                      controller.selectedImage.value!),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -253,8 +256,9 @@ class ProfileView extends GetView<ProfileController> {
                           // Show user's profile image or default
                           if (user.imageUrl != null &&
                               user.imageUrl!.isNotEmpty) {
-                            return ClipRRect( 
-                              borderRadius: BorderRadius.circular(Radiuss.xXLarge50),
+                            return ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(Radiuss.xXLarge50),
                               child: AppCachedNetworkImage(
                                 imageUrl: user.imageUrl!,
                                 height: Radiuss.xXLarge50 * 2,
@@ -277,7 +281,8 @@ class ProfileView extends GetView<ProfileController> {
                             height: Radiuss.xXLarge50 * 2,
                             width: Radiuss.xXLarge50 * 2,
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(Radiuss.xXLarge50),
+                              borderRadius:
+                                  BorderRadius.circular(Radiuss.xXLarge50),
                               child: const Icon(
                                 Icons.camera_alt,
                                 color: Colors.white,
@@ -296,9 +301,9 @@ class ProfileView extends GetView<ProfileController> {
                                 shape: BoxShape.circle,
                                 color: Colors.black.withValues(alpha: 0.5),
                               ),
-                              child: const Center(
+                              child: Center(
                                 child: CircularProgressIndicator(
-                                  color: ColorsManager.white,
+                                  color: ColorsManager.cardAdaptive(context),
                                 ),
                               ),
                             );

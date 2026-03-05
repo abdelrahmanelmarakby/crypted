@@ -60,7 +60,7 @@ class UserWidget extends StatelessWidget {
                   Text(
                     user?.fullName ?? Constants.kNoName.tr,
                     style: StylesManager.bold(
-                      color: ColorsManager.black,
+                      color: ColorsManager.textPrimaryAdaptive(context),
                       fontSize: FontSize.xLarge,
                     ),
                   ),

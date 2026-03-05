@@ -18,10 +18,10 @@ class PrivacyView extends GetView<PrivacyController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
         centerTitle: false,
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         title: Text(
           Constants.kPrivacy.tr,
           style: StylesManager.regular(fontSize: FontSize.xLarge),
@@ -295,7 +295,8 @@ class PrivacyView extends GetView<PrivacyController> {
                           children: [
                             Text(
                               "Blocked Users",
-                              style: StylesManager.bold(fontSize: FontSize.large),
+                              style:
+                                  StylesManager.bold(fontSize: FontSize.large),
                             ),
                             Text(
                               "Users you have blocked",
@@ -325,7 +326,8 @@ class PrivacyView extends GetView<PrivacyController> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return SizedBox(
                         height: 200,
-                        child: const Center(child: CircularProgressIndicator.adaptive()),
+                        child: const Center(
+                            child: CircularProgressIndicator.adaptive()),
                       );
                     }
 
@@ -337,12 +339,12 @@ class PrivacyView extends GetView<PrivacyController> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.error_outline,
-                                size: 48,
-                                color: ColorsManager.error),
+                                  size: 48, color: ColorsManager.error),
                               SizedBox(height: Sizes.size12),
                               Text(
                                 'Error loading blocked users',
-                                style: StylesManager.regular(color: ColorsManager.error),
+                                style: StylesManager.regular(
+                                    color: ColorsManager.error),
                               ),
                             ],
                           ),
@@ -404,23 +406,30 @@ class PrivacyView extends GetView<PrivacyController> {
                           ),
                           leading: CircleAvatar(
                             radius: 24,
-                            backgroundColor: ColorsManager.primary.withValues(alpha: 0.1),
-                            backgroundImage: user.imageUrl != null && user.imageUrl!.isNotEmpty
+                            backgroundColor:
+                                ColorsManager.primary.withValues(alpha: 0.1),
+                            backgroundImage: user.imageUrl != null &&
+                                    user.imageUrl!.isNotEmpty
                                 ? NetworkImage(user.imageUrl!)
                                 : null,
-                            child: user.imageUrl == null || user.imageUrl!.isEmpty
-                                ? Text(
-                                    user.fullName?.substring(0, 1).toUpperCase() ?? '?',
-                                    style: StylesManager.semiBold(
-                                      fontSize: FontSize.large,
-                                      color: ColorsManager.primary,
-                                    ),
-                                  )
-                                : null,
+                            child:
+                                user.imageUrl == null || user.imageUrl!.isEmpty
+                                    ? Text(
+                                        user.fullName
+                                                ?.substring(0, 1)
+                                                .toUpperCase() ??
+                                            '?',
+                                        style: StylesManager.semiBold(
+                                          fontSize: FontSize.large,
+                                          color: ColorsManager.primary,
+                                        ),
+                                      )
+                                    : null,
                           ),
                           title: Text(
                             user.fullName ?? 'Unknown',
-                            style: StylesManager.medium(fontSize: FontSize.medium),
+                            style:
+                                StylesManager.medium(fontSize: FontSize.medium),
                           ),
                           subtitle: Text(
                             user.phoneNumber ?? user.uid ?? '',
@@ -506,7 +515,8 @@ class PrivacyView extends GetView<PrivacyController> {
                           children: [
                             Text(
                               "Live Location Sharing",
-                              style: StylesManager.bold(fontSize: FontSize.large),
+                              style:
+                                  StylesManager.bold(fontSize: FontSize.large),
                             ),
                             Text(
                               "Active location shares",
@@ -536,7 +546,8 @@ class PrivacyView extends GetView<PrivacyController> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return SizedBox(
                         height: 200,
-                        child: const Center(child: CircularProgressIndicator.adaptive()),
+                        child: const Center(
+                            child: CircularProgressIndicator.adaptive()),
                       );
                     }
 
@@ -548,12 +559,12 @@ class PrivacyView extends GetView<PrivacyController> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.error_outline,
-                                size: 48,
-                                color: ColorsManager.error),
+                                  size: 48, color: ColorsManager.error),
                               SizedBox(height: Sizes.size12),
                               Text(
                                 'Error loading live location chats',
-                                style: StylesManager.regular(color: ColorsManager.error),
+                                style: StylesManager.regular(
+                                    color: ColorsManager.error),
                               ),
                             ],
                           ),
@@ -617,7 +628,8 @@ class PrivacyView extends GetView<PrivacyController> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: ColorsManager.primary.withValues(alpha: 0.1),
+                              color:
+                                  ColorsManager.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -628,7 +640,8 @@ class PrivacyView extends GetView<PrivacyController> {
                           ),
                           title: Text(
                             'Chat ID: $chatId',
-                            style: StylesManager.medium(fontSize: FontSize.medium),
+                            style:
+                                StylesManager.medium(fontSize: FontSize.medium),
                           ),
                           subtitle: Text(
                             'Sharing live location',

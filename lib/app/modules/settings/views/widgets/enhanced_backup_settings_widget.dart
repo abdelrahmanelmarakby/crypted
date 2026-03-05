@@ -305,7 +305,7 @@ class _EnhancedBackupSettingsWidgetState
       margin: const EdgeInsets.all(Paddings.large),
       padding: const EdgeInsets.all(Paddings.large),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.surfaceAdaptive(context),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -342,7 +342,7 @@ class _EnhancedBackupSettingsWidgetState
                       'Enhanced Backup',
                       style: StylesManager.bold(
                         fontSize: FontSize.large,
-                        color: Colors.black,
+                        color: ColorsManager.textPrimaryAdaptive(context),
                       ),
                     ),
                     Text(
@@ -393,7 +393,7 @@ class _EnhancedBackupSettingsWidgetState
                         _currentStatus,
                         style: StylesManager.regular(
                           fontSize: FontSize.xSmall,
-                          color: Colors.black54,
+                          color: ColorsManager.textSecondaryAdaptive(context),
                         ),
                       ),
                     ],
@@ -450,7 +450,7 @@ class _EnhancedBackupSettingsWidgetState
               'Backup Statistics',
               style: StylesManager.semiBold(
                 fontSize: FontSize.medium,
-                color: Colors.black87,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
             const SizedBox(height: 12),
@@ -474,7 +474,7 @@ class _EnhancedBackupSettingsWidgetState
             'Backup Options',
             style: StylesManager.semiBold(
               fontSize: FontSize.medium,
-              color: Colors.black87,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
           ),
           const SizedBox(height: 12),
@@ -740,7 +740,7 @@ class _EnhancedBackupSettingsWidgetState
                   label,
                   style: StylesManager.regular(
                     fontSize: FontSize.xSmall,
-                    color: Colors.black54,
+                    color: ColorsManager.textSecondaryAdaptive(context),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

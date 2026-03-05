@@ -896,7 +896,9 @@ class HelpView extends GetView<HelpController> {
                                             margin: EdgeInsets.only(bottom: 16),
                                             padding: EdgeInsets.all(20),
                                             decoration: BoxDecoration(
-                                              color: Colors.white,
+                                              color:
+                                                  ColorsManager.surfaceAdaptive(
+                                                      context),
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               border: Border.all(
@@ -1203,8 +1205,8 @@ class HelpView extends GetView<HelpController> {
                                                               horizontal: 12,
                                                               vertical: 4),
                                                       decoration: BoxDecoration(
-                                                        color:
-                                                            Color(0xFFF3F4F6),
+                                                        color: ColorsManager
+                                                            .inputBg(context),
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(12),

@@ -26,182 +26,183 @@ class BackupHistoryWidget extends GetView<BackupController> {
         return _buildEmptyState();
       }
 
-      return Container(
-        decoration: BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: ColorsManager.zenBorder,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            // List of history items with staggered animation
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: history.length > 5 ? 5 : history.length,
-              separatorBuilder: (context, index) => Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                height: 1,
-                color: ColorsManager.zenBorder,
-              ),
-              itemBuilder: (context, index) {
-                final item = history[index];
-                return _buildHistoryItem(context, item, index == 0, index)
-                    .animate()
-                    .fadeIn(
-                      delay: Duration(milliseconds: 80 * index),
-                      duration: 300.ms,
-                    )
-                    .slideX(
-                      begin: 0.1,
-                      end: 0,
-                      delay: Duration(milliseconds: 80 * index),
-                      duration: 300.ms,
-                    );
-              },
-            ),
-
-            // View all link (if more than 5)
-            if (history.length > 5)
-              GestureDetector(
-                onTap: () => _showAllHistory(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: ColorsManager.zenSurface,
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(20),
-                    ),
-                  ),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View all ${history.length} backups',
-                          style: StylesManager.dmSansMedium(
-                            fontSize: 14,
-                            color: ColorsManager.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 16,
-                          color: ColorsManager.primary,
-                        ),
-                      ],
-                    ),
+      return Builder(
+          builder: (context) => Container(
+                decoration: BoxDecoration(
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: ColorsManager.zenBorder,
+                    width: 1,
                   ),
                 ),
-              ),
-          ],
-        ),
-      )
-          .animate()
-          .fadeIn(duration: 400.ms);
+                child: Column(
+                  children: [
+                    // List of history items with staggered animation
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: history.length > 5 ? 5 : history.length,
+                      separatorBuilder: (context, index) => Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        height: 1,
+                        color: ColorsManager.zenBorder,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = history[index];
+                        return _buildHistoryItem(
+                                context, item, index == 0, index)
+                            .animate()
+                            .fadeIn(
+                              delay: Duration(milliseconds: 80 * index),
+                              duration: 300.ms,
+                            )
+                            .slideX(
+                              begin: 0.1,
+                              end: 0,
+                              delay: Duration(milliseconds: 80 * index),
+                              duration: 300.ms,
+                            );
+                      },
+                    ),
+
+                    // View all link (if more than 5)
+                    if (history.length > 5)
+                      GestureDetector(
+                        onTap: () => _showAllHistory(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: ColorsManager.zenSurface,
+                            borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(20),
+                            ),
+                          ),
+                          child: Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'View all ${history.length} backups',
+                                  style: StylesManager.dmSansMedium(
+                                    fontSize: 14,
+                                    color: ColorsManager.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 16,
+                                  color: ColorsManager.primary,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              )).animate().fadeIn(duration: 400.ms);
     });
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      decoration: BoxDecoration(
-        color: ColorsManager.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: ColorsManager.zenBorder,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Animated icon
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: ColorsManager.zenBorder.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
+    return Builder(
+        builder: (context) => Container(
+              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+              decoration: BoxDecoration(
+                color: ColorsManager.surfaceAdaptive(context),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: ColorsManager.zenBorder,
+                  width: 1,
                 ),
               ),
-              Icon(
-                Icons.history_rounded,
-                size: 36,
-                color: ColorsManager.zenMuted,
-              ),
-            ],
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scale(
-                begin: const Offset(1, 1),
-                end: const Offset(1.05, 1.05),
-                duration: 1500.ms,
-              ),
-          const SizedBox(height: 20),
-          Text(
-            'No backup history yet',
-            style: StylesManager.dmSansSemiBold(
-              fontSize: 18,
-              color: ColorsManager.zenCharcoal,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your completed backups will appear here\nso you can track when you last saved your data',
-            style: StylesManager.zenBody(),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-
-          // What history shows section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: ColorsManager.zenSurface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: ColorsManager.zenGray,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'What you\'ll see here',
-                      style: StylesManager.dmSansMedium(
-                        fontSize: 13,
-                        color: ColorsManager.zenCharcoal,
+              child: Column(
+                children: [
+                  // Animated icon
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.zenBorder.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
                       ),
+                      Icon(
+                        Icons.history_rounded,
+                        size: 36,
+                        color: ColorsManager.zenMuted,
+                      ),
+                    ],
+                  ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.05, 1.05),
+                        duration: 1500.ms,
+                      ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No backup history yet',
+                    style: StylesManager.dmSansSemiBold(
+                      fontSize: 18,
+                      color: ColorsManager.zenCharcoal,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildInfoItem(Icons.calendar_today_rounded, 'Date & time of each backup'),
-                _buildInfoItem(Icons.check_circle_outline_rounded, 'Success or failure status'),
-                _buildInfoItem(Icons.analytics_outlined, 'Items backed up count'),
-                _buildInfoItem(Icons.restore_rounded, 'Option to restore from any backup'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 400.ms)
-        .slideY(begin: 0.1, end: 0, duration: 400.ms);
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your completed backups will appear here\nso you can track when you last saved your data',
+                    style: StylesManager.zenBody(),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // What history shows section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: ColorsManager.zenSurface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: ColorsManager.zenGray,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'What you\'ll see here',
+                              style: StylesManager.dmSansMedium(
+                                fontSize: 13,
+                                color: ColorsManager.zenCharcoal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildInfoItem(Icons.calendar_today_rounded,
+                            'Date & time of each backup'),
+                        _buildInfoItem(Icons.check_circle_outline_rounded,
+                            'Success or failure status'),
+                        _buildInfoItem(
+                            Icons.analytics_outlined, 'Items backed up count'),
+                        _buildInfoItem(Icons.restore_rounded,
+                            'Option to restore from any backup'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )).animate().fadeIn(duration: 400.ms).slideY(
+        begin: 0.1, end: 0, duration: 400.ms);
   }
 
   Widget _buildInfoItem(IconData icon, String text) {
@@ -252,8 +253,11 @@ class BackupHistoryWidget extends GetView<BackupController> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
-                item.success ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
-                color: item.success ? ColorsManager.primary : ColorsManager.error,
+                item.success
+                    ? Icons.cloud_done_rounded
+                    : Icons.cloud_off_rounded,
+                color:
+                    item.success ? ColorsManager.primary : ColorsManager.error,
                 size: 22,
               ),
             ),
@@ -277,7 +281,8 @@ class BackupHistoryWidget extends GetView<BackupController> {
                       if (isLatest) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
@@ -364,9 +369,10 @@ class BackupHistoryWidget extends GetView<BackupController> {
         expand: false,
         builder: (context, scrollController) {
           return Container(
-            decoration: const BoxDecoration(
-              color: ColorsManager.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: ColorsManager.surfaceAdaptive(context),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
               children: [
@@ -448,7 +454,8 @@ class BackupHistoryWidget extends GetView<BackupController> {
                             children: [
                               _buildTimestampRow(
                                 'Backup started',
-                                DateFormat('MMM d, yyyy • h:mm a').format(item.date),
+                                DateFormat('MMM d, yyyy • h:mm a')
+                                    .format(item.date),
                               ),
                               const SizedBox(height: 10),
                               _buildTimestampRow(
@@ -466,7 +473,8 @@ class BackupHistoryWidget extends GetView<BackupController> {
                           _buildActionButton(
                             icon: Icons.restore_rounded,
                             label: 'Restore from this backup',
-                            explanation: 'Replace current data with this backup',
+                            explanation:
+                                'Replace current data with this backup',
                             onTap: () => _confirmRestore(item),
                             isPrimary: true,
                           ),
@@ -547,51 +555,52 @@ class BackupHistoryWidget extends GetView<BackupController> {
     required String value,
     required String explanation,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ColorsManager.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: ColorsManager.zenBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: StylesManager.zenBody(
-                    color: ColorsManager.zenGray,
+    return Builder(
+        builder: (context) => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: ColorsManager.surfaceAdaptive(context),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: ColorsManager.zenBorder),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: color, size: 20),
                   ),
-                ),
-                Text(
-                  explanation,
-                  style: StylesManager.zenCaption(),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            value,
-            style: StylesManager.dmSansBold(
-              fontSize: 22,
-              color: ColorsManager.zenCharcoal,
-            ),
-          ),
-        ],
-      ),
-    );
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: StylesManager.zenBody(
+                            color: ColorsManager.zenGray,
+                          ),
+                        ),
+                        Text(
+                          explanation,
+                          style: StylesManager.zenCaption(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: StylesManager.dmSansBold(
+                      fontSize: 22,
+                      color: ColorsManager.zenCharcoal,
+                    ),
+                  ),
+                ],
+              ),
+            ));
   }
 
   Widget _buildTimestampRow(String label, String value) {

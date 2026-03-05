@@ -182,7 +182,7 @@ class _GroupManagementBottomSheetState
                   style: TextStyle(
                     fontSize: FontSize.large,
                     fontWeight: FontWeight.w600,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -376,7 +376,8 @@ class _GroupManagementBottomSheetState
               widget.groupInfo.description!,
               style: TextStyle(
                 fontSize: FontSize.small,
-                color: ColorsManager.black.withValues(alpha: 0.8),
+                color: ColorsManager.textPrimaryAdaptive(context)
+                    .withValues(alpha: 0.8),
                 height: 1.4,
               ),
             ),
@@ -454,7 +455,7 @@ class _GroupManagementBottomSheetState
                       fontWeight: FontWeight.w500,
                       color: isDestructive
                           ? ColorsManager.error2
-                          : ColorsManager.black,
+                          : ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -511,7 +512,7 @@ class _GroupManagementBottomSheetState
                 style: TextStyle(
                   fontSize: FontSize.large,
                   fontWeight: FontWeight.w600,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               const SizedBox(height: 16),
@@ -626,7 +627,7 @@ class _GroupManagementBottomSheetState
                 style: TextStyle(
                   fontSize: FontSize.large,
                   fontWeight: FontWeight.w600,
-                  color: ColorsManager.black,
+                  color: ColorsManager.textPrimaryAdaptive(context),
                 ),
               ),
               const SizedBox(height: 16),
@@ -744,7 +745,7 @@ class _GroupManagementBottomSheetState
               style: TextStyle(
                 fontSize: FontSize.xLarge,
                 fontWeight: FontWeight.w600,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
             const SizedBox(height: 8),

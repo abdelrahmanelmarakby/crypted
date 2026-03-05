@@ -89,9 +89,8 @@ class _ChatSearchBarState extends State<ChatSearchBar>
   }
 
   void _updateHistoryVisibility() {
-    final shouldShow = _hasFocus &&
-        _controller.text.isEmpty &&
-        _searchHistory.isNotEmpty;
+    final shouldShow =
+        _hasFocus && _controller.text.isEmpty && _searchHistory.isNotEmpty;
     if (shouldShow != _showHistory) {
       setState(() {
         _showHistory = shouldShow;
@@ -121,7 +120,8 @@ class _ChatSearchBarState extends State<ChatSearchBar>
   void _removeHistoryItem(String query) {
     widget.onRemoveFromHistory?.call(query);
     setState(() {
-      _searchHistory.removeWhere((item) => item.toLowerCase() == query.toLowerCase());
+      _searchHistory
+          .removeWhere((item) => item.toLowerCase() == query.toLowerCase());
       _updateHistoryVisibility();
     });
   }
@@ -180,149 +180,149 @@ class _ChatSearchBarState extends State<ChatSearchBar>
               ],
             ),
             child: SafeArea(
-          bottom: false,
-          child: Row(
-            children: [
-              // Back button
-              IconButton(
-                onPressed: _close,
-                icon: const Icon(Icons.arrow_back),
-                color: ColorsManager.grey,
-                tooltip: 'Close search',
-              ),
-
-              // Search input
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Get.isDarkMode
-                        ? Colors.grey[800]
-                        : ColorsManager.offWhite,
-                    borderRadius: BorderRadius.circular(12),
+              bottom: false,
+              child: Row(
+                children: [
+                  // Back button
+                  IconButton(
+                    onPressed: _close,
+                    icon: const Icon(Icons.arrow_back),
+                    color: ColorsManager.grey,
+                    tooltip: 'Close search',
                   ),
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(left: Paddings.normal),
-                        child: Icon(
-                          Iconsax.search_normal,
-                          size: 18,
-                          color: ColorsManager.grey,
-                        ),
+
+                  // Search input
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Get.isDarkMode
+                            ? Colors.grey[800]
+                            : ColorsManager.offWhite,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          focusNode: _focusNode,
-                          style: StylesManager.medium(
-                            fontSize: FontSize.medium,
-                            color: Get.isDarkMode
-                                ? Colors.white
-                                : ColorsManager.black,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Search messages...',
-                            hintStyle: StylesManager.regular(
-                              fontSize: FontSize.medium,
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(left: Paddings.normal),
+                            child: Icon(
+                              Iconsax.search_normal,
+                              size: 18,
                               color: ColorsManager.grey,
                             ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: Paddings.small,
-                              vertical: Paddings.normal,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              focusNode: _focusNode,
+                              style: StylesManager.medium(
+                                fontSize: FontSize.medium,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Search messages...',
+                                hintStyle: StylesManager.regular(
+                                  fontSize: FontSize.medium,
+                                  color: ColorsManager.grey,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: Paddings.small,
+                                  vertical: Paddings.normal,
+                                ),
+                              ),
+                              textInputAction: TextInputAction.search,
+                              onSubmitted: (_) {
+                                // Navigate to first result on submit
+                                if (widget.resultCount > 0) {
+                                  widget.onNext?.call();
+                                }
+                              },
                             ),
                           ),
-                          textInputAction: TextInputAction.search,
-                          onSubmitted: (_) {
-                            // Navigate to first result on submit
-                            if (widget.resultCount > 0) {
-                              widget.onNext?.call();
-                            }
-                          },
-                        ),
+                          // Clear button
+                          if (_controller.text.isNotEmpty)
+                            IconButton(
+                              onPressed: _clearSearch,
+                              icon: const Icon(Icons.clear, size: 18),
+                              color: ColorsManager.grey,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                            ),
+                        ],
                       ),
-                      // Clear button
-                      if (_controller.text.isNotEmpty)
-                        IconButton(
-                          onPressed: _clearSearch,
-                          icon: const Icon(Icons.clear, size: 18),
-                          color: ColorsManager.grey,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
+                    ),
+                  ),
+
+                  // Result counter and navigation
+                  if (_controller.text.isNotEmpty) ...[
+                    SizedBox(width: Paddings.small),
+
+                    // Result counter
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 150),
+                      child: Container(
+                        key: ValueKey(
+                            '${widget.resultCount}_${widget.currentIndex}'),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Paddings.small,
+                          vertical: Paddings.xSmall,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.resultCount > 0
+                              ? ColorsManager.primary.withValues(alpha: 0.1)
+                              : ColorsManager.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          widget.resultCount > 0
+                              ? '${widget.currentIndex + 1}/${widget.resultCount}'
+                              : '0/0',
+                          style: StylesManager.medium(
+                            fontSize: FontSize.small,
+                            color: widget.resultCount > 0
+                                ? ColorsManager.primary
+                                : ColorsManager.grey,
                           ),
                         ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Result counter and navigation
-              if (_controller.text.isNotEmpty) ...[
-                SizedBox(width: Paddings.small),
-
-                // Result counter
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 150),
-                  child: Container(
-                    key: ValueKey('${widget.resultCount}_${widget.currentIndex}'),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Paddings.small,
-                      vertical: Paddings.xSmall,
-                    ),
-                    decoration: BoxDecoration(
-                      color: widget.resultCount > 0
-                          ? ColorsManager.primary.withValues(alpha: 0.1)
-                          : ColorsManager.grey.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      widget.resultCount > 0
-                          ? '${widget.currentIndex + 1}/${widget.resultCount}'
-                          : '0/0',
-                      style: StylesManager.medium(
-                        fontSize: FontSize.small,
-                        color: widget.resultCount > 0
-                            ? ColorsManager.primary
-                            : ColorsManager.grey,
                       ),
                     ),
-                  ),
-                ),
 
-                // Navigation arrows
-                IconButton(
-                  onPressed:
-                      widget.resultCount > 0 ? widget.onPrevious : null,
-                  icon: const Icon(Iconsax.arrow_up_2, size: 20),
-                  color: widget.resultCount > 0
-                      ? ColorsManager.primary
-                      : ColorsManager.grey.withValues(alpha: 0.4),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  tooltip: 'Previous result',
-                ),
-                IconButton(
-                  onPressed: widget.resultCount > 0 ? widget.onNext : null,
-                  icon: const Icon(Iconsax.arrow_down_1, size: 20),
-                  color: widget.resultCount > 0
-                      ? ColorsManager.primary
-                      : ColorsManager.grey.withValues(alpha: 0.4),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  tooltip: 'Next result',
-                ),
-              ],
-            ],
-          ),
-        ),
+                    // Navigation arrows
+                    IconButton(
+                      onPressed:
+                          widget.resultCount > 0 ? widget.onPrevious : null,
+                      icon: const Icon(Iconsax.arrow_up_2, size: 20),
+                      color: widget.resultCount > 0
+                          ? ColorsManager.primary
+                          : ColorsManager.grey.withValues(alpha: 0.4),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      tooltip: 'Previous result',
+                    ),
+                    IconButton(
+                      onPressed: widget.resultCount > 0 ? widget.onNext : null,
+                      icon: const Icon(Iconsax.arrow_down_1, size: 20),
+                      color: widget.resultCount > 0
+                          ? ColorsManager.primary
+                          : ColorsManager.grey.withValues(alpha: 0.4),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      tooltip: 'Next result',
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
 
           // Search history dropdown
@@ -419,9 +419,8 @@ class _ChatSearchBarState extends State<ChatSearchBar>
                               query,
                               style: StylesManager.regular(
                                 fontSize: FontSize.medium,
-                                color: Get.isDarkMode
-                                    ? Colors.white
-                                    : ColorsManager.black,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

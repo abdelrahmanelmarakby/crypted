@@ -258,13 +258,14 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back,
+              color: ColorsManager.textPrimaryAdaptive(context)),
         ),
         title: Text(
           'Chat Wallpaper',
@@ -364,7 +365,8 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
@@ -390,7 +392,8 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
       case WallpaperType.none:
         return Container(color: Colors.grey.shade100);
       case WallpaperType.color:
-        return Container(color: _selectedWallpaper.solidColor ?? Colors.grey.shade100);
+        return Container(
+            color: _selectedWallpaper.solidColor ?? Colors.grey.shade100);
       case WallpaperType.gradient:
         if (_selectedWallpaper.gradientColors != null &&
             _selectedWallpaper.gradientColors!.length >= 2) {
@@ -451,7 +454,9 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
           text,
           style: StylesManager.regular(
             fontSize: FontSize.small,
-            color: isMe ? Colors.white : Colors.black87,
+            color: isMe
+                ? Colors.white
+                : ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
       ),
@@ -604,9 +609,7 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
             colors: preset.previewColors,
           ),
           borderRadius: BorderRadius.circular(16),
-          border: isSelected
-              ? Border.all(color: Colors.white, width: 3)
-              : null,
+          border: isSelected ? Border.all(color: Colors.white, width: 3) : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),
@@ -698,7 +701,8 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     image: DecorationImage(
-                      image: FileImage(File(_selectedWallpaper.customImagePath!)),
+                      image:
+                          FileImage(File(_selectedWallpaper.customImagePath!)),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -727,7 +731,8 @@ class _ChatWallpaperPickerState extends State<ChatWallpaperPicker>
             ),
             child: Row(
               children: [
-                Icon(Iconsax.info_circle, color: Colors.blue.shade700, size: 20),
+                Icon(Iconsax.info_circle,
+                    color: Colors.blue.shade700, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

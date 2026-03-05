@@ -124,83 +124,84 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
             GestureDetector(
               onTap: _openInteractiveMap,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Stack(
                   children: [
                     // Static Map Image
                     CachedNetworkImage(
-                    imageUrl: _staticMapUrl,
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
+                      imageUrl: _staticMapUrl,
                       height: 160,
-                      color: ColorsManager.navbarColor,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        height: 160,
+                        color: ColorsManager.inputBg(context),
+                        child: Center(
+                          child: Icon(
+                            Iconsax.map_1_copy,
+                            size: 60,
+                            color: ColorsManager.grey.withValues(alpha: 0.3),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        height: 160,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              ColorsManager.primary.withValues(alpha: 0.1),
+                              ColorsManager.primary.withValues(alpha: 0.05),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Iconsax.map_1_copy,
+                                size: 48,
+                                color: ColorsManager.primary,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Map Preview',
+                                style: StylesManager.medium(
+                                  fontSize: FontSize.small,
+                                  color: ColorsManager.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Location Pin Overlay
+                    Positioned(
+                      top: 60,
+                      left: 0,
+                      right: 0,
                       child: Center(
                         child: Icon(
-                          Iconsax.map_1_copy,
-                          size: 60,
-                          color: ColorsManager.grey.withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      height: 160,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            ColorsManager.primary.withValues(alpha: 0.1),
-                            ColorsManager.primary.withValues(alpha: 0.05),
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Iconsax.map_1_copy,
-                              size: 48,
-                              color: ColorsManager.primary,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Map Preview',
-                              style: StylesManager.medium(
-                                fontSize: FontSize.small,
-                                color: ColorsManager.grey,
-                              ),
+                          Iconsax.location_copy,
+                          size: 40,
+                          color: ColorsManager.error,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 4,
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-
-                  // Location Pin Overlay
-                  Positioned(
-                    top: 60,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Icon(
-                        Iconsax.location_copy,
-                        size: 40,
-                        color: ColorsManager.error,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             ),
 
             // Location Details
@@ -231,7 +232,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                           'Shared Location',
                           style: StylesManager.semiBold(
                             fontSize: FontSize.medium,
-                            color: ColorsManager.black,
+                            color: ColorsManager.textPrimaryAdaptive(context),
                           ),
                         ),
                       ),
@@ -244,7 +245,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: ColorsManager.navbarColor,
+                        color: ColorsManager.inputBg(context),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
@@ -291,7 +292,8 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                               _address!,
                               style: StylesManager.medium(
                                 fontSize: FontSize.xSmall,
-                                color: ColorsManager.black,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -307,7 +309,7 @@ class _LocationMessageWidgetState extends State<LocationMessageWidget> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: ColorsManager.navbarColor,
+                      color: ColorsManager.inputBg(context),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(

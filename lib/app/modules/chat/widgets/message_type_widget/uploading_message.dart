@@ -416,7 +416,7 @@ class _UploadingMessageWidgetState extends State<UploadingMessageWidget>
                   fileName,
                   style: StylesManager.semiBold(
                     fontSize: FontSize.small,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

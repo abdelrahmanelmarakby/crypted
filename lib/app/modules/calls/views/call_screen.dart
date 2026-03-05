@@ -230,7 +230,7 @@ class _CallScreenState extends State<CallScreen> {
   /// Build loading screen.
   Widget _buildLoadingScreen(String message) {
     return Scaffold(
-      backgroundColor: ColorsManager.navbarColor,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -255,7 +255,7 @@ class _CallScreenState extends State<CallScreen> {
   /// Build error screen.
   Widget _buildErrorScreen(String message) {
     return Scaffold(
-      backgroundColor: ColorsManager.navbarColor,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -322,7 +322,7 @@ class _CallScreenState extends State<CallScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.scaffoldBg(context),
         body: Stack(
           children: [
             // ZEGO Call UI — appSign auth (UIKits app, no token enforcement)

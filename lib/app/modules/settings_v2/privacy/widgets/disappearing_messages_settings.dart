@@ -42,6 +42,7 @@ class DisappearingMessagesDurationSelector extends StatelessWidget {
         ...DisappearingDuration.values.map((duration) {
           final isSelected = duration == currentDuration;
           return _buildDurationOption(
+            context: context,
             duration: duration,
             isSelected: isSelected,
             onTap: () {
@@ -55,6 +56,7 @@ class DisappearingMessagesDurationSelector extends StatelessWidget {
   }
 
   Widget _buildDurationOption({
+    required BuildContext context,
     required DisappearingDuration duration,
     required bool isSelected,
     required VoidCallback onTap,
@@ -85,7 +87,9 @@ class DisappearingMessagesDurationSelector extends StatelessWidget {
                     duration.displayName,
                     style: StylesManager.semiBold(
                       fontSize: FontSize.medium,
-                      color: isSelected ? ColorsManager.primary : Colors.black87,
+                      color: isSelected
+                          ? ColorsManager.primary
+                          : ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   Text(
@@ -327,7 +331,8 @@ class _DisappearingMessagesSheetState extends State<DisappearingMessagesSheet> {
             ),
             child: Row(
               children: [
-                Icon(Iconsax.info_circle, color: Colors.blue.shade700, size: 20),
+                Icon(Iconsax.info_circle,
+                    color: Colors.blue.shade700, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -362,7 +367,10 @@ class _DisappearingMessagesSheetState extends State<DisappearingMessagesSheet> {
           // Action buttons
           Padding(
             padding: EdgeInsets.fromLTRB(
-              24, 8, 24, 16 + MediaQuery.of(context).padding.bottom,
+              24,
+              8,
+              24,
+              16 + MediaQuery.of(context).padding.bottom,
             ),
             child: Row(
               children: [
@@ -409,7 +417,8 @@ class _DisappearingMessagesSheetState extends State<DisappearingMessagesSheet> {
                           )
                         : Text(
                             'Save',
-                            style: StylesManager.semiBold(fontSize: FontSize.medium),
+                            style: StylesManager.semiBold(
+                                fontSize: FontSize.medium),
                           ),
                   ),
                 ),
@@ -453,13 +462,14 @@ class _DefaultDisappearingMessagesSettingsState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back,
+              color: ColorsManager.textPrimaryAdaptive(context)),
         ),
         title: Text(
           'Disappearing Messages',

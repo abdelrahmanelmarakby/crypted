@@ -98,7 +98,7 @@ class TabBarCallBody extends StatelessWidget {
             separatorBuilder: (context, index) => Divider(
               indent: 0,
               endIndent: 0,
-              color: ColorsManager.navbarColor,
+              color: ColorsManager.inputBg(context),
               thickness: 1,
             ),
             itemCount: data.length,

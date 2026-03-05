@@ -235,14 +235,15 @@ class _LinkPreviewCardState extends State<LinkPreviewCard> {
                             _metadata!.title!,
                             style: StylesManager.semiBold(
                               fontSize: FontSize.small,
-                              color: ColorsManager.black,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
 
                         // Description
-                        if (_metadata!.description != null && !widget.compact) ...[
+                        if (_metadata!.description != null &&
+                            !widget.compact) ...[
                           const SizedBox(height: 4),
                           Text(
                             _metadata!.description!,
@@ -424,7 +425,8 @@ class LinkMetadataFetcher {
     // Get title from og:title or <title> tag
     String? title = getMetaContent('title');
     if (title == null) {
-      final titlePattern = RegExp(r'<title[^>]*>([^<]*)</title>', caseSensitive: false);
+      final titlePattern =
+          RegExp(r'<title[^>]*>([^<]*)</title>', caseSensitive: false);
       final match = titlePattern.firstMatch(html);
       if (match != null) title = _decodeHtml(match.group(1));
     }

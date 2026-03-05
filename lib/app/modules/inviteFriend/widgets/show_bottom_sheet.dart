@@ -26,7 +26,7 @@ void showMyBottomSheet(BuildContext context) {
     builder: (BuildContext context) {
       return Container(
         decoration: BoxDecoration(
-          color: ColorsManager.white,
+          color: ColorsManager.surfaceAdaptive(context),
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(Radiuss.xXLarge40),
           ),
@@ -83,7 +83,7 @@ void showMyBottomSheet(BuildContext context) {
                 child: Container(
                   padding: const EdgeInsets.all(Paddings.normal),
                   decoration: BoxDecoration(
-                    color: ColorsManager.navbarColor,
+                    color: ColorsManager.inputBg(context),
                     borderRadius: BorderRadius.circular(Radiuss.normal),
                   ),
                   child: Row(
@@ -183,16 +183,17 @@ Widget build_media(
     onTap: onTap,
     child: Column(
       children: [
-        Container(
-          height: Sizes.size70,
-          width: Sizes.size70,
-          padding: const EdgeInsets.all(Paddings.normal),
-          decoration: BoxDecoration(
-            color: ColorsManager.navbarColor,
-            borderRadius: BorderRadius.circular(Radiuss.normal),
-          ),
-          child: SvgPicture.asset(image),
-        ),
+        Builder(
+            builder: (context) => Container(
+                  height: Sizes.size70,
+                  width: Sizes.size70,
+                  padding: const EdgeInsets.all(Paddings.normal),
+                  decoration: BoxDecoration(
+                    color: ColorsManager.surfaceAdaptive(context),
+                    borderRadius: BorderRadius.circular(Radiuss.normal),
+                  ),
+                  child: SvgPicture.asset(image),
+                )),
         SizedBox(height: Sizes.size10),
         Text(
           text,

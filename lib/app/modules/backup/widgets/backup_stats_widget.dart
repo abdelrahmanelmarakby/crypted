@@ -30,85 +30,86 @@ class BackupStatsWidget extends GetView<BackupController> {
       final filesCount = stats['files_count'] ?? 0;
       final totalItems = contactsCount + imagesCount + filesCount;
 
-      return Container(
-        decoration: BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: ColorsManager.zenBorder,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            // Stats Grid - 2x2 with explanations
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // First row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          value: contactsCount,
-                          label: 'Chats',
-                          icon: Icons.chat_bubble_outline_rounded,
-                          color: Colors.blue,
-                          explanation: 'Conversations backed up',
-                          index: 0,
-                        ),
+      return Builder(
+              builder: (context) => Container(
+                    decoration: BoxDecoration(
+                      color: ColorsManager.surfaceAdaptive(context),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: ColorsManager.zenBorder,
+                        width: 1,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          value: imagesCount,
-                          label: 'Media',
-                          icon: Icons.photo_library_outlined,
-                          color: Colors.purple,
-                          explanation: 'Photos & videos saved',
-                          index: 1,
+                    ),
+                    child: Column(
+                      children: [
+                        // Stats Grid - 2x2 with explanations
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              // First row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      value: contactsCount,
+                                      label: 'Chats',
+                                      icon: Icons.chat_bubble_outline_rounded,
+                                      color: Colors.blue,
+                                      explanation: 'Conversations backed up',
+                                      index: 0,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      value: imagesCount,
+                                      label: 'Media',
+                                      icon: Icons.photo_library_outlined,
+                                      color: Colors.purple,
+                                      explanation: 'Photos & videos saved',
+                                      index: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // Second row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      value: filesCount,
+                                      label: 'Files',
+                                      icon: Icons.folder_outlined,
+                                      color: Colors.orange,
+                                      explanation: 'Documents & attachments',
+                                      index: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      value: totalItems,
+                                      label: 'Total',
+                                      icon: Icons.inventory_2_outlined,
+                                      color: ColorsManager.primary,
+                                      explanation: 'All items protected',
+                                      isHighlighted: true,
+                                      index: 3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Second row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          value: filesCount,
-                          label: 'Files',
-                          icon: Icons.folder_outlined,
-                          color: Colors.orange,
-                          explanation: 'Documents & attachments',
-                          index: 2,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          value: totalItems,
-                          label: 'Total',
-                          icon: Icons.inventory_2_outlined,
-                          color: ColorsManager.primary,
-                          explanation: 'All items protected',
-                          isHighlighted: true,
-                          index: 3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
 
-            // Storage info footer
-            _buildStorageInfo(stats),
-          ],
-        ),
-      )
+                        // Storage info footer
+                        _buildStorageInfo(stats),
+                      ],
+                    ),
+                  ))
           .animate()
           .fadeIn(duration: 400.ms)
           .slideY(begin: 0.1, end: 0, duration: 400.ms);
@@ -307,94 +308,91 @@ class BackupStatsWidget extends GetView<BackupController> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      decoration: BoxDecoration(
-        color: ColorsManager.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: ColorsManager.zenBorder,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Empty state icon with animation
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: ColorsManager.zenBorder.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.bar_chart_rounded,
-              size: 36,
-              color: ColorsManager.zenMuted,
-            ),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scale(
-                begin: const Offset(1, 1),
-                end: const Offset(1.05, 1.05),
-                duration: 1500.ms,
-              ),
-          const SizedBox(height: 20),
-          Text(
-            'No backup data yet',
-            style: StylesManager.dmSansSemiBold(
-              fontSize: 18,
-              color: ColorsManager.zenCharcoal,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your backup statistics will appear here\nafter your first successful backup',
-            style: StylesManager.zenBody(),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          // What to expect section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: ColorsManager.info.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: ColorsManager.info,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'What you\'ll see',
-                      style: StylesManager.dmSansMedium(
-                        fontSize: 13,
-                        color: ColorsManager.info,
-                      ),
-                    ),
-                  ],
+    return Builder(
+        builder: (context) => Container(
+              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+              decoration: BoxDecoration(
+                color: ColorsManager.surfaceAdaptive(context),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: ColorsManager.zenBorder,
+                  width: 1,
                 ),
-                const SizedBox(height: 10),
-                _buildExpectationItem('Number of chats backed up'),
-                _buildExpectationItem('Media files (photos & videos)'),
-                _buildExpectationItem('Documents & attachments'),
-                _buildExpectationItem('Cloud storage usage'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 400.ms)
-        .slideY(begin: 0.1, end: 0, duration: 400.ms);
+              ),
+              child: Column(
+                children: [
+                  // Empty state icon with animation
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: ColorsManager.zenBorder.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.bar_chart_rounded,
+                      size: 36,
+                      color: ColorsManager.zenMuted,
+                    ),
+                  ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.05, 1.05),
+                        duration: 1500.ms,
+                      ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No backup data yet',
+                    style: StylesManager.dmSansSemiBold(
+                      fontSize: 18,
+                      color: ColorsManager.zenCharcoal,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your backup statistics will appear here\nafter your first successful backup',
+                    style: StylesManager.zenBody(),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  // What to expect section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: ColorsManager.info.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: ColorsManager.info,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'What you\'ll see',
+                              style: StylesManager.dmSansMedium(
+                                fontSize: 13,
+                                color: ColorsManager.info,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        _buildExpectationItem('Number of chats backed up'),
+                        _buildExpectationItem('Media files (photos & videos)'),
+                        _buildExpectationItem('Documents & attachments'),
+                        _buildExpectationItem('Cloud storage usage'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )).animate().fadeIn(duration: 400.ms).slideY(
+        begin: 0.1, end: 0, duration: 400.ms);
   }
 
   Widget _buildExpectationItem(String text) {
@@ -428,115 +426,117 @@ class BackupStatsWidget extends GetView<BackupController> {
     Color color,
   ) {
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
+      Builder(
+          builder: (context) => Container(
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: ColorsManager.zenBorder,
-                  borderRadius: BorderRadius.circular(2),
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Column(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.zenBorder,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: color,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$value',
+                              style: StylesManager.dmSansBold(
+                                fontSize: 32,
+                                color: ColorsManager.zenCharcoal,
+                              ),
+                            ),
+                            Text(
+                              label,
+                              style: StylesManager.zenBody(
+                                color: ColorsManager.zenGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Divider
+                    Container(
+                      height: 1,
+                      color: ColorsManager.zenBorder,
+                    ),
+                    const SizedBox(height: 20),
+                    // Explanation
                     Text(
-                      '$value',
-                      style: StylesManager.dmSansBold(
-                        fontSize: 32,
+                      'What this means',
+                      style: StylesManager.dmSansMedium(
+                        fontSize: 15,
                         color: ColorsManager.zenCharcoal,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Text(
-                      label,
-                      style: StylesManager.zenBody(
-                        color: ColorsManager.zenGray,
+                      _getDetailedExplanation(label, value),
+                      style: StylesManager.zenBody(),
+                    ),
+                    const SizedBox(height: 20),
+                    // Tip
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: ColorsManager.zenSurface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline_rounded,
+                            size: 18,
+                            color: ColorsManager.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _getTip(label),
+                              style: StylesManager.zenCaption(
+                                color: ColorsManager.zenGray,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 16),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Divider
-            Container(
-              height: 1,
-              color: ColorsManager.zenBorder,
-            ),
-            const SizedBox(height: 20),
-            // Explanation
-            Text(
-              'What this means',
-              style: StylesManager.dmSansMedium(
-                fontSize: 15,
-                color: ColorsManager.zenCharcoal,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _getDetailedExplanation(label, value),
-              style: StylesManager.zenBody(),
-            ),
-            const SizedBox(height: 20),
-            // Tip
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: ColorsManager.zenSurface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 18,
-                    color: ColorsManager.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _getTip(label),
-                      style: StylesManager.zenCaption(
-                        color: ColorsManager.zenGray,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+              )),
       isScrollControlled: true,
     );
   }

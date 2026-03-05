@@ -115,7 +115,8 @@ class _PinInputWidgetState extends State<PinInputWidget>
           animation: _shakeAnimation,
           builder: (context, child) {
             return Transform.translate(
-              offset: Offset(_shakeAnimation.value * (widget.showError ? 1 : 0), 0),
+              offset:
+                  Offset(_shakeAnimation.value * (widget.showError ? 1 : 0), 0),
               child: child,
             );
           },
@@ -233,7 +234,7 @@ class _PinInputWidgetState extends State<PinInputWidget>
           height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: ColorsManager.white,
+            color: ColorsManager.surfaceAdaptive(context),
             border: Border.all(
               color: ColorsManager.lightGrey,
               width: 1,
@@ -244,7 +245,7 @@ class _PinInputWidgetState extends State<PinInputWidget>
               digit,
               style: StylesManager.bold(
                 fontSize: FontSize.xLarge + 4,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
           ),
@@ -350,19 +351,20 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.navbarColor,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: ColorsManager.navbarColor,
+        backgroundColor: ColorsManager.scaffoldBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: ColorsManager.black),
+          icon: Icon(Icons.close,
+              color: ColorsManager.textPrimaryAdaptive(context)),
           onPressed: widget.onCancel ?? () => Navigator.of(context).pop(),
         ),
         title: Text(
           _isConfirming ? 'Confirm PIN' : 'Create PIN',
           style: StylesManager.bold(
             fontSize: FontSize.large,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         centerTitle: true,
@@ -391,10 +393,12 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
             // Title
             Text(
-              _isConfirming ? 'Confirm your PIN' : 'Enter a ${widget.pinLength}-digit PIN',
+              _isConfirming
+                  ? 'Confirm your PIN'
+                  : 'Enter a ${widget.pinLength}-digit PIN',
               style: StylesManager.medium(
                 fontSize: FontSize.large,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
 
@@ -540,13 +544,14 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorsManager.navbarColor,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: widget.onCancel != null
           ? AppBar(
-              backgroundColor: ColorsManager.navbarColor,
+              backgroundColor: ColorsManager.scaffoldBg(context),
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.close, color: ColorsManager.black),
+                icon: Icon(Icons.close,
+                    color: ColorsManager.textPrimaryAdaptive(context)),
                 onPressed: widget.onCancel,
               ),
             )
@@ -578,7 +583,7 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
               widget.title ?? 'Enter PIN',
               style: StylesManager.medium(
                 fontSize: FontSize.large,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
 

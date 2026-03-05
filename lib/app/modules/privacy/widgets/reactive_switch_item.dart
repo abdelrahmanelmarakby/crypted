@@ -21,7 +21,7 @@ class ReactiveSwitchItem extends StatelessWidget {
     return Obx(
       () => Container(
         decoration: BoxDecoration(
-          color: ColorsManager.navbarColor,
+          color: ColorsManager.surfaceAdaptive(context),
           borderRadius: BorderRadius.circular(8),
         ),
         padding: const EdgeInsets.symmetric(

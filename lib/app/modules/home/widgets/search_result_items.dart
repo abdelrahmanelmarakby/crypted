@@ -68,7 +68,7 @@ class MessageSearchResultItem extends StatelessWidget {
               _getMessageContent(message),
               style: StylesManager.regular(
                 fontSize: FontSize.small,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -199,9 +199,10 @@ class UserSearchResultItem extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: Radiuss.small,
-              backgroundImage: user.imageUrl != null && user.imageUrl!.isNotEmpty
-                  ? NetworkImage(user.imageUrl!)
-                  : null,
+              backgroundImage:
+                  user.imageUrl != null && user.imageUrl!.isNotEmpty
+                      ? NetworkImage(user.imageUrl!)
+                      : null,
               child: user.imageUrl == null || user.imageUrl!.isEmpty
                   ? Text(
                       user.fullName?.substring(0, 1).toUpperCase() ?? '?',
@@ -218,7 +219,7 @@ class UserSearchResultItem extends StatelessWidget {
                     user.fullName ?? 'Unknown User',
                     style: StylesManager.medium(
                       fontSize: FontSize.medium,
-                      color: ColorsManager.black,
+                      color: ColorsManager.textPrimaryAdaptive(context),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

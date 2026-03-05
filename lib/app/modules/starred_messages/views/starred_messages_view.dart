@@ -95,40 +95,41 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
         }
         controller.toggleSelection(item.message.messageId ?? '');
       },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? ColorsManager.primary.withValues(alpha: 0.1)
-              : ColorsManager.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: ColorsManager.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with room name and time
-            if (controller.showAllRooms || item.roomName != null)
-              _buildMessageHeader(item, isSelected),
+      child: Builder(
+          builder: (context) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? ColorsManager.primary.withValues(alpha: 0.1)
+                      : ColorsManager.surfaceAdaptive(context),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ColorsManager.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with room name and time
+                    if (controller.showAllRooms || item.roomName != null)
+                      _buildMessageHeader(item, isSelected),
 
-            // Message content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: _buildMessageContent(item),
-            ),
+                    // Message content
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: _buildMessageContent(item),
+                    ),
 
-            // Actions
-            if (!controller.isSelectionMode.value)
-              _buildMessageActions(item),
-          ],
-        ),
-      ),
+                    // Actions
+                    if (!controller.isSelectionMode.value)
+                      _buildMessageActions(item),
+                  ],
+                ),
+              )),
     );
   }
 
@@ -256,7 +257,8 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
                   child: Image.network(
                     message.photoUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.broken_image),
                   ),
                 )
               : Icon(Icons.photo, size: 48, color: ColorsManager.lightGrey),
@@ -291,7 +293,8 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
             color: ColorsManager.veryDarkGrey,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.play_circle_fill, size: 48, color: ColorsManager.white),
+          child: Icon(Icons.play_circle_fill,
+              size: 48, color: ColorsManager.white),
         ),
       ],
     );
@@ -320,7 +323,8 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               ),
               Text(
                 'Voice message ${message.audioDuration ?? ''}',
-                style: TextStyle(fontSize: 13, color: ColorsManager.textSecondary),
+                style:
+                    TextStyle(fontSize: 13, color: ColorsManager.textSecondary),
               ),
             ],
           ),
@@ -353,7 +357,8 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
               ),
               Text(
                 message.fileSize ?? 'Unknown size',
-                style: TextStyle(fontSize: 12, color: ColorsManager.textSecondary),
+                style:
+                    TextStyle(fontSize: 12, color: ColorsManager.textSecondary),
               ),
             ],
           ),
@@ -363,42 +368,44 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
   }
 
   Widget _buildMessageActions(StarredMessageItem item) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: ColorsManager.border),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextButton.icon(
-              onPressed: () => controller.goToMessage(item),
-              icon: const Icon(Icons.arrow_forward, size: 18),
-              label: const Text('Go to message'),
-              style: TextButton.styleFrom(
-                foregroundColor: ColorsManager.primary,
+    return Builder(
+        builder: (context) => Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top:
+                      BorderSide(color: ColorsManager.dividerAdaptive(context)),
+                ),
               ),
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 32,
-            color: ColorsManager.divider,
-          ),
-          Expanded(
-            child: TextButton.icon(
-              onPressed: () => controller.unstarMessage(item),
-              icon: const Icon(Icons.star_border, size: 18),
-              label: const Text('Unstar'),
-              style: TextButton.styleFrom(
-                foregroundColor: ColorsManager.textSecondary,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => controller.goToMessage(item),
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      label: const Text('Go to message'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: ColorsManager.primary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 32,
+                    color: ColorsManager.divider,
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => controller.unstarMessage(item),
+                      icon: const Icon(Icons.star_border, size: 18),
+                      label: const Text('Unstar'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: ColorsManager.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
+            ));
   }
 
   Widget _buildEmptyState() {
@@ -464,36 +471,37 @@ class StarredMessagesView extends GetView<StarredMessagesController> {
   }
 
   Widget _buildSelectionActions() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: ColorsManager.white,
-        boxShadow: [
-          BoxShadow(
-            color: ColorsManager.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            TextButton.icon(
-              onPressed: controller.forwardSelected,
-              icon: const Icon(Icons.forward),
-              label: const Text('Forward'),
-            ),
-            TextButton.icon(
-              onPressed: controller.unstarSelected,
-              icon: const Icon(Icons.star_border),
-              label: const Text('Unstar'),
-            ),
-          ],
-        ),
-      ),
-    );
+    return Builder(
+        builder: (context) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: ColorsManager.surfaceAdaptive(context),
+                boxShadow: [
+                  BoxShadow(
+                    color: ColorsManager.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    TextButton.icon(
+                      onPressed: controller.forwardSelected,
+                      icon: const Icon(Icons.forward),
+                      label: const Text('Forward'),
+                    ),
+                    TextButton.icon(
+                      onPressed: controller.unstarSelected,
+                      icon: const Icon(Icons.star_border),
+                      label: const Text('Unstar'),
+                    ),
+                  ],
+                ),
+              ),
+            ));
   }
 
   String _formatDate(DateTime? timestamp) {

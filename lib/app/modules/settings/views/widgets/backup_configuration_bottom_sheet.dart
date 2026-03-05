@@ -373,13 +373,17 @@ class _BackupConfigurationBottomSheetState
                         ),
                         child: Column(
                           children: [
-                            _buildFrequencyOption('Daily', 'daily'),
+                            _buildFrequencyOption('Daily', 'daily',
+                                context: context),
                             Divider(height: 1),
-                            _buildFrequencyOption('Weekly', 'weekly'),
+                            _buildFrequencyOption('Weekly', 'weekly',
+                                context: context),
                             Divider(height: 1),
-                            _buildFrequencyOption('Monthly', 'monthly'),
+                            _buildFrequencyOption('Monthly', 'monthly',
+                                context: context),
                             Divider(height: 1),
-                            _buildFrequencyOption('Manual Only', 'manual'),
+                            _buildFrequencyOption('Manual Only', 'manual',
+                                context: context),
                           ],
                         ),
                       )),
@@ -574,14 +578,17 @@ class _BackupConfigurationBottomSheetState
     );
   }
 
-  Widget _buildFrequencyOption(String label, String value) {
+  Widget _buildFrequencyOption(String label, String value,
+      {required BuildContext context}) {
     final isSelected = _backupFrequency.value == value;
     return ListTile(
       title: Text(
         label,
         style: StylesManager.regular(
           fontSize: FontSize.medium,
-          color: isSelected ? ColorsManager.primary : Colors.black87,
+          color: isSelected
+              ? ColorsManager.primary
+              : ColorsManager.textPrimaryAdaptive(context),
         ),
       ),
       trailing: isSelected

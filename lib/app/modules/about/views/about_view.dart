@@ -13,7 +13,8 @@ class AboutView extends StatefulWidget {
   State<AboutView> createState() => _AboutViewState();
 }
 
-class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMixin {
+class _AboutViewState extends State<AboutView>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   String appVersion = '';
@@ -50,7 +51,7 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -116,7 +117,8 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                               width: 100,
                               height: 100,
                               decoration: BoxDecoration(
-                                color: ColorsManager.primary.withValues(alpha: 0.1),
+                                color: ColorsManager.primary
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: Icon(
@@ -130,7 +132,8 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                               'Crypted',
                               style: StylesManager.bold(
                                 fontSize: 32,
-                                color: ColorsManager.black,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                             ),
                             SizedBox(height: 8),
@@ -156,13 +159,13 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                       SizedBox(height: 40),
 
                       // Description
-                      _buildSectionTitle('About This App'),
+                      _buildSectionTitle('About This App', context),
                       SizedBox(height: 12),
                       Text(
                         'Crypted is a secure, encrypted messaging application that prioritizes your privacy and security. With end-to-end encryption, your conversations remain private and protected.',
                         style: StylesManager.regular(
                           fontSize: FontSize.medium,
-                          color: ColorsManager.black.withValues(alpha: 0.8),
+                          color: ColorsManager.textPrimaryAdaptive(context),
                         ),
                         textAlign: TextAlign.justify,
                       ),
@@ -170,50 +173,91 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                       SizedBox(height: 32),
 
                       // Features
-                      _buildSectionTitle('Key Features'),
+                      _buildSectionTitle('Key Features', context),
                       SizedBox(height: 16),
                       _buildFeatureItem(
+                        context: context,
                         icon: Icons.lock,
                         title: 'End-to-End Encryption',
-                        description: 'Your messages are secured with military-grade encryption',
+                        description:
+                            'Your messages are secured with military-grade encryption',
                       ),
                       _buildFeatureItem(
+                        context: context,
                         icon: Icons.history,
                         title: 'Stories & Status',
-                        description: 'Share moments with 24-hour expiring stories',
+                        description:
+                            'Share moments with 24-hour expiring stories',
                       ),
                       _buildFeatureItem(
+                        context: context,
                         icon: Icons.group,
                         title: 'Group Chats',
-                        description: 'Connect with multiple people at once securely',
+                        description:
+                            'Connect with multiple people at once securely',
                       ),
                       _buildFeatureItem(
+                        context: context,
                         icon: Icons.video_call,
                         title: 'Voice & Video Calls',
-                        description: 'High-quality encrypted calls with your contacts',
+                        description:
+                            'High-quality encrypted calls with your contacts',
                       ),
                       _buildFeatureItem(
+                        context: context,
                         icon: Icons.cloud_upload,
                         title: 'Cloud Backup',
-                        description: 'Safely backup your conversations and media',
+                        description:
+                            'Safely backup your conversations and media',
+                      ),
+                      _buildFeatureItem(
+                        context: context,
+                        icon: Icons.history,
+                        title: 'Stories & Status',
+                        description:
+                            'Share moments with 24-hour expiring stories',
+                      ),
+                      _buildFeatureItem(
+                        context: context,
+                        icon: Icons.group,
+                        title: 'Group Chats',
+                        description:
+                            'Connect with multiple people at once securely',
+                      ),
+                      _buildFeatureItem(
+                        context: context,
+                        icon: Icons.video_call,
+                        title: 'Voice & Video Calls',
+                        description:
+                            'High-quality encrypted calls with your contacts',
+                      ),
+                      _buildFeatureItem(
+                        context: context,
+                        icon: Icons.cloud_upload,
+                        title: 'Cloud Backup',
+                        description:
+                            'Safely backup your conversations and media',
                       ),
 
                       SizedBox(height: 32),
 
                       // Credits
-                      _buildSectionTitle('Credits'),
+                      _buildSectionTitle('Credits', context),
                       SizedBox(height: 16),
                       _buildInfoCard(
+                        context: context,
                         icon: Icons.code,
                         title: 'Development',
                         subtitle: 'Built with Flutter & Firebase',
                       ),
                       _buildInfoCard(
+                        context: context,
                         icon: Icons.security,
                         title: 'Security',
                         subtitle: 'Industry-standard encryption protocols',
                       ),
                       _buildInfoCard(
+                        context: context,
                         icon: Icons.favorite,
                         title: 'Made with Love',
                         subtitle: 'Crafted with care for your privacy',
@@ -222,7 +266,7 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                       SizedBox(height: 32),
 
                       // Contact & Social
-                      _buildSectionTitle('Get in Touch'),
+                      _buildSectionTitle('Get in Touch', context),
                       SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -230,7 +274,8 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                           _buildSocialButton(
                             icon: Icons.email,
                             label: 'Email',
-                            onTap: () => _launchUrl('mailto:support@crypted.app'),
+                            onTap: () =>
+                                _launchUrl('mailto:support@crypted.app'),
                           ),
                           _buildSocialButton(
                             icon: Icons.language,
@@ -273,7 +318,9 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                                     ),
                                   ),
                                 ),
-                                Text('•', style: TextStyle(color: ColorsManager.grey)),
+                                Text('•',
+                                    style:
+                                        TextStyle(color: ColorsManager.grey)),
                                 TextButton(
                                   onPressed: () {},
                                   child: Text(
@@ -302,12 +349,12 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, BuildContext context) {
     return Text(
       title,
       style: StylesManager.semiBold(
         fontSize: FontSize.xLarge,
-        color: ColorsManager.black,
+        color: ColorsManager.textPrimaryAdaptive(context),
       ),
     );
   }
@@ -316,6 +363,7 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
     required IconData icon,
     required String title,
     required String description,
+    required BuildContext context,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -340,7 +388,7 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                   title,
                   style: StylesManager.semiBold(
                     fontSize: FontSize.medium,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                 ),
                 SizedBox(height: 4),
@@ -363,12 +411,13 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
     required IconData icon,
     required String title,
     required String subtitle,
+    required BuildContext context,
   }) {
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ColorsManager.navbarColor,
+        color: ColorsManager.cardAdaptive(context),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -383,7 +432,7 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
                   title,
                   style: StylesManager.semiBold(
                     fontSize: FontSize.medium,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                 ),
                 SizedBox(height: 2),
@@ -414,7 +463,8 @@ class _AboutViewState extends State<AboutView> with SingleTickerProviderStateMix
         width: 100,
         padding: EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          border: Border.all(color: ColorsManager.primary.withValues(alpha: 0.3)),
+          border:
+              Border.all(color: ColorsManager.primary.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(

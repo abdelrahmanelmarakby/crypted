@@ -69,8 +69,8 @@ class ConfirmationBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ??
-        (isDestructive ? Colors.red : ColorsManager.primary);
+    final effectiveIconColor =
+        iconColor ?? (isDestructive ? Colors.red : ColorsManager.primary);
 
     return Container(
       decoration: const BoxDecoration(
@@ -116,7 +116,7 @@ class ConfirmationBottomSheet extends StatelessWidget {
             style: TextStyle(
               fontSize: FontSize.large,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
             textAlign: TextAlign.center,
           ),
@@ -144,7 +144,8 @@ class ConfirmationBottomSheet extends StatelessWidget {
                 onConfirm?.call();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isDestructive ? Colors.red : ColorsManager.primary,
+                backgroundColor:
+                    isDestructive ? Colors.red : ColorsManager.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -320,7 +321,7 @@ class _EditFieldBottomSheetState extends State<EditFieldBottomSheet> {
             style: TextStyle(
               fontSize: FontSize.large,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: ColorsManager.textPrimaryAdaptive(context),
             ),
           ),
           const SizedBox(height: 16),
@@ -346,7 +347,8 @@ class _EditFieldBottomSheetState extends State<EditFieldBottomSheet> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: ColorsManager.primary, width: 1.5),
+                borderSide:
+                    BorderSide(color: ColorsManager.primary, width: 1.5),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -356,7 +358,8 @@ class _EditFieldBottomSheetState extends State<EditFieldBottomSheet> {
                 icon: const Icon(Icons.clear, size: 18),
                 onPressed: () => _controller.clear(),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             onChanged: (_) {
               if (_error != null) setState(() => _error = null);
@@ -381,7 +384,8 @@ class _EditFieldBottomSheetState extends State<EditFieldBottomSheet> {
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ),
@@ -402,7 +406,8 @@ class _EditFieldBottomSheetState extends State<EditFieldBottomSheet> {
                     ),
                     child: const Text(
                       'Save',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),

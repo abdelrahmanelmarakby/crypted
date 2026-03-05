@@ -9,7 +9,7 @@ class NotificationCover extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: ColorsManager.navbarColor,
+        color: ColorsManager.surfaceAdaptive(context),
         borderRadius: BorderRadius.circular(Radiuss.xSmall),
       ),
       child: Column(children: children),

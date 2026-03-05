@@ -662,158 +662,165 @@ class BackupView extends GetView<BackupController> {
     return Obx(() {
       final isEnabled = value.value;
 
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isEnabled
-              ? ColorsManager.white
-              : ColorsManager.zenBorder.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isEnabled ? ColorsManager.zenBorder : Colors.transparent,
-            width: 1,
-          ),
-          boxShadow: isEnabled
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                // Icon Container
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
+      return Builder(
+          builder: (context) => AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isEnabled
+                      ? ColorsManager.surfaceAdaptive(context)
+                      : ColorsManager.zenBorder.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
                     color: isEnabled
-                        ? iconColor.withValues(alpha: 0.1)
-                        : ColorsManager.zenBorder,
-                    borderRadius: BorderRadius.circular(12),
+                        ? ColorsManager.zenBorder
+                        : Colors.transparent,
+                    width: 1,
                   ),
-                  child: Icon(
-                    icon,
-                    color: isEnabled ? iconColor : ColorsManager.zenMuted,
-                    size: 22,
-                  ),
+                  boxShadow: isEnabled
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
-                const SizedBox(width: 14),
-                // Text Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: StylesManager.dmSansMedium(
-                          fontSize: 15,
-                          color: isEnabled
-                              ? ColorsManager.zenCharcoal
-                              : ColorsManager.zenMuted,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        // Icon Container
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isEnabled
+                                ? iconColor.withValues(alpha: 0.1)
+                                : ColorsManager.zenBorder,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            icon,
+                            color:
+                                isEnabled ? iconColor : ColorsManager.zenMuted,
+                            size: 22,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        description,
-                        style: StylesManager.zenCaption(
-                          color: ColorsManager.zenMuted,
+                        const SizedBox(width: 14),
+                        // Text Content
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: StylesManager.dmSansMedium(
+                                  fontSize: 15,
+                                  color: isEnabled
+                                      ? ColorsManager.zenCharcoal
+                                      : ColorsManager.zenMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                description,
+                                style: StylesManager.zenCaption(
+                                  color: ColorsManager.zenMuted,
+                                ),
+                                maxLines: 2,
+                              ),
+                            ],
+                          ),
                         ),
-                        maxLines: 2,
+                        const SizedBox(width: 12),
+                        // Toggle
+                        _buildAnimatedToggle(value),
+                      ],
+                    ),
+                    // Size estimate row
+                    if (isEnabled) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: ColorsManager.zenBorder.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.storage_rounded,
+                              color: ColorsManager.zenMuted,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Estimated size: $sizeEstimate',
+                              style: StylesManager.zenCaption(),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Toggle
-                _buildAnimatedToggle(value),
-              ],
-            ),
-            // Size estimate row
-            if (isEnabled) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: ColorsManager.zenBorder.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.storage_rounded,
-                      color: ColorsManager.zenMuted,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Estimated size: $sizeEstimate',
-                      style: StylesManager.zenCaption(),
-                    ),
                   ],
                 ),
-              ),
-            ],
-          ],
-        ),
-      );
+              ));
     });
   }
 
   Widget _buildAnimatedToggle(RxBool value) {
-    return Obx(() => GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            value.value = !value.value;
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 52,
-            height: 32,
-            decoration: BoxDecoration(
-              color:
-                  value.value ? ColorsManager.primary : ColorsManager.zenBorder,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutBack,
-              alignment:
-                  value.value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: 26,
-                height: 26,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
+    return Obx(() => Builder(
+        builder: (context) => GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                value.value = !value.value;
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 52,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: ColorsManager.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  color: value.value
+                      ? ColorsManager.primary
+                      : ColorsManager.zenBorder,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: value.value
-                    ? Icon(
-                        Icons.check_rounded,
-                        color: ColorsManager.primary,
-                        size: 16,
-                      )
-                    : null,
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutBack,
+                  alignment: value.value
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: ColorsManager.surfaceAdaptive(context),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: value.value
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: ColorsManager.primary,
+                            size: 16,
+                          )
+                        : null,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ));
+            )));
   }
 
   Widget _buildStatsSection() {
@@ -1024,56 +1031,58 @@ class BackupView extends GetView<BackupController> {
 
   void _showHelpSheet() {
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
+      Builder(
+          builder: (context) => Container(
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: ColorsManager.zenBorder,
-                  borderRadius: BorderRadius.circular(2),
+                  color: ColorsManager.surfaceAdaptive(context),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'How Backup Works',
-              style: StylesManager.zenTitle(),
-            ),
-            const SizedBox(height: 20),
-            _buildHelpItem(
-              '1',
-              'Choose what to backup',
-              'Select the types of data you want to include in your backup',
-            ),
-            _buildHelpItem(
-              '2',
-              'Start the backup',
-              'Tap the backup button to begin. Stay connected to the internet.',
-            ),
-            _buildHelpItem(
-              '3',
-              'Data is encrypted',
-              'Your data is encrypted before being sent to our secure servers',
-            ),
-            _buildHelpItem(
-              '4',
-              'Restore anytime',
-              'Restore your backup on this device or a new device',
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: ColorsManager.zenBorder,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'How Backup Works',
+                      style: StylesManager.zenTitle(),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildHelpItem(
+                      '1',
+                      'Choose what to backup',
+                      'Select the types of data you want to include in your backup',
+                    ),
+                    _buildHelpItem(
+                      '2',
+                      'Start the backup',
+                      'Tap the backup button to begin. Stay connected to the internet.',
+                    ),
+                    _buildHelpItem(
+                      '3',
+                      'Data is encrypted',
+                      'Your data is encrypted before being sent to our secure servers',
+                    ),
+                    _buildHelpItem(
+                      '4',
+                      'Restore anytime',
+                      'Restore your backup on this device or a new device',
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              )),
       isScrollControlled: true,
     );
   }

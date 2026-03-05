@@ -14,20 +14,21 @@ class PrivacyViewNew extends GetView<PrivacyController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         centerTitle: false,
         title: Text(
           Constants.kPrivacy.tr,
           style: StylesManager.bold(
             fontSize: FontSize.xLarge,
-            color: Colors.black87,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back,
+              color: ColorsManager.textPrimaryAdaptive(context)),
           onPressed: () => Get.back(),
         ),
       ),
@@ -40,6 +41,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
             // Who Can See Section
             _buildSectionHeader('Who Can See'),
             _buildPrivacyCard(
+              context: context,
               icon: Icons.person_outline,
               title: 'Profile Photo',
               subtitle: 'Control who can see your profile picture',
@@ -48,6 +50,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
               onChanged: controller.updateProfilePicture,
             ),
             _buildPrivacyCard(
+              context: context,
               icon: Icons.access_time,
               title: 'Last Seen',
               subtitle: 'Control who can see when you were last online',
@@ -56,6 +59,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
               onChanged: controller.updateLastSeen,
             ),
             _buildPrivacyCard(
+              context: context,
               icon: Icons.info_outline,
               title: 'About',
               subtitle: 'Control who can see your about info',
@@ -64,6 +68,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
               onChanged: controller.updateAbout,
             ),
             _buildPrivacyCard(
+              context: context,
               icon: Icons.visibility_outlined,
               title: 'Status',
               subtitle: 'Control who can see your status updates',
@@ -77,6 +82,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
             // Interactions Section
             _buildSectionHeader('Interactions'),
             _buildPrivacyCard(
+              context: context,
               icon: Icons.group_outlined,
               title: 'Groups',
               subtitle: 'Control who can add you to groups',
@@ -85,6 +91,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
               onChanged: controller.updateGroups,
             ),
             _buildSwitchCard(
+              context: context,
               icon: Icons.done_all,
               title: 'Read Receipts',
               subtitle: 'If turned off, you won\'t see others\' read receipts',
@@ -97,6 +104,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
             // Security Section
             _buildSectionHeader('Security'),
             _buildActionCard(
+              context: context,
               icon: Icons.block,
               title: 'Blocked Users',
               subtitle: 'View and manage blocked contacts',
@@ -104,6 +112,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
               onTap: _showBlockedUsers,
             ),
             _buildActionCard(
+              context: context,
               icon: Icons.location_on_outlined,
               title: 'Live Location',
               subtitle: 'Manage active location sharing',
@@ -116,6 +125,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
             // Advanced Section
             _buildSectionHeader('Advanced'),
             _buildSwitchCard(
+              context: context,
               icon: Icons.camera_alt_outlined,
               title: 'Camera Effects',
               subtitle: 'Use effects in camera and video calls',
@@ -123,6 +133,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
               onChanged: controller.toggleCameraEffects,
             ),
             _buildPrivacyCard(
+              context: context,
               icon: Icons.timer_outlined,
               title: 'Disappearing Messages',
               subtitle: 'Default timer for new chats',
@@ -155,6 +166,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
   }
 
   Widget _buildPrivacyCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -168,7 +180,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
             vertical: Paddings.xSmall,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ColorsManager.cardAdaptive(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -213,7 +225,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
                             title,
                             style: StylesManager.semiBold(
                               fontSize: FontSize.medium,
-                              color: Colors.black87,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                           ),
                           SizedBox(height: Sizes.size4),
@@ -254,6 +266,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
   }
 
   Widget _buildSwitchCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -266,7 +279,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
             vertical: Paddings.xSmall,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ColorsManager.cardAdaptive(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -301,7 +314,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
                         title,
                         style: StylesManager.semiBold(
                           fontSize: FontSize.medium,
-                          color: Colors.black87,
+                          color: ColorsManager.textPrimaryAdaptive(context),
                         ),
                       ),
                       SizedBox(height: Sizes.size4),
@@ -328,6 +341,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
   }
 
   Widget _buildActionCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -340,7 +354,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
         vertical: Paddings.xSmall,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.cardAdaptive(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -380,7 +394,7 @@ class PrivacyViewNew extends GetView<PrivacyController> {
                         title,
                         style: StylesManager.semiBold(
                           fontSize: FontSize.medium,
-                          color: Colors.black87,
+                          color: ColorsManager.textPrimaryAdaptive(context),
                         ),
                       ),
                       SizedBox(height: Sizes.size4),
@@ -415,79 +429,81 @@ class PrivacyViewNew extends GetView<PrivacyController> {
     required Function(String) onChanged,
   }) {
     Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(Radiuss.xLarge),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding: EdgeInsets.all(Paddings.large),
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+      Builder(
+          builder: (context) => Container(
+                decoration: BoxDecoration(
+                  color: ColorsManager.bottomSheetAdaptive(context),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(Radiuss.xLarge),
                   ),
-                  SizedBox(height: Sizes.size16),
-                  Text(
-                    title,
-                    style: StylesManager.bold(
-                      fontSize: FontSize.large,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1),
-            // Options
-            ...options.map((option) => InkWell(
-                  onTap: () {
-                    onChanged(option);
-                    Get.back();
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Paddings.xLarge,
-                      vertical: Paddings.large,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            option,
-                            style: StylesManager.medium(
-                              fontSize: FontSize.medium,
-                              color: currentValue == option
-                                  ? ColorsManager.primary
-                                  : Colors.black87,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.all(Paddings.large),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                        ),
-                        if (currentValue == option)
-                          Icon(
-                            Icons.check_circle,
-                            color: ColorsManager.primary,
-                            size: 24,
+                          SizedBox(height: Sizes.size16),
+                          Text(
+                            title,
+                            style: StylesManager.bold(
+                              fontSize: FontSize.large,
+                              color: ColorsManager.textPrimaryAdaptive(context),
+                            ),
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                )),
-            SizedBox(height: Sizes.size16),
-          ],
-        ),
-      ),
+                    Divider(height: 1),
+                    // Options
+                    ...options.map((option) => InkWell(
+                          onTap: () {
+                            onChanged(option);
+                            Get.back();
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Paddings.xLarge,
+                              vertical: Paddings.large,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: StylesManager.medium(
+                                      fontSize: FontSize.medium,
+                                      color: currentValue == option
+                                          ? ColorsManager.primary
+                                          : ColorsManager.textPrimaryAdaptive(
+                                              context),
+                                    ),
+                                  ),
+                                ),
+                                if (currentValue == option)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: ColorsManager.primary,
+                                    size: 24,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        )),
+                    SizedBox(height: Sizes.size16),
+                  ],
+                ),
+              )),
       backgroundColor: Colors.transparent,
       isDismissible: true,
       enableDrag: true,

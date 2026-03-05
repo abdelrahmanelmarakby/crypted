@@ -16,7 +16,7 @@ class TabBarCall extends StatelessWidget {
       length: 4, // 4 tabs بدلاً من 3
       child: Scaffold(
         // extendBody: true,
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.scaffoldBg(context),
 
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Paddings.xXLarge),
@@ -31,7 +31,7 @@ class TabBarCall extends StatelessWidget {
                     child: Container(
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
-                        color: ColorsManager.navbarColor,
+                        color: ColorsManager.navbarAdaptive(context),
                         borderRadius: BorderRadius.circular(Radiuss.xSmall),
                       ),
                       child: TabBar(
@@ -56,8 +56,8 @@ class TabBarCall extends StatelessWidget {
                           buildTab(Constants.kAll.tr, true),
                           buildTab(Constants.kInComing.tr, true),
                           buildTab(Constants.kUpComing.tr, true),
-                          buildTab(
-                              Constants.kMissedCall.tr, false), // لا يحتاج border
+                          buildTab(Constants.kMissedCall.tr,
+                              false), // لا يحتاج border
                         ],
                       ),
                     ),

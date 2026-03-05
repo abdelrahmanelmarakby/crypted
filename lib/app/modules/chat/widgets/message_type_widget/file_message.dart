@@ -248,7 +248,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget>
                         widget.message.fileName,
                         style: StylesManager.medium(
                           fontSize: FontSize.small,
-                          color: ColorsManager.black,
+                          color: ColorsManager.textPrimaryAdaptive(context),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -269,7 +269,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget>
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: ColorsManager.navbarColor,
+                                color: ColorsManager.inputBg(context),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
@@ -334,7 +334,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget>
       animation: _uploadAnimController,
       builder: (context, child) {
         final isUploading = _isLocalFile;
-        final scale = isUploading ? 1.0 + (_uploadAnimController.value * 0.05) : 1.0;
+        final scale =
+            isUploading ? 1.0 + (_uploadAnimController.value * 0.05) : 1.0;
 
         return Transform.scale(
           scale: scale,

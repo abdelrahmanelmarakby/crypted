@@ -14,20 +14,21 @@ class NotificationsViewNew extends GetView<NotificationsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ColorsManager.scaffoldBg(context),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsManager.appBarAdaptive(context),
         centerTitle: false,
         title: Text(
           Constants.kNotifications.tr,
           style: StylesManager.bold(
             fontSize: FontSize.xLarge,
-            color: Colors.black87,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back,
+              color: ColorsManager.textPrimaryAdaptive(context)),
           onPressed: () => Get.back(),
         ),
         actions: [
@@ -51,6 +52,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
               Colors.blue,
             ),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.notifications_outlined,
                   title: 'Show Notifications',
                   subtitle: 'Get notified about new messages',
@@ -58,6 +60,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                   onChanged: controller.toggleShowNotification,
                 )),
             Obx(() => _buildSoundSelector(
+                  context: context,
                   icon: Icons.volume_up_outlined,
                   title: 'Notification Sound',
                   subtitle: 'Choose your message notification sound',
@@ -66,6 +69,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                   enabled: controller.isShowNotificationEnabled.value,
                 )),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.emoji_emotions_outlined,
                   title: 'Reaction Notifications',
                   subtitle: 'Get notified when someone reacts to your message',
@@ -82,6 +86,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
               Colors.purple,
             ),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.notifications_outlined,
                   title: 'Show Notifications',
                   subtitle: 'Get notified about group messages',
@@ -89,6 +94,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                   onChanged: controller.toggleShowGroupNotification,
                 )),
             Obx(() => _buildSoundSelector(
+                  context: context,
                   icon: Icons.volume_up_outlined,
                   title: 'Notification Sound',
                   subtitle: 'Choose your group notification sound',
@@ -97,6 +103,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                   enabled: controller.isShowGroupNotificationEnabled.value,
                 )),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.emoji_emotions_outlined,
                   title: 'Reaction Notifications',
                   subtitle: 'Get notified about group message reactions',
@@ -113,6 +120,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
               Colors.green,
             ),
             Obx(() => _buildSoundSelector(
+                  context: context,
                   icon: Icons.volume_up_outlined,
                   title: 'Notification Sound',
                   subtitle: 'Choose your status notification sound',
@@ -121,6 +129,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                   enabled: true,
                 )),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.emoji_emotions_outlined,
                   title: 'Reaction Notifications',
                   subtitle: 'Get notified about status reactions',
@@ -137,6 +146,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
               Colors.orange,
             ),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.alarm,
                   title: 'Reminders',
                   subtitle: 'Get occasional reminders about updates',
@@ -144,6 +154,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                   onChanged: controller.toggleRemindersNotification,
                 )),
             Obx(() => _buildNotificationToggle(
+                  context: context,
                   icon: Icons.visibility_outlined,
                   title: 'Show Preview',
                   subtitle: 'Show message preview in notifications',
@@ -154,7 +165,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
             SizedBox(height: Sizes.size32),
 
             // Info Card
-            _buildInfoCard(),
+            _buildInfoCard(context),
 
             SizedBox(height: Sizes.size32),
           ],
@@ -191,6 +202,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
   }
 
   Widget _buildNotificationToggle({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -203,7 +215,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
         vertical: Paddings.xSmall,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.cardAdaptive(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -240,7 +252,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                     title,
                     style: StylesManager.semiBold(
                       fontSize: FontSize.medium,
-                      color: Colors.black87,
+                      color: ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   SizedBox(height: Sizes.size4),
@@ -268,6 +280,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
   }
 
   Widget _buildSoundSelector({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -281,7 +294,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
         vertical: Paddings.xSmall,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.cardAdaptive(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -325,7 +338,9 @@ class NotificationsViewNew extends GetView<NotificationsController> {
                         title,
                         style: StylesManager.semiBold(
                           fontSize: FontSize.medium,
-                          color: enabled ? Colors.black87 : Colors.grey,
+                          color: enabled
+                              ? ColorsManager.textPrimaryAdaptive(context)
+                              : Colors.grey,
                         ),
                       ),
                       SizedBox(height: Sizes.size4),
@@ -366,7 +381,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: Paddings.large),
       padding: EdgeInsets.all(Paddings.large),
@@ -398,7 +413,7 @@ class NotificationsViewNew extends GetView<NotificationsController> {
               'Customize your notification preferences to stay updated on what matters most to you',
               style: StylesManager.regular(
                 fontSize: FontSize.small,
-                color: Colors.black87,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
           ),
@@ -411,104 +426,108 @@ class NotificationsViewNew extends GetView<NotificationsController> {
     final sounds = ['Note', 'Bell', 'Chime', 'Alert', 'Ding', 'Silent'];
 
     Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(Radiuss.xLarge),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding: EdgeInsets.all(Paddings.large),
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+      Builder(
+          builder: (context) => Container(
+                decoration: BoxDecoration(
+                  color: ColorsManager.bottomSheetAdaptive(context),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(Radiuss.xLarge),
                   ),
-                  SizedBox(height: Sizes.size16),
-                  Row(
-                    children: [
-                      Icon(Icons.music_note, color: ColorsManager.primary),
-                      SizedBox(width: Sizes.size12),
-                      Text(
-                        'Choose Sound',
-                        style: StylesManager.bold(
-                          fontSize: FontSize.large,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1),
-            // Sound Options
-            ...sounds.map((sound) => InkWell(
-                  onTap: () {
-                    onSoundChanged(sound);
-                    Get.back();
-                    if (sound != 'Silent') {
-                      // Play sound preview
-                      Get.snackbar(
-                        'Sound Changed',
-                        'Notification sound set to $sound',
-                        duration: Duration(seconds: 1),
-                        snackPosition: SnackPosition.BOTTOM,
-                      );
-                    }
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Paddings.xLarge,
-                      vertical: Paddings.large,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          sound == 'Silent'
-                              ? Icons.volume_off
-                              : Icons.volume_up,
-                          color: currentSound == sound
-                              ? ColorsManager.primary
-                              : Colors.grey,
-                          size: 24,
-                        ),
-                        SizedBox(width: Sizes.size16),
-                        Expanded(
-                          child: Text(
-                            sound,
-                            style: StylesManager.medium(
-                              fontSize: FontSize.medium,
-                              color: currentSound == sound
-                                  ? ColorsManager.primary
-                                  : Colors.black87,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.all(Paddings.large),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                        ),
-                        if (currentSound == sound)
-                          Icon(
-                            Icons.check_circle,
-                            color: ColorsManager.primary,
-                            size: 24,
+                          SizedBox(height: Sizes.size16),
+                          Row(
+                            children: [
+                              Icon(Icons.music_note,
+                                  color: ColorsManager.primary),
+                              SizedBox(width: Sizes.size12),
+                              Text(
+                                'Choose Sound',
+                                style: StylesManager.bold(
+                                  fontSize: FontSize.large,
+                                  color: ColorsManager.textPrimaryAdaptive(
+                                      context),
+                                ),
+                              ),
+                            ],
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                )),
-            SizedBox(height: Sizes.size16),
-          ],
-        ),
-      ),
+                    Divider(height: 1),
+                    // Sound Options
+                    ...sounds.map((sound) => InkWell(
+                          onTap: () {
+                            onSoundChanged(sound);
+                            Get.back();
+                            if (sound != 'Silent') {
+                              // Play sound preview
+                              Get.snackbar(
+                                'Sound Changed',
+                                'Notification sound set to $sound',
+                                duration: Duration(seconds: 1),
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Paddings.xLarge,
+                              vertical: Paddings.large,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  sound == 'Silent'
+                                      ? Icons.volume_off
+                                      : Icons.volume_up,
+                                  color: currentSound == sound
+                                      ? ColorsManager.primary
+                                      : Colors.grey,
+                                  size: 24,
+                                ),
+                                SizedBox(width: Sizes.size16),
+                                Expanded(
+                                  child: Text(
+                                    sound,
+                                    style: StylesManager.medium(
+                                      fontSize: FontSize.medium,
+                                      color: currentSound == sound
+                                          ? ColorsManager.primary
+                                          : ColorsManager.textPrimaryAdaptive(
+                                              context),
+                                    ),
+                                  ),
+                                ),
+                                if (currentSound == sound)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: ColorsManager.primary,
+                                    size: 24,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        )),
+                    SizedBox(height: Sizes.size16),
+                  ],
+                ),
+              )),
       backgroundColor: Colors.transparent,
       isDismissible: true,
       enableDrag: true,

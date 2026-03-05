@@ -222,7 +222,7 @@ class BackupStatsCardWidget extends StatelessWidget {
                   statistics,
                   style: StylesManager.semiBold(
                     fontSize: FontSize.medium,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                 ),
                 SizedBox(height: Sizes.size4),
@@ -355,7 +355,7 @@ class BackupOptionTileWidget extends StatelessWidget {
                     title,
                     style: StylesManager.semiBold(
                       fontSize: FontSize.medium,
-                      color: ColorsManager.black,
+                      color: ColorsManager.textPrimaryAdaptive(context),
                     ),
                   ),
                   SizedBox(height: Sizes.size4),
@@ -430,7 +430,7 @@ class AutoBackupToggleWidget extends StatelessWidget {
                   Constants.kAutoBackup.tr,
                   style: StylesManager.semiBold(
                     fontSize: FontSize.medium,
-                    color: ColorsManager.black,
+                    color: ColorsManager.textPrimaryAdaptive(context),
                   ),
                 ),
                 SizedBox(height: Sizes.size4),

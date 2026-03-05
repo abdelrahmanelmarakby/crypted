@@ -146,7 +146,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
         vertical: Paddings.normal,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColorsManager.surfaceAdaptive(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -190,7 +190,7 @@ class _SimpleBackupSwitchWidgetState extends State<SimpleBackupSwitchWidget> {
                             Constants.kAutoBackup.tr,
                             style: StylesManager.bold(
                               fontSize: FontSize.large,
-                              color: Colors.black,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                           ),
                           Text(

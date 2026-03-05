@@ -16,12 +16,12 @@ class CallsView extends GetView<CallsController> {
   Widget build(BuildContext context) {
     return GetBuilder<CallsController>(
       builder: (controller) => Scaffold(
-        backgroundColor: ColorsManager.white,
+        backgroundColor: ColorsManager.scaffoldBg(context),
         body: Column(
           children: [
             Container(
               height: Sizes.size170,
-              color: ColorsManager.navbarColor,
+              color: ColorsManager.appBarAdaptive(context),
               padding: const EdgeInsets.only(
                 top: Paddings.xXLarge50,
                 left: Paddings.large,
@@ -61,7 +61,7 @@ class CallsView extends GetView<CallsController> {
                                         : null,
                                 hint: Constants.kSearch.tr,
                                 borderColor: ColorsManager.navbarColor,
-                                fillColor: ColorsManager.white,
+                                fillColor: ColorsManager.cardAdaptive(context),
                                 onChange: (value) {
                                   controller.searchCalls(value);
                                 },
@@ -75,7 +75,7 @@ class CallsView extends GetView<CallsController> {
                           child: Container(
                             padding: EdgeInsets.all(Sizes.size8),
                             decoration: BoxDecoration(
-                              color: ColorsManager.white,
+                              color: ColorsManager.cardAdaptive(context),
                               borderRadius:
                                   BorderRadius.circular(Radiuss.large),
                             ),

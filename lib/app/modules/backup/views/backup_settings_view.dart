@@ -481,44 +481,46 @@ class BackupSettingsView extends GetView<BackupController> {
     required void Function(bool)? onChanged,
   }) {
     final isDisabled = onChanged == null;
-    return GestureDetector(
-      onTap: isDisabled ? null : () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 48,
-        height: 28,
-        decoration: BoxDecoration(
-          color: isDisabled
-              ? ColorsManager.zenBorder
-              : value
-                  ? ColorsManager.primary
-                  : ColorsManager.zenBorder,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: AnimatedAlign(
-          duration: const Duration(milliseconds: 200),
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 22,
-            height: 22,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            decoration: BoxDecoration(
-              color: ColorsManager.white,
-              shape: BoxShape.circle,
-              boxShadow: isDisabled
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-            ),
-          ),
-        ),
-      ),
-    );
+    return Builder(
+        builder: (context) => GestureDetector(
+              onTap: isDisabled ? null : () => onChanged(!value),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 48,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: isDisabled
+                      ? ColorsManager.zenBorder
+                      : value
+                          ? ColorsManager.primary
+                          : ColorsManager.zenBorder,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 200),
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: ColorsManager.surfaceAdaptive(context),
+                      shape: BoxShape.circle,
+                      boxShadow: isDisabled
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                    ),
+                  ),
+                ),
+              ),
+            ));
   }
 
   Widget _buildMinimalDivider() {
@@ -536,9 +538,9 @@ class BackupSettingsView extends GetView<BackupController> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: ColorsManager.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: ColorsManager.surfaceAdaptive(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

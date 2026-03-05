@@ -39,7 +39,7 @@ class ChatEmptyState extends StatelessWidget {
               _getTitle(),
               style: StylesManager.bold(
                 fontSize: FontSize.xLarge,
-                color: ColorsManager.black,
+                color: ColorsManager.textPrimaryAdaptive(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -299,7 +299,7 @@ class _WaveGreetingState extends State<WaveGreeting>
           'Say hi to ${widget.userName}!',
           style: StylesManager.medium(
             fontSize: FontSize.large,
-            color: ColorsManager.black,
+            color: ColorsManager.textPrimaryAdaptive(context),
           ),
         ),
       ],

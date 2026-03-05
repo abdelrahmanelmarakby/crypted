@@ -241,7 +241,14 @@ class QuickReactionSelector extends StatelessWidget {
   final void Function(String emoji) onReactionSelected;
   final VoidCallback? onMoreReactions;
 
-  static const List<String> quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  static const List<String> quickReactions = [
+    '👍',
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+    '🙏'
+  ];
 
   const QuickReactionSelector({
     super.key,
@@ -479,7 +486,9 @@ class MessageContextMenu extends StatelessWidget {
 
             _MenuItem(
               icon: message.isFavorite ? Icons.star : Icons.star_outline,
-              label: message.isFavorite ? 'Remove from favorites' : 'Add to favorites',
+              label: message.isFavorite
+                  ? 'Remove from favorites'
+                  : 'Add to favorites',
               onTap: () {
                 Navigator.pop(context);
                 onFavorite?.call();
@@ -561,7 +570,7 @@ class _MenuItem extends StatelessWidget {
               label,
               style: StylesManager.medium(
                 fontSize: 16,
-                color: color ?? ColorsManager.black,
+                color: color ?? ColorsManager.textPrimaryAdaptive(context),
               ),
             ),
           ],

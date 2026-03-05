@@ -106,8 +106,9 @@ class UserSelectionWidget extends StatelessWidget {
                         user.fullName ?? 'Unknown User',
                         style: StylesManager.medium(
                           fontSize: FontSize.medium,
-                          color:
-                              isSelected ? ColorsManager.primary : Colors.black,
+                          color: isSelected
+                              ? ColorsManager.primary
+                              : ColorsManager.textPrimaryAdaptive(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -218,7 +219,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                             'New Chat',
                             style: StylesManager.bold(
                               fontSize: 24,
-                              color: Colors.black,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                           ),
                           const SizedBox(height: 3),
@@ -275,7 +276,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                     },
                     style: StylesManager.medium(
                       fontSize: FontSize.medium,
-                      color: Colors.black,
+                      color: ColorsManager.textPrimaryAdaptive(context),
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search by name or email...',
@@ -441,7 +442,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                               duration: const Duration(milliseconds: 300),
                               style: StylesManager.semiBold(
                                 fontSize: FontSize.medium,
-                                color: Colors.black87,
+                                color:
+                                    ColorsManager.textPrimaryAdaptive(context),
                               ),
                               child: Text(
                                 isGroupChat
@@ -504,7 +506,7 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                             },
                             style: StylesManager.medium(
                               fontSize: FontSize.medium,
-                              color: Colors.black,
+                              color: ColorsManager.textPrimaryAdaptive(context),
                             ),
                             decoration: InputDecoration(
                               hintText: 'Group name (required)',
@@ -725,7 +727,8 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                             'Group Photo',
                                             style: StylesManager.semiBold(
                                               fontSize: FontSize.medium,
-                                              color: Colors.black87,
+                                              color: ColorsManager
+                                                  .textPrimaryAdaptive(context),
                                             ),
                                           ),
                                           const SizedBox(height: 4),
@@ -1005,7 +1008,9 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
                                         user.fullName ?? 'Unknown User',
                                         style: StylesManager.medium(
                                           fontSize: FontSize.medium,
-                                          color: Colors.black,
+                                          color:
+                                              ColorsManager.textPrimaryAdaptive(
+                                                  context),
                                         ),
                                       ),
                                       if (user.email?.isNotEmpty == true)
@@ -1224,8 +1229,9 @@ class UserSelectionBottomSheet extends GetView<HomeController> {
       AlertDialog(
         title: Text(
           'Remove Photo',
-          style:
-              StylesManager.bold(fontSize: FontSize.large, color: Colors.black),
+          style: StylesManager.bold(
+              fontSize: FontSize.large,
+              color: ColorsManager.textPrimaryAdaptive(context)),
         ),
         content: Text(
           'Are you sure you want to remove this group photo?',
